@@ -48,7 +48,7 @@ jobs:
             # set date-stamped tag if default branch
             type=raw,value={{date 'YYYYMMDD'}},enable={{is_default_branch}}
             # set branch-name if not default branch
-            type=raw,value={{branch}},enable={{#if is_default_branch}}false{{else}}true{{/if}}
+            type=raw,value={{branch}},enable=${{ github.ref != format('refs/heads/{0}', 'main') }}
             # branch event
             type=ref,event=branch
             # tag event

@@ -30,6 +30,13 @@ TODO
 
 (incl. GitHub actions to publish ghcr image)
 
+### Local Docker
+
+```pwsh
+docker build -t openwish:dev .
+docker run -it --rm -p 5000:8080 openwish:dev
+```
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

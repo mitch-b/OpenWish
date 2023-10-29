@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-OpenWish-ae8fdb46-0c7d-4754-8979-1ec9fb69daea</UserSecretsId>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

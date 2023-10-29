@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
     <StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

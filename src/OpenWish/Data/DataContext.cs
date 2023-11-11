@@ -3,6 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace OpenWish.Data;
 
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+public class DataContext(DbContextOptions<DataContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
 }

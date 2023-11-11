@@ -6,6 +6,7 @@ using OpenWish.Client.Pages;
 using OpenWish.Components;
 using OpenWish.Data;
 using OpenWish.Identity;
+using OpenWish.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,20 +20,28 @@ builder.Services.AddScoped<UserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
+builder.Services
+    .AddFluentEmail(builder.Configuration.GetValue<string>("EmailConfig:SmtpFrom"))
+    .AddSmtpSender(
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpHost"), 
+        builder.Configuration.GetValue<int?>("EmailConfig:SmtpPort") ?? 587,
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpUser"),
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpPass"));
+
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+var connectionString = builder.Configuration.GetConnectionString("WishlistDb") ?? throw new InvalidOperationException("Connection string 'WishlistDb' not found.");
+builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddEntityFrameworkStores<DataContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender, NoOpEmailSender>();
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 var app = builder.Build();
 

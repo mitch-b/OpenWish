@@ -5,6 +5,10 @@
             "label": "build",
             "command": "dotnet",
             "type": "process",
+            "dependsOn": [
+                "clean",
+                "restore"
+            ],
             "args": [
                 "build",
                 "${workspaceFolder}/src/OpenWish.sln",
@@ -33,9 +37,40 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/src/OpenWish.sln"
+                "${workspaceFolder}/src/OpenWish.sln" 
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "restore",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "restore",
+                "${workspaceFolder}/src/OpenWish.sln"
+            ],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "find . -type d -name 'bin' -prune -exec rm -rf {} \\; ; find . -type d -name 'obj' -prune -exec rm -rf {} \\;",
+            "windows": {
+                "command": "powershell",
+                "args": [
+                    "-Command",
+                    "Get-ChildItem -Path . -Include bin,obj -Recurse -Directory | Remove-Item -Recurse -Force"
+                ]
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
         }
     ]
 }

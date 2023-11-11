@@ -5,11 +5,15 @@ WORKDIR /source
 # copy csproj and restore as distinct layers
 COPY OpenWish/*.csproj OpenWish/
 COPY OpenWish.Client/*.csproj OpenWish.Client/
+COPY OpenWish.Common/*.csproj OpenWish.Common/
+COPY OpenWish.Data/*.csproj OpenWish.Data/
 RUN dotnet restore OpenWish/OpenWish.csproj
 
 # copy and build app and libraries
 COPY OpenWish/ OpenWish/
 COPY OpenWish.Client/ OpenWish.Client/
+COPY OpenWish.Common/ OpenWish.Common/
+COPY OpenWish.Data/ OpenWish.Data/
 
 # test stage -- exposes optional entrypoint
 # target entrypoint with: docker build --target test

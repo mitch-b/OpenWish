@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace OpenWish.Migrations
+namespace OpenWish.Data.Migrations
 {
     /// <inheritdoc />
     public partial class CreateIdentitySchema : Migration

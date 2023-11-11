@@ -52,6 +52,12 @@ dotnet user-secrets set EmailConfig__SmtpHost my-smtp.host.com
 dotnet user-secrets set EmailConfig__SmtpPort 587
 ```
 
+On devcontainer, sometimes the port is still in use. Open terminal:
+
+```bash
+fuser -k 5065/tcp
+```
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

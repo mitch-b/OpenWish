@@ -11,10 +11,6 @@
             "userUid": "1000",
             "userGid": "1000",
             "upgradePackages": "true"
-        },
-		"ghcr.io/devcontainers/features/git:1": {
-            "version": "latest",
-            "ppa": "false"
         }
     },
 	// Configure tool-specific properties.

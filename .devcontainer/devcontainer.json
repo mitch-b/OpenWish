@@ -26,8 +26,7 @@
 				"EditorConfig.EditorConfig",
 				"GitHub.copilot-chat",
 				"github.vscode-github-actions",
-				"ms-dotnettools.csharp",
-				"ms-dotnettools.csdevkit@1.1.5"
+				"ms-dotnettools.csharp"
 			]
 		}
 	},

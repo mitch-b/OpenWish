@@ -37,6 +37,21 @@ docker build -t openwish:dev .
 docker run -it --rm -p 5000:8080 openwish:dev
 ```
 
+## Local Development
+
+### Secrets Management
+
+```bash
+cd src/OpenWish
+dotnet tool install --global dotnet-ef
+dotnet ef database update
+
+dotnet user-secrets set EmailConfig__SmtpUser myuser
+dotnet user-secrets set EmailConfig__SmtpPass mypass
+dotnet user-secrets set EmailConfig__SmtpHost my-smtp.host.com
+dotnet user-secrets set EmailConfig__SmtpPort 587
+```
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

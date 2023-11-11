@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using FluentEmail.Smtp;
 using OpenWish.Client.Pages;
 using OpenWish.Components;
 using OpenWish.Data;
 using OpenWish.Identity;
+using OpenWish.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,10 +21,20 @@ builder.Services.AddScoped<UserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();
 
+builder.Services
+    .AddFluentEmail(builder.Configuration.GetValue<string>("EmailConfig:SmtpFrom"))
+    .AddSmtpSender(
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpHost"), 
+        builder.Configuration.GetValue<int?>("EmailConfig:SmtpPort") ?? 587,
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpUser"),
+        builder.Configuration.GetValue<string?>("EmailConfig:SmtpPass"));
+
+builder.Services.AddTransient<IEmailSender, EmailSender>();
+
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("WishlistDb") ?? throw new InvalidOperationException("Connection string 'WishlistDb' not found.");
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

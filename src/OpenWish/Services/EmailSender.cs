@@ -5,12 +5,12 @@ namespace OpenWish.Services;
 
 public class EmailSender : IEmailSender
 {
-    //private readonly ILogger _logger;
+    private readonly ILogger _logger;
     private readonly IFluentEmail _fluentEmail;
 
-    public EmailSender(IFluentEmail fluentEmail)
+    public EmailSender(ILogger<EmailSender> logger, IFluentEmail fluentEmail)
     {
-        //_logger = logger;
+        _logger = logger;
         _fluentEmail = fluentEmail;
     }
 
@@ -19,11 +19,11 @@ public class EmailSender : IEmailSender
         var response = await _fluentEmail
             .To(toEmail)
             .Subject(subject)
-            .Body(message)
+            .Body(message, true)
             .SendAsync();
 
-        // _logger.LogInformation(response.Successful 
-        //                        ? $"Email to {toEmail} queued successfully!"
-        //                        : $"Failure sending email to {toEmail}");
+        _logger.LogInformation(response.Successful
+                               ? $"Email to {toEmail} queued successfully!"
+                               : $"Failure sending email to {toEmail}");
     }
 } 

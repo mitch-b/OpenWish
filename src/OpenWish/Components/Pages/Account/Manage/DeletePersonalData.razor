@@ -26,7 +26,7 @@
 <div>
     <EditForm id="delete-user" Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
         <DataAnnotationsValidator />
-        <ValidationSummary class="text-danger" />
+        <Microsoft.AspNetCore.Components.Forms.ValidationSummary class="text-danger" />
         @if (_requirePassword)
         {
             <div class="form-floating mb-3">

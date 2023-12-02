@@ -39,7 +39,7 @@
     <div class="col-md-4">
         <EditForm id="confirmation-form" Model="Input" OnValidSubmit="OnValidSubmitAsync" FormName="confirmation" method="post">
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" />
+            <Microsoft.AspNetCore.Components.Forms.ValidationSummary class="text-danger" />
             <div class="form-floating mb-3">
                 <InputText id="email" @bind-Value="Input.Email" class="form-control" autocomplete="email" placeholder="Please enter your email." />
                 <label for="email" class="form-label">Email</label>

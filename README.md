@@ -46,16 +46,23 @@ cd src/OpenWish
 dotnet tool install --global dotnet-ef
 dotnet ef database update
 
-dotnet user-secrets set EmailConfig__SmtpUser myuser
-dotnet user-secrets set EmailConfig__SmtpPass mypass
-dotnet user-secrets set EmailConfig__SmtpHost my-smtp.host.com
-dotnet user-secrets set EmailConfig__SmtpPort 587
+dotnet user-secrets set EmailConfig:SmtpUser myuser
+dotnet user-secrets set EmailConfig:SmtpPass mypass
+dotnet user-secrets set EmailConfig:SmtpHost my-smtp.host.com
+dotnet user-secrets set EmailConfig:SmtpPort 587
 ```
 
 On devcontainer, sometimes the port is still in use. Open terminal:
 
 ```bash
 fuser -k 5065/tcp
+```
+
+On MacOS:
+
+```bash
+lsof -i :5955
+kill -9 <PID>
 ```
 
 ## License

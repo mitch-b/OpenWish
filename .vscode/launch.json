@@ -6,7 +6,11 @@
             "type": "blazorwasm",
             "preLaunchTask": "build",
             "request": "launch",
-            "cwd": "${workspaceFolder}/src/OpenWish"
+            "cwd": "${workspaceFolder}/src/OpenWish",
+            "url": "https://localhost:7145",
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
         }
     ]
 }

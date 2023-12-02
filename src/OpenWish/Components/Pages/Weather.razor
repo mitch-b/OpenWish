@@ -13,27 +13,47 @@
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts)
-            {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <Div Margin="Margin.IsAuto.OnX">
+    <Card>
+        <CardHeader Padding="Padding.Is0.FromBottom">
+            <CardTitle Flex="Flex.Column.AlignItems.Start">
+                <Span TextWeight="TextWeight.Bold">Weather forecast</Span>
+                <Span TextColor="TextColor.Muted">demonstration data</Span>
+            </CardTitle>
+        </CardHeader>
+        <CardBody>
+            <Table Borderless>
+                <TableHeader>
+                    <TableRow>
+                        <TableHeaderCell>Date</TableHeaderCell>
+                        <TableHeaderCell>Temp (C)</TableHeaderCell>
+                        <TableHeaderCell>Temp (F)</TableHeaderCell>
+                        <TableHeaderCell>Summary</TableHeaderCell>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                @foreach (var forecast in forecasts)
+                {
+                    <TableRow>
+                        <TableRowCell>
+                            @forecast.Date.ToShortDateString()
+                        </TableRowCell>
+                        <TableRowCell>
+                            @forecast.TemperatureC
+                        </TableRowCell>
+                        <TableRowCell>
+                            @forecast.TemperatureF
+                        </TableRowCell>
+                        <TableRowCell>
+                            @forecast.Summary
+                        </TableRowCell>
+                    </TableRow>
+                }
+                </TableBody>
+            </Table>
+        </CardBody>
+    </Card>
+</Div>
 }
 
 @code {

@@ -1,19 +1,15 @@
 # https://hub.docker.com/_/microsoft-dotnet
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0-jammy AS build
 WORKDIR /source
 
 # copy csproj and restore as distinct layers
 COPY OpenWish/*.csproj OpenWish/
 COPY OpenWish.Client/*.csproj OpenWish.Client/
-COPY OpenWish.Common/*.csproj OpenWish.Common/
-COPY OpenWish.Data/*.csproj OpenWish.Data/
 RUN dotnet restore OpenWish/OpenWish.csproj
 
 # copy and build app and libraries
 COPY OpenWish/ OpenWish/
 COPY OpenWish.Client/ OpenWish.Client/
-COPY OpenWish.Common/ OpenWish.Common/
-COPY OpenWish.Data/ OpenWish.Data/
 
 # test stage -- exposes optional entrypoint
 # target entrypoint with: docker build --target test
@@ -35,7 +31,7 @@ WORKDIR /source/OpenWish
 RUN dotnet publish --no-restore -o /app
 
 # final stage/image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:8.0-jammy-chiseled-extra
 WORKDIR /app
 COPY --from=publish /app .
 ENTRYPOINT ["dotnet", "OpenWish.dll"]

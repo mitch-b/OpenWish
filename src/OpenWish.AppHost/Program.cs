@@ -4,6 +4,7 @@ var apiService = builder.AddProject<Projects.OpenWish_ApiService>("apiservice");
 
 builder.AddProject<Projects.OpenWish_Web>("webfrontend")
     .WithExternalHttpEndpoints()
-    .WithReference(apiService);
+    .WithReference(apiService)
+    .WaitFor(apiService);
 
 builder.Build().Run();

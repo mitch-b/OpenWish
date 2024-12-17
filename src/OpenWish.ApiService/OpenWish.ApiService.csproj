@@ -4,4 +4,8 @@
     <ProjectReference Include="..\OpenWish.ServiceDefaults\OpenWish.ServiceDefaults.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
 </Project>

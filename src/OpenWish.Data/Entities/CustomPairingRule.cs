@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class CustomPairingRule
+public class CustomPairingRule : BaseEntity
 {
-    public int CustomPairingRuleId { get; set; }
     public int EventId { get; set; }
     public Event Event { get; set; }
 

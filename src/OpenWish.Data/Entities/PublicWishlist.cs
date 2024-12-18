@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class PublicWishlist
+public class PublicWishlist : BaseEntity
 {
-    public int PublicWishlistId { get; set; }
     public string Name { get; set; }
     public int OwnerId { get; set; }
     public User Owner { get; set; }

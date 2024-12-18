@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class WillPurchase
+public class WillPurchase : BaseEntity
 {
-    public int WillPurchaseId { get; set; }
     public int WishlistItemId { get; set; }
     public WishlistItem WishlistItem { get; set; }
 

@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class User
+public class User : BaseEntity
 {
-    public int UserId { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
     public ICollection<Event> Events { get; set; } // Events the user is part of

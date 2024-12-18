@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class GiftExchange
+public class GiftExchange : BaseEntity
 {
-    public int GiftExchangeId { get; set; }
     public int EventId { get; set; }
     public Event Event { get; set; }
 

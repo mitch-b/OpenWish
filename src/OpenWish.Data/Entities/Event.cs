@@ -1,10 +1,9 @@
 namespace OpenWish.Data.Entities;
 
-public class Event
+public class Event : BaseEntity
 {
-    public int EventId { get; set; }
     public string Name { get; set; }
-    public DateTime Date { get; set; }
+    public DateTimeOffset Date { get; set; }
     public string Description { get; set; }
     public int CreatedByUserId { get; set; }
     public User CreatedBy { get; set; } // Creator of the event

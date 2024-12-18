@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class Wishlist
+public class Wishlist : BaseEntity
 {
-    public int WishlistId { get; set; }
     public string Name { get; set; }
     public int? OwnerId { get; set; } // Nullable if shared directly to event
     public User Owner { get; set; }

@@ -1,8 +1,7 @@
 namespace OpenWish.Data.Entities;
 
-public class WishlistReaction
+public class WishlistReaction : BaseEntity
 {
-    public int WishlistReactionId { get; set; }
     public int WishlistId { get; set; }
     public Wishlist Wishlist { get; set; }
     public int UserId { get; set; }

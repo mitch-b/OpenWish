@@ -16,6 +16,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{B105AD
 		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Data", "OpenWish.Data\OpenWish.Data.csproj", "{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Common", "OpenWish.Common\OpenWish.Common.csproj", "{33DD898C-2994-4DCA-82B6-6FF4D96D5054}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +42,14 @@ Global
 		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33DD898C-2994-4DCA-82B6-6FF4D96D5054}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33DD898C-2994-4DCA-82B6-6FF4D96D5054}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33DD898C-2994-4DCA-82B6-6FF4D96D5054}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33DD898C-2994-4DCA-82B6-6FF4D96D5054}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -6,10 +6,10 @@ public class GiftExchange : BaseEntity
     public Event Event { get; set; }
 
     public int GiverId { get; set; }
-    public User Giver { get; set; }
+    public OpenWishUser Giver { get; set; }
 
     public int ReceiverId { get; set; }
-    public User Receiver { get; set; }
+    public OpenWishUser Receiver { get; set; }
 
     public bool IsAnonymous { get; set; } // Indicates if the pairing is anonymous
     public string ReceiverPreferences { get; set; } // Receiver's gift preferences or notes

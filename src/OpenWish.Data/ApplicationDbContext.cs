@@ -10,7 +10,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     // Magic string.
     public static readonly string OpenWishDb = nameof(OpenWishDb).ToLower();
     
-    public DbSet<User> Users { get; set; }
+    public DbSet<OpenWishUser> OpenWishUsers { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<Wishlist> Wishlists { get; set; }
     public DbSet<WishlistItem> WishlistItems { get; set; }

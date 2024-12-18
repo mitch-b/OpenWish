@@ -6,5 +6,5 @@ public class WillPurchase : BaseEntity
     public WishlistItem WishlistItem { get; set; }
 
     public int PurchaserId { get; set; }
-    public User Purchaser { get; set; }
+    public OpenWishUser Purchaser { get; set; }
 }

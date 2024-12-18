@@ -1,6 +1,6 @@
 namespace OpenWish.Data.Entities;
 
-public class User : BaseEntity
+public class OpenWishUser : BaseEntity
 {
     public string Name { get; set; }
     public string Email { get; set; }

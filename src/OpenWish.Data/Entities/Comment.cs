@@ -6,5 +6,5 @@ public class Comment : BaseEntity
     public int WishlistItemId { get; set; }
     public WishlistItem WishlistItem { get; set; }
     public int UserId { get; set; }
-    public User User { get; set; }
+    public OpenWishUser OpenWishUser { get; set; }
 }

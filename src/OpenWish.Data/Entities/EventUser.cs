@@ -6,7 +6,7 @@ public class EventUser : BaseEntity
     public Event Event { get; set; }
 
     public int UserId { get; set; }
-    public User User { get; set; }
+    public OpenWishUser OpenWishUser { get; set; }
 
     public DateTimeOffset InvitationDate { get; set; }
     public bool IsAccepted { get; set; }

@@ -4,7 +4,7 @@ public class Wishlist : BaseEntity
 {
     public string Name { get; set; }
     public int? OwnerId { get; set; } // Nullable if shared directly to event
-    public User Owner { get; set; }
+    public OpenWishUser Owner { get; set; }
     public int? EventId { get; set; } // Nullable if a personal wishlist
     public Event Event { get; set; }
     public ICollection<WishlistItem> Items { get; set; } // Items in the wishlist

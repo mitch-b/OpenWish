@@ -41,8 +41,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    Console.WriteLine("Applying migrations after 10 sec...");
-    await Task.Delay(10000);
+    Console.WriteLine("Applying migrations after 3 sec...");
+    await Task.Delay(3000);
     await db.Database.MigrateAsync();
 }
 

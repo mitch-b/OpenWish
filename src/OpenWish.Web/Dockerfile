@@ -1,20 +1,12 @@
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
 WORKDIR /app
 EXPOSE 80
 
-FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
-ARG TARGETPLATFORM
-ARG TARGETOS
-ARG TARGETARCH
-ARG TARGETVARIANT
-ARG BUILDPLATFORM
-ARG BUILDOS
-ARG BUILDARCH
-ARG BUILDVARIANT
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 
-RUN echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM"
-RUN echo "Building on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}"
-RUN echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}"
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG BUILD_CONFIGURATION=Release
 
 WORKDIR /src
 
@@ -29,10 +21,10 @@ RUN dotnet restore "OpenWish.Web/OpenWish.Web.csproj"
 # Copy the rest of the code and publish
 COPY . .
 RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
-    -c Release \
+    -c $BUILD_CONFIGURATION \
     -o /app/publish \
     /p:UseAppHost=false \
-    --runtime $TARGETPLATFORM \
+    --arch $TARGETARCH \
     --self-contained false
 
 FROM base AS final

@@ -2,9 +2,10 @@
 
 Shareable wishlists. A web application intended for selfhosting.
 
-* [.NET 8](https://dot.net/)
-* Blazor [Auto Rendering Modes](https://learn.microsoft.com/en-us/aspnet/core/blazor/components/render-modes?view=aspnetcore-8.0) (Server + WebAssembly)
-* Entity Framework Core
+* [.NET 9](https://dot.net/)
+* Blazor Server App (user interface)
+* ASP.NET Core API server
+* Entity Framework Core managed data
 
 ## Screenshots
 
@@ -24,11 +25,50 @@ TODO
 
 ## Installation
 
-### Docker-Compose
+### Docker Compose
 
-TODO
+Since OpenWish is built to be a multi-component solution, docker compose can be the easiest way to get up and running!
 
-(incl. GitHub actions to publish ghcr image)
+```yaml
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - openwish-data:/var/opt/mssql
+
+  openwish-api:
+    build: ./src/OpenWish.ApiService
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sql;Database=YourDatabase;User Id=sa;Password=YourStrong!Passw0rd;
+      - ConnectionStrings__DefaultConnection__Host=sql
+      - ConnectionStrings__DefaultConnection__Database=OpenWishDb
+      - ConnectionStrings__DefaultConnection__UserId=sa
+      - ConnectionStrings__DefaultConnection__Password=YourStrong!Passw0rd
+      - 
+    ports:
+      - "5000:80"
+    depends_on:
+      - sql
+
+  web:
+    build: ./src/OpenWish.Web
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ApiService__BaseUrl=http://openwish-api:80
+    ports:
+      - "5001:80"
+    depends_on:
+      - api
+
+volumes:
+  openwish-data:
+```
 
 ### Local Docker
 
@@ -50,19 +90,6 @@ dotnet user-secrets set EmailConfig:SmtpUser myuser
 dotnet user-secrets set EmailConfig:SmtpPass mypass
 dotnet user-secrets set EmailConfig:SmtpHost my-smtp.host.com
 dotnet user-secrets set EmailConfig:SmtpPort 587
-```
-
-On devcontainer, sometimes the port is still in use. Open terminal:
-
-```bash
-fuser -k 5065/tcp
-```
-
-On MacOS:
-
-```bash
-lsof -i :5955
-kill -9 <PID>
 ```
 
 ## License

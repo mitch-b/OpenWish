@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\OpenWish.ServiceDefaults\OpenWish.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\OpenWish.Common\OpenWish.Common.csproj" />
+    <ProjectReference Include="..\OpenWish.Data\OpenWish.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+</Project>

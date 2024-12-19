@@ -1,5 +1,3 @@
-# Accept build platform argument
-ARG TARGETPLATFORM
 FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
 WORKDIR /app
 EXPOSE 80
@@ -9,11 +7,9 @@ ARG TARGETPLATFORM
 WORKDIR /src
 
 # Set architecture-specific variables
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    export DOTNET_RUNTIME_IDENTIFIER=linux-x64 ; \
-    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
-    export DOTNET_RUNTIME_IDENTIFIER=linux-arm64 ; \
-    fi
+ENV DOTNET_RUNTIME_IDENTIFIER=${TARGETPLATFORM:+${TARGETPLATFORM/linux\//linux-}} \
+    DOTNET_RUNTIME_IDENTIFIER=${DOTNET_RUNTIME_IDENTIFIER/arm64/arm64} \
+    DOTNET_RUNTIME_IDENTIFIER=${DOTNET_RUNTIME_IDENTIFIER/amd64/x64}
 
 # Copy solution and project files first
 COPY ["*.props", "./"]
@@ -23,9 +19,9 @@ COPY ["OpenWish.Common/OpenWish.Common.csproj", "OpenWish.Common/"]
 COPY ["OpenWish.Data/OpenWish.Data.csproj", "OpenWish.Data/"]
 RUN dotnet restore "OpenWish.ApiService/OpenWish.ApiService.csproj"
 
-# Copy the rest of the code
+# Copy the rest of the code and publish
 COPY . .
-RUN dotnet publish OpenWish.ApiService/OpenWish.ApiService.csproj \
+RUN dotnet publish "OpenWish.ApiService/OpenWish.ApiService.csproj" \
     -c Release \
     -o /app/publish \
     /p:UseAppHost=false \

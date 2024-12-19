@@ -4,12 +4,19 @@ EXPOSE 80
 
 FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 ARG TARGETPLATFORM
-WORKDIR /src
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+ARG BUILDPLATFORM
+ARG BUILDOS
+ARG BUILDARCH
+ARG BUILDVARIANT
 
-# Set architecture-specific variables
-ENV DOTNET_RUNTIME_IDENTIFIER=${TARGETPLATFORM:+${TARGETPLATFORM/linux\//linux-}} \
-    DOTNET_RUNTIME_IDENTIFIER=${DOTNET_RUNTIME_IDENTIFIER/arm64/arm64} \
-    DOTNET_RUNTIME_IDENTIFIER=${DOTNET_RUNTIME_IDENTIFIER/amd64/x64}
+RUN echo "Building on $BUILDPLATFORM, targeting $TARGETPLATFORM"
+RUN echo "Building on ${BUILDOS} and ${BUILDARCH} with optional variant ${BUILDVARIANT}"
+RUN echo "Targeting ${TARGETOS} and ${TARGETARCH} with optional variant ${TARGETVARIANT}"
+
+WORKDIR /src
 
 # Copy solution and project files first
 COPY ["*.props", "./"]
@@ -25,7 +32,7 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
     -c Release \
     -o /app/publish \
     /p:UseAppHost=false \
-    --runtime $DOTNET_RUNTIME_IDENTIFIER \
+    --runtime $TARGETPLATFORM \
     --self-contained false
 
 FROM base AS final

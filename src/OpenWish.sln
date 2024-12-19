@@ -12,8 +12,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenWish.Web", "OpenWish.We
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{B105AD27-7D89-4A9B-B1A7-F93966A96DDE}"
 	ProjectSection(SolutionItems) = preProject
+					..\.github\workflows\docker-image.yml = ..\.github\workflows\docker-image.yml
 		Directory.Packages.props = Directory.Packages.props
 		Directory.Build.props = Directory.Build.props
+		nuget.config = nuget.config
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Data", "OpenWish.Data\OpenWish.Data.csproj", "{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}"

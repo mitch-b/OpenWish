@@ -13,7 +13,7 @@ COPY ["OpenWish.Data/OpenWish.Data.csproj", "OpenWish.Data/"]
 RUN dotnet restore "OpenWish.ApiService/OpenWish.ApiService.csproj"
 # Copy the rest of the code
 COPY . .
-RUN dotnet publish "OpenWish.ApiService/OpenWish.ApiService.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish OpenWish.ApiService/OpenWish.ApiService.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

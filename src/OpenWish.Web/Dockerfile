@@ -5,6 +5,7 @@ EXPOSE 80
 FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 WORKDIR /src
 # Copy solution and project files first
+COPY ["*.props", "./"]
 COPY ["OpenWish.Web/OpenWish.Web.csproj", "OpenWish.Web/"]
 COPY ["OpenWish.Common/OpenWish.Common.csproj", "OpenWish.Common/"]
 COPY ["OpenWish.Data/OpenWish.Data.csproj", "OpenWish.Data/"]

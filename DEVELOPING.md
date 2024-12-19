@@ -1,5 +1,16 @@
 # Development Guide
 
+## Aspire Secrets
+
+To run a local SQL Server instance, you must give a password for the `sa` account. Use dotnet user secrets for this.
+
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
+```
+
+The secret will be passed into ApiService automatically (well, from Aspire).
+
 ## EntityFramework Core Changes
 
 The EFCore context is found in the [OpenWish.Data](./src/OpenWish.Data) project as a reference, but the [OpenWish.ApiService](./src/OpenWish.ApiService) project owns running the Migrations on Startup. 

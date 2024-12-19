@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenWish.Common.Extensions;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 
@@ -14,6 +15,8 @@ builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+builder.Services.AddOpenWishCommonServices(builder.Configuration);
+
 // Add Identity with default token providers
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     options.Password.RequireDigit = true;
@@ -27,8 +30,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 
 // Add EF Core with SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options => {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    var connectionString = builder.Configuration.GetConnectionString("OpenWish")
+        ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
     options.UseSqlServer(connectionString);
 });
 
@@ -38,6 +41,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    Console.WriteLine("Applying migrations after 10 sec...");
+    await Task.Delay(10000);
     await db.Database.MigrateAsync();
 }
 

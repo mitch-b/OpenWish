@@ -16,7 +16,8 @@
             "env": {
             },
             "launchSettingsFilePath": "${workspaceFolder}/src/OpenWish.AppHost/Properties/launchSettings.json",
-            "launchSettingsProfile": "https"
+            "launchSettingsProfile": "https",
+            "requireExactSource": false
         }
     ]
 }

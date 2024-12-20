@@ -23,6 +23,41 @@ TODO
 * Add users and share wishlists (admin user)
 * Allow anonymous access (optional feature)
 
+## AI Described Features
+
+OpenWish is designed to facilitate gift-giving events and wishlists with social features, making it suitable for managing occasions like Secret Santa, birthdays, or holiday gift exchanges.
+
+**Core Features**
+
+* User Management: 
+  * Supports identity/authentication
+* Event System:
+  * Create and manage events with configurable budgets
+  * Support for copying/cloning existing events
+  * Track event participants
+
+**Wishlist Features**
+
+* Wishlist Management:
+  * Users can create multiple wishlists
+  * Support for both private and public wishlists
+  * Add/remove items to wishlists
+
+**Social Features**
+
+* Comment on wishlists
+* React to wishlists
+* Comment on items
+* React to items
+
+**Gift Exchange Features**
+
+* Gift Exchange Coordination:
+  * Track who is giving gifts to whom
+  * Manage purchase intentions
+  * Set up custom pairing rules for gift exchanges
+  * Support for notifications
+
 ## Installation
 
 ### Docker Compose

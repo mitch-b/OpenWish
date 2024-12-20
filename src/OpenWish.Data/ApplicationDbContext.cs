@@ -28,6 +28,48 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Event>()
+            .HasOne(e => e.CopiedFromEvent)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Event>()
+            .Property(e => e.Budget)
+            .HasColumnType("decimal(11,2)");
+
+        modelBuilder.Entity<CustomPairingRule>()
+            .HasOne(cpr => cpr.SourceOpenWishUser)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+        
+        modelBuilder.Entity<CustomPairingRule>()
+            .HasOne(cpr => cpr.TargetOpenWishUser)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<EventUser>()
+            .HasOne(eu => eu.OpenWishUser)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<GiftExchange>()
+            .HasOne(ge => ge.Receiver)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<GiftExchange>()
+            .Property(e => e.Budget)
+            .HasColumnType("decimal(11,2)");
+        
+        modelBuilder.Entity<GiftExchange>()
+            .HasOne(ge => ge.Giver)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<WishlistItem>()
+            .Property(wli => wli.Price)
+            .HasColumnType("decimal(11,2)");
+
         SqlDefaultValueAttributeConvention.Apply(modelBuilder);
     }
 

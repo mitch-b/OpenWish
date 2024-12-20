@@ -186,7 +186,7 @@ namespace OpenWish.Data.Migrations
                     CreatedById = table.Column<int>(type: "int", nullable: false),
                     CopiedFromEventId = table.Column<int>(type: "int", nullable: false),
                     IsRecurring = table.Column<bool>(type: "bit", nullable: false),
-                    Budget = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Budget = table.Column<decimal>(type: "decimal(11,2)", nullable: true),
                     IsGiftExchange = table.Column<bool>(type: "bit", nullable: false),
                     Tags = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Deleted = table.Column<bool>(type: "bit", nullable: false),
@@ -200,8 +200,7 @@ namespace OpenWish.Data.Migrations
                         name: "FK_Events_Events_CopiedFromEventId",
                         column: x => x.CopiedFromEventId,
                         principalTable: "Events",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Events_OpenWishUsers_CreatedById",
                         column: x => x.CreatedById,
@@ -291,14 +290,12 @@ namespace OpenWish.Data.Migrations
                         name: "FK_CustomPairingRules_OpenWishUsers_SourceOpenWishUserId",
                         column: x => x.SourceOpenWishUserId,
                         principalTable: "OpenWishUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_CustomPairingRules_OpenWishUsers_TargetOpenWishUserId",
                         column: x => x.TargetOpenWishUserId,
                         principalTable: "OpenWishUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -330,8 +327,7 @@ namespace OpenWish.Data.Migrations
                         name: "FK_EventUser_OpenWishUsers_OpenWishUserId",
                         column: x => x.OpenWishUserId,
                         principalTable: "OpenWishUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -345,7 +341,7 @@ namespace OpenWish.Data.Migrations
                     ReceiverId = table.Column<int>(type: "int", nullable: false),
                     IsAnonymous = table.Column<bool>(type: "bit", nullable: false),
                     ReceiverPreferences = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Budget = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Budget = table.Column<decimal>(type: "decimal(11,2)", nullable: true),
                     Deleted = table.Column<bool>(type: "bit", nullable: false),
                     RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: true),
                     CreatedOn = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, defaultValueSql: "GETUTCDATE()")
@@ -363,14 +359,12 @@ namespace OpenWish.Data.Migrations
                         name: "FK_GiftExchanges_OpenWishUsers_GiverId",
                         column: x => x.GiverId,
                         principalTable: "OpenWishUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_GiftExchanges_OpenWishUsers_ReceiverId",
                         column: x => x.ReceiverId,
                         principalTable: "OpenWishUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -443,7 +437,7 @@ namespace OpenWish.Data.Migrations
                     Url = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Image = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Price = table.Column<decimal>(type: "decimal(11,2)", nullable: true),
                     WhereToBuy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     WishlistId = table.Column<int>(type: "int", nullable: false),
                     IsPrivate = table.Column<bool>(type: "bit", nullable: false),

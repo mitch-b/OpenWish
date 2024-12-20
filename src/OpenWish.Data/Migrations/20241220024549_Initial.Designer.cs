@@ -12,7 +12,7 @@ using OpenWish.Data;
 namespace OpenWish.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241219032240_Initial")]
+    [Migration("20241220024549_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -330,7 +330,7 @@ namespace OpenWish.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("Budget")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(11,2)");
 
                     b.Property<int>("CopiedFromEventId")
                         .HasColumnType("int");
@@ -442,7 +442,7 @@ namespace OpenWish.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("Budget")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(11,2)");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
@@ -813,7 +813,7 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Price")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(11,2)");
 
                     b.Property<int>("Priority")
                         .HasColumnType("int");
@@ -970,13 +970,13 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "SourceOpenWishUser")
                         .WithMany()
                         .HasForeignKey("SourceOpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "TargetOpenWishUser")
                         .WithMany()
                         .HasForeignKey("TargetOpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Event");
@@ -991,7 +991,7 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.Event", "CopiedFromEvent")
                         .WithMany()
                         .HasForeignKey("CopiedFromEventId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "CreatedBy")
@@ -1016,7 +1016,7 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
                         .WithMany()
                         .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Event");
@@ -1035,13 +1035,13 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Giver")
                         .WithMany()
                         .HasForeignKey("GiverId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Event");

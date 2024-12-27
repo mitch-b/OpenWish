@@ -14,7 +14,7 @@ WORKDIR /src
 COPY ["*.props", "./"]
 COPY ["nuget.config", "./"]
 COPY ["OpenWish.Web/OpenWish.Web.csproj", "OpenWish.Web/"]
-COPY ["OpenWish.Common/OpenWish.Common.csproj", "OpenWish.Common/"]
+COPY ["OpenWish.Application/OpenWish.Application.csproj", "OpenWish.Application/"]
 COPY ["OpenWish.Data/OpenWish.Data.csproj", "OpenWish.Data/"]
 RUN dotnet restore "OpenWish.Web/OpenWish.Web.csproj"
 

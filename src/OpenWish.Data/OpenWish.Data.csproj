@@ -14,7 +14,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\OpenWish.Common\OpenWish.Common.csproj" />
+        <ProjectReference Include="..\OpenWish.Application\OpenWish.Application.csproj" />
     </ItemGroup>
 
 </Project>

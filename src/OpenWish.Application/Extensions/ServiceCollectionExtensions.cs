@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenWish.Common.Models.Configuration;
+using OpenWish.Application.Models.Configuration;
 
-namespace OpenWish.Common.Extensions;
+namespace OpenWish.Application.Extensions;
 
 public static class ServiceCollectionExtensions
 {

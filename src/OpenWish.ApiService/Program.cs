@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using OpenWish.Common.Extensions;
+using OpenWish.Application.Extensions;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 

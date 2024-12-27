@@ -1,4 +1,4 @@
-namespace OpenWish.Common.Models.Configuration;
+namespace OpenWish.Application.Models.Configuration;
 
 public record OpenAISettings
 {

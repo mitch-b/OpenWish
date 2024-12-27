@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpenWish.ServiceDefaults\OpenWish.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\OpenWish.Common\OpenWish.Common.csproj" />
+    <ProjectReference Include="..\OpenWish.Application\OpenWish.Application.csproj" />
     <ProjectReference Include="..\OpenWish.Data\OpenWish.Data.csproj" />
   </ItemGroup>
 

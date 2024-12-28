@@ -25,8 +25,8 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
     /p:UseAppHost=false \
-    --arch $TARGETARCH \
-    --self-contained false
+    --arch $TARGETARCH 
+    # --self-contained false
 
 FROM base AS final
 WORKDIR /app

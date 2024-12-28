@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 
-namespace OpenWish.Server.Components.Account;
+namespace OpenWish.Web.Components.Account;
 
 internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {

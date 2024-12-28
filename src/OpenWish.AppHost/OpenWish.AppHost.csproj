@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OpenWish.Server\OpenWish.Server.csproj" />
+    <ProjectReference Include="..\OpenWish.Web\OpenWish.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

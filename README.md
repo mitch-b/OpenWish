@@ -76,7 +76,7 @@ services:
       - openwish-data:/var/opt/mssql
 
   web:
-    build: ./src/OpenWish.Server
+    build: ./src/OpenWish.Web
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;

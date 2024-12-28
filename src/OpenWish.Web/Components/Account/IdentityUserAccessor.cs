@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using OpenWish.Data.Entities;
 
-namespace OpenWish.Server.Components.Account;
+namespace OpenWish.Web.Components.Account;
 
 internal sealed class IdentityUserAccessor(UserManager<ApplicationUser> userManager, IdentityRedirectManager redirectManager)
 {

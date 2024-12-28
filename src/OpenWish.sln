@@ -26,9 +26,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".docs", ".docs", "{64501CDC
 		..\TODO.md = ..\TODO.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Server", "OpenWish.Server\OpenWish.Server.csproj", "{DA0EFE30-1ACF-2A1A-C6F4-795254898382}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Web", "OpenWish.Web\OpenWish.Web.csproj", "{DA0EFE30-1ACF-2A1A-C6F4-795254898382}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Server.Client", "OpenWish.Server.Client\OpenWish.Server.Client.csproj", "{36F6E7C3-E8C7-ADCA-912C-66D624EA3B68}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Web.Client", "OpenWish.Web.Client\OpenWish.Web.Client.csproj", "{36F6E7C3-E8C7-ADCA-912C-66D624EA3B68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

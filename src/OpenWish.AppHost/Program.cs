@@ -11,7 +11,7 @@ var sql = builder.AddSqlServer(sqlHostName, sqlPassword)
 
 var db = sql.AddDatabase(sqlDatabaseName);
 
-builder.AddProject<Projects.OpenWish_Server>("openwish-web")
+builder.AddProject<Projects.OpenWish_Web>("openwish-web")
     .WithExternalHttpEndpoints()
     .WithReference(db)
     .WaitFor(db);

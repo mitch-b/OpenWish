@@ -11,17 +11,9 @@ var sql = builder.AddSqlServer(sqlHostName, sqlPassword)
 
 var db = sql.AddDatabase(sqlDatabaseName);
 
-var apiService = builder.AddProject<Projects.OpenWish_ApiService>("apiservice")
-    .WithReference(db)
-    .WithEnvironment("OpenWishSettings__Database__Host", $"{sqlHostName}:32772")
-    .WithEnvironment("OpenWishSettings__Database__Name", sqlDatabaseName)
-    .WithEnvironment("OpenWishSettings__Database__User", "sa")
-    .WithEnvironment("OpenWishSettings__Database__Password", sqlPassword.Resource.Value)
-    .WaitFor(db);
-
-builder.AddProject<Projects.OpenWish_Web>("webfrontend")
+builder.AddProject<Projects.OpenWish_Web>("openwish-web")
     .WithExternalHttpEndpoints()
-    .WithReference(apiService)
-    .WaitFor(apiService);
+    .WithReference(db)
+    .WaitFor(db);
 
 builder.Build().Run();

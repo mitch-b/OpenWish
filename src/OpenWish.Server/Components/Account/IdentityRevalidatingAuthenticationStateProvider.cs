@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using OpenWish.Server.Data;
+using OpenWish.Data.Entities;
 
 namespace OpenWish.Server.Components.Account;
 

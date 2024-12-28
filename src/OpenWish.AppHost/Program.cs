@@ -11,18 +11,9 @@ var sql = builder.AddSqlServer(sqlHostName, sqlPassword)
 
 var db = sql.AddDatabase(sqlDatabaseName);
 
-var apiService = builder.AddProject<Projects.OpenWish_ApiService>("apiservice")
-    .WithReference(db)
-    .WaitFor(db);
-
 builder.AddProject<Projects.OpenWish_Server>("openwish-web")
     .WithExternalHttpEndpoints()
-    .WithReference(apiService)
-    .WaitFor(apiService);
-
-builder.AddProject<Projects.OpenWish_Web>("webfrontend")
-    .WithExternalHttpEndpoints()
-    .WithReference(apiService)
-    .WaitFor(apiService);
+    .WithReference(db)
+    .WaitFor(db);
 
 builder.Build().Run();

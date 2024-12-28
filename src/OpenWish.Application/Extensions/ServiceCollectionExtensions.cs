@@ -6,7 +6,7 @@ namespace OpenWish.Application.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddOpenWishCommonServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddOpenWishApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<OpenWishSettings>(configuration.GetSection(nameof(OpenWishSettings)));
         return services;

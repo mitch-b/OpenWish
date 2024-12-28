@@ -28,7 +28,7 @@ builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddOpenWishCommonServices(builder.Configuration);
+builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 
 // Add Identity with default token providers
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {

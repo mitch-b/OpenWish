@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using OpenWish.Server.Data;
+using OpenWish.Data.Entities;
 
 namespace OpenWish.Server.Components.Account;
 

@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using OpenWish.Application.Extensions;
+using OpenWish.Data;
+using OpenWish.Data.Entities;
 using OpenWish.Server.Client.Pages;
 using OpenWish.Server.Components;
 using OpenWish.Server.Components.Account;
-using OpenWish.Server.Data;
+using OpenWish.Data.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,7 +46,18 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.AddOpenWishApplicationServices(builder.Configuration);
+
 var app = builder.Build();
+
+// Apply migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    Console.WriteLine("Applying migrations after 3 sec...");
+    await Task.Delay(TimeSpan.FromSeconds(3));
+    await db.Database.MigrateAsync();
+}
 
 app.MapDefaultEndpoints();
 

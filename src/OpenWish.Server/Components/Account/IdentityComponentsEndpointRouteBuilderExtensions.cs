@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using OpenWish.Server.Components.Account.Pages;
 using OpenWish.Server.Components.Account.Pages.Manage;
-using OpenWish.Server.Data;
+using OpenWish.Data.Entities;
 
 namespace Microsoft.AspNetCore.Routing;
 

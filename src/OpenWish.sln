@@ -6,10 +6,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenWish.AppHost", "OpenWis
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenWish.ServiceDefaults", "OpenWish.ServiceDefaults\OpenWish.ServiceDefaults.csproj", "{25FEC7F7-3773-4F00-826C-C639F9D3B922}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenWish.ApiService", "OpenWish.ApiService\OpenWish.ApiService.csproj", "{C9297535-12AB-491A-A703-FCFF3A0A22B2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenWish.Web", "OpenWish.Web\OpenWish.Web.csproj", "{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".build", ".build", "{B105AD27-7D89-4A9B-B1A7-F93966A96DDE}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Build.props = Directory.Build.props
@@ -24,6 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Application", "Ope
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".docs", ".docs", "{64501CDC-16E3-4456-8AE9-AC854948E94A}"
 	ProjectSection(SolutionItems) = preProject
+		..\DEVELOPING.md = ..\DEVELOPING.md
 		..\LICENSE = ..\LICENSE
 		..\README.md = ..\README.md
 		..\TODO.md = ..\TODO.md
@@ -32,8 +29,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Server", "OpenWish.Server\OpenWish.Server.csproj", "{DA0EFE30-1ACF-2A1A-C6F4-795254898382}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenWish.Server.Client", "OpenWish.Server.Client\OpenWish.Server.Client.csproj", "{36F6E7C3-E8C7-ADCA-912C-66D624EA3B68}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity", "Identity", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,14 +44,6 @@ Global
 		{25FEC7F7-3773-4F00-826C-C639F9D3B922}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25FEC7F7-3773-4F00-826C-C639F9D3B922}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25FEC7F7-3773-4F00-826C-C639F9D3B922}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C9297535-12AB-491A-A703-FCFF3A0A22B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C9297535-12AB-491A-A703-FCFF3A0A22B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C9297535-12AB-491A-A703-FCFF3A0A22B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C9297535-12AB-491A-A703-FCFF3A0A22B2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{35F0D670-3C77-472A-83DA-2D7CCBA17A5C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B6629D9-DBD6-4CD4-90F0-252012EEC8EF}.Release|Any CPU.ActiveCfg = Release|Any CPU

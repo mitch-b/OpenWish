@@ -1,4 +1,4 @@
-name: Create Images
+name: Create Docker image
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   OWNER: ${{ github.repository_owner }}
-  API_IMAGE: openwish-api
+  # API_IMAGE: openwish-api
   WEB_IMAGE: openwish-web
   
 jobs:
@@ -33,31 +33,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate Docker metadata for API
-        id: meta-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.API_IMAGE }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=sha,format=short
-            type=ref,event=branch
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value={{date 'YYYY'}}{{date 'MM'}},enable={{is_default_branch}}
-
-
-      - name: Build and push API image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./src
-          file: ./src/OpenWish.ApiService/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       - name: Generate Docker metadata for Web
         id: meta-web
         uses: docker/metadata-action@v5
@@ -68,12 +43,13 @@ jobs:
             type=sha,format=short
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value={{date 'YYYY'}}{{date 'MM'}},enable={{is_default_branch}}
 
       - name: Build and push Web image
         uses: docker/build-push-action@v5
         with:
           context: ./src
-          file: ./src/OpenWish.Web/Dockerfile
+          file: ./src/OpenWish.Server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-web.outputs.tags }}

@@ -4,7 +4,6 @@ Shareable wishlists. A web application intended for selfhosting.
 
 * [.NET 9](https://dot.net/)
 * Blazor Server App (user interface)
-* ASP.NET Core API server
 * Entity Framework Core managed data
 
 ## Screenshots
@@ -76,40 +75,18 @@ services:
     volumes:
       - openwish-data:/var/opt/mssql
 
-  openwish-api:
-    build: ./src/OpenWish.ApiService
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sql;Database=YourDatabase;User Id=sa;Password=YourStrong!Passw0rd;
-      - ConnectionStrings__DefaultConnection__Host=sql
-      - ConnectionStrings__DefaultConnection__Database=OpenWishDb
-      - ConnectionStrings__DefaultConnection__UserId=sa
-      - ConnectionStrings__DefaultConnection__Password=YourStrong!Passw0rd
-      - 
-    ports:
-      - "5000:80"
-    depends_on:
-      - sql
-
   web:
-    build: ./src/OpenWish.Web
+    build: ./src/OpenWish.Server
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ApiService__BaseUrl=http://openwish-api:80
+      - ConnectionStrings__DefaultConnection=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;
     ports:
       - "5001:80"
     depends_on:
-      - api
+      - sql
 
 volumes:
   openwish-data:
-```
-
-### Local Docker
-
-```pwsh
-docker build -t openwish:dev .
-docker run -it --rm -p 5000:8080 openwish:dev
 ```
 
 ## Local Development

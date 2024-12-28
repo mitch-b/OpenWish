@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Identity;
-using OpenWish.Server.Data;
+using OpenWish.Data.Entities;
 
 namespace OpenWish.Server.Components.Account;
 

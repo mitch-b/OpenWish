@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\OpenWish.ApiService\OpenWish.ApiService.csproj" />
     <ProjectReference Include="..\OpenWish.Web\OpenWish.Web.csproj" />
+    <ProjectReference Include="..\OpenWish.Server\OpenWish.Server.csproj" />
   </ItemGroup>
 
   <ItemGroup>

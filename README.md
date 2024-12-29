@@ -3,10 +3,15 @@
 Shareable wishlists. A web application intended for selfhosting.
 
 * [.NET 9](https://dot.net/)
-* Blazor Server App (user interface)
+* Blazor Server App
 * Entity Framework Core managed data
+* Docker images [published](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
+
+## Developing?
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mitch-b/OpenWish)
+
+See [DEVELOPING.md](./DEVELOPING.md) for additional details.
 
 ## Screenshots
 
@@ -28,7 +33,7 @@ TODO
 
 OpenWish is designed to facilitate gift-giving events and wishlists with social features, making it suitable for managing occasions like Secret Santa, birthdays, or holiday gift exchanges.
 
-**Core Features**
+### Core Features
 
 * User Management: 
   * Supports identity/authentication
@@ -37,21 +42,21 @@ OpenWish is designed to facilitate gift-giving events and wishlists with social 
   * Support for copying/cloning existing events
   * Track event participants
 
-**Wishlist Features**
+### Wishlist Features
 
 * Wishlist Management:
   * Users can create multiple wishlists
   * Support for both private and public wishlists
   * Add/remove items to wishlists
 
-**Social Features**
+### Social Features
 
 * Comment on wishlists
 * React to wishlists
 * Comment on items
 * React to items
 
-**Gift Exchange Features**
+### Gift Exchange Features
 
 * Gift Exchange Coordination:
   * Track who is giving gifts to whom
@@ -73,7 +78,7 @@ services:
       SA_PASSWORD: "YourStrong!Passw0rd"
       ACCEPT_EULA: "Y"
     ports:
-      - "1433:1433"
+      - 1433:1433
     volumes:
       - openwish-data:/var/opt/mssql
 
@@ -81,9 +86,10 @@ services:
     build: ./src/OpenWish.Web
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;
+      - ConnectionStrings__OpenWish=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;Encrypt=optional;
+      - OpenWish__OwnDatabaseUpgrades=true
     ports:
-      - "5001:80"
+      - 5001:8080
     depends_on:
       - sql
 
@@ -92,6 +98,8 @@ volumes:
 ```
 
 > Note: if you choose to bind volume mount the SQL data, see https://stackoverflow.com/a/77808783 to ensure your SQL directory has proper permissions applied.
+
+See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202412`) for managing upgrades.
 
 ## Local Development
 

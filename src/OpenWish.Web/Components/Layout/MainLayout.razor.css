@@ -96,3 +96,8 @@ main {
         right: 0.75rem;
         top: 0.5rem;
     }
+
+.github {
+    height: 1.5rem;
+    width: 1.5rem;
+}

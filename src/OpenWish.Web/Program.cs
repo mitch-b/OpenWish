@@ -56,19 +56,23 @@ using (var provider = builder.Services.BuildServiceProvider())
 {
     var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
-
-    Console.WriteLine($"OpenWishSettings: {JsonSerializer.Serialize(openWishSettings)}");
+        
     // setup email from configuration
-    var fromAddress = string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) 
-        ? null 
-        : openWishSettings.EmailConfig.SmtpFrom;
-    builder.Services
-        .AddFluentEmail(fromAddress)
-        .AddSmtpSender(
-            openWishSettings.EmailConfig?.SmtpHost, 
-            openWishSettings.EmailConfig?.SmtpPort ?? 587,
-            openWishSettings.EmailConfig?.SmtpUser,
-            openWishSettings.EmailConfig?.SmtpPass);
+    if (!string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpFrom)
+        && !string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpHost))
+    {
+        builder.Services
+            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom)
+            .AddSmtpSender(
+                openWishSettings?.EmailConfig?.SmtpHost, 
+                openWishSettings?.EmailConfig?.SmtpPort ?? 587,
+                openWishSettings?.EmailConfig?.SmtpUser,
+                openWishSettings?.EmailConfig?.SmtpPass);
+    }
+    else
+    {
+        Console.WriteLine("Full email configuration not found. Email will not work.");
+    }
 }
 
 var app = builder.Build();

@@ -101,21 +101,6 @@ volumes:
 
 See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202412`) for managing upgrades.
 
-## Local Development
-
-### Secrets Management
-
-```bash
-cd src/OpenWish
-dotnet tool install --global dotnet-ef
-dotnet ef database update
-
-dotnet user-secrets set EmailConfig:SmtpUser myuser
-dotnet user-secrets set EmailConfig:SmtpPass mypass
-dotnet user-secrets set EmailConfig:SmtpHost my-smtp.host.com
-dotnet user-secrets set EmailConfig:SmtpPort 587
-```
-
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

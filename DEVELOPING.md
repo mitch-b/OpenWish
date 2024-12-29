@@ -25,3 +25,16 @@ dotnet ef migrations add Initial --project ../OpenWish.Data/OpenWish.Data.csproj
 ```
 
 > Note: may need `dotnet tool install --global dotnet-ef`
+
+## Secrets Management
+
+Certain components require secret values that shouldn't be in source control -- ever. To solve this for local development, use `dotnet user-secrets`. 
+
+```bash
+cd src/OpenWish.Web
+
+dotnet user-secrets set EmailConfig:SmtpUser myuser
+dotnet user-secrets set EmailConfig:SmtpPass mypass
+dotnet user-secrets set EmailConfig:SmtpHost my-smtp.host.com
+dotnet user-secrets set EmailConfig:SmtpPort 587
+```

@@ -9,7 +9,7 @@ cd src/OpenWish.AppHost
 dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
 ```
 
-The secret will be passed into ApiService automatically (well, from Aspire).
+The secret will be passed into `OpenWish.Web` automatically (well, from Aspire).
 
 ## EntityFramework Core Changes
 

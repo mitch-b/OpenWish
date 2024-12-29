@@ -1,7 +1,32 @@
 ﻿@page "/"
+@inject NavigationManager NavigationManager
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+<table>
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td>NavigationManager.BaseUri</td>
+        <td>@(NavigationManager.BaseUri)</td>
+    </tr>
+    <tr>
+        <td>NavigationManager.Uri</td>
+        <td>@(NavigationManager.Uri)</td>
+    </tr>
+    <tr>
+        <td>NavigationManager.ToAbsoluteUri(NavigationManager.Uri)</td>
+        <td>@(NavigationManager.ToAbsoluteUri(NavigationManager.Uri))</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+    </tr>
+        
+</table>

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using OpenWish.Web.Services;
 using OpenWish.Web.Extensions;
 using System.Text.Json;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +55,9 @@ builder.Services.AddOpenWishWebServices();
 
 using (var provider = builder.Services.BuildServiceProvider())
 {
+    var configuration = provider.GetRequiredService<IConfiguration>();
+    Console.WriteLine("Configuration: " + (configuration as IConfigurationRoot).GetDebugView());
+    
     var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
         
@@ -76,6 +80,17 @@ using (var provider = builder.Services.BuildServiceProvider())
 }
 
 var app = builder.Build();
+
+// // fix Codespaces thinking Navigation BaseUri was localhost
+// var forwardingOptions = new ForwardedHeadersOptions()
+// {
+//     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+// };
+
+// forwardingOptions.KnownNetworks.Clear();
+// forwardingOptions.KnownProxies.Clear();
+
+// app.UseForwardedHeaders(forwardingOptions);
 
 // Apply migrations on startup
 using (var scope = app.Services.CreateScope())

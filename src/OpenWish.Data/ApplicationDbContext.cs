@@ -7,9 +7,6 @@ namespace OpenWish.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    // Magic string.
-    public static readonly string OpenWishDb = nameof(OpenWishDb).ToLower();
-    
     public DbSet<OpenWishUser> OpenWishUsers { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<Wishlist> Wishlists { get; set; }

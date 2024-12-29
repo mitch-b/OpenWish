@@ -56,7 +56,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    var settings = config.GetSection("OpenWish").Get<OpenWishSettings>();
+    var settings = config.GetSection(nameof(OpenWishSettings)).Get<OpenWishSettings>();
     if (settings?.OwnDatabaseUpgrades == true)
     {
         var waitSeconds = 3;

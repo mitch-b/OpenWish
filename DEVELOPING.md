@@ -33,8 +33,8 @@ Certain components require secret values that shouldn't be in source control -- 
 ```bash
 cd src/OpenWish.Web
 
-dotnet user-secrets set EmailConfig:SmtpUser myuser
-dotnet user-secrets set EmailConfig:SmtpPass mypass
-dotnet user-secrets set EmailConfig:SmtpHost my-smtp.host.com
-dotnet user-secrets set EmailConfig:SmtpPort 587
+dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpUser myuser
+dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpPass mypass
+dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpHost my-smtp.host.com
+dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpPort 587
 ```

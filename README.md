@@ -87,7 +87,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__OpenWish=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;Encrypt=optional;
-      - OpenWish__OwnDatabaseUpgrades=true
+      - OpenWishSettings__OwnDatabaseUpgrades=true
     ports:
       - 5001:8080
     depends_on:

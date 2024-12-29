@@ -1,6 +1,5 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS base
 WORKDIR /app
-EXPOSE 80
 
 ENV \    
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \    

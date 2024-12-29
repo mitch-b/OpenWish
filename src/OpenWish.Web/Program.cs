@@ -12,6 +12,7 @@ using OpenWish.Application.Models.Configuration;
 using Microsoft.Extensions.Options;
 using OpenWish.Web.Services;
 using OpenWish.Web.Extensions;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +52,25 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
 
+using (var provider = builder.Services.BuildServiceProvider())
+{
+    var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
+        ?? throw new InvalidOperationException("OpenWishSettings not found.");
+
+    Console.WriteLine($"OpenWishSettings: {JsonSerializer.Serialize(openWishSettings)}");
+    // setup email from configuration
+    var fromAddress = string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) 
+        ? null 
+        : openWishSettings.EmailConfig.SmtpFrom;
+    builder.Services
+        .AddFluentEmail(fromAddress)
+        .AddSmtpSender(
+            openWishSettings.EmailConfig?.SmtpHost, 
+            openWishSettings.EmailConfig?.SmtpPort ?? 587,
+            openWishSettings.EmailConfig?.SmtpUser,
+            openWishSettings.EmailConfig?.SmtpPass);
+}
+
 var app = builder.Build();
 
 // Apply migrations on startup
@@ -70,18 +90,6 @@ using (var scope = app.Services.CreateScope())
     {
         Console.WriteLine("Skipping migrations...");
     }
-
-    // setup email from configuration
-    var fromAddress = string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) 
-        ? null 
-        : openWishSettings.EmailConfig.SmtpFrom;
-    builder.Services
-        .AddFluentEmail(fromAddress)
-        .AddSmtpSender(
-            openWishSettings.EmailConfig?.SmtpHost, 
-            openWishSettings.EmailConfig?.SmtpPort ?? 587,
-            openWishSettings.EmailConfig?.SmtpUser,
-            openWishSettings.EmailConfig?.SmtpPass);
 }
 
 app.MapDefaultEndpoints();

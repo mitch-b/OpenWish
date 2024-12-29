@@ -31,7 +31,7 @@ dotnet ef migrations add Initial --project ../OpenWish.Data/OpenWish.Data.csproj
 Certain components require secret values that shouldn't be in source control -- ever. To solve this for local development, use `dotnet user-secrets`. 
 
 ```bash
-cd src/OpenWish.Web
+cd src/OpenWish.AppHost
 
 dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpUser myuser
 dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpPass mypass

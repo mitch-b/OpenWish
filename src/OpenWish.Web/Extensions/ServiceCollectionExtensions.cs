@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenWishWebServices(this IServiceCollection services)
     {
-        services.AddSingleton<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
+        services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
 
         // Add OpenAIClient to the service collection
         var apiKey = services.BuildServiceProvider().GetRequiredService<IOptions<OpenWishSettings>>().Value?.OpenAI.ApiKey;

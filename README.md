@@ -6,6 +6,8 @@ Shareable wishlists. A web application intended for selfhosting.
 * Blazor Server App (user interface)
 * Entity Framework Core managed data
 
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mitch-b/OpenWish)
+
 ## Screenshots
 
 TODO

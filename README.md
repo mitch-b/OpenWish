@@ -68,7 +68,7 @@ OpenWish is designed to facilitate gift-giving events and wishlists with social 
 
 ### Docker Compose
 
-Since OpenWish is built to be a multi-component solution, docker compose can be the easiest way to get up and running!
+Since OpenWish depends on an external datasource (SQL), if you don't already have a SQL instance to use, you can run a SQL instance alongside the OpenWish application using Docker Compose:
 
 ```yaml
 services:
@@ -83,7 +83,7 @@ services:
       - openwish-data:/var/opt/mssql
 
   web:
-    build: ./src/OpenWish.Web
+    image: ghcr.io/mitch-b/openwish-web:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__OpenWish=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;Encrypt=optional;

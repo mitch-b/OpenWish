@@ -91,6 +91,8 @@ volumes:
   openwish-data:
 ```
 
+> Note: if you choose to bind volume mount the SQL data, see https://stackoverflow.com/a/77808783 to ensure your SQL directory has proper permissions applied.
+
 ## Local Development
 
 ### Secrets Management

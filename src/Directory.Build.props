@@ -5,5 +5,6 @@
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
     <UserSecretsId>openwish-7a370443-2fc2-41e2-9fe4-815e03888f26</UserSecretsId>
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 </Project>

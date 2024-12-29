@@ -2,6 +2,14 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS bas
 WORKDIR /app
 EXPOSE 80
 
+ENV \    
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \    
+    LC_ALL=en_US.UTF-8 \    
+    LANG=en_US.UTF-8
+    RUN apk add --no-cache \    
+    icu-data-full \    
+    icu-libs
+
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 
 ARG TARGETPLATFORM

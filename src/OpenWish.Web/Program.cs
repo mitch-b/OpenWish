@@ -8,6 +8,7 @@ using OpenWish.Web.Client.Pages;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
 using OpenWish.Data.Entities;
+using OpenWish.Application.Models.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,9 +55,19 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    Console.WriteLine("Applying migrations after 3 sec...");
-    await Task.Delay(TimeSpan.FromSeconds(3));
-    await db.Database.MigrateAsync();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var settings = config.GetSection("OpenWish").Get<OpenWishSettings>();
+    if (settings?.OwnDatabaseUpgrades == true)
+    {
+        var waitSeconds = 3;
+        Console.WriteLine($"Applying migrations after {waitSeconds} seconds...");
+        await Task.Delay(TimeSpan.FromSeconds(waitSeconds));
+        await db.Database.MigrateAsync();
+    }
+    else
+    {
+        Console.WriteLine("Skipping migrations...");
+    }
 }
 
 app.MapDefaultEndpoints();

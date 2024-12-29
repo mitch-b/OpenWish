@@ -6,8 +6,8 @@
 1. Project Structure
    - [x] Create Data project for EF Core
    - [x] Create Shared project for models
-   - [ ] Set up authentication infrastructure (ASP.NET Identity with Blazor Server)
-   - [ ] Confirm automatic migrations
+   - [x] Set up authentication infrastructure (ASP.NET Identity with Blazor Server)
+   - [x] Confirm automatic migrations
 
 2. Core Services Layer
    - [ ] User management service

@@ -6,11 +6,13 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using OpenWish.Data.Entities
+@using OpenWish.Web.Services
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IBaseUriService BaseUriService
 
 <PageTitle>Resend email confirmation</PageTitle>
 
@@ -52,7 +54,7 @@
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 
@@ -66,3 +68,11 @@
         public string Email { get; set; } = "";
     }
 }
+    using OpenWish.Web.Services;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 2 "/workspaces/OpenWish/src/OpenWish.Web/Components/Account/Pages/_Imports.razor"
+    

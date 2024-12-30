@@ -27,10 +27,9 @@ public class BaseUriService: IBaseUriService
 
     public Uri GetBaseUri()
     {
-        // read from IOptions<OpenWishSettings> and grab BaseUri
+        // read from IOptions<OpenWishSettings> and grab BaseUri - overrides all other ways of deriving
         if (!string.IsNullOrWhiteSpace(_openWishSettings.Value.BaseUri))
         {
-            Console.WriteLine($"BaseUri from OpenWishSettings: {_openWishSettings.Value.BaseUri}");
             return new Uri(_openWishSettings.Value.BaseUri);
         }
 
@@ -43,12 +42,11 @@ public class BaseUriService: IBaseUriService
             {
                 var codespaceName = _configuration.GetValue<string>("CODESPACE_NAME");
                 var portForwardingDomain = _configuration.GetValue<string>("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN");
-                Console.WriteLine($"BaseUri from Codespace: https://{codespaceName}-{port}.{portForwardingDomain}");
-                return new Uri($"https://{codespaceName}-{port}.{portForwardingDomain}");
+                var stitchedUri = $"https://{codespaceName}-{port}.{portForwardingDomain}/";
+                return new Uri(stitchedUri, UriKind.Absolute);
             }
         }
 
-        Console.WriteLine($"BaseUri from NavigationManager: {_navigationManager.BaseUri}");
         return new Uri(_navigationManager.BaseUri);
     }
 
@@ -57,10 +55,8 @@ public class BaseUriService: IBaseUriService
 
     public string ToBaseRelativePath(string uri)
     {
-        if (!Uri.TryCreate(uri, UriKind.Absolute, out _))
-        {
-            uri = ToAbsoluteUri(uri).ToString();
-        }
-        return GetBaseUri().MakeRelativeUri(new Uri(uri)).ToString();
+        var baseUri = GetBaseUri();
+        var newUri = new Uri(baseUri, uri);
+        return baseUri.MakeRelativeUri(newUri).ToString();
     }
 }

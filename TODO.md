@@ -10,14 +10,14 @@
    - [x] Confirm automatic migrations
 
 2. Core Services Layer
-   - [ ] User management service
+   - [x] User management service
    - [ ] Wishlist service
    - [ ] Item management service
-   - [ ] Configure dependency injection
+   - [x] Configure dependency injection
 
 3. Blazor Server UI
-   - [ ] Authentication state provider
-   - [ ] Login/Register pages
+   - [x] Authentication state provider
+   - [x] Login/Register pages
    - [ ] Wishlist management page
    - [ ] Item management components
    - [ ] Shared layout with navigation

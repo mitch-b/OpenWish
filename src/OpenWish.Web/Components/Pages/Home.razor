@@ -2,6 +2,56 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="hero-section">
+    <h1>Create & Share Your Wishlists</h1>
+    <p>The easiest way to organize gifts for any occasion</p>
+    
+    <AuthorizeView>
+        <Authorized>
+            <a href="/wishlists/new" class="btn btn-primary">Create Your Wishlist</a>
+        </Authorized>
+        <NotAuthorized>
+            <a href="/Account/Register" class="btn btn-primary">Get Started</a>
+            <a href="/Account/Login" class="btn btn-secondary">Login</a>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
 
-Welcome to your new app.
+<div class="features-section">
+    <div class="feature-card">
+        <i class="fas fa-gift"></i>
+        <h3>Create Wishlists</h3>
+        <p>Organize your wishes for any occasion</p>
+    </div>
+    <div class="feature-card">
+        <i class="fas fa-share-alt"></i>
+        <h3>Share Easily</h3>
+        <p>Share with family and friends</p>
+    </div>
+    <div class="feature-card">
+        <i class="fas fa-users"></i>
+        <h3>Coordinate Gifts</h3>
+        <p>Avoid duplicate gifts</p>
+    </div>
+</div>
+
+@if (featuredWishlists != null)
+{
+    <div class="featured-section">
+        <h2>Featured Wishlists</h2>
+        <div class="wishlist-carousel">
+            @foreach (var wishlist in featuredWishlists)
+            {
+                @* <WishlistCard Wishlist="@wishlist" /> *@
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<dynamic>? featuredWishlists;
+    protected override async Task OnInitializedAsync()
+    {
+        // featuredWishlists = (await WishlistService.GetFeaturedWishlistsAsync()).ToList();
+    }
+}

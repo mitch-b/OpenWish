@@ -1,4 +1,10 @@
 ﻿@page "/"
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Services
+
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
 
 <PageTitle>Home</PageTitle>
 
@@ -40,18 +46,23 @@
     <div class="featured-section">
         <h2>Featured Wishlists</h2>
         <div class="wishlist-carousel">
-            @foreach (var wishlist in featuredWishlists)
+            @foreach (var wishlist in featuredWishlists ?? [])
             {
-                @* <WishlistCard Wishlist="@wishlist" /> *@
+                <WishlistCard Wishlist="@wishlist" />
             }
         </div>
     </div>
 }
 
 @code {
-    private List<dynamic>? featuredWishlists;
+    private List<Wishlist>? featuredWishlists;
     protected override async Task OnInitializedAsync()
     {
-        // featuredWishlists = (await WishlistService.GetFeaturedWishlistsAsync()).ToList();
+        var userId = await UserContextService.GetUserIdAsync();
+        if (userId is not null)
+        {
+            featuredWishlists = (await WishlistService.GetUserWishlistsAsync(userId))
+                .ToList();
+        }
     }
 }

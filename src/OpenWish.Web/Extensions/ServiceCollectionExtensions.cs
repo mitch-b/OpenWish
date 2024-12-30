@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-//using OpenWish.Application.Contracts;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data.Entities;
 using OpenWish.Web.Services;
@@ -13,6 +12,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOpenWishWebServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+
+        services.AddScoped<IUserContextService, UserContextService>();
         
         services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
         services.AddScoped<IBaseUriService, BaseUriService>();

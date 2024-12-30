@@ -15,4 +15,7 @@ public class BaseEntity
 
     [SqlDefaultValue("GETUTCDATE()")]
     public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
+
+    [SqlDefaultValue("GETUTCDATE()")]
+    public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

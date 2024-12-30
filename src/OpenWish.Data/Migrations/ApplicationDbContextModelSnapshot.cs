@@ -236,9 +236,6 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -248,15 +245,21 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WishlistItemId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OpenWishUserId");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("WishlistItemId");
 
@@ -295,25 +298,26 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("SourceOpenWishUserId")
-                        .HasColumnType("int");
+                    b.Property<string>("SourceUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<int?>("SourceUserId")
-                        .HasColumnType("int");
+                    b.Property<string>("TargetUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("TargetOpenWishUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TargetUserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
 
-                    b.HasIndex("SourceOpenWishUserId");
+                    b.HasIndex("SourceUserId");
 
-                    b.HasIndex("TargetOpenWishUserId");
+                    b.HasIndex("TargetUserId");
 
                     b.ToTable("CustomPairingRules");
                 });
@@ -332,8 +336,8 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("CopiedFromEventId")
                         .HasColumnType("int");
 
-                    b.Property<int>("CreatedById")
-                        .HasColumnType("int");
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
@@ -372,6 +376,11 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CopiedFromEventId");
@@ -406,9 +415,6 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("IsAccepted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -418,14 +424,20 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
 
-                    b.HasIndex("OpenWishUserId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("EventUser");
                 });
@@ -452,14 +464,16 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("EventId")
                         .HasColumnType("int");
 
-                    b.Property<int>("GiverId")
-                        .HasColumnType("int");
+                    b.Property<string>("GiverId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ReceiverId")
-                        .HasColumnType("int");
+                    b.Property<string>("ReceiverId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("ReceiverPreferences")
                         .IsRequired()
@@ -469,6 +483,11 @@ namespace OpenWish.Data.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.HasKey("Id");
 
@@ -497,9 +516,6 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ReactionType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -509,15 +525,21 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WishlistItemId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OpenWishUserId");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("WishlistItemId");
 
@@ -531,6 +553,9 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
@@ -550,56 +575,27 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OpenWishUserId");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("OpenWish.Data.Entities.OpenWishUser", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("CreatedOn")
+                    b.Property<DateTimeOffset>("UpdatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetimeoffset")
                         .HasDefaultValueSql("GETUTCDATE()");
 
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Email")
+                    b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("OpenWishUsers");
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.PublicWishlist", b =>
@@ -610,6 +606,9 @@ namespace OpenWish.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetimeoffset")
@@ -622,8 +621,9 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("int");
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -638,7 +638,14 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("OwnerId");
 
@@ -661,13 +668,19 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("PurchaserId")
-                        .HasColumnType("int");
+                    b.Property<string>("PurchaserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<int?>("WishlistId")
                         .HasColumnType("int");
@@ -694,6 +707,9 @@ namespace OpenWish.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetimeoffset")
@@ -712,15 +728,23 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("OwnerId")
-                        .HasColumnType("int");
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("EventId");
 
@@ -745,9 +769,6 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -757,15 +778,21 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WishlistId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OpenWishUserId");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("WishlistId");
 
@@ -823,6 +850,11 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -859,9 +891,6 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("OpenWishUserId")
-                        .HasColumnType("int");
-
                     b.Property<string>("ReactionType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -871,15 +900,21 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetimeoffset")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("WishlistId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OpenWishUserId");
+                    b.HasIndex("UserId");
 
                     b.HasIndex("WishlistId");
 
@@ -939,10 +974,10 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.Comment", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.WishlistItem", "WishlistItem")
@@ -951,7 +986,7 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
 
                     b.Navigation("WishlistItem");
                 });
@@ -964,23 +999,23 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "SourceOpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "SourceUser")
                         .WithMany()
-                        .HasForeignKey("SourceOpenWishUserId")
+                        .HasForeignKey("SourceUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "TargetOpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "TargetUser")
                         .WithMany()
-                        .HasForeignKey("TargetOpenWishUserId")
+                        .HasForeignKey("TargetUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Event");
 
-                    b.Navigation("SourceOpenWishUser");
+                    b.Navigation("SourceUser");
 
-                    b.Navigation("TargetOpenWishUser");
+                    b.Navigation("TargetUser");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.Event", b =>
@@ -991,11 +1026,9 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "CreatedBy")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "CreatedBy")
                         .WithMany("Events")
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CreatedById");
 
                     b.Navigation("CopiedFromEvent");
 
@@ -1010,15 +1043,15 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("OpenWishUserId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Event");
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.GiftExchange", b =>
@@ -1029,13 +1062,13 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Giver")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Giver")
                         .WithMany()
                         .HasForeignKey("GiverId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Receiver")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -1050,10 +1083,10 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.ItemReaction", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.WishlistItem", "WishlistItem")
@@ -1062,28 +1095,36 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
 
                     b.Navigation("WishlistItem");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.Notification", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", null)
                         .WithMany("Notifications")
-                        .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.PublicWishlist", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Owner")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", null)
                         .WithMany("PublicWishlists")
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Owner")
+                        .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -1091,10 +1132,10 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.WillPurchase", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Purchaser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Purchaser")
                         .WithMany()
                         .HasForeignKey("PurchaserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.Wishlist", null)
@@ -1114,13 +1155,19 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.Wishlist", b =>
                 {
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", null)
+                        .WithMany("Wishlists")
+                        .HasForeignKey("ApplicationUserId");
+
                     b.HasOne("OpenWish.Data.Entities.Event", "Event")
                         .WithMany("EventWishlists")
                         .HasForeignKey("EventId");
 
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "Owner")
-                        .WithMany("Wishlists")
-                        .HasForeignKey("OwnerId");
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Event");
 
@@ -1129,10 +1176,10 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.WishlistComment", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.Wishlist", "Wishlist")
@@ -1141,7 +1188,7 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
 
                     b.Navigation("Wishlist");
                 });
@@ -1163,10 +1210,10 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.WishlistReaction", b =>
                 {
-                    b.HasOne("OpenWish.Data.Entities.OpenWishUser", "OpenWishUser")
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("OpenWishUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.Wishlist", "Wishlist")
@@ -1175,9 +1222,20 @@ namespace OpenWish.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("OpenWishUser");
+                    b.Navigation("User");
 
                     b.Navigation("Wishlist");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.ApplicationUser", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Notifications");
+
+                    b.Navigation("PublicWishlists");
+
+                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.Event", b =>
@@ -1189,17 +1247,6 @@ namespace OpenWish.Data.Migrations
                     b.Navigation("GiftExchanges");
 
                     b.Navigation("PairingRules");
-                });
-
-            modelBuilder.Entity("OpenWish.Data.Entities.OpenWishUser", b =>
-                {
-                    b.Navigation("Events");
-
-                    b.Navigation("Notifications");
-
-                    b.Navigation("PublicWishlists");
-
-                    b.Navigation("Wishlists");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.PublicWishlist", b =>

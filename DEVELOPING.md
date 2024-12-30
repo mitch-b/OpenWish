@@ -20,8 +20,8 @@ The EFCore context is found in the [OpenWish.Data](./src/OpenWish.Data) project 
 After adjusting EF models and you want to stage a new DB migration, run:
 
 ```bash
-cd src/OpenWish.Web
-dotnet ef migrations add Initial --project ../OpenWish.Data/OpenWish.Data.csproj
+# from project root
+dotnet ef migrations add Initial -p src/OpenWish.Data -s src/OpenWish.Web
 ```
 
 > Note: may need `dotnet tool install --global dotnet-ef`

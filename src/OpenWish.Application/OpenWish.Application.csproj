@@ -1,9 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>netstandard2.0</TargetFramework>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="Humanizer" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />
@@ -12,7 +8,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Services/" />
+        <ProjectReference Include="..\OpenWish.Data\OpenWish.Data.csproj" />
     </ItemGroup>
 
 </Project>

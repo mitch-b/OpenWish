@@ -1,0 +1,61 @@
+@page "/wishlists"
+@using Microsoft.Extensions.Logging
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@inject IWishlistService WishlistService
+@inject NavigationManager NavigationManager
+@inject ILogger<Index> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@attribute [Authorize]
+
+<h3>My Wishlists</h3>
+
+<div class="mb-3">
+    <a href="/wishlists/new" class="btn btn-primary">Create New Wishlist</a>
+</div>
+
+@if (wishlists == null)
+{
+    <p>Loading...</p>
+}
+else if (!wishlists.Any())
+{
+    <p>No wishlists found. Create one to get started!</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var wishlist in wishlists)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@wishlist.Name</h5>
+                        <p class="card-text">@wishlist.Items?.Count items</p>
+                        <a href="/wishlists/@wishlist.Id" class="btn btn-primary">View</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IEnumerable<Wishlist> wishlists;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            Logger.LogError("User ID not found in claims");
+            return;
+        }
+        
+        wishlists = await WishlistService.GetUserWishlistsAsync(userId);
+    }
+}

@@ -13,8 +13,4 @@
         <Folder Include="Migrations\" />
     </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\OpenWish.Application\OpenWish.Application.csproj" />
-    </ItemGroup>
-
 </Project>

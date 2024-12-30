@@ -1,0 +1,25 @@
+@page "/wishlists/new"
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Services
+@inject IWishlistService WishlistService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserContextService UserContextService
+
+@attribute [Authorize]
+
+<h3>Create New Wishlist</h3>
+
+<WishlistForm Model="@wishlist" OnValidSubmit="@HandleValidSubmit" />
+
+@code {
+    private Wishlist wishlist = new();
+
+    private async Task HandleValidSubmit()
+    {
+        var userId = await UserContextService.GetUserIdAsync();
+        await WishlistService.CreateWishlistAsync(wishlist.Name, userId);
+        NavigationManager.NavigateTo("/wishlists");
+    }
+}

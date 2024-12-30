@@ -6,7 +6,7 @@ public class Event : BaseEntity
     public DateTimeOffset Date { get; set; }
     public string Description { get; set; }
     public int CreatedByUserId { get; set; }
-    public OpenWishUser CreatedBy { get; set; } // Creator of the event
+    public ApplicationUser CreatedBy { get; set; } // Creator of the event
     public ICollection<EventUser> EventUsers { get; set; } // Users invited to the event
     public ICollection<Wishlist> EventWishlists { get; set; } // Wishlists tied to the event
     public Event CopiedFromEvent { get; set; } // Reference to a past event if copied

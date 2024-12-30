@@ -7,7 +7,6 @@ namespace OpenWish.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-    public DbSet<OpenWishUser> OpenWishUsers { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<Wishlist> Wishlists { get; set; }
     public DbSet<WishlistItem> WishlistItems { get; set; }
@@ -35,17 +34,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasColumnType("decimal(11,2)");
 
         modelBuilder.Entity<CustomPairingRule>()
-            .HasOne(cpr => cpr.SourceOpenWishUser)
+            .HasOne(cpr => cpr.SourceUser)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
         
         modelBuilder.Entity<CustomPairingRule>()
-            .HasOne(cpr => cpr.TargetOpenWishUser)
+            .HasOne(cpr => cpr.TargetUser)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<EventUser>()
-            .HasOne(eu => eu.OpenWishUser)
+            .HasOne(eu => eu.User)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
 
@@ -66,6 +65,46 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<WishlistItem>()
             .Property(wli => wli.Price)
             .HasColumnType("decimal(11,2)");
+        
+        modelBuilder.Entity<WishlistComment>()
+            .HasOne(wc => wc.User)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+        
+        modelBuilder.Entity<WishlistReaction>()
+            .HasOne(wr => wr.User)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+        
+        modelBuilder.Entity<Comment>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ItemReaction>()
+            .HasOne(ir => ir.User)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<PublicWishlist>()
+            .HasOne(pw => pw.Owner)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Wishlist>()
+            .HasOne(w => w.Owner)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<WillPurchase>()
+            .HasOne(wp => wp.Purchaser)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
 
         SqlDefaultValueAttributeConvention.Apply(modelBuilder);
     }

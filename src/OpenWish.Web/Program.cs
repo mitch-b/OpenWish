@@ -7,7 +7,6 @@ using OpenWish.Data.Entities;
 using OpenWish.Web.Client.Pages;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
-using OpenWish.Data.Entities;
 using OpenWish.Application.Models.Configuration;
 using Microsoft.Extensions.Options;
 using OpenWish.Web.Services;

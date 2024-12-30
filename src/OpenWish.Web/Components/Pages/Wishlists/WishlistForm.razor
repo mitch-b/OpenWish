@@ -1,0 +1,18 @@
+@using OpenWish.Data.Entities
+
+<EditForm Model="@Model" OnValidSubmit="@(async context => await OnValidSubmit.InvokeAsync(Model))">
+  <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Wishlist Name</label>
+        <InputText id="name" class="form-control" @bind-Value="Model.Name" />
+        <ValidationMessage For="@(() => Model.Name)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update")</button>
+</EditForm>
+
+@code {
+    [Parameter] public Wishlist Model { get; set; }
+    [Parameter] public EventCallback<Wishlist> OnValidSubmit { get; set; }
+}

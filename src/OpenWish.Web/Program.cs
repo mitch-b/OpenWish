@@ -13,6 +13,7 @@ using OpenWish.Web.Services;
 using OpenWish.Web.Extensions;
 using System.Text.Json;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +41,10 @@ var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString)
+        // HMM... https://github.com/dotnet/efcore/issues/34431
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
+    );
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -99,9 +103,9 @@ using (var scope = app.Services.CreateScope())
 {
     var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
-    if (openWishSettings.OwnDatabaseUpgrades == true)
+    if (openWishSettings.OwnDatabaseUpgrades)
     {
-        using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var waitSeconds = 3;
         Console.WriteLine($"Applying migrations after {waitSeconds} seconds...");
         await Task.Delay(TimeSpan.FromSeconds(waitSeconds));

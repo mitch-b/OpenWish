@@ -13,9 +13,9 @@ public class BaseEntity
     [Timestamp]
     public byte[]? RowVersion { get; set; }
 
-    [SqlDefaultValue("GETUTCDATE()")]
+    [SqlDefaultValue("timezone('utc', now())")]
     public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
 
-    [SqlDefaultValue("GETUTCDATE()")]
+    [SqlDefaultValue("timezone('utc', now())")]
     public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

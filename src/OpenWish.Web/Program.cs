@@ -82,15 +82,15 @@ using (var provider = builder.Services.BuildServiceProvider())
 var app = builder.Build();
 
 // // fix Codespaces thinking Navigation BaseUri was localhost
-// var forwardingOptions = new ForwardedHeadersOptions()
-// {
-//     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-// };
+var forwardingOptions = new ForwardedHeadersOptions()
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
 
-// forwardingOptions.KnownNetworks.Clear();
-// forwardingOptions.KnownProxies.Clear();
+forwardingOptions.KnownNetworks.Clear();
+forwardingOptions.KnownProxies.Clear();
 
-// app.UseForwardedHeaders(forwardingOptions);
+app.UseForwardedHeaders(forwardingOptions);
 
 // Apply migrations on startup
 using (var scope = app.Services.CreateScope())

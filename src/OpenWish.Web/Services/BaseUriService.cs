@@ -55,6 +55,12 @@ public class BaseUriService: IBaseUriService
     public Uri ToAbsoluteUri(string relativeUri) => 
         new(GetBaseUri(), relativeUri);
 
-    public string ToBaseRelativePath(string uri) => 
-        GetBaseUri().MakeRelativeUri(new Uri(uri)).ToString();
+    public string ToBaseRelativePath(string uri)
+    {
+        if (!Uri.TryCreate(uri, UriKind.Absolute, out _))
+        {
+            uri = ToAbsoluteUri(uri).ToString();
+        }
+        return GetBaseUri().MakeRelativeUri(new Uri(uri)).ToString();
+    }
 }

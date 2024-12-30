@@ -77,7 +77,7 @@
     protected override void OnInitialized()
     {
         // TODO: fix the currentUrl assignment. Breaks logout.
-        currentUrl = BaseUriService.ToBaseRelativePath(new Uri(NavigationManager.Uri).GetLeftPart(UriPartial.Path));
+        currentUrl = BaseUriService.ToBaseRelativePath(new Uri(NavigationManager.Uri).LocalPath);
         NavigationManager.LocationChanged += OnLocationChanged;
     }
 

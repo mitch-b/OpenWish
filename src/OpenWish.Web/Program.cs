@@ -76,6 +76,9 @@ using (var provider = builder.Services.BuildServiceProvider())
     else
     {
         Console.WriteLine("Full email configuration not found. Email will not work.");
+        // register service so Services that depend on IFluentEmail can be registered
+        builder.Services
+            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom);
     }
 }
 

@@ -1,9 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
+using OpenWish.Web.Services;
 
 namespace OpenWish.Web.Components.Account;
 
-internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
+internal sealed class IdentityRedirectManager(NavigationManager navigationManager, IBaseUriService baseUriService)
 {
     public const string StatusCookieName = "Identity.StatusMessage";
 
@@ -23,7 +24,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
         // Prevent open redirects.
         if (!Uri.IsWellFormedUriString(uri, UriKind.Relative))
         {
-            uri = navigationManager.ToBaseRelativePath(uri);
+            uri = baseUriService.ToBaseRelativePath(uri);
         }
 
         // During static rendering, NavigateTo throws a NavigationException which is handled by the framework as a redirect.
@@ -37,7 +38,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
     [DoesNotReturn]
     public void RedirectTo(string uri, Dictionary<string, object?> queryParameters)
     {
-        var uriWithoutQuery = navigationManager.ToAbsoluteUri(uri).GetLeftPart(UriPartial.Path);
+        var uriWithoutQuery = baseUriService.ToAbsoluteUri(uri).GetLeftPart(UriPartial.Path);
         var newUri = navigationManager.GetUriWithQueryParameters(uriWithoutQuery, queryParameters);
         RedirectTo(newUri);
     }
@@ -49,7 +50,7 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
         RedirectTo(uri);
     }
 
-    private string CurrentPath => navigationManager.ToAbsoluteUri(navigationManager.Uri).GetLeftPart(UriPartial.Path);
+    private string CurrentPath => baseUriService.ToAbsoluteUri(navigationManager.Uri).GetLeftPart(UriPartial.Path);
 
     [DoesNotReturn]
     public void RedirectToCurrentPage() => RedirectTo(CurrentPath);

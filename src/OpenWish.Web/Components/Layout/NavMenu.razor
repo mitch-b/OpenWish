@@ -1,6 +1,8 @@
-﻿@implements IDisposable
+﻿@using OpenWish.Web.Services
+@implements IDisposable
 
 @inject NavigationManager NavigationManager
+@inject IBaseUriService BaseUriService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -74,13 +76,14 @@
 
     protected override void OnInitialized()
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        // TODO: fix the currentUrl assignment. Breaks logout.
+        currentUrl = BaseUriService.ToBaseRelativePath(new Uri(NavigationManager.Uri).GetLeftPart(UriPartial.Path));
         NavigationManager.LocationChanged += OnLocationChanged;
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        currentUrl = BaseUriService.ToBaseRelativePath(e.Location);
         StateHasChanged();
     }
 

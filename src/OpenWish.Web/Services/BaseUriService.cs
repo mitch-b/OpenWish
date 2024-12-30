@@ -9,6 +9,7 @@ public interface IBaseUriService
 {
     Uri GetBaseUri();
     Uri ToAbsoluteUri(string relativeUri);
+    string ToBaseRelativePath(string uri);
 }
 
 public class BaseUriService: IBaseUriService
@@ -51,8 +52,9 @@ public class BaseUriService: IBaseUriService
         return new Uri(_navigationManager.BaseUri);
     }
 
-    public Uri ToAbsoluteUri(string relativeUri)
-    {
-        return new Uri(GetBaseUri(), relativeUri);
-    }
+    public Uri ToAbsoluteUri(string relativeUri) => 
+        new(GetBaseUri(), relativeUri);
+
+    public string ToBaseRelativePath(string uri) => 
+        GetBaseUri().MakeRelativeUri(new Uri(uri)).ToString();
 }

@@ -24,7 +24,9 @@ internal sealed class IdentityRedirectManager(NavigationManager navigationManage
         // Prevent open redirects.
         if (!Uri.IsWellFormedUriString(uri, UriKind.Relative))
         {
+            Console.WriteLine($"Invalid redirect URI: {uri}");
             uri = baseUriService.ToBaseRelativePath(uri);
+            Console.WriteLine($"Redirecting to fixed uri: {uri}");
         }
 
         // During static rendering, NavigateTo throws a NavigationException which is handled by the framework as a redirect.

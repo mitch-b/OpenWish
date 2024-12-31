@@ -1,19 +1,16 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Options;
 using OpenWish.Application.Extensions;
+using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
-using OpenWish.Web.Client.Pages;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
-using OpenWish.Application.Models.Configuration;
-using Microsoft.Extensions.Options;
-using OpenWish.Web.Services;
 using OpenWish.Web.Extensions;
-using System.Text.Json;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 

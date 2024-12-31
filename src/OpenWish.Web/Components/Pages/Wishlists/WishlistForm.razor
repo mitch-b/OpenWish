@@ -1,31 +1,37 @@
 @using OpenWish.Data.Entities
-@using System.ComponentModel.DataAnnotations
 
-<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@if (Model is not null)
+{
+    <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
 
-    <div class="mb-3">
-        <label for="name" class="form-label">Name</label>
-        <InputText id="name" class="form-control" 
-                   @bind-Value="@Model!.Name" />
-        <ValidationMessage For="@(() => Model.Name)" />
-    </div>
-    
-    <div class="mb-3">
-        <label for="deleted" class="form-label">Deleted</label>
-        <InputCheckbox id="deleted" @bind-Value="@Model!.Deleted" /> Deleted
-        <ValidationMessage For="@(() => Model.Deleted)" />
-    </div>
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <InputText id="name" class="form-control" 
+            @bind-Value="@Model!.Name" />
+            <ValidationMessage For="@(() => Model.Name)" />
+        </div>
 
-    <button type="submit" class="btn btn-primary mt-3">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
-</EditForm>
+        <div class="mb-3">
+            <InputCheckbox id="isCollaborative" @bind-Value="@Model!.IsCollaborative" /> Is Collaborative? (allows other invited members to add items to your list)
+            <ValidationMessage For="@(() => Model.IsCollaborative)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
+    </EditForm>
+}
+else
+{
+    <p>Loading form...</p>
+}
+
 
 @code {
-    [Parameter] public Wishlist? Model { get; set; } = new();
-    
+
+    [Parameter] public Wishlist? Model { get; set; }
     [Parameter] public EventCallback<Wishlist> OnSubmit { get; set; }
-    
+
     private async Task HandleSubmit()
     {
         if (OnSubmit.HasDelegate)

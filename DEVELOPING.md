@@ -2,12 +2,13 @@
 
 ## Aspire Secrets
 
-To run a local PostgreSQL instance, you must give a password for the `sa` account. Use dotnet user secrets for this.
+To run a local PostgreSQL instance, you must give a username & password. Use dotnet user secrets for this.
 
 ```bash
 cd src/OpenWish.AppHost
 dotnet user-secrets set Parameters:sqlUser "openwish"
 dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
+# (no really, don't)
 ```
 
 The secret will be passed into `OpenWish.Web` automatically (well, from Aspire).
@@ -21,11 +22,11 @@ The EFCore context is found in the [OpenWish.Data](./src/OpenWish.Data) project 
 After adjusting EF models and you want to stage a new DB migration, run:
 
 ```bash
-# from project root
+# from project root, change name of 'Initial' as needed
 dotnet ef migrations add Initial -p src/OpenWish.Data -s src/OpenWish.Web
 ```
 
-> Note: may need `dotnet tool install --global dotnet-ef`
+> Note: may need `dotnet tool install --global dotnet-ef` if you don't have the EF Core tools installed.
 
 ## Secrets Management
 

@@ -11,7 +11,7 @@
 
 2. Core Services Layer
    - [x] User management service
-   - [ ] Wishlist service
+   - [x] Wishlist service
    - [ ] Item management service
    - [x] Configure dependency injection
 
@@ -24,10 +24,10 @@
    - [ ] Error boundaries
 
 4. Security & Configuration
-   - [ ] User secrets for development
+   - [x] User secrets for development
    - [ ] CSRF protection
-   - [ ] Authentication cookie settings
-   - [ ] Session state configuration
+   - [x] Authentication cookie settings
+   - [x] Session state configuration
 
 ## Phase 2: Social Features
 1. Friend Management

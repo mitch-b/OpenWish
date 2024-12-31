@@ -73,21 +73,21 @@ Since OpenWish depends on an external datasource (PostgreSQL), if you don't alre
 ```yaml
 services:
   sql:
-    image: postgres:16
-    container_name: postgres
+    image: postgres:17
+    container_name: openwish-postgres
     environment:
       POSTGRES_USER: "openwish"
       POSTGRES_PASSWORD: "YourStrong!Passw0rd"
       POSTGRES_DB: "OpenWish"
     volumes:
-      - openwish-data:/var/lib/postgresql@16/data
+      - openwish-data:/var/lib/postgresql@17/data
     ports:
       - 5432:5432
 
   web:
     image: ghcr.io/mitch-b/openwish-web:latest
+    container_name: openwish-web
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__OpenWish=Server=sql;Port=5432;Database=OpenWish;User Id=openwish;Password=YourStrong!Passw0rd;
       - OpenWishSettings__OwnDatabaseUpgrades=true
     ports:

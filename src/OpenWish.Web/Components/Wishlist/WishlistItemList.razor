@@ -18,7 +18,10 @@
                 {
                     <tr>
                         <td colspan="5">
-                            <WishlistItemForm Model="@item" OnSubmit="@HandleEditSubmit" />
+                            <WishlistItemForm 
+                                Model="@item" 
+                                OnSubmit="@HandleEditSubmit" 
+                                OnCancel="@HandleOnCancel" />
                         </td>
                     </tr>
                 }
@@ -30,7 +33,11 @@
                         <td>@item.Price?.ToString("C")</td>
                         <td>@item.Priority</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" @onclick="() => StartEdit(item.Id)">Edit</button>
+                            <button 
+                                class="btn btn-sm btn-primary" 
+                                @onclick="() => StartEdit(item.Id)">
+                                Edit
+                            </button>
                         </td>
                     </tr>
                 }
@@ -42,6 +49,7 @@
 @code {
     [Parameter] public IEnumerable<WishlistItem> Items { get; set; } = Array.Empty<WishlistItem>();
     [Parameter] public EventCallback<WishlistItem> OnEdit { get; set; }
+    
     
     private int? EditingItemId;
 
@@ -56,6 +64,11 @@
         {
             await OnEdit.InvokeAsync(item);
         }
+        EditingItemId = null;
+    }
+
+    private async Task HandleOnCancel(WishlistItem item)
+    {
         EditingItemId = null;
     }
 }

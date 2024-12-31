@@ -1,0 +1,38 @@
+.wishlist-header {
+    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.wishlist-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 2rem;
+}
+
+.add-item-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.add-item-section h4 {
+    color: #4C51BF;
+    margin-bottom: 1.5rem;
+}
+
+.view-transition {
+    transition: all 0.3s ease-in-out;
+}
+
+.form-container {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

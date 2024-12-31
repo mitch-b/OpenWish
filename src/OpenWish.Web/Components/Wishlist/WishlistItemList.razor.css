@@ -1,0 +1,39 @@
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table th {
+    background: #f8f9fa;
+    color: #4C51BF;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+    padding: 1rem;
+}
+
+.table td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(108, 99, 255, 0.05);
+}
+
+.btn-edit {
+    background: #4C51BF;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-edit:hover {
+    background: #3c4099;
+}

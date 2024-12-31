@@ -15,43 +15,44 @@
 
 @if (_wishlist is null)
 {
-    <p>Loading...</p>
-}
+    <p>Loading...</p>}
 else
 {
-    <div class="row mb-4">
-        <div class="col">
-            <h2>@_wishlist?.Name</h2>
-        </div>
+    <div class="wishlist-header">
+        <h2>@_wishlist?.Name</h2>
+        @if (_wishlist.IsCollaborative)
+        {
+            <span class="badge bg-info">Collaborative Wishlist</span>
+        }
     </div>
 
     <div class="row">
         <div class="col-md-8">
-            @if (_items is not null)
-            {
-                @if (_canEdit)
+            <div class="wishlist-content view-transition">
+                @if (_items is not null)
                 {
-                    <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+                    @if (_canEdit)
+                    {
+                        <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+                    }
+                    else 
+                    {
+                        <WishlistItemList Items="@_items" />
+                    }
                 }
-                else 
+                else
                 {
-                    <WishlistItemList Items="@_items" />
+                    <p>Loading...</p>
                 }
-            }
-            else
-            {
-                <p>Loading...</p>
-            }
+            </div>
         </div>
         <div class="col-md-4">
             @if (_canEdit)
             {
-                <h4>Add New Item</h4>
-                <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
-            }
-            else
-            {
-                // use this space for something?
+                <div class="add-item-section">
+                    <h4>Add New Item</h4>
+                    <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
+                </div>
             }
         </div>
     </div>

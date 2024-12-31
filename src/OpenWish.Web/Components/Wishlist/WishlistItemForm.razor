@@ -48,18 +48,31 @@
         <ValidationMessage For="@(() => Model.IsPrivate)" />
     </div>
 
-    <button type="submit" class="btn btn-primary">Add Item</button>
+    <button type="submit" class="btn btn-primary">@(Model.Id > 0 ? "Edit" : "Create") Item</button>
+    @if (OnCancel.HasDelegate)
+    {
+        <button type="button" class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
+    }
 </EditForm>
 
 @code {
     [Parameter] public WishlistItem Model { get; set; } = new();
     [Parameter] public EventCallback<WishlistItem> OnSubmit { get; set; }
+    [Parameter] public EventCallback<WishlistItem> OnCancel { get; set; }
 
     private async Task HandleSubmit()
     {
         if (OnSubmit.HasDelegate)
         {
             await OnSubmit.InvokeAsync(Model);
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
         }
     }
 }

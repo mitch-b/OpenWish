@@ -1,0 +1,74 @@
+@attribute [Authorize]
+@page "/wishlists/{WishlistId:int}"
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Wishlist
+
+@inject IWishlistService WishlistService
+
+@rendermode InteractiveServer
+
+<PageTitle>@(_wishlist is not null ? _wishlist?.Name : "") Wishlist</PageTitle>
+
+@if (_wishlist is null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col">
+            <h2>@_wishlist?.Name</h2>
+            <p>Manage your wishlist</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            @if (_items is not null)
+            {
+                <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+            }
+            else
+            {
+                <p>Loading...</p>
+            }
+        </div>
+        <div class="col-md-4">
+            <h4>Add New Item</h4>
+            <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int WishlistId { get; set; }
+    private Wishlist? _wishlist;
+    private List<WishlistItem> _items = new();
+    private WishlistItem _newItem = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _items = (await WishlistService.GetWishlistItemsAsync(WishlistId)).ToList();
+    }
+
+    private async Task HandleAddItem(WishlistItem item)
+    {
+        await WishlistService.AddItemToWishlistAsync(WishlistId, item);
+        _newItem = new WishlistItem();
+        await LoadItems();
+    }
+
+    private async Task HandleItemEdit(WishlistItem item)
+    {
+        await WishlistService.UpdateWishlistItemAsync(WishlistId, item.Id, item);
+        await LoadItems();
+    }
+}

@@ -1,0 +1,32 @@
+@attribute [Authorize]
+@page "/wishlists/{WishlistId:int}/items/new"
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Wishlist
+
+@inject IWishlistService WishlistService
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<h3>Add Item to Wishlist</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <FormMappingScope Name="new-wishlist-item">
+            <WishlistItemForm Model="@_item" OnSubmit="@HandleSubmit" />
+        </FormMappingScope>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int WishlistId { get; set; }
+    private readonly WishlistItem _item = new();
+
+    private async Task HandleSubmit(WishlistItem item)
+    {
+        await WishlistService.AddItemToWishlistAsync(WishlistId, item);
+        NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+    }
+}

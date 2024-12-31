@@ -38,7 +38,7 @@ var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString + ";Include Error Detail=true;")
+    options.UseNpgsql(connectionString)
         // HMM... https://github.com/dotnet/efcore/issues/34431
         .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
         .EnableSensitiveDataLogging()

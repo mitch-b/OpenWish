@@ -1,0 +1,65 @@
+@using OpenWish.Data.Entities
+
+<EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <InputText id="name" class="form-control" @bind-Value="@Model!.Name" />
+        <ValidationMessage For="@(() => Model.Name)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <InputTextArea id="description" class="form-control" @bind-Value="@Model!.Description" />
+        <ValidationMessage For="@(() => Model.Description)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="price" class="form-label">Price</label>
+        <InputNumber id="price" class="form-control" @bind-Value="@Model!.Price" />
+        <ValidationMessage For="@(() => Model.Price)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="url" class="form-label">URL</label>
+        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" />
+        <ValidationMessage For="@(() => Model.Url)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="whereToBuy" class="form-label">Where to Buy</label>
+        <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" />
+        <ValidationMessage For="@(() => Model.WhereToBuy)" />
+    </div>
+
+    <div class="mb-3">
+        <label for="priority" class="form-label">Priority</label>
+        <InputSelect id="priority" class="form-control" @bind-Value="@Model!.Priority">
+            <option value="1">High</option>
+            <option value="2">Medium</option>
+            <option value="3">Low</option>
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <InputCheckbox id="isPrivate" @bind-Value="@Model!.IsPrivate" /> Private Item?
+        <ValidationMessage For="@(() => Model.IsPrivate)" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add Item</button>
+</EditForm>
+
+@code {
+    [Parameter] public WishlistItem Model { get; set; } = new();
+    [Parameter] public EventCallback<WishlistItem> OnSubmit { get; set; }
+
+    private async Task HandleSubmit()
+    {
+        if (OnSubmit.HasDelegate)
+        {
+            await OnSubmit.InvokeAsync(Model);
+        }
+    }
+}

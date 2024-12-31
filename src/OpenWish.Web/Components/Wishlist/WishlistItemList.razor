@@ -1,0 +1,61 @@
+@using OpenWish.Data.Entities
+
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Priority</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items)
+            {
+                @if (EditingItemId == item.Id)
+                {
+                    <tr>
+                        <td colspan="5">
+                            <WishlistItemForm Model="@item" OnSubmit="@HandleEditSubmit" />
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td>@item.Description</td>
+                        <td>@item.Price?.ToString("C")</td>
+                        <td>@item.Priority</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => StartEdit(item.Id)">Edit</button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<WishlistItem> Items { get; set; } = Array.Empty<WishlistItem>();
+    [Parameter] public EventCallback<WishlistItem> OnEdit { get; set; }
+    
+    private int? EditingItemId;
+
+    private void StartEdit(int itemId)
+    {
+        EditingItemId = itemId;
+    }
+
+    private async Task HandleEditSubmit(WishlistItem item)
+    {
+        if (OnEdit.HasDelegate)
+        {
+            await OnEdit.InvokeAsync(item);
+        }
+        EditingItemId = null;
+    }
+}

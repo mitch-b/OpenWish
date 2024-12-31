@@ -11,8 +11,14 @@ public interface IWishlistService
     Task<IEnumerable<Wishlist>> GetUserWishlistsAsync(string userId);
     Task<Wishlist> UpdateWishlistAsync(int id, Wishlist wishlist);
     Task DeleteWishlistAsync(int id);
+    
+    // WishlistItems
+    Task<WishlistItem> GetWishlistItemAsync(int wishlistId, int itemId);
+    Task<IEnumerable<WishlistItem>> GetWishlistItemsAsync(int wishlistId);
     Task<WishlistItem> AddItemToWishlistAsync(int wishlistId, WishlistItem item);
     Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId);
+    Task<WishlistItem> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItem item);
+
 }
 
 public class WishlistService(ApplicationDbContext context) : IWishlistService
@@ -79,17 +85,17 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
 
     public async Task<WishlistItem> AddItemToWishlistAsync(int wishlistId, WishlistItem item)
     {
-        var wishlist = await _context.Wishlists
-            .Include(w => w.Items)
-            .FirstOrDefaultAsync(w => w.Id == wishlistId)
-            ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
-
+        var wishlist = await GetWishlistAsync(wishlistId);
+        
         item.WishlistId = wishlistId;
         item.CreatedOn = DateTime.UtcNow;
-        
-        wishlist.Items.Add(item);
+        item.UpdatedOn = DateTime.UtcNow;
+        item.OrderIndex = await _context.WishlistItems
+            .Where(i => i.WishlistId == wishlistId)
+            .CountAsync();
+
+        _context.WishlistItems.Add(item);
         await _context.SaveChangesAsync();
-        
         return item;
     }
 
@@ -104,5 +110,37 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
         _context.WishlistItems.Remove(item);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<WishlistItem> GetWishlistItemAsync(int wishlistId, int itemId)
+    {
+        return await _context.WishlistItems
+            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId)
+            ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+    }
+
+    public async Task<IEnumerable<WishlistItem>> GetWishlistItemsAsync(int wishlistId)
+    {
+        return await _context.WishlistItems
+            .Where(i => i.WishlistId == wishlistId && !i.Deleted)
+            .OrderBy(i => i.OrderIndex)
+            .ToListAsync();
+    }
+
+    public async Task<WishlistItem> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItem item)
+    {
+        var existingItem = await GetWishlistItemAsync(wishlistId, itemId);
+        
+        existingItem.Name = item.Name;
+        existingItem.Description = item.Description;
+        existingItem.Price = item.Price;
+        existingItem.Url = item.Url;
+        existingItem.WhereToBuy = item.WhereToBuy;
+        existingItem.Priority = item.Priority;
+        existingItem.IsPrivate = item.IsPrivate;
+        existingItem.UpdatedOn = DateTime.UtcNow;
+        
+        await _context.SaveChangesAsync();
+        return existingItem;
     }
 }

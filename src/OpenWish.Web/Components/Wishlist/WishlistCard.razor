@@ -11,7 +11,7 @@ else
             <div class="card-body">
                 <h5 class="card-title">@Wishlist.Name</h5>
                 <p class="card-text">
-                    <span class="badge bg-primary">@(Wishlist.Items?.Count ?? 0) items</span>
+                    <span class="badge bg-primary">@Wishlist.Items?.Count items</span>
                     @if (Wishlist.IsCollaborative)
                     {
                         <span class="badge bg-info">Collaborative</span>

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using OpenWish.Application.Services
 @using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Wishlist
 @using OpenWish.Web.Services
 
 @inject IWishlistService WishlistService
@@ -41,12 +42,12 @@
     </div>
 </div>
 
-@if (featuredWishlists != null)
+@if (_featuredWishlists != null)
 {
     <div class="featured-section">
         <h2>Featured Wishlists</h2>
         <div class="wishlist-carousel">
-            @foreach (var wishlist in featuredWishlists ?? [])
+            @foreach (var wishlist in _featuredWishlists ?? [])
             {
                 <WishlistCard Wishlist="@wishlist" />
             }
@@ -55,14 +56,13 @@
 }
 
 @code {
-    private List<Wishlist>? featuredWishlists;
+    private List<Wishlist>? _featuredWishlists;
     protected override async Task OnInitializedAsync()
     {
         var userId = await UserContextService.GetUserIdAsync();
         if (userId is not null)
         {
-            featuredWishlists = (await WishlistService.GetUserWishlistsAsync(userId))
-                .ToList();
+            _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(userId)).ToList();
         }
     }
 }

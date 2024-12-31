@@ -7,7 +7,6 @@
 
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IUserContextService UserContextService
 @inject ILogger<New> Logger
 
@@ -17,12 +16,12 @@
 <h3>Create a Wishlist</h3>
 
 <FormMappingScope Name="new-wishlist">
-    <WishlistForm Model="@wishlist" OnSubmit="@HandleSubmit" />
+    <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" />
 </FormMappingScope>
 
 @code {
-    private Wishlist wishlist { get; set; } = new();
-
+    private readonly Wishlist? _wishlist = new();
+    
     private async Task HandleSubmit(Wishlist submittedWishlist)
     {
         var userId = await UserContextService.GetUserIdAsync();

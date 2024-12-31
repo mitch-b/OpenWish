@@ -1,18 +1,27 @@
 @using OpenWish.Data.Entities
 
-<EditForm Model="@Model" OnValidSubmit="@(async context => await OnValidSubmit.InvokeAsync(Model))">
-  <DataAnnotationsValidator />
+<EditForm Model="WishlistModel" OnValidSubmit="HandleSubmit" FormName="WishlistForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
 
     <div class="mb-3">
-        <label for="name" class="form-label">Wishlist Name</label>
-        <InputText id="name" class="form-control" @bind-Value="Model.Name" />
-        <ValidationMessage For="@(() => Model.Name)" />
+        <label for="name" class="form-label">Name</label>
+        <InputText id="name" class="form-control" @bind-Value="@WishlistModel!.Name" />
+        <ValidationMessage For="@(() => WishlistModel.Name)" />
     </div>
 
-    <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update")</button>
+    <button type="submit" class="btn btn-primary">@(WishlistModel.Id == 0 ? "Create" : "Update")</button>
 </EditForm>
 
 @code {
-    [Parameter] public Wishlist Model { get; set; }
-    [Parameter] public EventCallback<Wishlist> OnValidSubmit { get; set; }
+    [Parameter, EditorRequired] public Wishlist? WishlistModel { get; set; } = new();
+    [Parameter] public EventCallback<Wishlist> OnSubmit { get; set; }
+    
+    private async Task HandleSubmit(EditContext editContext)
+    {
+        if (OnSubmit.HasDelegate)
+        {
+            await OnSubmit.InvokeAsync(WishlistModel);
+        }
+    }
 }

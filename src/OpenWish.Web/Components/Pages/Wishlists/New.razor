@@ -11,15 +11,14 @@
 
 <h3>Create New Wishlist</h3>
 
-<WishlistForm Model="@wishlist" OnValidSubmit="@HandleValidSubmit" />
+<WishlistForm WishlistModel="@wishlist" OnSubmit="@HandleSubmit" />
 
 @code {
-    private Wishlist wishlist = new();
-
-    private async Task HandleValidSubmit()
+    private Wishlist wishlist { get; set; } = new();
+    private async Task HandleSubmit(Wishlist wishlist)
     {
         var userId = await UserContextService.GetUserIdAsync();
-        await WishlistService.CreateWishlistAsync(wishlist.Name, userId);
+        await WishlistService.CreateWishlistAsync(this.wishlist.Name, userId);
         NavigationManager.NavigateTo("/wishlists");
     }
 }

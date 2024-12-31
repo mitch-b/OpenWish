@@ -1,27 +1,54 @@
 @using OpenWish.Data.Entities
+@using System.ComponentModel.DataAnnotations
 
-<EditForm Model="WishlistModel" OnValidSubmit="HandleSubmit" FormName="WishlistForm">
+<EditForm Model="@_model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="mb-3">
         <label for="name" class="form-label">Name</label>
-        <InputText id="name" class="form-control" @bind-Value="@WishlistModel!.Name" />
-        <ValidationMessage For="@(() => WishlistModel.Name)" />
+        <InputText id="name" class="form-control" 
+                   @bind-Value="@_model.Name" />
+        <ValidationMessage For="@(() => _model.Name)" />
+    </div>
+    
+    <div class="mb-3">
+        <label for="deleted" class="form-label">Deleted</label>
+        <InputCheckbox id="deleted" @bind-Value="@_model.Deleted" /> Deleted
+        <ValidationMessage For="@(() => _model.Deleted)" />
     </div>
 
-    <button type="submit" class="btn btn-primary">@(WishlistModel.Id == 0 ? "Create" : "Update")</button>
+    <button type="submit" class="btn btn-primary mt-3">@(_model.Id == 0 ? "Create" : "Update") Wishlist</button>
 </EditForm>
 
 @code {
-    [Parameter, EditorRequired] public Wishlist? WishlistModel { get; set; } = new();
+    private Wishlist _model = new();
+    
+    [Parameter] public Wishlist? Model { get; set; } = new();
+    
     [Parameter] public EventCallback<Wishlist> OnSubmit { get; set; }
     
-    private async Task HandleSubmit(EditContext editContext)
+    protected override void OnInitialized()
+    {
+        if (Model != null)
+        {
+            _model = Model;
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        if (Model != null)
+        {
+            _model = Model;
+        }
+    }
+    
+    private async Task HandleSubmit()
     {
         if (OnSubmit.HasDelegate)
         {
-            await OnSubmit.InvokeAsync(WishlistModel);
+            await OnSubmit.InvokeAsync(_model);
         }
     }
 }

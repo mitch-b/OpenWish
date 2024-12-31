@@ -8,6 +8,13 @@
         </div>
         <p class="text-muted small mb-2">@Event.Date.ToString("MMM d, yyyy")</p>
         <p class="card-text">@Event.Description</p>
+        <p class="card-text">
+            <span class="badge bg-primary">@Event.EventUsers?.Count people</span>
+            @if (Event.IsGiftExchange)
+            {
+                <span class="badge bg-success-subtle">Gift Exchange</span>
+            }
+        </p>
     </div>
     <div class="card-footer bg-transparent border-top-0">
         <a href="/events/@Event.Id" class="btn btn-outline-primary btn-sm">View Details</a>

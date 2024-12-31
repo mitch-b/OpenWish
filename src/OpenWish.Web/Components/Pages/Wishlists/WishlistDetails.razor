@@ -4,7 +4,9 @@
 @using OpenWish.Application.Services
 @using OpenWish.Data.Entities
 @using OpenWish.Web.Components.Wishlist
+@using OpenWish.Web.Services
 
+@inject IUserContextService UserContextService
 @inject IWishlistService WishlistService
 
 @rendermode InteractiveServer
@@ -20,7 +22,6 @@ else
     <div class="row mb-4">
         <div class="col">
             <h2>@_wishlist?.Name</h2>
-            <p>Manage your wishlist</p>
         </div>
     </div>
 
@@ -28,7 +29,14 @@ else
         <div class="col-md-8">
             @if (_items is not null)
             {
-                <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+                @if (_canEdit)
+                {
+                    <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+                }
+                else 
+                {
+                    <WishlistItemList Items="@_items" />
+                }
             }
             else
             {
@@ -36,8 +44,15 @@ else
             }
         </div>
         <div class="col-md-4">
-            <h4>Add New Item</h4>
-            <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
+            @if (_canEdit)
+            {
+                <h4>Add New Item</h4>
+                <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
+            }
+            else
+            {
+                // use this space for something?
+            }
         </div>
     </div>
 }
@@ -47,10 +62,13 @@ else
     private Wishlist? _wishlist;
     private List<WishlistItem> _items = new();
     private WishlistItem _newItem = new();
+    private string? _currentUserId;
+    private bool _canEdit;
 
     protected override async Task OnInitializedAsync()
     {
         _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
+        await SetupSecurity();
         await LoadItems();
     }
 
@@ -70,5 +88,12 @@ else
     {
         await WishlistService.UpdateWishlistItemAsync(WishlistId, item.Id, item);
         await LoadItems();
+    }
+
+    private async Task SetupSecurity()
+    {
+        if (_wishlist == null) return;
+        _currentUserId ??= await UserContextService.GetUserIdAsync();
+        _canEdit = _wishlist.OwnerId == _currentUserId || _wishlist.IsCollaborative;
     }
 }

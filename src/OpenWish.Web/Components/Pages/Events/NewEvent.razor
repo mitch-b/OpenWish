@@ -1,0 +1,80 @@
+@page "/events/new"
+@attribute [Authorize]
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Event
+@using OpenWish.Web.Services
+
+@inject IEventService EventService
+@inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
+@inject ILogger<NewEvent> Logger
+
+@rendermode InteractiveServer
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <span style="font-size: 3rem;">📅</span>
+                        <h2 class="mt-3">Create a New Event</h2>
+                        <p class="text-muted">
+                            Plan your special occasion and organize gifts with friends and family
+                        </p>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <FormMappingScope Name="new-event">
+                            <EventForm Model="@_event" OnSubmit="@HandleSubmit" />
+                        </FormMappingScope>
+                        
+                        <div class="text-center mt-3">
+                            <button class="btn btn-link" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
+                                Cancel and return to events
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly Event _event = new() { Date = DateTimeOffset.UtcNow.AddDays(7) };
+    private bool _isLoading;
+    
+    private async Task HandleSubmit(Event submittedEvent)
+    {
+        try
+        {
+            _isLoading = true;
+            var userId = await UserContextService.GetUserIdAsync();
+            if (userId is not null)
+            {
+                await EventService.CreateEventAsync(submittedEvent, userId);
+                NavigationManager.NavigateTo("/events");
+            }
+            else
+            {
+                Logger.LogError("Could not determine UserId when creating event");
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

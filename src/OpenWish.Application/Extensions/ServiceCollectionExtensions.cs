@@ -11,6 +11,7 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<OpenWishSettings>(configuration.GetSection(nameof(OpenWishSettings)));
         services.AddScoped<IWishlistService, WishlistService>();
+        services.AddScoped<IEventService, EventService>();
         return services;
     }
 }

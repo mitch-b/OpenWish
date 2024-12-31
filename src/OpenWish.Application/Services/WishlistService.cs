@@ -27,16 +27,10 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
 
     public async Task<Wishlist> CreateWishlistAsync(Wishlist wishlist, string ownerId)
     {
-        var newWishlist = new Wishlist
-        {
-            Name = wishlist.Name,
-            OwnerId = ownerId,
-            IsCollaborative = wishlist.IsCollaborative
-        };
-
-        _context.Wishlists.Add(newWishlist);
+        wishlist.OwnerId = ownerId;
+        var entry = _context.Wishlists.Add(wishlist);
         await _context.SaveChangesAsync();
-        return newWishlist;
+        return entry.Entity;
     }
 
     public async Task<Wishlist> GetWishlistAsync(int id)
@@ -65,9 +59,8 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
         var editedWishlist = await _context.Wishlists.FindAsync(id) 
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
 
-        editedWishlist.Name = wishlist.Name;
-        editedWishlist.IsCollaborative = wishlist.IsCollaborative;
-        editedWishlist.UpdatedOn = DateTime.UtcNow;
+        wishlist.UpdatedOn = DateTime.UtcNow;
+        _context.Entry(editedWishlist).CurrentValues.SetValues(wishlist);
         await _context.SaveChangesAsync();
         
         return wishlist;
@@ -75,12 +68,10 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
 
     public async Task DeleteWishlistAsync(int id)
     {
-        var wishlist = await _context.Wishlists.FindAsync(id);
-        if (wishlist != null)
-        {
-            _context.Wishlists.Remove(wishlist);
-            await _context.SaveChangesAsync();
-        }
+        var wishlist = await _context.Wishlists.FindAsync(id)
+            ?? throw new KeyNotFoundException($"Wishlist {id} not found");
+        wishlist.Deleted = true;
+        await UpdateWishlistAsync(id, wishlist);
     }
 
     public async Task<WishlistItem> AddItemToWishlistAsync(int wishlistId, WishlistItem item)
@@ -94,9 +85,9 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
             .Where(i => i.WishlistId == wishlistId)
             .CountAsync();
 
-        _context.WishlistItems.Add(item);
+        var entry = _context.WishlistItems.Add(item);
         await _context.SaveChangesAsync();
-        return item;
+        return entry.Entity;
     }
 
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
@@ -130,15 +121,9 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
     public async Task<WishlistItem> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItem item)
     {
         var existingItem = await GetWishlistItemAsync(wishlistId, itemId);
-        
-        existingItem.Name = item.Name;
-        existingItem.Description = item.Description;
-        existingItem.Price = item.Price;
-        existingItem.Url = item.Url;
-        existingItem.WhereToBuy = item.WhereToBuy;
-        existingItem.Priority = item.Priority;
-        existingItem.IsPrivate = item.IsPrivate;
-        existingItem.UpdatedOn = DateTime.UtcNow;
+
+        item.UpdatedOn = DateTime.UtcNow;
+        _context.Entry(existingItem).CurrentValues.SetValues(item);
         
         await _context.SaveChangesAsync();
         return existingItem;

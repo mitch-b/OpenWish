@@ -1,4 +1,8 @@
+@using OpenWish.Application.Services
 @using OpenWish.Data.Entities
+
+@inject IWishlistService WishlistService
+@inject ILogger<WishlistCard> Logger
 
 @if (Wishlist == null)
 {
@@ -21,12 +25,14 @@ else
                     <small class="text-muted">Created by @Wishlist.Owner?.UserName</small>
                     <div>
                         <a href="/wishlists/@Wishlist.Id" class="btn btn-outline-primary btn-sm d-none d-md-inline-block">View</a>
-                        <div class="dropdown d-inline-block d-md-none">
+                        <div class="dropdown d-inline-block">
                             <button class="btn btn-outline-secondary btn-sm kebab-menu" type="button" id="dropdownMenu@(Wishlist.Id)" data-bs-toggle="dropdown" aria-expanded="false">
                                 ⋮
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
-                                <li><a class="dropdown-item" href="/wishlists/@Wishlist.Id">View</a></li>
+                                <li><a class="dropdown-item d-md-none" href="/wishlists/@Wishlist.Id">View</a></li>
+                                <li><hr class="dropdown-divider d-md-none"></li>
+                                <li><button class="dropdown-item text-danger" @onclick="ShowDeleteDialog">Delete</button></li>
                             </ul>
                         </div>
                     </div>
@@ -34,9 +40,35 @@ else
             </div>
         </div>
     </div>
+    <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDelete" />
 }
 
 @code {
     [Parameter]
     public Wishlist? Wishlist { get; set; }
+    [Parameter]
+    public EventCallback<Wishlist> OnDelete { get; set; }
+
+    private WishlistDeleteDialog deleteDialog;
+
+    private void ShowDeleteDialog()
+    {
+        deleteDialog.Show(
+            "Delete Wishlist",
+            $"Are you sure you want to delete the wishlist '{Wishlist?.Name}'? This action cannot be undone."
+        );
+    }
+
+    private async Task HandleDelete()
+    {
+        if (Wishlist != null)
+        {
+            Logger.LogInformation("Deleting wishlist {WishlistId}", Wishlist.Id);
+            await WishlistService.DeleteWishlistAsync(Wishlist.Id);
+            if (OnDelete.HasDelegate)
+            {
+                await OnDelete.InvokeAsync(Wishlist);
+            }
+        }
+    }
 }

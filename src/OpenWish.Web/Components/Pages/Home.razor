@@ -7,6 +7,8 @@
 @inject IWishlistService WishlistService
 @inject IUserContextService UserContextService
 
+@rendermode InteractiveServer
+
 <PageTitle>Home</PageTitle>
 
 <div class="hero-section">
@@ -49,7 +51,7 @@
         <div class="wishlist-carousel">
             @foreach (var wishlist in _featuredWishlists ?? [])
             {
-                <WishlistCard Wishlist="@wishlist" />
+                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
             }
         </div>
     </div>
@@ -57,12 +59,23 @@
 
 @code {
     private List<Wishlist>? _featuredWishlists;
+    private string? _userId;
     protected override async Task OnInitializedAsync()
     {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (userId is not null)
+        _userId = await UserContextService.GetUserIdAsync();
+        await LoadFeaturedWishlists();
+    }
+
+    private async Task LoadFeaturedWishlists()
+    {
+        if (_userId is not null)
         {
-            _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(userId)).ToList();
+            _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId)).ToList();
         }
+    }
+
+    private async Task HandleWishlistDeleted(Wishlist wishlist)
+    {
+        await LoadFeaturedWishlists();
     }
 }

@@ -1,0 +1,45 @@
+<div class="dialog-container @(_isOpen ? "show" : "")" @onclick="HandleBackdropClick">
+    <div class="dialog" @onclick:stopPropagation>
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <div class="dialog-header">
+                <h3>@Title</h3>
+                <button class="close-button" @onclick="Close">&times;</button>
+            </div>
+        }
+        <div class="dialog-content">
+            @ChildContent
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _isOpen;
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    public void Show()
+    {
+        _isOpen = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _isOpen = false;
+        StateHasChanged();
+        OnClose.InvokeAsync();
+    }
+
+    private void HandleBackdropClick()
+    {
+        Close();
+    }
+}

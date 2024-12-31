@@ -1,0 +1,35 @@
+@using OpenWish.Web.Client.Components.Shared
+
+<Dialog @ref="dialog" Title="@Title">
+    <div class="modal-body">
+        <p>@Message</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Delete</button>
+        <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+    </div>
+</Dialog>
+
+@code {
+    private Dialog dialog;
+    private string Title { get; set; }
+    private string Message { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    public void Show(string title, string message)
+    {
+        Title = title;
+        Message = message;
+        dialog.Show();
+    }
+
+    public void Close() => dialog.Close();
+
+    private async Task HandleConfirm()
+    {
+        await OnConfirm.InvokeAsync();
+        dialog.Close();
+    }
+}

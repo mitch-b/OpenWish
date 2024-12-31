@@ -12,6 +12,8 @@
 @inject ILogger<Index> Logger
 @inject IUserContextService UserContextService
 
+@rendermode InteractiveServer
+
 <h3>My Wishlists</h3>
 
 <div class="mb-3">
@@ -32,7 +34,7 @@ else
         @foreach (var wishlist in wishlists)
         {
             <div class="col-md-4 mb-4">
-                <WishlistCard Wishlist="@wishlist" />
+                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
             </div>
         }
     </div>
@@ -40,16 +42,24 @@ else
 
 @code {
     private IEnumerable<Wishlist>? wishlists;
+    private string? _userId;
 
     protected override async Task OnInitializedAsync()
     {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (string.IsNullOrWhiteSpace(userId))
+        _userId = await UserContextService.GetUserIdAsync();
+        await LoadWishlists();
+    }
+
+    private async Task LoadWishlists()
+    {
+        if (!string.IsNullOrWhiteSpace(_userId))
         {
-            Logger.LogError("User ID not found in claims");
-            return;
+            wishlists = await WishlistService.GetUserWishlistsAsync(_userId);
         }
-        
-        wishlists = await WishlistService.GetUserWishlistsAsync(userId);
+    }
+
+    private async Task HandleWishlistDeleted(Wishlist wishlist)
+    {
+        await LoadWishlists();
     }
 }

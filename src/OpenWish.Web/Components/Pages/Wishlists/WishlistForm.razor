@@ -1,54 +1,36 @@
 @using OpenWish.Data.Entities
 @using System.ComponentModel.DataAnnotations
 
-<EditForm Model="@_model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
+<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="mb-3">
         <label for="name" class="form-label">Name</label>
         <InputText id="name" class="form-control" 
-                   @bind-Value="@_model.Name" />
-        <ValidationMessage For="@(() => _model.Name)" />
+                   @bind-Value="@Model!.Name" />
+        <ValidationMessage For="@(() => Model.Name)" />
     </div>
     
     <div class="mb-3">
         <label for="deleted" class="form-label">Deleted</label>
-        <InputCheckbox id="deleted" @bind-Value="@_model.Deleted" /> Deleted
-        <ValidationMessage For="@(() => _model.Deleted)" />
+        <InputCheckbox id="deleted" @bind-Value="@Model!.Deleted" /> Deleted
+        <ValidationMessage For="@(() => Model.Deleted)" />
     </div>
 
-    <button type="submit" class="btn btn-primary mt-3">@(_model.Id == 0 ? "Create" : "Update") Wishlist</button>
+    <button type="submit" class="btn btn-primary mt-3">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
 </EditForm>
 
 @code {
-    private Wishlist _model = new();
-    
     [Parameter] public Wishlist? Model { get; set; } = new();
     
     [Parameter] public EventCallback<Wishlist> OnSubmit { get; set; }
-    
-    protected override void OnInitialized()
-    {
-        if (Model != null)
-        {
-            _model = Model;
-        }
-    }
-    
-    protected override void OnParametersSet()
-    {
-        if (Model != null)
-        {
-            _model = Model;
-        }
-    }
     
     private async Task HandleSubmit()
     {
         if (OnSubmit.HasDelegate)
         {
-            await OnSubmit.InvokeAsync(_model);
+            await OnSubmit.InvokeAsync(Model);
         }
     }
 }

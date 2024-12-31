@@ -1,0 +1,32 @@
+.events-header {
+    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
+    color: white;
+    padding: 3rem;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state {
+    background: white;
+    border-radius: 8px;
+    padding: 3rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-light {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-light:hover {
+    background: white;
+    transform: translateY(-2px);
+}

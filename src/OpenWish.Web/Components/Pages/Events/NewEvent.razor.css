@@ -1,0 +1,26 @@
+.event-header {
+    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.event-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 2rem;
+}
+
+.view-transition {
+    transition: all 0.3s ease-in-out;
+}
+
+.add-item-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+}

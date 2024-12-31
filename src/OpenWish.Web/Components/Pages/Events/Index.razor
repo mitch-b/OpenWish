@@ -1,0 +1,91 @@
+@page "/events"
+@attribute [Authorize]
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Event
+@using OpenWish.Web.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<PageTitle>Events</PageTitle>
+
+<div class="events-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1>Your Events</h1>
+                <p class="lead mb-0">Plan and organize special occasions with friends and family</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="/events/new" class="btn btn-light btn-lg">
+                    <span style="font-size: 1.2rem;">📅</span> Create Event
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    @if (_events == null)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (!_events.Any())
+    {
+        <div class="empty-state text-center">
+            <div class="empty-state-icon">📅</div>
+            <h2>No Events Yet</h2>
+            <p class="lead">Start planning your first event!</p>
+            <a href="/events/new" class="btn btn-primary btn-lg mt-3">
+                Create Your First Event
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var evt in _events)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Event>? _events;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var userId = await UserContextService.GetUserIdAsync();
+        if (userId is not null)
+        {
+            await LoadEvents(userId);
+        }
+    }
+
+    private async Task LoadEvents(string userId)
+    {
+        _events = (await EventService.GetUserEventsAsync(userId)).ToList();
+    }
+
+    private async Task HandleEventDeleted(Event evt)
+    {
+        var userId = await UserContextService.GetUserIdAsync();
+        if (userId is not null)
+        {
+            await LoadEvents(userId);
+        }
+    }
+}

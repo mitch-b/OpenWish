@@ -16,3 +16,9 @@
 .badge {
     margin-right: 0.5rem;
 }
+
+.kebab-menu {
+    font-size: 1.5rem;
+    line-height: 0.85;
+    padding: 0.25rem 0.5rem;
+}

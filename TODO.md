@@ -43,4 +43,4 @@
 
 ## Cleanup
 1. Technical changes
-   - [ ] Convert to PostgreSQL from SQL Server
+   - [x] Convert to PostgreSQL from SQL Server

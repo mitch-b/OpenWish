@@ -2,10 +2,11 @@
 
 ## Aspire Secrets
 
-To run a local SQL Server instance, you must give a password for the `sa` account. Use dotnet user secrets for this.
+To run a local PostgreSQL instance, you must give a password for the `sa` account. Use dotnet user secrets for this.
 
 ```bash
 cd src/OpenWish.AppHost
+dotnet user-secrets set Parameters:sqlUser "openwish"
 dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
 ```
 

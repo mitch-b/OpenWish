@@ -1,13 +1,14 @@
+@attribute [Authorize]
 @page "/wishlists"
+
 @using Microsoft.Extensions.Logging
 @using OpenWish.Application.Services
 @using OpenWish.Data.Entities
+
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
-
-@attribute [Authorize]
 
 <h3>My Wishlists</h3>
 

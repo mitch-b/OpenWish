@@ -1,25 +1,39 @@
+@attribute [Authorize]
 @page "/wishlists/new"
+
 @using OpenWish.Application.Services
 @using OpenWish.Data.Entities
 @using OpenWish.Web.Services
+
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IUserContextService UserContextService
+@inject ILogger<New> Logger
 
-@attribute [Authorize]
+@* InteractiveServer because in Server project. If in Client, this can be InteractiveAuto *@
+@rendermode InteractiveServer
 
-<h3>Create New Wishlist</h3>
+<h3>Create a Wishlist</h3>
 
-<WishlistForm Model="@wishlist" OnValidSubmit="@HandleValidSubmit" />
+<FormMappingScope Name="new-wishlist">
+    <WishlistForm Model="@wishlist" OnSubmit="@HandleSubmit" />
+</FormMappingScope>
 
 @code {
-    private Wishlist wishlist = new();
+    private Wishlist wishlist { get; set; } = new();
 
-    private async Task HandleValidSubmit()
+    private async Task HandleSubmit(Wishlist submittedWishlist)
     {
         var userId = await UserContextService.GetUserIdAsync();
-        await WishlistService.CreateWishlistAsync(wishlist.Name, userId);
+        if (userId is not null)
+        {
+            await WishlistService.CreateWishlistAsync(submittedWishlist, userId);
+        }
+        else
+        {
+            Logger.LogError("Could not determine UserId from new Wishlist page.");
+        }
         NavigationManager.NavigateTo("/wishlists");
     }
 }

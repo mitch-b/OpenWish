@@ -1,18 +1,16 @@
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Options;
 using OpenWish.Application.Extensions;
+using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
-using OpenWish.Web.Client.Pages;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
-using OpenWish.Application.Models.Configuration;
-using Microsoft.Extensions.Options;
-using OpenWish.Web.Services;
 using OpenWish.Web.Extensions;
-using System.Text.Json;
-using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +38,11 @@ var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseNpgsql(connectionString + ";Include Error Detail=true;")
+        // HMM... https://github.com/dotnet/efcore/issues/34431
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
+        .EnableSensitiveDataLogging()
+    );
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -99,9 +101,9 @@ using (var scope = app.Services.CreateScope())
 {
     var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
-    if (openWishSettings.OwnDatabaseUpgrades == true)
+    if (openWishSettings.OwnDatabaseUpgrades)
     {
-        using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var waitSeconds = 3;
         Console.WriteLine($"Applying migrations after {waitSeconds} seconds...");
         await Task.Delay(TimeSpan.FromSeconds(waitSeconds));

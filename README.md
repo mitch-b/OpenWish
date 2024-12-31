@@ -4,7 +4,7 @@ Shareable wishlists. A web application intended for selfhosting.
 
 * [.NET 9](https://dot.net/)
 * Blazor Server App
-* Entity Framework Core managed data
+* Entity Framework Core managed data on PostgreSQL
 * Docker images [published](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
 
 ## Developing?
@@ -68,25 +68,27 @@ OpenWish is designed to facilitate gift-giving events and wishlists with social 
 
 ### Docker Compose
 
-Since OpenWish depends on an external datasource (SQL), if you don't already have a SQL instance to use, you can run a SQL instance alongside the OpenWish application using Docker Compose:
+Since OpenWish depends on an external datasource (PostgreSQL), if you don't already have a PostgreSQL instance to use, you can run an instance alongside the OpenWish application using Docker Compose:
 
 ```yaml
 services:
   sql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: postgres:16
+    container_name: postgres
     environment:
-      SA_PASSWORD: "YourStrong!Passw0rd"
-      ACCEPT_EULA: "Y"
-    ports:
-      - 1433:1433
+      POSTGRES_USER: "openwish"
+      POSTGRES_PASSWORD: "YourStrong!Passw0rd"
+      POSTGRES_DB: "OpenWish"
     volumes:
-      - openwish-data:/var/opt/mssql
+      - openwish-data:/var/lib/postgresql@16/data
+    ports:
+      - 5432:5432
 
   web:
     image: ghcr.io/mitch-b/openwish-web:latest
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__OpenWish=Server=sql;Database=OpenWish;User Id=sa;Password=YourStrong!Passw0rd;Encrypt=optional;
+      - ConnectionStrings__OpenWish=Server=sql;Port=5432;Database=OpenWish;User Id=openwish;Password=YourStrong!Passw0rd;
       - OpenWishSettings__OwnDatabaseUpgrades=true
     ports:
       - 5001:8080
@@ -96,8 +98,6 @@ services:
 volumes:
   openwish-data:
 ```
-
-> Note: if you choose to bind volume mount the SQL data, see https://stackoverflow.com/a/77808783 to ensure your SQL directory has proper permissions applied.
 
 See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202412`) for managing upgrades.
 

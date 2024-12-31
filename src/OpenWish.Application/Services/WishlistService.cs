@@ -6,10 +6,10 @@ namespace OpenWish.Application.Services;
 
 public interface IWishlistService
 {
-    Task<Wishlist> CreateWishlistAsync(string name, string ownerId);
+    Task<Wishlist> CreateWishlistAsync(Wishlist wishlist, string ownerId);
     Task<Wishlist> GetWishlistAsync(int id);
     Task<IEnumerable<Wishlist>> GetUserWishlistsAsync(string userId);
-    Task<Wishlist> UpdateWishlistAsync(int id, string name);
+    Task<Wishlist> UpdateWishlistAsync(int id, Wishlist wishlist);
     Task DeleteWishlistAsync(int id);
     Task<WishlistItem> AddItemToWishlistAsync(int wishlistId, WishlistItem item);
     Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId);
@@ -19,23 +19,24 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
 {
     private readonly ApplicationDbContext _context = context;
 
-    public async Task<Wishlist> CreateWishlistAsync(string name, string ownerId)
+    public async Task<Wishlist> CreateWishlistAsync(Wishlist wishlist, string ownerId)
     {
-        var wishlist = new Wishlist
+        var newWishlist = new Wishlist
         {
-            Name = name,
+            Name = wishlist.Name,
             OwnerId = ownerId,
-            IsCollaborative = false
+            IsCollaborative = wishlist.IsCollaborative
         };
 
-        _context.Wishlists.Add(wishlist);
+        _context.Wishlists.Add(newWishlist);
         await _context.SaveChangesAsync();
-        return wishlist;
+        return newWishlist;
     }
 
     public async Task<Wishlist> GetWishlistAsync(int id)
     {
         var wishlist = await _context.Wishlists
+            .Where(w => !w.Deleted)
             .Include(w => w.Items)
             .Include(w => w.Owner)
             .FirstOrDefaultAsync(w => w.Id == id);
@@ -46,19 +47,21 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
     public async Task<IEnumerable<Wishlist>> GetUserWishlistsAsync(string userId)
     {
         return await _context.Wishlists
+            .Where(w => !w.Deleted)
             .Include(w => w.Items)
             .Include(w => w.Owner)
             .Where(w => w.Owner.Id == userId)
             .ToListAsync();
     }
 
-    public async Task<Wishlist> UpdateWishlistAsync(int id, string name)
+    public async Task<Wishlist> UpdateWishlistAsync(int id, Wishlist wishlist)
     {
-        var wishlist = await _context.Wishlists.FindAsync(id) 
+        var editedWishlist = await _context.Wishlists.FindAsync(id) 
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
-        
-        wishlist.Name = name;
-        wishlist.UpdatedOn = DateTime.UtcNow;
+
+        editedWishlist.Name = wishlist.Name;
+        editedWishlist.IsCollaborative = wishlist.IsCollaborative;
+        editedWishlist.UpdatedOn = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         
         return wishlist;

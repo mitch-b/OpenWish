@@ -1,0 +1,24 @@
+.event-header {
+    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.list-group-item {
+    border: none;
+    background: #F7FAFC;
+    margin-bottom: 0.5rem;
+    border-radius: 6px !important;
+}
+
+.card h3 {
+    color: #2D3748;
+    margin-bottom: 1.5rem;
+}

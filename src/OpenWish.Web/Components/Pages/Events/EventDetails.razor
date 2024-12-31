@@ -1,0 +1,171 @@
+@page "/events/{EventId:int}"
+@attribute [Authorize]
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Event
+@using OpenWish.Web.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<PageTitle>@(_event?.Name ?? "Event Details")</PageTitle>
+
+@if (_event == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="event-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="display-4">@_event.Name</h1>
+                    <p class="lead mb-0">@_event.Description</p>
+                    @if (_event.Tags != null)
+                    {
+                        <div class="mt-3">
+                            @foreach (var tag in _event.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                <span class="badge bg-light text-dark me-2">@tag.Trim()</span>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (_isOwner)
+                {
+                    <a href="/events/@EventId/manage" class="btn btn-light">
+                        <i class="bi bi-gear"></i> Manage Event
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3>Event Details</h3>
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <h5>Date & Time</h5>
+                                <p class="mb-4">@_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")</p>
+
+                                @if (_event.Budget.HasValue)
+                                {
+                                    <h5>Suggested Budget</h5>
+                                    <p class="mb-4">@_event.Budget.Value.ToString("C")</p>
+                                }
+
+                                @if (_event.IsGiftExchange)
+                                {
+                                    <h5>Gift Exchange</h5>
+                                    <p class="mb-4">
+                                        <span class="badge bg-success">Active</span>
+                                        This event includes a gift exchange
+                                    </p>
+                                }
+
+                                @if (_event.IsRecurring)
+                                {
+                                    <h5>Recurring Event</h5>
+                                    <p class="mb-4">This is a recurring event</p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Created By</h5>
+                                <p class="mb-4">@_event.CreatedBy.UserName</p>
+
+                                <h5>Participants (@_event.EventUsers.Count)</h5>
+                                <div class="list-group">
+                                    @foreach (var participant in _event.EventUsers)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            @participant.User.UserName
+                                            <span class="badge bg-primary">@participant.Role</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (_event.EventWishlists.Any())
+                {
+                    <div class="card shadow-sm mt-4">
+                        <div class="card-body">
+                            <h3>Event Wishlists</h3>
+                            <div class="row g-3 mt-2">
+                                @foreach (var wishlist in _event.EventWishlists)
+                                {
+                                    <div class="col-md-6">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h5 class="card-title">@wishlist.Name</h5>
+                                                <p class="card-text">Created by @wishlist.Owner.UserName</p>
+                                                <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">
+                                                    View Wishlist
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-md-4">
+                @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
+                {
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h3>Gift Exchange</h3>
+                            <p>You are gifting to:</p>
+                            @{
+                                var myExchange = _event.GiftExchanges.FirstOrDefault(ge => ge.GiverId == _currentUserId);
+                                if (myExchange != null)
+                                {
+                                    <div class="alert alert-info">
+                                        <strong>@myExchange.Receiver.UserName</strong>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    private Event? _event;
+    private string? _currentUserId;
+    private bool _isOwner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserId = await UserContextService.GetUserIdAsync();
+        await LoadEvent();
+    }
+
+    private async Task LoadEvent()
+    {
+        _event = await EventService.GetEventAsync(EventId);
+        _isOwner = _event?.CreatedBy.Id == _currentUserId;
+    }
+}

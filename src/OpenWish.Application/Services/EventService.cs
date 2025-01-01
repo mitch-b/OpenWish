@@ -12,6 +12,7 @@ public interface IEventService
     Task<Event> UpdateEventAsync(int id, Event evt);
     Task DeleteEventAsync(int id);
     Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
+    Task<bool> RemoveUserFromEventAsync(int eventId, string userId);
 }
 
 public class EventService : IEventService
@@ -33,7 +34,15 @@ public class EventService : IEventService
 
     public async Task<Event> GetEventAsync(int id)
     {
-        return await _context.Events.FindAsync(id)
+        return await _context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
+            .Include(e => e.EventWishlists)
+                .ThenInclude(ew => ew.Owner)
+            .Include(e => e.GiftExchanges)
+                .ThenInclude(ge => ge.Receiver)
+            .FirstOrDefaultAsync(e => e.Id == id)
             ?? throw new KeyNotFoundException($"Event with id {id} not found");
     }
 
@@ -74,6 +83,20 @@ public class EventService : IEventService
         }
 
         evt.EventUsers.Add(new EventUser { Event = evt, User = user, Role = role });
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
+    {
+        var eventUser = await _context.Events.Include(e => e.EventUsers)
+            .SelectMany(e => e.EventUsers)
+            .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.UserId == userId);
+
+        if (eventUser == null)
+            return false;
+
+        _context.Events.Find(eventId)?.EventUsers.Remove(eventUser);
         await _context.SaveChangesAsync();
         return true;
     }

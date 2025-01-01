@@ -1,8 +1,10 @@
 .event-header {
     background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
     color: white;
-    padding: 2rem 0;
+    padding: 2rem;
+    border-radius: 8px;
     margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .card {

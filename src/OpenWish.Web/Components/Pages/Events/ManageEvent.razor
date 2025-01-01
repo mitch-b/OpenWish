@@ -127,8 +127,7 @@ else
 
     private async Task HandleRemoveParticipant(EventUser participant)
     {
-        // Note: You'll need to implement this in your EventService
-        // await EventService.RemoveUserFromEventAsync(EventId, participant.UserId);
+        await EventService.RemoveUserFromEventAsync(EventId, participant.UserId);
         await LoadEvent();
     }
 }

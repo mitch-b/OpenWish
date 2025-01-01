@@ -1,0 +1,133 @@
+@page "/events/{EventId:int}/manage"
+@attribute [Authorize]
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Event
+@using OpenWish.Web.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+
+@rendermode InteractiveServer
+
+<PageTitle>Manage Event - @(_event?.Name ?? "")</PageTitle>
+
+@if (_event == null)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (!_isOwner)
+{
+    <div class="alert alert-danger" role="alert">
+        You do not have permission to manage this event.
+    </div>
+}
+else
+{
+    <div class="event-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>Manage Event</h1>
+                <button class="btn btn-danger" @onclick="HandleDeleteEvent">
+                    <i class="bi bi-trash"></i> Delete Event
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <FormMappingScope Name="edit-event">
+                            <EventForm Model="@_event" 
+                                     OnSubmit="@HandleSubmit"
+                                     ShowValidationSummary="true" />
+                        </FormMappingScope>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h3>Manage Participants</h3>
+                        <div class="list-group mt-3">
+                            @foreach (var participant in _event.EventUsers)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>@participant.User.UserName</strong>
+                                        <br />
+                                        <small class="text-muted">@participant.Role</small>
+                                    </div>
+                                    @if (participant.UserId != _currentUserId)
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                @onclick="() => HandleRemoveParticipant(participant)">
+                                            Remove
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    private Event? _event;
+    private string? _currentUserId;
+    private bool _isOwner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentUserId = await UserContextService.GetUserIdAsync();
+        await LoadEvent();
+    }
+
+    private async Task LoadEvent()
+    {
+        _event = await EventService.GetEventAsync(EventId);
+        _isOwner = _event?.CreatedBy.Id == _currentUserId;
+        
+        if (!_isOwner)
+        {
+            NavigationManager.NavigateTo($"/events/{EventId}");
+        }
+    }
+
+    private async Task HandleSubmit(Event updatedEvent)
+    {
+        if (_event != null)
+        {
+            await EventService.UpdateEventAsync(EventId, updatedEvent);
+            NavigationManager.NavigateTo($"/events/{EventId}");
+        }
+    }
+
+    private async Task HandleDeleteEvent()
+    {
+        if (_event != null)
+        {
+            await EventService.DeleteEventAsync(EventId);
+            NavigationManager.NavigateTo("/events");
+        }
+    }
+
+    private async Task HandleRemoveParticipant(EventUser participant)
+    {
+        await EventService.RemoveUserFromEventAsync(EventId, participant.UserId);
+        await LoadEvent();
+    }
+}

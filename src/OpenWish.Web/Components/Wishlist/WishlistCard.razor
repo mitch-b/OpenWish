@@ -10,36 +10,38 @@
 }
 else
 {
-    <div class="wishlist-card">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">@Wishlist.Name</h5>
-                <p class="card-text">
-                    <span class="badge bg-primary">@Wishlist.Items?.Count items</span>
-                    @if (Wishlist.IsCollaborative)
-                    {
-                        <span class="badge bg-info">Collaborative</span>
-                    }
-                </p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">Created by @Wishlist.Owner?.UserName</small>
-                    <div>
-                        <a href="/wishlists/@Wishlist.Id" class="btn btn-outline-primary btn-sm d-none d-md-inline-block">View</a>
-                        <div class="dropdown d-inline-block">
-                            <button class="btn btn-outline-secondary btn-sm kebab-menu" type="button" id="dropdownMenu@(Wishlist.Id)" data-bs-toggle="dropdown" aria-expanded="false">
-                                ⋮
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
-                                <li><a class="dropdown-item d-md-none" href="/wishlists/@Wishlist.Id">View</a></li>
-                                <li><hr class="dropdown-divider d-md-none"></li>
-                                <li><button class="dropdown-item text-danger" @onclick="ShowDeleteDialog">Delete</button></li>
-                            </ul>
-                        </div>
+    <div class="card h-100 shadow-sm wishlist-card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <h5 class="card-title mb-1">@Wishlist.Name</h5>
+                <span style="font-size: 1.5rem;">📋</span>
+            </div>
+            <p class="card-text">
+                <span class="badge bg-primary">@Wishlist.Items?.Count items</span>
+                @if (Wishlist.IsCollaborative)
+                {
+                    <span class="badge bg-info">Collaborative</span>
+                }
+            </p>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Created by @Wishlist.Owner?.UserName</small>
+                <div>
+                    <a href="/wishlists/@Wishlist.Id" class="btn btn-outline-primary btn-sm d-none d-md-inline-block">View</a>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-outline-secondary btn-sm kebab-menu" type="button" id="dropdownMenu@(Wishlist.Id)" data-bs-toggle="dropdown" aria-expanded="false">
+                            ⋮
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
+                            <li><a class="dropdown-item d-md-none" href="/wishlists/@Wishlist.Id">View</a></li>
+                            <li><hr class="dropdown-divider d-md-none"></li>
+                            <li><button class="dropdown-item text-danger" @onclick="ShowDeleteDialog">Delete</button></li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDelete" />
 }
 

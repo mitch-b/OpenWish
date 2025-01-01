@@ -1,0 +1,39 @@
+@using OpenWish.Data.Entities
+
+<div class="card h-100 shadow-sm event-card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-1">@Event.Name</h5>
+            <span style="font-size: 1.5rem;">📅</span>
+        </div>
+        <p class="text-muted small mb-2">@Event.Date.ToString("MMM d, yyyy")</p>
+        <p class="card-text">@Event.Description</p>
+        <p class="card-text">
+            <span class="badge bg-primary">@Event.EventUsers?.Count people</span>
+            @if (Event.IsGiftExchange)
+            {
+                <span class="badge bg-success-subtle">Gift Exchange</span>
+            }
+        </p>
+    </div>
+    <div class="card-footer bg-transparent border-top-0">
+        <a href="/events/@Event.Id" class="btn btn-outline-primary btn-sm">View Details</a>
+        @if (OnDelete.HasDelegate)
+        {
+            <button class="btn btn-link btn-sm text-danger float-end" @onclick="DeleteEvent">Delete</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Event Event { get; set; } = default!;
+    [Parameter] public EventCallback<Event> OnDelete { get; set; }
+
+    private async Task DeleteEvent()
+    {
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(Event);
+        }
+    }
+}

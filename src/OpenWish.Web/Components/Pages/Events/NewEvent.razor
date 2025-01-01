@@ -1,0 +1,74 @@
+@page "/events/new"
+@attribute [Authorize]
+
+@using OpenWish.Application.Services
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Components.Event
+@using OpenWish.Web.Services
+
+@inject IEventService EventService
+@inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
+@inject ILogger<NewEvent> Logger
+
+@rendermode InteractiveServer
+
+<PageTitle>Create New Event</PageTitle>
+
+@if (_isLoading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="event-header">
+        <h2>Create New Event</h2>
+        <span class="badge bg-info">New Event</span>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="event-content view-transition">
+                <FormMappingScope Name="new-event">
+                    <EventForm Model="@_event" OnSubmit="@HandleSubmit" />
+                </FormMappingScope>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="add-item-section">
+                <h4>Event Details</h4>
+                <p>Plan your special occasion and organize gifts with friends and family</p>
+                <button class="btn btn-link" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
+                    <i class="bi bi-arrow-left"></i> Back to events
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly Event _event = new() { Date = DateTimeOffset.UtcNow.AddDays(7) };
+    private bool _isLoading;
+    
+    private async Task HandleSubmit(Event submittedEvent)
+    {
+        try
+        {
+            _isLoading = true;
+            var userId = await UserContextService.GetUserIdAsync();
+            if (userId is not null)
+            {
+                await EventService.CreateEventAsync(submittedEvent, userId);
+                NavigationManager.NavigateTo("/events");
+            }
+            else
+            {
+                Logger.LogError("Could not determine UserId when creating event");
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

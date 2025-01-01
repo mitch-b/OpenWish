@@ -59,7 +59,7 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
         var editedWishlist = await _context.Wishlists.FindAsync(id) 
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
 
-        wishlist.UpdatedOn = DateTime.UtcNow;
+        wishlist.UpdatedOn = DateTimeOffset.UtcNow;
         _context.Entry(editedWishlist).CurrentValues.SetValues(wishlist);
         await _context.SaveChangesAsync();
         
@@ -79,8 +79,8 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
         var wishlist = await GetWishlistAsync(wishlistId);
         
         item.WishlistId = wishlistId;
-        item.CreatedOn = DateTime.UtcNow;
-        item.UpdatedOn = DateTime.UtcNow;
+        item.CreatedOn = DateTimeOffset.UtcNow;
+        item.UpdatedOn = DateTimeOffset.UtcNow;
         item.OrderIndex = await _context.WishlistItems
             .Where(i => i.WishlistId == wishlistId)
             .CountAsync();
@@ -122,7 +122,7 @@ public class WishlistService(ApplicationDbContext context) : IWishlistService
     {
         var existingItem = await GetWishlistItemAsync(wishlistId, itemId);
 
-        item.UpdatedOn = DateTime.UtcNow;
+        item.UpdatedOn = DateTimeOffset.UtcNow;
         _context.Entry(existingItem).CurrentValues.SetValues(item);
         
         await _context.SaveChangesAsync();

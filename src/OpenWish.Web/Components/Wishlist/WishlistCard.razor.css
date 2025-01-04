@@ -2,6 +2,7 @@
     min-width: 300px;
     margin-right: 1rem;
     border-left: 4px solid var(--bs-primary);
+    cursor: pointer;
 }
 
 .card {

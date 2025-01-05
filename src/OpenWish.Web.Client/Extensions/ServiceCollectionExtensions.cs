@@ -13,7 +13,8 @@ public static class ServiceCollectionExtensions
         // authentication
         //services.AddScoped<BaseAddressAuthorizationMessageHandler>();
         //services.RemoveAll<AuthenticationStateProvider>();
-        services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+        // https://jonhilton.net/blazor-share-auth-state/
+        services.AddSingleton<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
 
         services.AddScoped<IUserContextService, UserContextService>();
         services.AddScoped<IWishlistService, WishlistHttpClientService>();

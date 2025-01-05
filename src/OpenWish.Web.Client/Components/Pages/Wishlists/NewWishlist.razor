@@ -1,17 +1,14 @@
 @attribute [Authorize]
 @page "/wishlists/new"
 
-@using OpenWish.Application.Services
-@using OpenWish.Web.Services
-@using OpenWish.Web.Components.Wishlist
+@using OpenWish.Web.Client.Components.Wishlist
 
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
-@inject ILogger<New> Logger
+@inject ILogger<NewWishlist> Logger
 
-@* InteractiveServer because in Server project. If in Client, this can be InteractiveAuto *@
-@rendermode InteractiveServer
+@rendermode InteractiveAuto
 
 <h3>Create a Wishlist</h3>
 

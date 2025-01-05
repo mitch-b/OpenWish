@@ -16,6 +16,7 @@ var db = sql.AddDatabase(sqlDatabaseName);
 
 builder.AddProject<Projects.OpenWish_Web>("openwish-web")
     .WithEnvironment("OpenWishSettings__OwnDatabaseUpgrades", "true")
+    .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithExternalHttpEndpoints()
     .WithReference(db)
     .WaitFor(db);

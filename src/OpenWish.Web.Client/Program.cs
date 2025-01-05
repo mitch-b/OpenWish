@@ -5,6 +5,9 @@ using OpenWish.Web.Client.Extensions;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+// Configure logging
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
 builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();
@@ -15,8 +18,7 @@ builder.Services.AddHttpClient("OpenWish.API", client => client.BaseAddress = ne
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("OpenWish.API"));
 
-// Add authorization
-// builder.Services.AddApiAuthorization();
+builder.Services.AddApiAuthorization();
 
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWasmClientServices(builder.Configuration);

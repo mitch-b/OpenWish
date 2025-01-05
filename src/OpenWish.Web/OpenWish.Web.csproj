@@ -18,4 +18,8 @@
     <ProjectReference Include="..\OpenWish.Web.Client\OpenWish.Web.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Wishlist\" />
+  </ItemGroup>
+
 </Project>

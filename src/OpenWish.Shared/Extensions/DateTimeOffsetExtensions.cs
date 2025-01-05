@@ -1,6 +1,6 @@
 using Humanizer;
 
-namespace OpenWish.Application.Extensions;
+namespace OpenWish.Shared.Extensions;
 public static class DateTimeOffsetExtensions
 {
     public static DateTimeOffset? ToLocalTime(this DateTimeOffset? dateTimeOffset)

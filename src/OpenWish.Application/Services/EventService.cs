@@ -1,40 +1,36 @@
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
-using Microsoft.EntityFrameworkCore;
+using OpenWish.Shared.Models;
+using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public interface IEventService
+public class EventService(ApplicationDbContext context, IMapper mapper) : IEventService
 {
-    Task<Event> CreateEventAsync(Event evt, string creatorId);
-    Task<Event> GetEventAsync(int id);
-    Task<IEnumerable<Event>> GetUserEventsAsync(string userId);
-    Task<Event> UpdateEventAsync(int id, Event evt);
-    Task DeleteEventAsync(int id);
-    Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
-    Task<bool> RemoveUserFromEventAsync(int eventId, string userId);
-}
+    private readonly ApplicationDbContext _context = context;
+    private readonly IMapper _mapper = mapper;
 
-public class EventService : IEventService
-{
-    private readonly ApplicationDbContext _context;
-
-    public EventService(ApplicationDbContext context)
+    public async Task<EventModel> CreateEventAsync(EventModel eventModel, string creatorId)
     {
-        _context = context;
-    }
+        var creator = await _context.Users.FindAsync(creatorId)
+            ?? throw new KeyNotFoundException($"User with id {creatorId} not found");
 
-    public async Task<Event> CreateEventAsync(Event evt, string creatorId)
-    {
-        evt.CreatedBy = await _context.Users.FindAsync(creatorId);
-        var entry = _context.Events.Add(evt);
+        var eventEntity = _mapper.Map<Event>(eventModel);
+        eventEntity.CreatedBy = creator;
+        eventEntity.CreatedOn = DateTimeOffset.UtcNow;
+
+        _context.Events.Add(eventEntity);
         await _context.SaveChangesAsync();
-        return entry.Entity;
+
+        var resultModel = _mapper.Map<EventModel>(eventEntity);
+        return resultModel;
     }
 
-    public async Task<Event> GetEventAsync(int id)
+    public async Task<EventModel> GetEventAsync(int id)
     {
-        return await _context.Events
+        var eventEntity = await _context.Events
             .Include(e => e.CreatedBy)
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
@@ -42,61 +38,88 @@ public class EventService : IEventService
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.GiftExchanges)
                 .ThenInclude(ge => ge.Receiver)
-            .FirstOrDefaultAsync(e => e.Id == id)
-            ?? throw new KeyNotFoundException($"Event with id {id} not found");
+            .FirstOrDefaultAsync(e => e.Id == id);
+
+        if (eventEntity == null)
+            throw new KeyNotFoundException($"Event with id {id} not found");
+
+        var eventModel = _mapper.Map<EventModel>(eventEntity);
+        return eventModel;
     }
 
-    public async Task<IEnumerable<Event>> GetUserEventsAsync(string userId)
+    public async Task<IEnumerable<EventModel>> GetUserEventsAsync(string userId)
     {
-        return await _context.Events
+        var eventEntities = await _context.Events
+            .Include(e => e.CreatedBy)
             .Where(e => e.CreatedBy.Id == userId)
             .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists)
+                .ThenInclude(ew => ew.Owner)
             .ToListAsync();
+
+        var eventModels = _mapper.Map<IEnumerable<EventModel>>(eventEntities);
+        return eventModels;
     }
 
-    public async Task<Event> UpdateEventAsync(int id, Event evt)
+    public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel)
     {
         var existingEvent = await _context.Events.FindAsync(id)
             ?? throw new KeyNotFoundException($"Event with id {id} not found");
 
-        _context.Entry(existingEvent).CurrentValues.SetValues(evt);
+        _mapper.Map(eventModel, existingEvent);
+        existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
+
         await _context.SaveChangesAsync();
-        return existingEvent;
+
+        var updatedModel = _mapper.Map<EventModel>(existingEvent);
+        return updatedModel;
     }
 
     public async Task DeleteEventAsync(int id)
     {
-        var evt = await _context.Events.FindAsync(id)
+        var eventEntity = await _context.Events.FindAsync(id)
             ?? throw new KeyNotFoundException($"Event with id {id} not found");
-        evt.Deleted = true;
-        await UpdateEventAsync(id, evt);
+
+        eventEntity.Deleted = true;
+        eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant")
     {
-        var evt = await _context.Events.FindAsync(eventId);
+        var eventEntity = await _context.Events.Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId);
         var user = await _context.Users.FindAsync(userId);
-        if (evt == null || user == null)
+
+        if (eventEntity == null || user == null)
         {
             return false;
         }
 
-        evt.EventUsers.Add(new EventUser { Event = evt, User = user, Role = role });
-        await _context.SaveChangesAsync();
+        if (!eventEntity.EventUsers.Any(eu => eu.UserId == userId))
+        {
+            eventEntity.EventUsers.Add(new EventUser
+            {
+                EventId = eventId,
+                UserId = userId,
+                Role = role
+            });
+            await _context.SaveChangesAsync();
+        }
         return true;
     }
 
     public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
     {
-        var eventUser = await _context.Events.Include(e => e.EventUsers)
-            .SelectMany(e => e.EventUsers)
+        var eventUser = await _context.EventUsers
             .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.UserId == userId);
 
         if (eventUser == null)
             return false;
 
-        _context.Events.Find(eventId)?.EventUsers.Remove(eventUser);
+        _context.EventUsers.Remove(eventUser);
         await _context.SaveChangesAsync();
         return true;
     }

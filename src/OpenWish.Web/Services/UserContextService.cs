@@ -1,35 +1,39 @@
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
+using OpenWish.Shared.Services;
 
 namespace OpenWish.Web.Services;
 
-public interface IUserContextService
+public class UserContextService : IUserContextService
 {
-    Task<string?> GetUserIdAsync();
-    Task<string> GetUserNameAsync();
-    Task<bool> IsAuthenticatedAsync();
-}
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
 
-public class UserContextService(AuthenticationStateProvider authStateProvider) : IUserContextService
-{
-    private readonly AuthenticationStateProvider _authStateProvider = authStateProvider;
-
-    public async Task<string> GetUserNameAsync()
+    public UserContextService(AuthenticationStateProvider authenticationStateProvider)
     {
-        var state = await _authStateProvider.GetAuthenticationStateAsync();
-        return state.User.FindFirstValue(ClaimTypes.Name) 
-            ?? throw new InvalidOperationException("Username not found");
-    }
-
-    public async Task<bool> IsAuthenticatedAsync()
-    {
-        var state = await _authStateProvider.GetAuthenticationStateAsync();
-        return state.User.Identity?.IsAuthenticated ?? false;
+        _authenticationStateProvider = authenticationStateProvider;
     }
 
     public async Task<string?> GetUserIdAsync()
     {
-        var state = await _authStateProvider.GetAuthenticationStateAsync();
-        return state.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        return user.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    public async Task<string?> GetUserNameAsync()
+    {
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        return user.Identity?.Name;
+    }
+
+    public async Task<bool> IsAuthenticatedAsync()
+    {
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        return user.Identity?.IsAuthenticated ?? false;
     }
 }

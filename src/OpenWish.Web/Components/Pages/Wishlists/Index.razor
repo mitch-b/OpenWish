@@ -3,7 +3,6 @@
 
 @using Microsoft.Extensions.Logging
 @using OpenWish.Application.Services
-@using OpenWish.Data.Entities
 @using OpenWish.Web.Services
 @using OpenWish.Web.Components.Wishlist
 
@@ -41,7 +40,7 @@ else
 }
 
 @code {
-    private IEnumerable<Wishlist>? wishlists;
+    private IEnumerable<WishlistModel>? wishlists;
     private string? _userId;
 
     protected override async Task OnInitializedAsync()
@@ -58,7 +57,7 @@ else
         }
     }
 
-    private async Task HandleWishlistDeleted(Wishlist wishlist)
+    private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {
         await LoadWishlists();
     }

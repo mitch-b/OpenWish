@@ -1,4 +1,3 @@
-@using OpenWish.Data.Entities
 
 <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
     <DataAnnotationsValidator />
@@ -56,9 +55,9 @@
 </EditForm>
 
 @code {
-    [Parameter] public WishlistItem Model { get; set; } = new();
-    [Parameter] public EventCallback<WishlistItem> OnSubmit { get; set; }
-    [Parameter] public EventCallback<WishlistItem> OnCancel { get; set; }
+    [Parameter] public WishlistItemModel Model { get; set; } = new();
+    [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
 
     private async Task HandleSubmit()
     {

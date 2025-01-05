@@ -2,7 +2,6 @@
 @page "/wishlists/new"
 
 @using OpenWish.Application.Services
-@using OpenWish.Data.Entities
 @using OpenWish.Web.Services
 @using OpenWish.Web.Components.Wishlist
 
@@ -21,9 +20,9 @@
 </FormMappingScope>
 
 @code {
-    private readonly Wishlist? _wishlist = new();
-    
-    private async Task HandleSubmit(Wishlist submittedWishlist)
+    private readonly WishlistModel? _wishlist = new();
+
+    private async Task HandleSubmit(WishlistModel submittedWishlist)
     {
         var userId = await UserContextService.GetUserIdAsync();
         if (userId is not null)

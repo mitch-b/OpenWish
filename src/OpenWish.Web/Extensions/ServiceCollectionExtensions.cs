@@ -12,8 +12,6 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOpenWishWebServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
-
-        services.AddScoped<IUserContextService, UserContextService>();
         
         services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
         services.AddScoped<IBaseUriService, BaseUriService>();

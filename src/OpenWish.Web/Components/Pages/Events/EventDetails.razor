@@ -2,7 +2,6 @@
 @attribute [Authorize]
 
 @using OpenWish.Application.Services
-@using OpenWish.Data.Entities
 @using OpenWish.Web.Components.Event
 @using OpenWish.Web.Services
 
@@ -33,7 +32,7 @@ else
                     @if (_event.Tags != null)
                     {
                         <div class="mt-3">
-                            @foreach (var tag in _event.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            @foreach (var tag in _event.Tags ?? [])
                             {
                                 <span class="badge bg-light text-dark me-2">@tag.Trim()</span>
                             }
@@ -101,7 +100,7 @@ else
                     </div>
                 </div>
 
-                @if (_event.EventWishlists.Any())
+                @* @if (_event.EventWishlists.Any())
                 {
                     <div class="card shadow-sm mt-4">
                         <div class="card-body">
@@ -124,11 +123,11 @@ else
                             </div>
                         </div>
                     </div>
-                }
+                } *@
             </div>
 
             <div class="col-md-4">
-                @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
+                @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
                 {
                     <div class="card shadow-sm">
                         <div class="card-body">
@@ -145,7 +144,7 @@ else
                             }
                         </div>
                     </div>
-                }
+                } *@
             </div>
         </div>
     </div>
@@ -153,7 +152,7 @@ else
 
 @code {
     [Parameter] public int EventId { get; set; }
-    private Event? _event;
+    private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
 

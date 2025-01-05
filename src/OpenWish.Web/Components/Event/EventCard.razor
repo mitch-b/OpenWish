@@ -1,5 +1,3 @@
-@using OpenWish.Data.Entities
-
 <div class="card h-100 shadow-sm event-card">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-start">
@@ -26,8 +24,8 @@
 </div>
 
 @code {
-    [Parameter] public Event Event { get; set; } = default!;
-    [Parameter] public EventCallback<Event> OnDelete { get; set; }
+    [Parameter] public EventModel Event { get; set; } = default!;
+    [Parameter] public EventCallback<EventModel> OnDelete { get; set; }
 
     private async Task DeleteEvent()
     {

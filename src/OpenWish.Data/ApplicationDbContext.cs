@@ -8,6 +8,7 @@ namespace OpenWish.Data;
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
     public DbSet<Event> Events { get; set; }
+    public DbSet<EventUser> EventUsers { get; set; }
     public DbSet<Wishlist> Wishlists { get; set; }
     public DbSet<WishlistItem> WishlistItems { get; set; }
     public DbSet<WillPurchase> WillPurchases { get; set; }
@@ -103,6 +104,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<WillPurchase>()
             .HasOne(wp => wp.Purchaser)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<EventUser>()
+            .HasKey(eu => new { eu.EventId, eu.UserId });
+
+        modelBuilder.Entity<EventUser>()
+            .HasOne(eu => eu.Event)
+            .WithMany()
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<EventUser>()
+            .HasOne(eu => eu.User)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
 

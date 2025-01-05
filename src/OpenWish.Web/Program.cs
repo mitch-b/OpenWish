@@ -8,6 +8,7 @@ using OpenWish.Application.Extensions;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
+using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
 using OpenWish.Web.Extensions;
@@ -52,6 +53,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
+builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
 
 using (var provider = builder.Services.BuildServiceProvider())

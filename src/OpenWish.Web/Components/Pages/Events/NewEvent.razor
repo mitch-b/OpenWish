@@ -47,10 +47,10 @@ else
 }
 
 @code {
-    private readonly Event _event = new() { Date = DateTimeOffset.UtcNow.AddDays(7) };
+    private readonly EventModel _event = new() { Date = DateTimeOffset.UtcNow.AddDays(7) };
     private bool _isLoading;
-    
-    private async Task HandleSubmit(Event submittedEvent)
+
+    private async Task HandleSubmit(EventModel submittedEvent)
     {
         try
         {

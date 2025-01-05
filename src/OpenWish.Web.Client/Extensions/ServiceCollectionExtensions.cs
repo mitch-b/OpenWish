@@ -1,4 +1,7 @@
-﻿using OpenWish.Shared.Services;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenWish.Shared.Services;
 using OpenWish.Web.Client.Services;
 
 namespace OpenWish.Web.Client.Extensions;
@@ -7,6 +10,11 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenWishWasmClientServices(this IServiceCollection services, IConfiguration configuration)
     {
+        // authentication
+        //services.AddScoped<BaseAddressAuthorizationMessageHandler>();
+        //services.RemoveAll<AuthenticationStateProvider>();
+        services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
+
         services.AddScoped<IUserContextService, UserContextService>();
         services.AddScoped<IWishlistService, WishlistHttpClientService>();
         services.AddScoped<IEventService, EventHttpClientService>();

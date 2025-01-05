@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\OpenWish.Data\OpenWish.Data.csproj" />
+      <ProjectReference Include="..\OpenWish.Shared\OpenWish.Shared.csproj" />
     </ItemGroup>
 
 </Project>

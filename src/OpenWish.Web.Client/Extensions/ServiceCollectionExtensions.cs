@@ -7,7 +7,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenWishWasmClientServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<IWishlistService, WishlistService>();
+        services.AddScoped<IUserContextService, UserContextService>();
+        services.AddScoped<IWishlistService, WishlistHttpClientService>();
+        services.AddScoped<IEventService, EventHttpClientService>();
         return services;
     }
 }

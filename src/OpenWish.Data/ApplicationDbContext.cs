@@ -112,12 +112,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<EventUser>()
             .HasOne(eu => eu.Event)
-            .WithMany()
+            .WithMany(e => e.EventUsers)
+            .HasForeignKey(eu => eu.EventId)
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<EventUser>()
             .HasOne(eu => eu.User)
-            .WithMany()
+            .WithMany(u => u.EventUsers)
+            .HasForeignKey(eu => eu.UserId)
             .OnDelete(DeleteBehavior.NoAction);
 
         SqlDefaultValueAttributeConvention.Apply(modelBuilder);

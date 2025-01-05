@@ -4,8 +4,9 @@ namespace OpenWish.Data.Entities;
 
 public class ApplicationUser : IdentityUser
 {
-    public ICollection<Event> Events { get; set; } = new List<Event>();
-    public ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
-    public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-    public ICollection<PublicWishlist> PublicWishlists { get; set; } = new List<PublicWishlist>();
+    public ICollection<Event> Events { get; set; } = [];
+    public ICollection<Wishlist> Wishlists { get; set; } = [];
+    public ICollection<Notification> Notifications { get; set; } = [];
+    public ICollection<PublicWishlist> PublicWishlists { get; set; } = [];
+    public ICollection<EventUser> EventUsers { get; set; } = [];
 }

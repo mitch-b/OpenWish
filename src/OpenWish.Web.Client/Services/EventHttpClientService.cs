@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 
 namespace OpenWish.Web.Client.Services;
 
-public class EventService(HttpClient httpClient) : IEventService
+public class EventHttpClientService(HttpClient httpClient) : IEventService
 {
     private readonly HttpClient _httpClient = httpClient;
 

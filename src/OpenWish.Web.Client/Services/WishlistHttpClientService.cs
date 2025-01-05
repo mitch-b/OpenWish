@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 
 namespace OpenWish.Web.Client.Services;
 
-public class WishlistService(HttpClient httpClient) : IWishlistService
+public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 {
     private readonly HttpClient _httpClient = httpClient;
 

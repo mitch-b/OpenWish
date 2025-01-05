@@ -4,6 +4,7 @@ using OpenWish.Data.Entities;
 using OpenWish.Web.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using OpenWish.Shared.Services;
 
 namespace OpenWish.Web.Extensions;
 
@@ -15,6 +16,8 @@ public static class ServiceCollectionExtensions
         
         services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
         services.AddScoped<IBaseUriService, BaseUriService>();
+
+        services.AddScoped<IUserContextService, UserContextService>();
         
         // Add OpenAIClient to the service collection
         var apiKey = services.BuildServiceProvider().GetRequiredService<IOptions<OpenWishSettings>>().Value?.OpenAI.ApiKey;

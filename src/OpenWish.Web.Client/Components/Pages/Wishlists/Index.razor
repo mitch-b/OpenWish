@@ -4,12 +4,11 @@
 @using Microsoft.Extensions.Logging
 @using OpenWish.Web.Client.Components.Wishlist
 
-@inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
 @inject IUserContextService UserContextService
 @inject IWishlistService WishlistService
 
-@rendermode InteractiveAuto
+@rendermode InteractiveServer
 
 <h3>My Wishlists</h3>
 
@@ -36,6 +35,10 @@ else
         }
     </div>
 }
+
+<div class="mt-4">
+    <p>RenderMode: @RendererInfo.Name , Interactive: @RendererInfo.IsInteractive.ToString()</p>
+</div>
 
 @code {
     private IEnumerable<WishlistModel>? wishlists;

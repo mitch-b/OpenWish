@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-        <PackageReference Include="Humanizer" />
+        <PackageReference Include="AutoMapper" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\OpenWish.Data\OpenWish.Data.csproj" />
+      <ProjectReference Include="..\OpenWish.Shared\OpenWish.Shared.csproj" />
     </ItemGroup>
 
 </Project>

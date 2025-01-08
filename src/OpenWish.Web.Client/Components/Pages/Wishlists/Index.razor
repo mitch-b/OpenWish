@@ -2,17 +2,13 @@
 @page "/wishlists"
 
 @using Microsoft.Extensions.Logging
-@using OpenWish.Application.Services
-@using OpenWish.Data.Entities
-@using OpenWish.Web.Services
-@using OpenWish.Web.Components.Wishlist
+@using OpenWish.Web.Client.Components.Wishlist
 
-@inject IWishlistService WishlistService
-@inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
 @inject IUserContextService UserContextService
+@inject IWishlistService WishlistService
 
-@rendermode InteractiveServer
+@rendermode InteractiveAuto
 
 <h3>My Wishlists</h3>
 
@@ -31,7 +27,7 @@ else if (!wishlists.Any())
 else
 {
     <div class="row">
-        @foreach (var wishlist in wishlists)
+        @foreach (var wishlist in wishlists ?? [])
         {
             <div class="col-md-4 mb-4">
                 <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
@@ -40,14 +36,25 @@ else
     </div>
 }
 
+<div class="mt-4">
+    <p>RenderMode: @RendererInfo.Name , Interactive: @RendererInfo.IsInteractive.ToString()</p>
+</div>
+
 @code {
-    private IEnumerable<Wishlist>? wishlists;
+    private IEnumerable<WishlistModel>? wishlists;
     private string? _userId;
 
     protected override async Task OnInitializedAsync()
     {
-        _userId = await UserContextService.GetUserIdAsync();
-        await LoadWishlists();
+        try
+        {
+            _userId = await UserContextService.GetUserIdAsync();
+            await LoadWishlists();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing the Index component.");
+        }
     }
 
     private async Task LoadWishlists()
@@ -58,7 +65,7 @@ else
         }
     }
 
-    private async Task HandleWishlistDeleted(Wishlist wishlist)
+    private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {
         await LoadWishlists();
     }

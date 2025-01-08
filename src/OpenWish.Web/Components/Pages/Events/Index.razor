@@ -2,7 +2,6 @@
 @attribute [Authorize]
 
 @using OpenWish.Application.Services
-@using OpenWish.Data.Entities
 @using OpenWish.Web.Components.Event
 @using OpenWish.Web.Services
 
@@ -64,7 +63,7 @@
 </div>
 
 @code {
-    private List<Event>? _events;
+    private List<EventModel>? _events;
     
     protected override async Task OnInitializedAsync()
     {
@@ -80,7 +79,7 @@
         _events = (await EventService.GetUserEventsAsync(userId)).ToList();
     }
 
-    private async Task HandleEventDeleted(Event evt)
+    private async Task HandleEventDeleted(EventModel evt)
     {
         var userId = await UserContextService.GetUserIdAsync();
         if (userId is not null)

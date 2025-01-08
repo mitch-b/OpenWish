@@ -8,6 +8,7 @@ using OpenWish.Application.Extensions;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
+using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
 using OpenWish.Web.Extensions;
@@ -20,12 +21,13 @@ builder.AddServiceDefaults();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()
-    .AddAuthenticationStateSerialization();
+    .AddAuthenticationStateSerialization(options => options.SerializeAllClaims = true);
 
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
-builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider, PersistingAuthenticationStateProvider>();
+// for InteractiveServer only: builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -52,6 +54,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddDefaultTokenProviders();
 
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
+builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
 
 using (var provider = builder.Services.BuildServiceProvider())
@@ -82,6 +85,8 @@ using (var provider = builder.Services.BuildServiceProvider())
             .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom);
     }
 }
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -132,7 +137,6 @@ else
 
 app.UseHttpsRedirection();
 
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -143,5 +147,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+
+app.MapControllers();
 
 app.Run();

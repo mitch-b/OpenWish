@@ -1,14 +1,12 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId:int}/items/new"
 
-@using OpenWish.Application.Services
-@using OpenWish.Data.Entities
-@using OpenWish.Web.Components.Wishlist
+@using OpenWish.Web.Client.Components.Wishlist
 
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 
-@rendermode InteractiveServer
+@rendermode InteractiveAuto
 
 <h3>Add Item to Wishlist</h3>
 
@@ -22,9 +20,9 @@
 
 @code {
     [Parameter] public int WishlistId { get; set; }
-    private readonly WishlistItem _item = new();
+    private readonly WishlistItemModel _item = new();
 
-    private async Task HandleSubmit(WishlistItem item)
+    private async Task HandleSubmit(WishlistItemModel item)
     {
         await WishlistService.AddItemToWishlistAsync(WishlistId, item);
         NavigationManager.NavigateTo($"/wishlists/{WishlistId}");

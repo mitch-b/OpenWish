@@ -1,9 +1,7 @@
 ﻿@page "/"
-@using OpenWish.Application.Services
-@using OpenWish.Data.Entities
+
+@using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Web.Components.Event
-@using OpenWish.Web.Components.Wishlist
-@using OpenWish.Web.Services
 
 @inject IWishlistService WishlistService
 @inject IEventService EventService
@@ -105,8 +103,8 @@
 </AuthorizeView>
 
 @code {
-    private List<Wishlist>? _featuredWishlists;
-    private List<Event>? _events;
+    private List<WishlistModel>? _featuredWishlists;
+    private List<EventModel>? _events;
     private string? _userId;
     protected override async Task OnInitializedAsync()
     {
@@ -131,12 +129,12 @@
         }
     }
 
-    private async Task HandleWishlistDeleted(Wishlist wishlist)
+    private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {
         await LoadFeaturedWishlists();
     }
 
-    private async Task HandleEventDeleted(Event evt)
+    private async Task HandleEventDeleted(EventModel evt)
     {
         await LoadEvents();
     }

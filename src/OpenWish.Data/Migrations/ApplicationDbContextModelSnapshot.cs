@@ -385,11 +385,11 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.EventUser", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("EventId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
@@ -399,7 +399,7 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("EventId")
+                    b.Property<int>("Id")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("InvitationDate")
@@ -422,17 +422,11 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("timezone('utc', now())");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
+                    b.HasKey("EventId", "UserId");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("EventUser");
+                    b.ToTable("EventUsers");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.GiftExchange", b =>
@@ -1028,11 +1022,11 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.Event", "Event")
                         .WithMany("EventUsers")
                         .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
-                        .WithMany()
+                        .WithMany("EventUsers")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
@@ -1217,6 +1211,8 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.ApplicationUser", b =>
                 {
+                    b.Navigation("EventUsers");
+
                     b.Navigation("Events");
 
                     b.Navigation("Notifications");

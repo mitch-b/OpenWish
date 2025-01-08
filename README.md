@@ -99,7 +99,7 @@ volumes:
   openwish-data:
 ```
 
-See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202412`) for managing upgrades.
+See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202501`) for managing upgrades.
 
 ## License
 

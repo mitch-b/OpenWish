@@ -86,6 +86,8 @@ using (var provider = builder.Services.BuildServiceProvider())
     }
 }
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 // // fix Codespaces thinking Navigation BaseUri was localhost
@@ -135,7 +137,6 @@ else
 
 app.UseHttpsRedirection();
 
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -146,5 +147,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+
+app.MapControllers();
 
 app.Run();

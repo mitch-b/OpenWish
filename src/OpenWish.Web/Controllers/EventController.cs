@@ -10,10 +10,10 @@ namespace OpenWish.Web.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]s")]
-public class EventController(IEventService eventService, IUserContextService userContextService) : ControllerBase
+public class EventController(IEventService eventService, ApiUserContextService userContextService) : ControllerBase
 {
     private readonly IEventService _eventService = eventService;
-    private readonly IUserContextService _userContextService = userContextService;
+    private readonly ApiUserContextService _userContextService = userContextService;
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EventModel>>> GetEvents()

@@ -10,10 +10,6 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenWishWasmClientServices(this IServiceCollection services, IConfiguration configuration)
     {
-        //services.RemoveAll<AuthenticationStateProvider>();
-        // https://jonhilton.net/blazor-share-auth-state/
-        // services.TryAddScoped<AuthenticationStateProvider, PersistentAuthenticationStateProvider>();
-
         services.AddScoped<IUserContextService, UserContextService>();
         services.AddScoped<IWishlistService, WishlistHttpClientService>();
         services.AddScoped<IEventService, EventHttpClientService>();

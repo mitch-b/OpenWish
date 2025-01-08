@@ -9,10 +9,10 @@ namespace OpenWish.Web.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]s")]
-public class WishlistController(IWishlistService wishlistService, IUserContextService userContextService) : ControllerBase
+public class WishlistController(IWishlistService wishlistService, ApiUserContextService userContextService) : ControllerBase
 {
     private readonly IWishlistService _wishlistService = wishlistService;
-    private readonly IUserContextService _userContextService = userContextService;
+    private readonly ApiUserContextService _userContextService = userContextService;
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<WishlistModel>>> GetWishlists()

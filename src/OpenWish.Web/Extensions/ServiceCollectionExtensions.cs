@@ -1,10 +1,12 @@
-using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data.Entities;
-using OpenWish.Web.Services;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Options;
 using OpenWish.Shared.Services;
+using OpenWish.Web.Services;
+using System.Net.Http.Headers;
 
 namespace OpenWish.Web.Extensions;
 
@@ -13,6 +15,8 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOpenWishWebServices(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+
+        services.TryAddScoped<IWebAssemblyHostEnvironment, ServerHostEnvironment>();
         
         services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
         services.AddScoped<IBaseUriService, BaseUriService>();

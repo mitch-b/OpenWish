@@ -16,6 +16,8 @@
     <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" />
 </FormMappingScope>
 
+<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
+
 @code {
     private readonly WishlistModel? _wishlist = new();
 

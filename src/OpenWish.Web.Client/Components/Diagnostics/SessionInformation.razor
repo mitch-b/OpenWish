@@ -1,0 +1,60 @@
+﻿@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.WebAssembly.Hosting
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IWebAssemblyHostEnvironment HostEnvironment
+
+@if (HostEnvironment.IsDevelopment())
+{
+    <div class="session-information">
+        <h3>Session Information</h3>
+        <p>
+            <strong>Render Mode:</strong> @RendererInfo.Name
+            @if (RendererInfo.IsInteractive)
+            {
+                <span class="badge bg-success">Interactive</span>
+            }
+            else
+            {
+                <span class="badge bg-warning">Static</span>
+            }
+        </p>
+        @if (user == null || string.IsNullOrWhiteSpace(user?.Identity?.Name))
+        {
+            <p>No user information available.</p>
+        }
+        else if (user.Identity is not null)
+        {
+            <p><strong>User:</strong> @user.Identity.Name</p>
+            <p><strong>Is Authenticated:</strong> @user.Identity.IsAuthenticated</p>
+            <p><strong>Authentication Type:</strong> @user.Identity.AuthenticationType</p>
+            <p>
+                <button class="toggle-button" @onclick="ToggleClaims">Toggle Claims</button>
+            </p>
+            <div class="claims" style="display:@(showClaims ? "block" : "none")">
+                <ul>
+                    @foreach (var claim in user.Claims)
+                    {
+                        <li>@claim.Type: @claim.Value</li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private ClaimsPrincipal? user;
+    private bool showClaims = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+    }
+
+    private void ToggleClaims()
+    {
+        showClaims = !showClaims;
+    }
+}

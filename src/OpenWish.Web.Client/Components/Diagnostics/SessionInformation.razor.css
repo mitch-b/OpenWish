@@ -1,0 +1,45 @@
+﻿.session-information {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #333;
+    transition: background-color 1s ease-in-out;
+}
+
+    .session-information h3 {
+        margin-top: 0;
+        font-size: 16px;
+        color: #007bff;
+    }
+
+    .session-information p, .session-information ul {
+        margin: 5px 0;
+    }
+
+    .session-information ul {
+        padding-left: 20px;
+    }
+
+.badge {
+    margin-left: 5px;
+}
+
+.toggle-button {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    font-size: 14px;
+}
+
+.claims {
+    transition: max-height 0.5s ease-in-out;
+    overflow: hidden;
+}

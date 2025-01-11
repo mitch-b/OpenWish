@@ -36,9 +36,7 @@ else
     </div>
 }
 
-<div class="mt-4">
-    <p>RenderMode: @RendererInfo.Name , Interactive: @RendererInfo.IsInteractive.ToString()</p>
-</div>
+<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     private IEnumerable<WishlistModel>? wishlists;

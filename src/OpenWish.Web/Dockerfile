@@ -38,8 +38,6 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
     --arch $TARGETARCH 
     # --self-contained false
 
-
-
 RUN echo "${BUILD_VERSION}.${GIT_SHA}" > /app/version.txt
 
 FROM base AS final
@@ -47,7 +45,10 @@ WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=build /app/version.txt .
 
-# Set the environment variable for the version number
-ENV APP_VERSION=$(cat /app/version.txt)
+# Read the version from the file and set it as an environment variable
+RUN export APP_VERSION=$(cat /app/version.txt) && echo "APP_VERSION=${APP_VERSION}" > /app/env.sh
+
+# Source the environment variable
+RUN . /app/env.sh
 
 ENTRYPOINT ["dotnet", "OpenWish.Web.dll"]

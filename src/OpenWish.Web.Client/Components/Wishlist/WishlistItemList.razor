@@ -1,3 +1,4 @@
+@using OpenWish.Shared.Extensions;
 
 <div class="table-responsive">
     <table class="table">
@@ -7,6 +8,7 @@
                 <th>Description</th>
                 <th>Price</th>
                 <th>Priority</th>
+                <th>Added</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -31,6 +33,12 @@
                         <td>@item.Description</td>
                         <td>@item.Price?.ToString("C")</td>
                         <td>@item.Priority</td>
+                        <td>
+                            <span class="tooltip-container">
+                                @item.CreatedOn.ToLocalHumanizedString()
+                                <span class="tooltip-text">@item.CreatedOn.ToLocalTime()</span>
+                            </span>
+                        </td>
                         <td>
                             <button 
                                 class="btn btn-sm btn-primary" 

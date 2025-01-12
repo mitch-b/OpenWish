@@ -19,6 +19,11 @@ public static class DateTimeOffsetExtensions
 
     public static string? ToLocalHumanizedString(this DateTimeOffset? dateTimeOffset)
     {
+        return ToLocalHumanizedString(dateTimeOffset.Value);
+    }
+
+    public static string? ToLocalHumanizedString(this DateTimeOffset dateTimeOffset)
+    {
         return ToLocalTime(dateTimeOffset).Humanize();
     }
 }

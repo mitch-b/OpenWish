@@ -14,6 +14,8 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG BUILD_CONFIGURATION=Release
+ARG BUILD_VERSION=UNKNOWN
+ARG GIT_SHA=UNKNOWN
 
 WORKDIR /src
 
@@ -36,7 +38,16 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
     --arch $TARGETARCH 
     # --self-contained false
 
+
+
+RUN echo "${BUILD_VERSION}.${GIT_SHA}" > /app/version.txt
+
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /app/version.txt .
+
+# Set the environment variable for the version number
+ENV APP_VERSION=$(cat /app/version.txt)
+
 ENTRYPOINT ["dotnet", "OpenWish.Web.dll"]

@@ -3,6 +3,7 @@
 
 @inject NavigationManager NavigationManager
 @inject IBaseUriService BaseUriService
+@inject IAppVersionService AppVersionService
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -66,6 +67,12 @@
                 </div>
             </NotAuthorized>
         </AuthorizeView>
+
+        <div class="nav-item px-3">
+            <p class="nav-link">
+                <span>@AppVersionService.GetAppVersion()</span>
+            </p>
+        </div>
     </nav>
 </div>
 

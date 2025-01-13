@@ -56,3 +56,40 @@ dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpPass mypass
 dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpHost my-smtp.host.com
 dotnet user-secrets set OpenWishSettings:EmailConfig:SmtpPort 587
 ```
+
+## Docker Build Locally
+
+```bash
+# bash
+cd src/
+
+GIT_SHA=$(git rev-parse --short HEAD)
+BUILD_YEAR=$(date -u +"%Y")
+BUILD_MONTH=$(date -u +"%m")
+BUILD_VERSION="$BUILD_YEAR.$BUILD_MONTH"
+TAG_NAME="$BUILD_YEAR$BUILD_MONTH"
+
+echo "Building with:"
+echo "GIT_SHA: $GIT_SHA"
+echo "BUILD_VERSION: $BUILD_VERSION"
+echo "TAG_NAME: $TAG_NAME"
+
+docker buildx build \
+  --build-arg GIT_SHA=$GIT_SHA \
+  --build-arg BUILD_VERSION=$BUILD_VERSION \
+  --file OpenWish.Web/Dockerfile \
+  --tag openwishlocal:latest \
+  --tag openwishlocal:$TAG_NAME \
+  .
+```
+
+and to run the image...
+
+```bash
+# bash
+docker run --rm \
+  -e "ASPNETCORE_ENVIRONMENT=Development" \
+  -e "ConnectionStrings__OpenWishContext=Host=localhost;Database=openwish;Username=openwish;Password=dev" \
+  -p 8080:80 \
+  openwishlocal:$TAG_NAME
+```

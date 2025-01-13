@@ -45,10 +45,11 @@ WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=build /app/version.txt .
 
-# Read the version from the file and set it as an environment variable
-RUN export APP_VERSION=$(cat /app/version.txt) && echo "APP_VERSION=${APP_VERSION}" > /app/env.sh
+# Entrypoint script to set APP_VERSION, then start the app
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'export APP_VERSION=$(cat /app/version.txt)' >> /entrypoint.sh && \
+    echo 'echo "App version: $APP_VERSION"' >> /entrypoint.sh && \
+    echo 'exec dotnet OpenWish.Web.dll' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
-# Source the environment variable
-RUN . /app/env.sh
-
-ENTRYPOINT ["dotnet", "OpenWish.Web.dll"]
+ENTRYPOINT ["/entrypoint.sh"]

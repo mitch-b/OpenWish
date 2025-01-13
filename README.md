@@ -3,7 +3,7 @@
 Shareable wishlists. A web application intended for selfhosting.
 
 * [.NET 9](https://dot.net/)
-* Blazor Server App
+* Blazor App (Server & Client WebAssembly)
 * Entity Framework Core managed data on PostgreSQL
 * Docker images [published](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
 

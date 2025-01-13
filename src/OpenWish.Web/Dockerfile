@@ -45,6 +45,8 @@ WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=build /app/version.txt .
 
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
 # Entrypoint script to set APP_VERSION, then start the app
 RUN echo '#!/bin/sh' > /entrypoint.sh && \
     echo 'export APP_VERSION=$(cat /app/version.txt)' >> /entrypoint.sh && \

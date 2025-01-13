@@ -88,6 +88,7 @@ services:
     image: ghcr.io/mitch-b/openwish-web:latest
     container_name: openwish-web
     environment:
+      - TZ=America/Chicago
       - ConnectionStrings__OpenWish=Server=sql;Port=5432;Database=OpenWish;User Id=openwish;Password=YourStrong!Passw0rd;
       - OpenWishSettings__OwnDatabaseUpgrades=true
     ports:

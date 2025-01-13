@@ -89,6 +89,7 @@ and to run the image...
 # bash
 docker run --rm \
   -e "ASPNETCORE_ENVIRONMENT=Development" \
+  -e "TZ=America/Chicago" \
   -e "ConnectionStrings__OpenWishContext=Host=localhost;Database=openwish;Username=openwish;Password=dev" \
   -p 8080:80 \
   openwishlocal:$TAG_NAME

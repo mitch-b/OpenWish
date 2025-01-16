@@ -5,9 +5,6 @@ ENV \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \    
     LC_ALL=en_US.UTF-8 \    
     LANG=en_US.UTF-8
-    RUN apk add --no-cache \    
-    icu-data-full \    
-    icu-libs
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-noble AS build
 
@@ -44,8 +41,6 @@ FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=build /app/version.txt .
-
-ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 # Entrypoint script to set APP_VERSION, then start the app
 RUN echo '#!/bin/sh' > /entrypoint.sh && \

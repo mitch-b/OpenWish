@@ -38,7 +38,6 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-COPY --from=build /app/version.txt .
 
 # Set environment variable and start the app
 ARG BUILD_VERSION

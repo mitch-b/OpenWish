@@ -4,21 +4,24 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IWebAssemblyHostEnvironment HostEnvironment
 
-@if (HostEnvironment.IsDevelopment())
-{
-    <div class="session-information">
+<div class="session-information">
+    <div class="header" @onclick="ToggleDetails">
         <h3>Session Information</h3>
         <p>
             <strong>Render Mode:</strong> @RendererInfo.Name
-            @if (RendererInfo.IsInteractive)
-            {
-                <span class="badge bg-success">Interactive</span>
-            }
-            else
-            {
-                <span class="badge bg-warning">Static</span>
-            }
+            <span style="margin-left: 10px;">
+                @if (RendererInfo.IsInteractive)
+                {
+                    <span class="badge bg-success">Interactive</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning">Static</span>
+                }
+            </span>
         </p>
+    </div>
+    <div class="details" style="display:@(showDetails ? "block" : "none")">
         @if (user == null || string.IsNullOrWhiteSpace(user?.Identity?.Name))
         {
             <p>No user information available.</p>
@@ -41,11 +44,12 @@
             </div>
         }
     </div>
-}
+</div>
 
 @code {
     private ClaimsPrincipal? user;
     private bool showClaims = false;
+    private bool showDetails = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,5 +60,10 @@
     private void ToggleClaims()
     {
         showClaims = !showClaims;
+    }
+
+    private void ToggleDetails()
+    {
+        showDetails = !showDetails;
     }
 }

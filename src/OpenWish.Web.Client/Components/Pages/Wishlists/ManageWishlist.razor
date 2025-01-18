@@ -1,0 +1,35 @@
+﻿@attribute [Authorize]
+@page "/wishlists/{WishlistId:int}/manage"
+@using OpenWish.Web.Client.Components.Wishlist
+
+@inject IWishlistService WishlistService
+@inject NavigationManager NavigationManager
+
+<h3>Manage Wishlist</h3>
+
+@if (_wishlist == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
+}
+
+@code {
+    [Parameter]
+    public int WishlistId { get; set; }
+
+    private WishlistModel? _wishlist;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
+    }
+
+    private async Task HandleSubmit(WishlistModel updatedWishlist)
+    {
+        await WishlistService.UpdateWishlistAsync(WishlistId, updatedWishlist);
+        NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+    }
+}

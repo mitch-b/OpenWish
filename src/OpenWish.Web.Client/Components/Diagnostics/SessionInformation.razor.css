@@ -1,45 +1,72 @@
 ﻿.session-information {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background-color: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    padding: 10px;
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    color: #333;
-    transition: background-color 1s ease-in-out;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
 }
 
-    .session-information h3 {
-        margin-top: 0;
-        font-size: 16px;
-        color: #007bff;
+    .session-information:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     }
 
-    .session-information p, .session-information ul {
-        margin: 5px 0;
+    .session-information .header {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
     }
 
-    .session-information ul {
-        padding-left: 20px;
+        .session-information .header h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .session-information .header p {
+            margin: 0;
+            font-size: 1rem;
+            color: #666;
+        }
+
+    .session-information .details {
+        margin-top: 10px;
     }
+
+    .session-information .claims {
+        margin-top: 10px;
+    }
+
+    .session-information .toggle-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+        .session-information .toggle-button:hover {
+            background-color: #0056b3;
+        }
 
 .badge {
-    margin-left: 5px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: white;
+    font-size: 0.875rem;
 }
 
-.toggle-button {
-    background: none;
-    border: none;
-    color: #007bff;
-    cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-    font-size: 14px;
+.bg-success {
+    background-color: #28a745;
 }
 
-.claims {
-    transition: max-height 0.5s ease-in-out;
-    overflow: hidden;
+.bg-warning {
+    background-color: #ffc107;
 }

@@ -6,34 +6,46 @@
 
 @inject IUserContextService UserContextService
 @inject IWishlistService WishlistService
+@inject NavigationManager NavigationManager
 
 @rendermode InteractiveAuto
 
-<PageTitle>@(_wishlist is not null ? _wishlist?.Name : "") Wishlist</PageTitle>
+<PageTitle>@(_wishlist?.Name ?? "Wishlist")</PageTitle>
 
-@if (_wishlist is null)
+@if (_wishlist == null)
 {
-    <p>Loading...</p>}
+    <p>Loading...</p>
+}
 else
 {
     <div class="wishlist-header">
-        <h2>@_wishlist?.Name</h2>
-        @if (_wishlist.IsCollaborative)
-        {
-            <span class="badge bg-info">Collaborative Wishlist</span>
-        }
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2>@_wishlist.Name</h2>
+                @if (_wishlist.IsCollaborative)
+                {
+                    <span class="badge bg-info">Collaborative Wishlist</span>
+                }
+            </div>
+            @if (_isOwner)
+            {
+                <a href="/wishlists/@WishlistId/manage" class="btn btn-light d-inline-flex align-items-center">
+                    <i class="bi bi-gear me-2"></i> Manage Wishlist
+                </a>
+            }
+        </div>
     </div>
 
     <div class="row">
         <div class="col-md-8">
             <div class="wishlist-content view-transition">
-                @if (_items is not null)
+                @if (_items != null)
                 {
                     @if (_canEdit)
                     {
                         <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
                     }
-                    else 
+                    else
                     {
                         <WishlistItemList Items="@_items" />
                     }
@@ -59,12 +71,16 @@ else
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
-    [Parameter] public int WishlistId { get; set; }
+
+    [Parameter]
+    public int WishlistId { get; set; }
+
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
     private WishlistItemModel _newItem = new();
     private string? _currentUserId;
     private bool _canEdit;
+    private bool _isOwner;
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,6 +111,8 @@ else
     {
         if (_wishlist == null) return;
         _currentUserId ??= await UserContextService.GetUserIdAsync();
-        _canEdit = _wishlist.OwnerId == _currentUserId || _wishlist.IsCollaborative;
+
+        _isOwner = _wishlist.OwnerId == _currentUserId;
+        _canEdit = _isOwner || _wishlist.IsCollaborative;
     }
 }

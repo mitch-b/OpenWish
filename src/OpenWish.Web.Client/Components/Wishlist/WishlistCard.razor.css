@@ -1,26 +1,23 @@
 ﻿.wishlist-card {
-    min-width: 300px;
-    margin-right: 1rem;
-    border-left: 4px solid var(--bs-primary);
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
     cursor: pointer;
 }
 
-.card {
-    transition: transform 0.2s;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-    .card:hover {
-        transform: translateY(-5px);
+    .wishlist-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        /*transform: translateY(-5px);*/
     }
 
-.badge {
-    margin-right: 0.5rem;
+.kebab-menu {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
 }
 
-.kebab-menu {
-    font-size: 1.5rem;
-    line-height: 0.85;
-    padding: 0.25rem 0.5rem;
-}
+    .kebab-menu:hover {
+        background-color: #f0f0f0;
+    }

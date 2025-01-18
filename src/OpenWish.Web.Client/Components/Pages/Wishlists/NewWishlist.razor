@@ -12,14 +12,14 @@
 
 <h3>Create a Wishlist</h3>
 
-<FormMappingScope Name="new-wishlist">
+@* <FormMappingScope Name="new-wishlist"> *@
     <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" />
-</FormMappingScope>
+@* </FormMappingScope> *@
 
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
-    private readonly WishlistModel? _wishlist = new();
+    private readonly WishlistModel? _wishlist = new() { Name = "" };
 
     private async Task HandleSubmit(WishlistModel submittedWishlist)
     {

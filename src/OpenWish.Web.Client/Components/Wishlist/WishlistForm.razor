@@ -1,7 +1,7 @@
 
 @if (Model is not null)
 {
-    <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
+    <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
         <DataAnnotationsValidator />
         <ValidationSummary />
 

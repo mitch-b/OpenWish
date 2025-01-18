@@ -14,7 +14,7 @@
 <div class="hero-section text-center py-5">
     <h1 class="display-4">Create & Share Your Wishlists</h1>
     <p class="lead">The easiest way to organize gifts for any occasion</p>
-    
+
     <AuthorizeView>
         <Authorized>
             <div class="d-flex gap-3 justify-content-center mt-4">
@@ -35,35 +35,36 @@
     </AuthorizeView>
 </div>
 
-<div class="features-section py-5">
-    <div class="container">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
-                    <span style="font-size: 2.5rem;">🎁</span>
-                    <h3 class="mt-3">Create Wishlists</h3>
-                    <p>Organize your wishes for any occasion</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
-                    <span style="font-size: 2.5rem;">🎉</span>
-                    <h3 class="mt-3">Plan Events</h3>
-                    <p>Organize gift exchanges and celebrations</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
-                    <span style="font-size: 2.5rem;">💝</span>
-                    <h3 class="mt-3">Share Easily</h3>
-                    <p>Connect with family and friends</p>
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="features-section py-5">
+            <div class="container">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                            <span style="font-size: 2.5rem;">🎁</span>
+                            <h3 class="mt-3">Create Wishlists</h3>
+                            <p>Organize your wishes for any occasion</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                            <span style="font-size: 2.5rem;">🎉</span>
+                            <h3 class="mt-3">Plan Events</h3>
+                            <p>Organize gift exchanges and celebrations</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                            <span style="font-size: 2.5rem;">💝</span>
+                            <h3 class="mt-3">Share Easily</h3>
+                            <p>Connect with family and friends</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-<AuthorizeView>
+    </NotAuthorized>
     <Authorized>
         @if (_featuredWishlists != null || _events != null)
         {
@@ -82,7 +83,7 @@
                             }
                         </div>
                     </div>
-                    
+
                     <div class="col-12 col-md-6">
                         <h2 class="mb-4">
                             <span style="font-size: 1.5rem;">📅</span> Upcoming Events

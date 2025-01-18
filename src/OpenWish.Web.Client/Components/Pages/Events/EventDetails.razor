@@ -1,15 +1,14 @@
 @page "/events/{EventId:int}"
 @attribute [Authorize]
 
-@using OpenWish.Application.Services
-@using OpenWish.Web.Components.Event
-@using OpenWish.Web.Services
+@using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Event
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject NavigationManager NavigationManager
 
-@rendermode InteractiveServer
+@rendermode InteractiveAuto
 
 <PageTitle>@(_event?.Name ?? "Event Details")</PageTitle>
 

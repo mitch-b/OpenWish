@@ -1,16 +1,15 @@
 @page "/events/new"
 @attribute [Authorize]
 
-@using OpenWish.Application.Services
-@using OpenWish.Web.Components.Event
-@using OpenWish.Web.Services
+@using OpenWish.Web.Client.Components.Event
+@using OpenWish.Shared.Services
 
 @inject IEventService EventService
 @inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
 @inject ILogger<NewEvent> Logger
 
-@rendermode InteractiveServer
+@rendermode InteractiveAuto
 
 <PageTitle>Create New Event</PageTitle>
 

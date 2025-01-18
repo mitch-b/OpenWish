@@ -1,0 +1,62 @@
+@inject NavigationManager NavigationManager
+
+<div class="card h-100 shadow-sm event-card" @onclick="NavigateToEvent">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-1">@Event.Name</h5>
+            <span style="font-size: 1.5rem;">📅</span>
+        </div>
+        <p class="text-muted small mb-2">@Event.Date.ToString("MMM d, yyyy")</p>
+        <p class="card-text">@Event.Description</p>
+        <p class="card-text">
+            <span class="badge bg-primary">@Event.EventUsers?.Count people</span>
+            @if (Event.IsGiftExchange)
+            {
+                <span class="badge bg-success-subtle">Gift Exchange</span>
+            }
+        </p>
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">Created by @Event.CreatedBy?.UserName</small>
+            @if (OnDelete.HasDelegate)
+            {
+                <div class="dropdown d-inline-block">
+                    <button class="btn btn-outline-secondary btn-sm kebab-menu"
+                            type="button"
+                            id="dropdownMenu@(Event.Id)"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            @onclick:stopPropagation="true">
+                        ⋮
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
+                        <li>
+                            <button class="dropdown-item text-danger"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="DeleteEvent">
+                                Delete
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventModel Event { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<EventModel> OnDelete { get; set; }
+
+    private void NavigateToEvent() => NavigationManager.NavigateTo($"/events/{Event.Id}");
+
+    private async Task DeleteEvent()
+    {
+        if (OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(Event);
+        }
+    }
+}

@@ -4,47 +4,50 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IWebAssemblyHostEnvironment HostEnvironment
 
-<div class="session-information">
-    <div class="header" @onclick="ToggleDetails">
-        <h3>Session Information</h3>
-        <p>
-            <strong>Render Mode:</strong> @RendererInfo.Name
-            <span style="margin-left: 10px;">
-                @if (RendererInfo.IsInteractive)
-                {
-                    <span class="badge bg-success">Interactive</span>
-                }
-                else
-                {
-                    <span class="badge bg-warning">Static</span>
-                }
-            </span>
-        </p>
-    </div>
-    <div class="details" style="display:@(showDetails ? "block" : "none")">
-        @if (user == null || string.IsNullOrWhiteSpace(user?.Identity?.Name))
-        {
-            <p>No user information available.</p>
-        }
-        else if (user.Identity is not null)
-        {
-            <p><strong>User:</strong> @user.Identity.Name</p>
-            <p><strong>Is Authenticated:</strong> @user.Identity.IsAuthenticated</p>
-            <p><strong>Authentication Type:</strong> @user.Identity.AuthenticationType</p>
+@if (HostEnvironment.IsDevelopment())
+{
+    <div class="session-information">
+        <div class="header" @onclick="ToggleDetails">
+            <h3>Session Information</h3>
             <p>
-                <button class="toggle-button" @onclick="ToggleClaims">Toggle Claims</button>
-            </p>
-            <div class="claims" style="display:@(showClaims ? "block" : "none")">
-                <ul>
-                    @foreach (var claim in user.Claims)
+                <strong>Render Mode:</strong> @RendererInfo.Name
+                <span style="margin-left: 10px;">
+                    @if (RendererInfo.IsInteractive)
                     {
-                        <li>@claim.Type: @claim.Value</li>
+                        <span class="badge bg-success">Interactive</span>
                     }
-                </ul>
-            </div>
-        }
+                    else
+                    {
+                        <span class="badge bg-warning">Static</span>
+                    }
+                </span>
+            </p>
+        </div>
+        <div class="details" style="display:@(showDetails ? "block" : "none")">
+            @if (user == null || string.IsNullOrWhiteSpace(user?.Identity?.Name))
+            {
+                <p>No user information available.</p>
+            }
+            else if (user.Identity is not null)
+            {
+                <p><strong>User:</strong> @user.Identity.Name</p>
+                <p><strong>Is Authenticated:</strong> @user.Identity.IsAuthenticated</p>
+                <p><strong>Authentication Type:</strong> @user.Identity.AuthenticationType</p>
+                <p>
+                    <button class="toggle-button" @onclick="ToggleClaims">Toggle Claims</button>
+                </p>
+                <div class="claims" style="display:@(showClaims ? "block" : "none")">
+                    <ul>
+                        @foreach (var claim in user.Claims)
+                        {
+                            <li>@claim.Type: @claim.Value</li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
     </div>
-</div>
+}
 
 @code {
     private ClaimsPrincipal? user;

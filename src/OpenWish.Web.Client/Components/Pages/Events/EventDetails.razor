@@ -1,8 +1,8 @@
 @page "/events/{EventId:int}"
 @attribute [Authorize]
 
-@using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Event
+@using OpenWish.Shared.Services
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
@@ -10,7 +10,7 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>@(_event?.Name ?? "Event Details")</PageTitle>
+<PageTitle>Event Details - @(_event?.Name ?? "")</PageTitle>
 
 @if (_event == null)
 {
@@ -22,128 +22,70 @@
 }
 else
 {
-    <div class="event-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h1 class="display-4">@_event.Name</h1>
-                    <p class="lead mb-0">@_event.Description</p>
-                    @if (_event.Tags != null)
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@_event.Name</h1>
+            @if (_isOwner)
+            {
+                <button class="btn btn-primary" @onclick="@(() => NavigationManager.NavigateTo($"/events/{EventId}/manage"))">
+                    <i class="bi bi-gear"></i> Manage Event
+                </button>
+            }
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h3>Participants</h3>
+                <div class="list-group mb-4">
+                    @foreach (var participant in _event.EventUsers)
                     {
-                        <div class="mt-3">
-                            @foreach (var tag in _event.Tags ?? [])
-                            {
-                                <span class="badge bg-light text-dark me-2">@tag.Trim()</span>
-                            }
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>@(participant.User?.UserName ?? participant.Email)</strong>
+                                @if (!participant.IsAccepted)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">Pending</span>
+                                }
+                                <br />
+                                <small class="text-muted">@participant.Role</small>
+                            </div>
+                            <div>
+                                @if (participant.UserId != null)
+                                {
+                                    <button class="btn btn-link" @onclick="() => ViewWishlist(participant.UserId)">View Wishlist</button>
+                                }
+                                @if (_isOwner && participant.User?.Id != _currentUserId)
+                                {
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => HandleRemoveParticipant(participant)">
+                                        Remove
+                                    </button>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
+
                 @if (_isOwner)
                 {
-                    <a href="/events/@EventId/manage" class="btn btn-light d-inline-flex align-items-center">
-                        <i class="bi bi-gear me-2"></i> Manage Event
-                    </a>
+                    <h4>Add Participant</h4>
+                    <div class="input-group mb-3">
+                        <input type="email" @bind="_newParticipantEmail" class="form-control" placeholder="Enter user's email">
+                        <button class="btn btn-success" @onclick="HandleAddParticipant">Add</button>
+                    </div>
+                    @if (_addParticipantError != null)
+                    {
+                        <div class="alert alert-danger">@_addParticipantError</div>
+                    }
                 }
             </div>
-        </div>
-    </div>
-
-    <div class="container py-5">
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h3>Event Details</h3>
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h5>Date & Time</h5>
-                                <p class="mb-4">@_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")</p>
-
-                                @if (_event.Budget.HasValue)
-                                {
-                                    <h5>Suggested Budget</h5>
-                                    <p class="mb-4">@_event.Budget.Value.ToString("C")</p>
-                                }
-
-                                @if (_event.IsGiftExchange)
-                                {
-                                    <h5>Gift Exchange</h5>
-                                    <p class="mb-4">
-                                        <span class="badge bg-success">Active</span>
-                                        This event includes a gift exchange
-                                    </p>
-                                }
-
-                                @if (_event.IsRecurring)
-                                {
-                                    <h5>Recurring Event</h5>
-                                    <p class="mb-4">This is a recurring event</p>
-                                }
-                            </div>
-                            <div class="col-md-6">
-                                <h5>Created By</h5>
-                                <p class="mb-4">@_event.CreatedBy.UserName</p>
-
-                                <h5>Participants (@_event.EventUsers.Count)</h5>
-                                <div class="list-group">
-                                    @foreach (var participant in _event.EventUsers)
-                                    {
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            @participant.User.UserName
-                                            <span class="badge bg-primary">@participant.Role</span>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                @* @if (_event.EventWishlists.Any())
-                {
-                    <div class="card shadow-sm mt-4">
-                        <div class="card-body">
-                            <h3>Event Wishlists</h3>
-                            <div class="row g-3 mt-2">
-                                @foreach (var wishlist in _event.EventWishlists)
-                                {
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-body">
-                                                <h5 class="card-title">@wishlist.Name</h5>
-                                                <p class="card-text">Created by @wishlist.Owner.UserName</p>
-                                                <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">
-                                                    View Wishlist
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                } *@
-            </div>
-
             <div class="col-md-4">
-                @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
+                <h3>Event Details</h3>
+                <p>@_event.Description</p>
+                <p><strong>Date:</strong> @_event.Date.ToString("MMMM dd, yyyy")</p>
+                @if (_event.Budget.HasValue)
                 {
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h3>Gift Exchange</h3>
-                            <p>You are gifting to:</p>
-                            @{
-                                var myExchange = _event.GiftExchanges.FirstOrDefault(ge => ge.GiverId == _currentUserId);
-                                if (myExchange != null)
-                                {
-                                    <div class="alert alert-info">
-                                        <strong>@myExchange.Receiver.UserName</strong>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                } *@
+                    <p><strong>Budget:</strong> @_event.Budget.Value.ToString("C")</p>
+                }
             </div>
         </div>
     </div>
@@ -154,6 +96,8 @@ else
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
+    private string _newParticipantEmail = string.Empty;
+    private string? _addParticipantError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -165,5 +109,37 @@ else
     {
         _event = await EventService.GetEventAsync(EventId);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
+    }
+
+    private async Task HandleAddParticipant()
+    {
+        if (string.IsNullOrWhiteSpace(_newParticipantEmail))
+        {
+            _addParticipantError = "Please enter a valid email address.";
+            return;
+        }
+
+        var result = await EventService.AddUserToEventByEmailAsync(EventId, _newParticipantEmail);
+        if (result)
+        {
+            _addParticipantError = null;
+            _newParticipantEmail = string.Empty;
+            await LoadEvent(); // Refresh participants list
+        }
+        else
+        {
+            _addParticipantError = "Unable to add participant. Please ensure the email is correct and the user exists.";
+        }
+    }
+
+    private async Task HandleRemoveParticipant(EventUserModel participant)
+    {
+        await EventService.RemoveUserFromEventAsync(EventId, participant.User.Id);
+        await LoadEvent();
+    }
+
+    private void ViewWishlist(string userId)
+    {
+        NavigationManager.NavigateTo($"/users/{userId}/wishlists");
     }
 }

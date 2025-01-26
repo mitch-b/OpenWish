@@ -16,6 +16,7 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IBaseUriService BaseUriService
+@inject IEventService EventService
 
 <PageTitle>Register</PageTitle>
 
@@ -65,6 +66,15 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    [SupplyParameterFromQuery]
+    private int? EventId { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Email { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Token { get; set; }
+
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
     public async Task RegisterUser(EditContext editContext)
@@ -83,6 +93,26 @@
         }
 
         Logger.LogInformation("User created a new account with password.");
+
+        if (EventId.HasValue && !string.IsNullOrEmpty(Token))
+        {
+            var joinEventWasSuccessful = false;
+            try
+            {
+                joinEventWasSuccessful = await EventService.AcceptEventInvitationAsync(EventId.Value, Input.Email, Token);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error accepting event invitation.");
+            }
+            finally
+            {
+                if (!joinEventWasSuccessful)
+                {
+                    Logger.LogError("Failed to accept event invitation during registration process.");
+                }
+            }
+        }
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);

@@ -44,10 +44,23 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
 
-        modelBuilder.Entity<EventUser>()
-            .HasOne(eu => eu.User)
-            .WithMany()
-            .OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<EventUser>(entity =>
+        {
+            entity.HasKey(eu => new { eu.EventId, eu.Email });
+            
+            entity.HasOne(eu => eu.Event)
+                .WithMany(e => e.EventUsers)
+                .HasForeignKey(eu => eu.EventId)
+                .OnDelete(DeleteBehavior.NoAction);
+            
+            entity.HasOne(eu => eu.User)
+                .WithMany()
+                .HasForeignKey(eu => eu.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(eu => eu.Email)
+                .IsRequired();
+        });
 
         modelBuilder.Entity<GiftExchange>()
             .HasOne(ge => ge.Receiver)

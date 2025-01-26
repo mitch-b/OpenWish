@@ -11,4 +11,7 @@ public interface IEventService
     Task DeleteEventAsync(int id);
     Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
     Task<bool> RemoveUserFromEventAsync(int eventId, string userId);
+    Task<bool> AddUserToEventByEmailAsync(int eventId, string email);
+    Task<bool> AcceptEventInvitationAsync(int eventId, string email, string token);
+    Task<bool> IsValidInvitationTokenAsync(int eventId, string email, string token);
 }

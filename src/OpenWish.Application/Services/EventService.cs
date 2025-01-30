@@ -129,7 +129,7 @@ public class EventService(ApplicationDbContext context, IMapper mapper, IEmailSe
         return true;
     }
 
-    public async Task<bool> AddUserToEventByEmailAsync(int eventId, string email)
+    public async Task<bool> AddUserToEventByEmailAsync(int eventId, string email, string baseUri)
     {
         var eventEntity = await _context.Events
             .Include(e => e.EventUsers)
@@ -159,17 +159,17 @@ public class EventService(ApplicationDbContext context, IMapper mapper, IEmailSe
         _context.EventUsers.Add(eventUser);
         await _context.SaveChangesAsync();
 
-        await SendInvitationEmailAsync(eventEntity, email);
+        await SendInvitationEmailAsync(eventEntity, email, baseUri);
 
         return true;
     }
 
-    private async Task SendInvitationEmailAsync(Event eventEntity, string email)
+    private async Task SendInvitationEmailAsync(Event eventEntity, string email, string baseUri)
     {
         // Generate a token for invitation
         var token = await GenerateInvitationTokenAsync(eventEntity.Id, email);
 
-        var callbackUrl = $"{_openWishSettings.BaseUri}/Account/Register?eventId={eventEntity.Id}&email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
+        var callbackUrl = $"{baseUri}/Account/Register?eventId={eventEntity.Id}&email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}";
 
         var subject = $"You're Invited to {eventEntity.Name}!";
         var message = $"You've been invited to join the event '{eventEntity.Name}'. Please register to join: <a href='{callbackUrl}'>Join Event</a>";

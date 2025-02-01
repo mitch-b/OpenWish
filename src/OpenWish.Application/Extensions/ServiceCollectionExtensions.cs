@@ -15,6 +15,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IWishlistService, WishlistService>();
         services.AddScoped<IEventService, EventService>();
+        services.AddScoped<IProductService, ProductService>();
 
         services.AddAutoMapper(typeof(OpenWishProfile).Assembly);
 

@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using OpenWish.Shared.Services;
+﻿using OpenWish.Shared.Services;
 using OpenWish.Web.Client.Services;
 
 namespace OpenWish.Web.Client.Extensions;
@@ -13,6 +10,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserContextService, UserContextService>();
         services.AddScoped<IWishlistService, WishlistHttpClientService>();
         services.AddScoped<IEventService, EventHttpClientService>();
+        services.AddScoped<IProductService, ProductHttpClientService>();
         return services;
     }
 }

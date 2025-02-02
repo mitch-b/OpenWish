@@ -13,6 +13,19 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<OpenWishSettings>(configuration.GetSection(nameof(OpenWishSettings)));
 
+        services.AddHttpClient("ProductHttpClient", client =>
+        {
+            client.DefaultRequestVersion = new Version(2, 0);
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "OpenWish/1.0");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
+            EnableMultipleHttp2Connections = true
+        });
+
         services.AddScoped<IWishlistService, WishlistService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IProductService, ProductService>();

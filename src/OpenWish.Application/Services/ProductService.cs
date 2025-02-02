@@ -1,20 +1,28 @@
+using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using OpenWish.Application.Models;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
 
-public partial class ProductService : IProductService, IDisposable
+namespace OpenWish.Application.Services;
+
+public partial class ProductService : IProductService
 {
-    [System.Text.RegularExpressions.GeneratedRegex(@"[^0-9.,]+")]
-    private static partial System.Text.RegularExpressions.Regex PriceParseRegex();
+    [GeneratedRegex(@"[^0-9.,]+")]
+    private static partial Regex PriceParseRegex();
 
     private readonly HttpClient _client;
     private readonly ILogger<ProductService> _logger;
+    private const string UserAgent = "OpenWish/1.0 (Compatible; Modern Browser)";
 
-    public ProductService(ILogger<ProductService> logger)
+    public ProductService(IHttpClientFactory httpClientFactory, ILogger<ProductService> logger)
     {
-        _client = new HttpClient();
+        _client = httpClientFactory.CreateClient("ProductHttpClient");
+        _client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+        _client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/html"));
+        _client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+        _client.DefaultRequestHeaders.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("en-US"));
         _logger = logger;
     }
 
@@ -82,6 +90,4 @@ public partial class ProductService : IProductService, IDisposable
         }
         return null;
     }
-
-    public void Dispose() => _client.Dispose();
 }

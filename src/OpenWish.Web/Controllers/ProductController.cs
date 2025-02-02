@@ -16,7 +16,7 @@ public class ProductController(IProductService productService, ApiUserContextSer
     private readonly ApiUserContextService _userContextService = userContextService;
 
     // TODO: Rate Limit aggressively by user
-    [HttpPost(Name = "scrape")]
+    [HttpPost("scrape")]
     public async Task<ActionResult<WishlistModel>> TryScrape(ProductScrapeRequest productScrapeRequest)
     {
         var userId = await _userContextService.GetUserIdAsync();

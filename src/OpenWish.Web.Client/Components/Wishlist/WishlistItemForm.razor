@@ -78,6 +78,7 @@
                 var product = await ProductService.TryScrapeProductFromUrl(url);
                 if (product != null)
                 {
+                    // TODO: only replace properties that are null/empty
                     Model.Name = product.Name ?? Model.Name;
                     Model.Description = product.Description ?? Model.Description;
                     Model.Price = product.Price ?? Model.Price;

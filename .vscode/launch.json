@@ -9,7 +9,7 @@
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/src/OpenWish.AppHost/bin/Debug/net9.0/OpenWish.AppHost.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/src/OpenWish.AppHost",
+            "cwd": "${workspaceFolder}/src",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
             "console": "internalConsole",
             "stopAtEntry": false,

@@ -1,3 +1,6 @@
+@using OpenWish.Web.Client.CustomEvents
+
+@inject IProductService ProductService
 
 <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
     <DataAnnotationsValidator />
@@ -23,7 +26,8 @@
 
     <div class="mb-3">
         <label for="url" class="form-label">URL</label>
-        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" />
+        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" @onopenwishpaste="HandleUrlPaste" />
+        <small class="text-muted">Paste a product URL to automatically fill in details</small>
         <ValidationMessage For="@(() => Model.Url)" />
     </div>
 
@@ -58,6 +62,41 @@
     [Parameter] public WishlistItemModel Model { get; set; } = new();
     [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
+
+    private bool isLoading;
+
+    private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
+    {
+        try
+        {
+            isLoading = true;
+
+            var url = e.PastedData;
+            
+            if (!string.IsNullOrEmpty(url))
+            {
+                var product = await ProductService.TryScrapeProductFromUrl(url);
+                if (product != null)
+                {
+                    // TODO: only replace properties that are null/empty
+                    Model.Name = product.Name ?? Model.Name;
+                    Model.Description = product.Description ?? Model.Description;
+                    Model.Price = product.Price ?? Model.Price;
+                    Model.Url = url;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // You might want to add error handling/display here
+            Console.Error.WriteLine($"Error scraping URL: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 
     private async Task HandleSubmit()
     {

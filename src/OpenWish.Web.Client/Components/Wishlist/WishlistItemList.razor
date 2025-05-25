@@ -19,9 +19,9 @@
                 {
                     <tr>
                         <td colspan="6">
-                            <WishlistItemForm 
-                                Model="@item" 
-                                OnSubmit="@HandleEditSubmit" 
+                            <WishlistItemForm
+                                Model="@item"
+                                OnSubmit="@HandleEditSubmit"
                                 OnCancel="@HandleOnCancel" />
                         </td>
                     </tr>
@@ -41,15 +41,15 @@
                         </td>
                         <td>
                             <div class="btn-group">
-                                <button 
-                                    class="btn btn-sm btn-primary" 
+                                <button
+                                    class="btn btn-sm btn-primary"
                                     @onclick="() => StartEdit(item.Id)">
-                                    <i class="bi bi-pencil"></i> Edit
+                                    ✏️
                                 </button>
-                                <button 
-                                    class="btn btn-sm btn-danger" 
+                                <button
+                                    class="btn btn-sm btn-danger"
                                     @onclick="() => ShowDeleteConfirm(item)">
-                                    <i class="bi bi-trash"></i>
+                                    🗑️
                                 </button>
                             </div>
                         </td>
@@ -66,7 +66,7 @@
     [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
-    
+
     private int? EditingItemId;
     private WishlistDeleteDialog deleteDialog;
     private WishlistItemModel? itemToDelete;
@@ -94,7 +94,7 @@
     {
         itemToDelete = item;
         deleteDialog.Show(
-            "Delete Item", 
+            "Delete Item",
             $"Are you sure you want to delete \"{item.Name}\"? This action cannot be undone."
         );
     }

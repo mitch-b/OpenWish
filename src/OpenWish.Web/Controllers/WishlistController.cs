@@ -61,7 +61,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return NotFound();
         }
-        return NoContent();
+        return Ok(updatedWishlist);
     }
 
     [HttpDelete("{id}")]

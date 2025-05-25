@@ -155,6 +155,8 @@
         }
         finally
         {
+            // Clear the import URL field after processing
+            ImportUrl = string.Empty;
             isLoading = false;
             StateHasChanged();
         }

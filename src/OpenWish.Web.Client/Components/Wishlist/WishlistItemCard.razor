@@ -109,7 +109,7 @@
         builder.CloseElement();
         builder.CloseElement();
         
-        builder.CloseElement();
+        builder.CloseElement(); // Close card-details
 
         // Card Actions
         if (OnEdit.HasDelegate || OnDelete.HasDelegate)
@@ -141,8 +141,10 @@
                 builder.CloseElement();
             }
             
-            builder.CloseElement();
+            builder.CloseElement(); // Close card-actions
         }
+        
+        builder.CloseElement(); // Close card-content
     };
 
     private string GetPriorityClass() => Item.Priority switch

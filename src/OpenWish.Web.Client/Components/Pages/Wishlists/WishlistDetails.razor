@@ -66,10 +66,10 @@ else
                     </select>
                     
                     <div class="btn-group" role="group" aria-label="View toggle">
-                        <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="() => ViewMode = "list"">
+                        <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("list"))">
                             <i class="bi bi-list-ul"></i>
                         </button>
-                        <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="() => ViewMode = "card"">
+                        <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("card"))">
                             <i class="bi bi-grid-3x3-gap"></i>
                         </button>
                     </div>
@@ -250,5 +250,11 @@ else
         {
             await JSRuntime.InvokeVoidAsync("alert", "Unable to copy. Please copy the URL manually.");
         }
+    }
+
+    private void SetViewMode(string mode)
+    {
+        ViewMode = mode;
+        StateHasChanged();
     }
 }

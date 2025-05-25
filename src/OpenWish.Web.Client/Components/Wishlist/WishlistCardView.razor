@@ -4,8 +4,8 @@
         <div class="col-md-6 col-lg-4">
             <WishlistItemCard 
                 Item="@item" 
-                OnEdit="@(OnEdit.HasDelegate ? (item) => OnEdit.InvokeAsync(item) : null)" 
-                OnDelete="@(OnDelete.HasDelegate ? (item) => OnDelete.InvokeAsync(item) : null)" />
+                OnEdit="@(OnEdit.HasDelegate ? item => OnEdit.InvokeAsync(item) : null)" 
+                OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)" />
         </div>
     }
 </div>

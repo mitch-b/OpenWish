@@ -18,9 +18,9 @@
 3. Blazor Server UI (In Progress)
    - [x] Authentication state provider
    - [x] Login/Register pages
-   - [ ] Wishlist management pages
-      - [ ] List view with filters and search
-      - [ ] Create/Edit forms
+   - [x] Wishlist management pages
+      - [x] List view with filters and search
+      - [x] Create/Edit forms
       - [x] Delete confirmation dialog
    - [ ] Item management components
       - [ ] Item card component

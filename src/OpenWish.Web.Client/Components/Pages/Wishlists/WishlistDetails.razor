@@ -7,6 +7,7 @@
 @inject IUserContextService UserContextService
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 @rendermode InteractiveAuto
 
@@ -18,7 +19,7 @@
 }
 else
 {
-    <div class="wishlist-header">
+    <div class="wishlist-header mb-4">
         <div class="d-flex justify-content-between align-items-start">
             <div>
                 <h2>@_wishlist.Name</h2>
@@ -27,27 +28,59 @@ else
                     <span class="badge bg-info">Collaborative Wishlist</span>
                 }
             </div>
-            @if (_isOwner)
-            {
-                <a href="/wishlists/@WishlistId/manage" class="btn btn-light d-inline-flex align-items-center">
-                    <i class="bi bi-gear me-2"></i> Manage Wishlist
-                </a>
-            }
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary d-inline-flex align-items-center" @onclick="ShareWishlist">
+                    <i class="bi bi-share me-2"></i> Share
+                </button>
+                @if (_isOwner)
+                {
+                    <a href="/wishlists/@WishlistId/manage" class="btn btn-light d-inline-flex align-items-center">
+                        <i class="bi bi-gear me-2"></i> Manage Wishlist
+                    </a>
+                }
+            </div>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-8">
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+                <div class="btn-group">
+                    <button class="btn @(SortBy == "name" ? "btn-primary" : "btn-outline-primary")" @onclick="() => SortItems("name")">
+                        Name <i class="bi @(SortBy == "name" ? (SortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up") : "")"></i>
+                    </button>
+                    <button class="btn @(SortBy == "priority" ? "btn-primary" : "btn-outline-primary")" @onclick="() => SortItems("priority")">
+                        Priority <i class="bi @(SortBy == "priority" ? (SortAscending ? "bi-sort-numeric-down" : "bi-sort-numeric-up") : "")"></i>
+                    </button>
+                    <button class="btn @(SortBy == "price" ? "btn-primary" : "btn-outline-primary")" @onclick="() => SortItems("price")">
+                        Price <i class="bi @(SortBy == "price" ? (SortAscending ? "bi-sort-numeric-down" : "bi-sort-numeric-up") : "")"></i>
+                    </button>
+                </div>
+
+                <select class="form-select" style="width: auto" @bind="PriorityFilter">
+                    <option value="all">All Priorities</option>
+                    <option value="1">High Priority</option>
+                    <option value="2">Medium Priority</option>
+                    <option value="3">Low Priority</option>
+                </select>
+            </div>
+            
             <div class="wishlist-content view-transition">
                 @if (_items != null)
                 {
-                    @if (_canEdit)
+                    @if (_filteredItems.Count == 0)
                     {
-                        <WishlistItemList Items="@_items" OnEdit="@HandleItemEdit" />
+                        <div class="alert alert-info">
+                            No items match the current filters. Try changing your filter settings or add new items.
+                        </div>
+                    }
+                    else if (_canEdit)
+                    {
+                        <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
                     }
                     else
                     {
-                        <WishlistItemList Items="@_items" />
+                        <WishlistItemList Items="@_filteredItems" />
                     }
                 }
                 else
@@ -77,10 +110,14 @@ else
 
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
+    private List<WishlistItemModel> _filteredItems = new();
     private WishlistItemModel _newItem = new();
     private string? _currentUserId;
     private bool _canEdit;
     private bool _isOwner;
+    private string SortBy { get; set; } = "priority";
+    private bool SortAscending { get; set; } = true;
+    private string PriorityFilter { get; set; } = "all";
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,6 +129,58 @@ else
     private async Task LoadItems()
     {
         _items = (await WishlistService.GetWishlistItemsAsync(WishlistId)).ToList();
+        ApplyFiltersAndSort();
+    }
+
+    private void ApplyFiltersAndSort()
+    {
+        var filtered = _items.AsEnumerable();
+
+        // Apply priority filter
+        if (PriorityFilter != "all")
+        {
+            if (int.TryParse(PriorityFilter, out int priority))
+            {
+                filtered = filtered.Where(i => i.Priority == priority);
+            }
+        }
+
+        // Apply sorting
+        filtered = SortBy switch
+        {
+            "name" => SortAscending 
+                ? filtered.OrderBy(i => i.Name) 
+                : filtered.OrderByDescending(i => i.Name),
+                
+            "priority" => SortAscending 
+                ? filtered.OrderBy(i => i.Priority) 
+                : filtered.OrderByDescending(i => i.Priority),
+                
+            "price" => SortAscending 
+                ? filtered.OrderBy(i => i.Price) 
+                : filtered.OrderByDescending(i => i.Price),
+                
+            _ => filtered
+        };
+
+        _filteredItems = filtered.ToList();
+    }
+
+    private void SortItems(string sortBy)
+    {
+        if (SortBy == sortBy)
+        {
+            // Toggle sort direction
+            SortAscending = !SortAscending;
+        }
+        else
+        {
+            // New sort field, default to ascending
+            SortBy = sortBy;
+            SortAscending = true;
+        }
+
+        ApplyFiltersAndSort();
     }
 
     private async Task HandleAddItem(WishlistItemModel item)
@@ -107,6 +196,12 @@ else
         await LoadItems();
     }
 
+    private async Task HandleItemDelete(WishlistItemModel item)
+    {
+        await WishlistService.RemoveItemFromWishlistAsync(WishlistId, item.Id);
+        await LoadItems();
+    }
+
     private async Task SetupSecurity()
     {
         if (_wishlist == null) return;
@@ -114,5 +209,20 @@ else
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
         _canEdit = _isOwner || _wishlist.IsCollaborative;
+    }
+
+    private async Task ShareWishlist()
+    {
+        string wishlistUrl = NavigationManager.Uri;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", wishlistUrl);
+            await JSRuntime.InvokeVoidAsync("alert", "Wishlist URL copied to clipboard!");
+        }
+        catch
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Unable to copy. Please copy the URL manually.");
+        }
     }
 }

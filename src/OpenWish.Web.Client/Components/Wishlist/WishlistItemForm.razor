@@ -1,6 +1,30 @@
 @using OpenWish.Web.Client.CustomEvents
 
 @inject IProductService ProductService
+@inject IJSRuntime JSRuntime
+
+<div class="url-import-section mb-4">
+    <div class="card bg-light">
+        <div class="card-body">
+            <h5 class="card-title">Import from URL</h5>
+            <div class="input-group">
+                <InputText class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
+                <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span>Importing...</span>
+                    }
+                    else
+                    {
+                        <span>Import</span>
+                    }
+                </button>
+            </div>
+            <small class="text-muted">Paste a product URL to automatically fill in details from popular websites</small>
+        </div>
+    </div>
+</div>
 
 <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
     <DataAnnotationsValidator />
@@ -26,8 +50,7 @@
 
     <div class="mb-3">
         <label for="url" class="form-label">URL</label>
-        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" @onopenwishpaste="HandleUrlPaste" />
-        <small class="text-muted">Paste a product URL to automatically fill in details</small>
+        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" />
         <ValidationMessage For="@(() => Model.Url)" />
     </div>
 
@@ -46,16 +69,19 @@
         </InputSelect>
     </div>
 
-    <div class="mb-3">
-        <InputCheckbox id="isPrivate" @bind-Value="@Model!.IsPrivate" /> Private Item?
+    <div class="mb-3 form-check">
+        <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
+        <label class="form-check-label" for="isPrivate">Private Item?</label>
         <ValidationMessage For="@(() => Model.IsPrivate)" />
     </div>
 
-    <button type="submit" class="btn btn-primary">@(Model.Id > 0 ? "Edit" : "Create") Item</button>
-    @if (OnCancel.HasDelegate)
-    {
-        <button type="button" class="btn btn-secondary" @onclick="HandleCancel">Cancel</button>
-    }
+    <div class="d-flex justify-content-between">
+        <button type="submit" class="btn btn-primary">@(Model.Id > 0 ? "Edit" : "Create") Item</button>
+        @if (OnCancel.HasDelegate)
+        {
+            <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
+        }
+    </div>
 </EditForm>
 
 @code {
@@ -64,37 +90,73 @@
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
 
     private bool isLoading;
+    private string ImportUrl { get; set; } = string.Empty;
+    private string importMessage = string.Empty;
+    private bool showImportMessage;
+
+    private async Task ImportFromUrl()
+    {
+        if (string.IsNullOrWhiteSpace(ImportUrl))
+            return;
+
+        await ProcessUrlImport(ImportUrl);
+    }
 
     private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
+    {
+        ImportUrl = e.PastedData ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(ImportUrl))
+        {
+            await ProcessUrlImport(ImportUrl);
+        }
+    }
+
+    private async Task ProcessUrlImport(string url)
     {
         try
         {
             isLoading = true;
-
-            var url = e.PastedData;
+            StateHasChanged();
             
-            if (!string.IsNullOrEmpty(url))
+            var product = await ProductService.TryScrapeProductFromUrl(url);
+            if (product != null)
             {
-                var product = await ProductService.TryScrapeProductFromUrl(url);
-                if (product != null)
-                {
-                    // TODO: only replace properties that are null/empty
-                    Model.Name = product.Name ?? Model.Name;
-                    Model.Description = product.Description ?? Model.Description;
-                    Model.Price = product.Price ?? Model.Price;
+                // Only update empty fields
+                if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
+                    Model.Name = product.Name;
+                    
+                if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
+                    Model.Description = product.Description;
+                    
+                if (!Model.Price.HasValue && product.Price.HasValue)
+                    Model.Price = product.Price;
+                    
+                if (string.IsNullOrWhiteSpace(Model.Url))
                     Model.Url = url;
-                    StateHasChanged();
-                }
+                    
+                if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
+                    Model.WhereToBuy = new Uri(url).Host.Replace("www.", "");
+                    
+                // Set default priority if not set
+                if (!Model.Priority.HasValue)
+                    Model.Priority = 2; // Medium priority by default
+                
+                await JSRuntime.InvokeVoidAsync("alert", "Product details imported successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Could not extract product details. Please fill in the form manually.");
             }
         }
         catch (Exception ex)
         {
-            // You might want to add error handling/display here
-            Console.Error.WriteLine($"Error scraping URL: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Error processing URL. Please fill in the form manually.");
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 

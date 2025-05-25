@@ -57,12 +57,23 @@ else
                     </button>
                 </div>
 
-                <select class="form-select" style="width: auto" @bind="PriorityFilter">
-                    <option value="all">All Priorities</option>
-                    <option value="1">High Priority</option>
-                    <option value="2">Medium Priority</option>
-                    <option value="3">Low Priority</option>
-                </select>
+                <div class="d-flex gap-2 align-items-center">
+                    <select class="form-select" style="width: auto" @bind="PriorityFilter">
+                        <option value="all">All Priorities</option>
+                        <option value="1">High Priority</option>
+                        <option value="2">Medium Priority</option>
+                        <option value="3">Low Priority</option>
+                    </select>
+                    
+                    <div class="btn-group" role="group" aria-label="View toggle">
+                        <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="() => ViewMode = "list"">
+                            <i class="bi bi-list-ul"></i>
+                        </button>
+                        <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="() => ViewMode = "card"">
+                            <i class="bi bi-grid-3x3-gap"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div class="wishlist-content view-transition">
@@ -76,11 +87,25 @@ else
                     }
                     else if (_canEdit)
                     {
-                        <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                        @if (ViewMode == "list")
+                        {
+                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                        }
+                        else
+                        {
+                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                        }
                     }
                     else
                     {
-                        <WishlistItemList Items="@_filteredItems" />
+                        @if (ViewMode == "list")
+                        {
+                            <WishlistItemList Items="@_filteredItems" />
+                        }
+                        else
+                        {
+                            <WishlistCardView Items="@_filteredItems" />
+                        }
                     }
                 }
                 else
@@ -118,6 +143,7 @@ else
     private string SortBy { get; set; } = "priority";
     private bool SortAscending { get; set; } = true;
     private string PriorityFilter { get; set; } = "all";
+    private string ViewMode { get; set; } = "list"; // "list" or "card"
 
     protected override async Task OnInitializedAsync()
     {

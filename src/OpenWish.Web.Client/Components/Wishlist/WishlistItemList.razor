@@ -1,7 +1,7 @@
 @using OpenWish.Shared.Extensions;
 
 <div class="table-responsive">
-    <table class="table">
+    <table class="table table-hover">
         <thead>
             <tr>
                 <th>Name</th>
@@ -29,10 +29,22 @@
                 else
                 {
                     <tr>
-                        <td>@item.Name</td>
-                        <td>@item.Description</td>
-                        <td>@item.Price?.ToString("C")</td>
-                        <td>@item.Priority</td>
+                        <td>
+                            <span class="item-name">@item.Name</span>
+                            @if (!string.IsNullOrEmpty(item.Url))
+                            {
+                                <a href="@item.Url" target="_blank" class="ms-2 text-decoration-none">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            }
+                        </td>
+                        <td>@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
+                        <td>@(item.Price?.ToString("C") ?? "-")</td>
+                        <td>
+                            <span class="priority-badge @GetPriorityClass(item.Priority)">
+                                @GetPriorityText(item.Priority)
+                            </span>
+                        </td>
                         <td>
                             <span class="tooltip-container">
                                 @item.CreatedOn.ToLocalHumanizedString()
@@ -43,13 +55,15 @@
                             <div class="btn-group">
                                 <button
                                     class="btn btn-sm btn-primary"
-                                    @onclick="() => StartEdit(item.Id)">
-                                    ✏️
+                                    @onclick="() => StartEdit(item.Id)"
+                                    title="Edit item">
+                                    <i class="bi bi-pencil"></i>
                                 </button>
                                 <button
                                     class="btn btn-sm btn-danger"
-                                    @onclick="() => ShowDeleteConfirm(item)">
-                                    🗑️
+                                    @onclick="() => ShowDeleteConfirm(item)"
+                                    title="Delete item">
+                                    <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </td>
@@ -107,4 +121,20 @@
             itemToDelete = null;
         }
     }
+
+    private string GetPriorityClass(int? priority) => priority switch
+    {
+        1 => "priority-high",
+        2 => "priority-medium",
+        3 => "priority-low",
+        _ => "priority-none"
+    };
+
+    private string GetPriorityText(int? priority) => priority switch
+    {
+        1 => "High",
+        2 => "Medium",
+        3 => "Low",
+        _ => "None"
+    };
 }

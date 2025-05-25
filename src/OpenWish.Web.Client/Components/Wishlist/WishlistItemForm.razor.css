@@ -28,3 +28,23 @@
 .btn-primary:hover {
     background: #3c4099;
 }
+
+.url-import-section {
+    transition: all 0.3s ease;
+}
+
+.url-import-section .card {
+    border-left: 4px solid #4C51BF;
+}
+
+.form-check-input {
+    margin-top: 0.25rem;
+}
+
+.input-group .btn {
+    padding: 0.375rem 0.75rem;
+}
+
+.spinner-border-sm {
+    margin-right: 0.25rem;
+}

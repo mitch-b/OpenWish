@@ -1,0 +1,17 @@
+<div class="row g-3">
+    @foreach (var item in Items)
+    {
+        <div class="col-md-6 col-lg-4">
+            <WishlistItemCard 
+                Item="@item" 
+                OnEdit="@(OnEdit.HasDelegate ? (item) => OnEdit.InvokeAsync(item) : null)" 
+                OnDelete="@(OnDelete.HasDelegate ? (item) => OnDelete.InvokeAsync(item) : null)" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
+    [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+}

@@ -1,0 +1,105 @@
+@using OpenWish.Shared.Extensions
+
+<div class="card wishlist-item-card mb-3">
+    <div class="row g-0">
+        @if (!string.IsNullOrEmpty(Item.Image))
+        {
+            <div class="col-md-4">
+                <img src="@Item.Image" class="img-fluid rounded-start" alt="@Item.Name">
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <CardContent />
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-12">
+                <div class="card-body">
+                    <CardContent />
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public WishlistItemModel Item { get; set; } = new();
+    [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+
+    private RenderFragment CardContent => __builder =>
+    {
+        <h5 class="card-title">@Item.Name</h5>
+        
+        <div class="priority-badge @GetPriorityClass()">
+            @GetPriorityText()
+        </div>
+        
+        @if (!string.IsNullOrEmpty(Item.Description))
+        {
+            <p class="card-text">@Item.Description</p>
+        }
+        
+        <div class="card-details">
+            @if (Item.Price.HasValue)
+            {
+                <p class="card-text"><strong>Price:</strong> @Item.Price?.ToString("C")</p>
+            }
+            
+            @if (!string.IsNullOrEmpty(Item.WhereToBuy))
+            {
+                <p class="card-text"><strong>Where to Buy:</strong> @Item.WhereToBuy</p>
+            }
+            
+            @if (!string.IsNullOrEmpty(Item.Url))
+            {
+                <p class="card-text">
+                    <a href="@Item.Url" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-link-45deg"></i> View Product
+                    </a>
+                </p>
+            }
+            
+            <p class="card-text">
+                <small class="text-muted">Added: @Item.CreatedOn.ToLocalHumanizedString()</small>
+            </p>
+        </div>
+
+        @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+        {
+            <div class="card-actions">
+                @if (OnEdit.HasDelegate)
+                {
+                    <button class="btn btn-sm btn-primary" @onclick="() => OnEdit.InvokeAsync(Item)">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                }
+                
+                @if (OnDelete.HasDelegate)
+                {
+                    <button class="btn btn-sm btn-danger" @onclick="() => OnDelete.InvokeAsync(Item)">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                }
+            </div>
+        }
+    };
+
+    private string GetPriorityClass() => Item.Priority switch
+    {
+        1 => "priority-high",
+        2 => "priority-medium",
+        3 => "priority-low",
+        _ => "priority-none"
+    };
+
+    private string GetPriorityText() => Item.Priority switch
+    {
+        1 => "High Priority",
+        2 => "Medium Priority",
+        3 => "Low Priority",
+        _ => "No Priority"
+    };
+}

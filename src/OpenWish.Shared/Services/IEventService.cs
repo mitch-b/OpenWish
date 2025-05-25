@@ -1,4 +1,4 @@
-﻿using OpenWish.Shared.Models;
+using OpenWish.Shared.Models;
 
 namespace OpenWish.Shared.Services;
 

@@ -1,4 +1,4 @@
-﻿namespace OpenWish.Shared.RequestModels;
+namespace OpenWish.Shared.RequestModels;
 
 public class AddUserToEventRequest
 {

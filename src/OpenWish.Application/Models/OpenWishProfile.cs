@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
 

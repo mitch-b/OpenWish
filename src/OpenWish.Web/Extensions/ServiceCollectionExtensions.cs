@@ -17,14 +17,14 @@ public static class ServiceCollectionExtensions
         services.AddHttpContextAccessor();
 
         services.TryAddScoped<IWebAssemblyHostEnvironment, ServerHostEnvironment>();
-        
+
         services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
         services.AddScoped<IBaseUriService, BaseUriService>();
 
         services.AddScoped<IUserContextService, UserContextService>();
         // API controllers (outside Razor context) need to use HttpContextAccessor - Do not call GetAuthenticationStateAsync outside of the DI scope for a Razor component. Typically, this means you can call it only within a Razor component or inside another DI service that is resolved for a Razor component.
         services.AddScoped<ApiUserContextService>();
-        
+
         // Add OpenAIClient to the service collection
         var apiKey = services.BuildServiceProvider().GetRequiredService<IOptions<OpenWishSettings>>().Value?.OpenAI.ApiKey;
         services.AddHttpClient("OpenAI", c =>

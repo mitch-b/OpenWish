@@ -1,4 +1,4 @@
-﻿namespace OpenWish.Application.Models.Configuration;
+namespace OpenWish.Application.Models.Configuration;
 
 public record OpenWishSettings
 {

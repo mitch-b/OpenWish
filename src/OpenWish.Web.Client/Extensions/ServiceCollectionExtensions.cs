@@ -1,4 +1,4 @@
-﻿using OpenWish.Shared.Services;
+using OpenWish.Shared.Services;
 using OpenWish.Web.Client.Services;
 
 namespace OpenWish.Web.Client.Extensions;

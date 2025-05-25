@@ -41,7 +41,9 @@ public class EventService(ApplicationDbContext context, IMapper mapper) : IEvent
             .FirstOrDefaultAsync(e => e.Id == id);
 
         if (eventEntity == null)
+        {
             throw new KeyNotFoundException($"Event with id {id} not found");
+        }
 
         var eventModel = _mapper.Map<EventModel>(eventEntity);
         return eventModel;
@@ -117,7 +119,9 @@ public class EventService(ApplicationDbContext context, IMapper mapper) : IEvent
             .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.UserId == userId);
 
         if (eventUser == null)
+        {
             return false;
+        }
 
         _context.EventUsers.Remove(eventUser);
         await _context.SaveChangesAsync();

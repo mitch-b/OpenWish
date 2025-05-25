@@ -1,7 +1,7 @@
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
+using System.Text.RegularExpressions;
 
 namespace OpenWish.Web.Services;
 
@@ -12,7 +12,7 @@ public interface IBaseUriService
     string ToBaseRelativePath(string uri);
 }
 
-public class BaseUriService: IBaseUriService
+public class BaseUriService : IBaseUriService
 {
     private readonly IConfiguration _configuration;
     private readonly IOptions<OpenWishSettings> _openWishSettings;
@@ -50,7 +50,7 @@ public class BaseUriService: IBaseUriService
         return new Uri(_navigationManager.BaseUri);
     }
 
-    public Uri ToAbsoluteUri(string relativeUri) => 
+    public Uri ToAbsoluteUri(string relativeUri) =>
         new(GetBaseUri(), relativeUri);
 
     public string ToBaseRelativePath(string uri)

@@ -1,7 +1,7 @@
-﻿using OpenWish.Data.Entities;
-using OpenWish.Data.Extensions;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using OpenWish.Data.Entities;
+using OpenWish.Data.Extensions;
 
 namespace OpenWish.Data;
 
@@ -38,7 +38,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(cpr => cpr.SourceUser)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
-        
+
         modelBuilder.Entity<CustomPairingRule>()
             .HasOne(cpr => cpr.TargetUser)
             .WithMany()
@@ -57,7 +57,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<GiftExchange>()
             .Property(e => e.Budget)
             .HasColumnType("decimal(11,2)");
-        
+
         modelBuilder.Entity<GiftExchange>()
             .HasOne(ge => ge.Giver)
             .WithMany()
@@ -66,17 +66,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<WishlistItem>()
             .Property(wli => wli.Price)
             .HasColumnType("decimal(11,2)");
-        
+
         modelBuilder.Entity<WishlistComment>()
             .HasOne(wc => wc.User)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
-        
+
         modelBuilder.Entity<WishlistReaction>()
             .HasOne(wr => wr.User)
             .WithMany()
             .OnDelete(DeleteBehavior.NoAction);
-        
+
         modelBuilder.Entity<Comment>()
             .HasOne(c => c.User)
             .WithMany()

@@ -27,7 +27,7 @@
             <option value="collaborative">Collaborative Only</option>
             <option value="private">Private Only</option>
         </select>
-        <select class="form-select" style="width: auto" @bind="sortBy" @onchange="HandleSort">
+        <select class="form-select" style="width: auto" @bind="sortBy" @bind:after="HandleSort">
             <option value="nameAsc">Name (A-Z)</option>
             <option value="nameDesc">Name (Z-A)</option>
             <option value="recent">Most Recent</option>

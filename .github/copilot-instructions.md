@@ -2,7 +2,7 @@ This application is a C# .NET application that uses the ASP.NET Core framework t
 
 ## Code Standards
 
-### Required Before Each Commit
+### Required Before Each Commit (when non-interactive and during a GitHub Action only)
 - Change working directory to `{root}/src`
 - Run `dotnet format` before committing any changes to ensure proper code formatting
 - This will run format on all files to maintain consistent style based on `.editorconfig` settings

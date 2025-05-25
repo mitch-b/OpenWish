@@ -10,11 +10,20 @@
 
 @rendermode InteractiveAuto
 
-<h3>Create a Wishlist</h3>
+<PageTitle>Create a Wishlist</PageTitle>
 
-@* <FormMappingScope Name="new-wishlist"> *@
-    <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" />
-@* </FormMappingScope> *@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Create a Wishlist</h3>
+    <a href="/wishlists" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Wishlists
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" OnCancel="@HandleCancel" />
+    </div>
+</div>
 
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
@@ -32,6 +41,11 @@
         {
             Logger.LogError("Could not determine UserId from new Wishlist page.");
         }
+        NavigationManager.NavigateTo("/wishlists");
+    }
+
+    private void HandleCancel()
+    {
         NavigationManager.NavigateTo("/wishlists");
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
@@ -61,7 +61,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return NotFound();
         }
-        return NoContent();
+        return Ok(updatedWishlist);
     }
 
     [HttpDelete("{id}")]

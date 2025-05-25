@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
@@ -107,4 +107,3 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return NoContent();
     }
 }
-

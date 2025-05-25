@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http;
-using System.Security.Claims;
 using OpenWish.Shared.Services;
+using System.Security.Claims;
 
 namespace OpenWish.Web.Services;
 

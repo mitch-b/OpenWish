@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using OpenWish.Data.Attributes;
+using System.ComponentModel.DataAnnotations;
 
 namespace OpenWish.Data.Entities;
 

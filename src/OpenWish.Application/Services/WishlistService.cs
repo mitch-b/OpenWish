@@ -33,7 +33,9 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper) : IWi
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (wishlistEntity == null)
+        {
             throw new KeyNotFoundException($"Wishlist {id} not found");
+        }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
         return wishlistModel;
@@ -102,7 +104,9 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper) : IWi
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
 
         if (item == null)
+        {
             return false;
+        }
 
         _context.WishlistItems.Remove(item);
         await _context.SaveChangesAsync();
@@ -115,7 +119,9 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper) : IWi
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
 
         if (itemEntity == null)
+        {
             throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+        }
 
         var itemModel = _mapper.Map<WishlistItemModel>(itemEntity);
         return itemModel;

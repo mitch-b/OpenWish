@@ -1,6 +1,6 @@
-using OpenWish.Data.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using OpenWish.Data.Attributes;
 
 namespace OpenWish.Data.Extensions;
 
@@ -34,7 +34,11 @@ public static class ConventionBehaviors
             var properties = entity.GetProperties();
             foreach (var property in properties)
             {
-                if (property is null) continue;
+                if (property is null)
+                {
+                    continue;
+                }
+
                 if (property.PropertyInfo?
                         .GetCustomAttributes(typeof(TAttribute), false)
                         .FirstOrDefault() is TAttribute attribute)

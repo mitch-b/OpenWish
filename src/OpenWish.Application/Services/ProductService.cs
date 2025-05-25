@@ -1,9 +1,9 @@
-using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using OpenWish.Application.Models;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
+using System.Text.RegularExpressions;
 
 namespace OpenWish.Application.Services;
 

@@ -12,12 +12,21 @@
             <ValidationMessage For="@(() => Model.Name)" />
         </div>
 
-        <div class="mb-3">
-            <InputCheckbox id="isCollaborative" @bind-Value="@Model!.IsCollaborative" /> Is Collaborative? (allows other invited members to add items to your list)
+        <div class="mb-3 form-check">
+            <InputCheckbox id="isCollaborative" class="form-check-input" @bind-Value="@Model!.IsCollaborative" />
+            <label class="form-check-label" for="isCollaborative">
+                Is Collaborative? (allows other invited members to add items to your list)
+            </label>
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
-        <button type="submit" class="btn btn-primary mt-3">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
+            @if (OnCancel.HasDelegate)
+            {
+                <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
+            }
+        </div>
     </EditForm>
 }
 else
@@ -27,15 +36,23 @@ else
 
 
 @code {
-
     [Parameter] public WishlistModel? Model { get; set; }
     [Parameter] public EventCallback<WishlistModel> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
 
     private async Task HandleSubmit()
     {
         if (OnSubmit.HasDelegate)
         {
             await OnSubmit.InvokeAsync(Model);
+        }
+    }
+
+    private async Task HandleCancel()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
         }
     }
 }

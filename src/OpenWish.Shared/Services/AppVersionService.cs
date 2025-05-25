@@ -1,4 +1,4 @@
-﻿namespace OpenWish.Shared.Services;
+namespace OpenWish.Shared.Services;
 
 public interface IAppVersionService
 {

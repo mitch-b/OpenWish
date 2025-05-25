@@ -1,4 +1,4 @@
-﻿namespace OpenWish.Shared.Models;
+namespace OpenWish.Shared.Models;
 
 public class EventModel : BaseEntityModel
 {

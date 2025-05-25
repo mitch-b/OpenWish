@@ -1,35 +1,98 @@
-﻿@attribute [Authorize]
+@attribute [Authorize]
 @page "/wishlists/{WishlistId:int}/manage"
 @using OpenWish.Web.Client.Components.Wishlist
 
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
+@inject ILogger<ManageWishlist> Logger
 
-<h3>Manage Wishlist</h3>
+@rendermode InteractiveAuto
+
+<PageTitle>Manage Wishlist - @(_wishlist?.Name ?? "")</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Manage Wishlist</h3>
+    <div class="btn-group">
+        <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Wishlist
+        </a>
+        <button class="btn btn-danger" type="button" @onclick="ShowDeleteDialog">
+            <i class="bi bi-trash"></i> Delete Wishlist
+        </button>
+    </div>
+</div>
 
 @if (_wishlist == null)
 {
     <p>Loading...</p>
 }
+else if (!_isOwner)
+{
+    <div class="alert alert-danger">
+        You don't have permission to manage this wishlist.
+    </div>
+}
 else
 {
-    <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
+    <div class="card">
+        <div class="card-body">
+            <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
+        </div>
+    </div>
 }
+
+<WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDeleteWishlist" />
+
+<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     [Parameter]
     public int WishlistId { get; set; }
 
     private WishlistModel? _wishlist;
+    private WishlistDeleteDialog deleteDialog;
+    private string? _currentUserId;
+    private bool _isOwner;
 
     protected override async Task OnInitializedAsync()
     {
         _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
+        await SetupSecurity();
+    }
+
+    private async Task SetupSecurity()
+    {
+        if (_wishlist == null) return;
+        _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+        _isOwner = _wishlist.OwnerId == _currentUserId;
     }
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
         await WishlistService.UpdateWishlistAsync(WishlistId, updatedWishlist);
         NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+    }
+
+    private void ShowDeleteDialog()
+    {
+        deleteDialog.Show(
+            "Delete Wishlist",
+            $"Are you sure you want to delete the wishlist '{_wishlist?.Name}'? This action cannot be undone."
+        );
+    }
+
+    private async Task HandleDeleteWishlist()
+    {
+        try
+        {
+            await WishlistService.DeleteWishlistAsync(WishlistId);
+            NavigationManager.NavigateTo("/wishlists");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting wishlist {WishlistId}", WishlistId);
+        }
     }
 }

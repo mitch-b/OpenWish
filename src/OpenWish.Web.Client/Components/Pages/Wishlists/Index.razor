@@ -12,22 +12,43 @@
 
 <h3>My Wishlists</h3>
 
-<div class="mb-3">
+<div class="mb-3 d-flex justify-content-between align-items-center">
     <a href="/wishlists/new" class="btn btn-primary">Create New Wishlist</a>
+    <div class="d-flex gap-2">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search..." 
+                   @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
+                <i class="bi bi-search"></i> Search
+            </button>
+        </div>
+        <select class="form-select" style="width: auto" @bind="filterBy">
+            <option value="all">All Wishlists</option>
+            <option value="collaborative">Collaborative Only</option>
+            <option value="private">Private Only</option>
+        </select>
+        <select class="form-select" style="width: auto" @bind="sortBy" @bind:after="HandleSort">
+            <option value="nameAsc">Name (A-Z)</option>
+            <option value="nameDesc">Name (Z-A)</option>
+            <option value="recent">Most Recent</option>
+            <option value="oldest">Oldest</option>
+            <option value="itemCount">Most Items</option>
+        </select>
+    </div>
 </div>
 
-@if (wishlists == null)
+@if (filteredWishlists == null)
 {
     <p>Loading...</p>
 }
-else if (!wishlists.Any())
+else if (!filteredWishlists.Any())
 {
     <p>No wishlists found. Create one to get started!</p>
 }
 else
 {
     <div class="row">
-        @foreach (var wishlist in wishlists ?? [])
+        @foreach (var wishlist in filteredWishlists)
         {
             <div class="col-md-4 mb-4">
                 <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
@@ -40,7 +61,13 @@ else
 
 @code {
     private IEnumerable<WishlistModel>? wishlists;
+    private IEnumerable<WishlistModel>? filteredWishlists;
     private string? _userId;
+    
+    // Filter and sort properties
+    private string searchTerm = "";
+    private string filterBy = "all";
+    private string sortBy = "nameAsc";
 
     protected override async Task OnInitializedAsync()
     {
@@ -60,7 +87,57 @@ else
         if (!string.IsNullOrWhiteSpace(_userId))
         {
             wishlists = await WishlistService.GetUserWishlistsAsync(_userId);
+            ApplyFiltersAndSort();
         }
+    }
+
+    private void ApplyFiltersAndSort()
+    {
+        if (wishlists == null)
+        {
+            filteredWishlists = Array.Empty<WishlistModel>();
+            return;
+        }
+
+        // Apply filters
+        var filtered = wishlists;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filtered = filtered.Where(w => 
+                w.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (filterBy == "collaborative")
+        {
+            filtered = filtered.Where(w => w.IsCollaborative);
+        }
+        else if (filterBy == "private")
+        {
+            filtered = filtered.Where(w => !w.IsCollaborative);
+        }
+
+        // Apply sorting
+        filtered = sortBy switch
+        {
+            "nameAsc" => filtered.OrderBy(w => w.Name),
+            "nameDesc" => filtered.OrderByDescending(w => w.Name),
+            "recent" => filtered.OrderByDescending(w => w.CreatedOn),
+            "oldest" => filtered.OrderBy(w => w.CreatedOn),
+            "itemCount" => filtered.OrderByDescending(w => w.ItemCount),
+            _ => filtered.OrderBy(w => w.Name)
+        };
+
+        filteredWishlists = filtered;
+    }
+
+    private void HandleSearch()
+    {
+        ApplyFiltersAndSort();
+    }
+
+    private void HandleSort()
+    {
+        ApplyFiltersAndSort();
     }
 
     private async Task HandleWishlistDeleted(WishlistModel wishlist)

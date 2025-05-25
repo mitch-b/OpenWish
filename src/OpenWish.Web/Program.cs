@@ -61,10 +61,10 @@ using (var provider = builder.Services.BuildServiceProvider())
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
     Console.WriteLine("Configuration: " + (configuration as IConfigurationRoot).GetDebugView());
-    
+
     var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
-        
+
     // setup email from configuration
     if (!string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpFrom)
         && !string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpHost))
@@ -72,7 +72,7 @@ using (var provider = builder.Services.BuildServiceProvider())
         builder.Services
             .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom)
             .AddSmtpSender(
-                openWishSettings?.EmailConfig?.SmtpHost, 
+                openWishSettings?.EmailConfig?.SmtpHost,
                 openWishSettings?.EmailConfig?.SmtpPort ?? 587,
                 openWishSettings?.EmailConfig?.SmtpUser,
                 openWishSettings?.EmailConfig?.SmtpPass);

@@ -1,6 +1,6 @@
 using FluentEmail.Core;
-using OpenWish.Data.Entities;
 using Microsoft.AspNetCore.Identity;
+using OpenWish.Data.Entities;
 
 namespace OpenWish.Web.Services;
 
@@ -9,11 +9,11 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     private readonly ILogger _logger = logger;
     private readonly IFluentEmail _fluentEmail = fluentEmail;
 
-    public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) => 
+    public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) =>
         SendEmailAsync(email, "Confirm your email",
             WrapInHtmlFormattedEmail($"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>."));
 
-    public Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode) => 
+    public Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode) =>
         SendEmailAsync(email, "Reset your password",
             WrapInHtmlFormattedEmail($"Please reset your password using the following code: {resetCode}"));
 
@@ -38,4 +38,4 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     {
         return $"<html><body>{message}</body></html>";
     }
-} 
+}

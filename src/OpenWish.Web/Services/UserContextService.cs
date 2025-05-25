@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 using OpenWish.Shared.Services;
+using System.Security.Claims;
 
 namespace OpenWish.Web.Services;
 

@@ -14,9 +14,6 @@ jobs:
       # If you want to clone the repository as part of your setup steps, for example to install dependencies, you'll need the `contents: read` permission. If you don't clone the repository in your setup steps, Copilot will do this for you automatically after the steps complete.
       contents: read
 
-    env:
-      DOTNET_CHANNEL: 9.0
-
     # You can define any steps you want, and they will run before the agent starts.
     # If you do not check out your code, Copilot will do this for you.
     steps:
@@ -27,7 +24,7 @@ jobs:
         run: |
           wget https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh -O dotnet-install.sh
           chmod +x dotnet-install.sh
-          ./dotnet-install.sh --channel "$DOTNET_CHANNEL" --install-dir /usr/share/dotnet
+          ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
           export DOTNET_ROOT=/usr/share/dotnet
           export PATH=$DOTNET_ROOT:$PATH
 

@@ -32,6 +32,7 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <returns></returns>
     public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
     {
+        _logger.LogInformation("Sending friend invite email to {Email} with link {InviteLink}", toEmail, inviteLink);
         var subject = $"{inviterName} invited you to join OpenWish!";
         var body = WrapInHtmlFormattedEmail($"<p>{inviterName} has invited you to join OpenWish to connect and share wishlists!<br/>" +
             $"<a href='{inviteLink}'>Click here to join and connect</a>.</p>");

@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
@@ -13,13 +14,15 @@ public class FriendService(ApplicationDbContext context,
     IMapper mapper,
     INotificationService notificationService,
     IAppEmailSender emailSender,
-    IOptions<OpenWishSettings> openWishSettings) : IFriendService
+    IOptions<OpenWishSettings> openWishSettings,
+    ILogger<FriendService> logger) : IFriendService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly IMapper _mapper = mapper;
     private readonly INotificationService _notificationService = notificationService;
     private readonly IAppEmailSender _emailSender = emailSender;
     private readonly string? _baseUri = openWishSettings.Value.BaseUri;
+    private readonly ILogger<FriendService> _logger = logger;
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
@@ -216,7 +219,14 @@ public class FriendService(ApplicationDbContext context,
         // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{emailAddress}|{senderUserId}";
-        var inviteLink = $"{baseUri}/Account/Register?invite=" + Uri.EscapeDataString(inviteData);
+        
+        // Ensure proper path format with leading slash but avoiding double slashes
+        var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
+        var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
+        
+        // Log the generated link for debugging
+        _logger.LogInformation("Generated friend invite link: {Link}", inviteLink);
+        
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
 
         await _notificationService.CreateNotificationAsync(

@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWishlistService, WishlistService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IProductService, ProductService>();
-        
+
         // Social features
         services.AddScoped<IFriendService, FriendService>();
         services.AddScoped<INotificationService, NotificationService>();

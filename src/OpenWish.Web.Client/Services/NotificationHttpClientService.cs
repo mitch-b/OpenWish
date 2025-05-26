@@ -8,18 +8,18 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
 {
     private readonly HttpClient _httpClient = httpClient;
     private const string BaseUrl = "api/notifications";
-    
+
     public async Task<IEnumerable<NotificationModel>> GetUserNotificationsAsync(string userId, bool includeRead = false)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}/user/{userId}?includeRead={includeRead}") 
+        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}/user/{userId}?includeRead={includeRead}")
             ?? Array.Empty<NotificationModel>();
     }
-    
+
     public async Task<int> GetUnreadNotificationCountAsync(string userId)
     {
         return await _httpClient.GetFromJsonAsync<int>($"{BaseUrl}/user/{userId}/count");
     }
-    
+
     public async Task<NotificationModel> CreateNotificationAsync(string userId, string message)
     {
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/user/{userId}", message);
@@ -27,21 +27,21 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
         return await response.Content.ReadFromJsonAsync<NotificationModel>()
             ?? throw new HttpRequestException("Failed to create notification");
     }
-    
+
     public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
     {
         var response = await _httpClient.PutAsync($"{BaseUrl}/{notificationId}/read", null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
     {
         var response = await _httpClient.PutAsync($"{BaseUrl}/user/{userId}/read-all", null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<bool> DeleteNotificationAsync(int notificationId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{notificationId}");

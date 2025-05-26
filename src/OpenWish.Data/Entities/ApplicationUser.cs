@@ -9,7 +9,7 @@ public class ApplicationUser : IdentityUser
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<PublicWishlist> PublicWishlists { get; set; } = [];
     public ICollection<EventUser> EventUsers { get; set; } = [];
-    
+
     // Social features
     public ICollection<Friend> Friends { get; set; } = [];
     public ICollection<FriendRequest> SentFriendRequests { get; set; } = [];

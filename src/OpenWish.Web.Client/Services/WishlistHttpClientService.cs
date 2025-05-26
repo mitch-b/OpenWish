@@ -8,7 +8,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 {
     private readonly HttpClient _httpClient = httpClient;
     private const string BaseUrl = "api/wishlists";
-    
+
     public async Task<WishlistModel> CreateWishlistAsync(WishlistModel wishlist, string ownerId)
     {
         var response = await _httpClient.PostAsJsonAsync(BaseUrl, wishlist);
@@ -74,7 +74,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         }
         return false;
     }
-    
+
     // Wishlist sharing and permissions
     public async Task<WishlistPermissionModel> ShareWishlistAsync(int wishlistId, string userId, string permissionType)
     {
@@ -83,7 +83,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>();
     }
-    
+
     public async Task<string> CreateSharingLinkAsync(int wishlistId, string permissionType, TimeSpan? expiration = null)
     {
         var linkRequest = new { permissionType, expiration };
@@ -91,7 +91,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync();
     }
-    
+
     public async Task<bool> AcceptSharingLinkAsync(string token, string userId)
     {
         var request = new { userId };
@@ -99,34 +99,34 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsAsync(int wishlistId)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistId}/permissions");
     }
-    
+
     public async Task<bool> RemoveWishlistPermissionAsync(int wishlistId, string userId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/permissions/{userId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<IEnumerable<WishlistModel>> GetSharedWithMeWishlistsAsync(string userId)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/shared-with-me");
     }
-    
+
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-access/{userId}");
     }
-    
+
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-edit/{userId}");
     }
-    
+
     // Item comments
     public async Task<ItemCommentModel> AddCommentToItemAsync(int wishlistId, int itemId, string userId, string text)
     {
@@ -135,19 +135,19 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
     }
-    
+
     public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsAsync(int wishlistId, int itemId)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistId}/items/{itemId}/comments");
     }
-    
+
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/{commentId}?userId={userId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     // Item reservations
     public async Task<bool> ReserveItemAsync(int wishlistId, int itemId, string userId, bool isAnonymous = false)
     {
@@ -156,26 +156,26 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation?userId={userId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
-    
+
     public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId)
     {
         var response = await _httpClient.GetAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation");
-        
+
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
-        
+
         return await response.Content.ReadFromJsonAsync<ItemReservationModel>();
     }
-    
+
     public async Task<bool> IsItemReservedAsync(int itemId)
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/items/{itemId}/is-reserved");

@@ -27,7 +27,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy));  // map from EF entity to DtoModel
         CreateMap<EventUserModel, EventUser>()
             .ReverseMap();
-            
+
         // Social feature mappings
         CreateMap<FriendModel, Friend>().ReverseMap();
         CreateMap<FriendRequestModel, FriendRequest>().ReverseMap();

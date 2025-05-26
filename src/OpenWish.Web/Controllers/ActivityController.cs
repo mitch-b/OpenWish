@@ -46,10 +46,10 @@ public class ActivityController : ControllerBase
             request.Description,
             request.WishlistId,
             request.WishlistItemId);
-            
+
         return Ok(activity);
     }
-    
+
     public class ActivityLogRequest
     {
         public string UserId { get; set; }

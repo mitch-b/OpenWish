@@ -11,9 +11,9 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
 {
     private readonly ApplicationDbContext _context = context;
     private readonly IMapper _mapper = mapper;
-    
+
     public async Task<ActivityLogModel> LogActivityAsync(
-        string userId, 
+        string userId,
         string activityType,
         string description,
         int? wishlistId = null,
@@ -29,13 +29,13 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             CreatedOn = DateTimeOffset.UtcNow,
             UpdatedOn = DateTimeOffset.UtcNow
         };
-        
+
         _context.ActivityLogs.Add(activityLog);
         await _context.SaveChangesAsync();
-        
+
         return _mapper.Map<ActivityLogModel>(activityLog);
     }
-    
+
     public async Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
         var activities = await _context.ActivityLogs
@@ -47,10 +47,10 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             .Include(a => a.Wishlist)
             .Include(a => a.WishlistItem)
             .ToListAsync();
-            
+
         return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
     }
-    
+
     public async Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
         // Get list of friends
@@ -58,7 +58,7 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             .Where(f => f.UserId == userId && !f.Deleted)
             .Select(f => f.FriendUserId)
             .ToListAsync();
-        
+
         // Get activities from friends
         var activities = await _context.ActivityLogs
             .Where(a => friendIds.Contains(a.UserId))
@@ -69,10 +69,10 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             .Include(a => a.Wishlist)
             .Include(a => a.WishlistItem)
             .ToListAsync();
-            
+
         return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
     }
-    
+
     public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0)
     {
         var activities = await _context.ActivityLogs
@@ -83,7 +83,7 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             .Include(a => a.User)
             .Include(a => a.WishlistItem)
             .ToListAsync();
-            
+
         return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
     }
 }

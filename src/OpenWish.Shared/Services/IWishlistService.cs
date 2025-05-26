@@ -26,12 +26,12 @@ public interface IWishlistService
     Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel item);
     Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId);
     Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel item);
-    
+
     // Item comments
     Task<ItemCommentModel> AddCommentToItemAsync(int wishlistId, int itemId, string userId, string text);
     Task<IEnumerable<ItemCommentModel>> GetItemCommentsAsync(int wishlistId, int itemId);
     Task<bool> RemoveItemCommentAsync(int commentId, string userId);
-    
+
     // Item reservations
     Task<bool> ReserveItemAsync(int wishlistId, int itemId, string userId, bool isAnonymous = false);
     Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId);

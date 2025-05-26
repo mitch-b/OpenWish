@@ -2,7 +2,10 @@ This application is a C# .NET application that uses the ASP.NET Core framework t
 
 ## Code Standards
 
-### Required Before Each Commit (when implementing new features or fixing bugs)
+When using GitHub Copilot as a coding agent (for automated PRs or code suggestions), always run dotnet format and ensure dotnet build succeeds before committing changes.
+When using Copilot in VS Code interactive/agent mode (for on-demand code generation or suggestions), running dotnet format and dotnet build is optional and not required after every change.
+
+To format and ensure build:
 - Change working directory to `{root}/src`
 - Run `dotnet format` before committing any changes to ensure proper code formatting
 - This will run format on all files to maintain consistent style based on `.editorconfig` settings

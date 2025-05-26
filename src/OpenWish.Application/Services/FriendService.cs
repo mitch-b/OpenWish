@@ -4,14 +4,22 @@ using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
+using Microsoft.Extensions.Options;
+using OpenWish.Application.Models.Configuration;
 
 namespace OpenWish.Application.Services;
 
-public class FriendService(ApplicationDbContext context, IMapper mapper, INotificationService notificationService) : IFriendService
+public class FriendService(ApplicationDbContext context,
+    IMapper mapper,
+    INotificationService notificationService,
+    IAppEmailSender emailSender,
+    IOptions<OpenWishSettings> openWishSettings) : IFriendService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly IMapper _mapper = mapper;
     private readonly INotificationService _notificationService = notificationService;
+    private readonly IAppEmailSender _emailSender = emailSender;
+    private readonly string? _baseUri = openWishSettings.Value.BaseUri;
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
@@ -198,14 +206,17 @@ public class FriendService(ApplicationDbContext context, IMapper mapper, INotifi
             return true;
         }
 
-        // Send invitation email
-        // In a real implementation, this would use an email service to send an invitation
-        // For now, we'll just simulate this by creating a notification
+        // Send invitation email using the application email sender
         var sender = await _context.Users.FirstOrDefaultAsync(u => u.Id == senderUserId);
         if (sender == null)
         {
             return false;
         }
+
+        // Generate an invite link using the configured BaseUri
+        var baseUri = _baseUri?.TrimEnd('/') ?? "";
+        var inviteLink = $"{baseUri}/register?invite=" + Uri.EscapeDataString(emailAddress);
+        await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
 
         await _notificationService.CreateNotificationAsync(
             senderUserId,
@@ -242,7 +253,7 @@ public class FriendService(ApplicationDbContext context, IMapper mapper, INotifi
     {
         if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
         {
-            return Array.Empty<ApplicationUserModel>();
+            return [];
         }
 
         // Only search by username for privacy/security reasons

@@ -21,6 +21,7 @@ public class OpenWishProfile : Profile
         CreateMap<EventModel, Event>()
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
+            .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.Date.ToUniversalTime()))
             .ReverseMap()
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => (src.Tags ?? string.Empty).Split(",", StringSplitOptions.RemoveEmptyEntries)))
             .ForMember(dest => dest.EventUsers, opt => opt.MapFrom(src => src.EventUsers)) // map from EF entity to DtoModel

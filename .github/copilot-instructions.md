@@ -26,6 +26,10 @@ To format and ensure build:
 
 ## Key Guidelines
 1. Follow C# and ASP.NET Core best practices and idiomatic patterns
-2. Maintain existing code structure and organization
-3. Use dependency injection patterns where appropriate
-5. Document public APIs and complex logic. Suggest changes to the `.docs/` folder when appropriate
+1. If single statement methods, use expression-bodied members where appropriate
+1. Use `var` when the type is obvious from the right-hand side of the assignment
+1. Use `nameof` for property names in exceptions and logging
+1. Use `async`/`await` for asynchronous methods and ensure proper exception handling
+1. Maintain existing code structure and organization
+1. Use dependency injection patterns where appropriate
+1. Document public APIs and complex logic. Suggest changes to the `.docs/` folder when appropriate

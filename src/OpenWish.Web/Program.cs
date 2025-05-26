@@ -101,11 +101,14 @@ forwardingOptions.KnownProxies.Clear();
 
 app.UseForwardedHeaders(forwardingOptions);
 
+await Task.Delay(TimeSpan.FromSeconds(15));
+
 // Apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
+    await Task.Delay(TimeSpan.FromSeconds(15));
     if (openWishSettings.OwnDatabaseUpgrades)
     {
         await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
             KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
             EnableMultipleHttp2Connections = true
         });
-        
+
         services.AddScoped<IAppEmailSender, OpenWishEmailSender>();
 
         // Core services

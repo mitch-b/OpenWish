@@ -103,6 +103,20 @@ public class FriendController : ControllerBase
         }
     }
 
+    [HttpPost("invite/complete/{newUserId}/{inviterUserId}")]
+    public async Task<IActionResult> CreateFriendshipFromInvite(string newUserId, string inviterUserId)
+    {
+        try
+        {
+            var result = await _friendService.CreateFriendshipFromInviteAsync(newUserId, inviterUserId);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> SearchUsers([FromQuery] string term, [FromQuery] string userId, [FromQuery] int max = 10)
     {

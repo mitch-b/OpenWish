@@ -185,7 +185,44 @@ flowchart TD
   - Accepting/rejecting requests
   - Retrieving friend lists
   - Searching for potential friends
+  - Sending email invitations
+  - Creating friendships from email invitations
 - Friend relationships are bi-directional with a single record
+
+### Email Invitation Flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI as User Interface
+    participant FS as Friend Service
+    participant Email as Email Service
+    participant DB as Database
+    participant Registration as Registration Page
+    
+    User->>UI: Enter email to invite
+    UI->>FS: SendFriendInviteByEmailAsync(senderId, email)
+    
+    alt User exists
+        FS->>DB: Check if user exists
+        DB-->>FS: User found
+        FS->>FS: SendFriendRequestAsync(senderId, existingUserId)
+    else User does not exist
+        FS->>DB: Check if user exists
+        DB-->>FS: User not found
+        FS->>Email: Send invitation email with link
+        Email-->>User: Invitation email with registration link
+    end
+    
+    User->>Registration: Click invitation link
+    Registration->>Registration: Parse invite data (email|inviterId)
+    Registration->>Registration: Pre-fill email field
+    User->>Registration: Complete registration form
+    Registration->>DB: Create new user
+    Registration->>FS: CreateFriendshipFromInviteAsync(newUserId, inviterId)
+    FS->>DB: Create bidirectional friendship records
+    FS->>DB: Create notification for inviter
+```
 
 ### Wishlist Sharing
 - `WishlistPermission` entity stores:

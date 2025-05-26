@@ -19,6 +19,7 @@ public interface IFriendService
     // Email invites
     Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress);
     Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses);
+    Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId);
 
     // User search for adding friends
     Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10);

@@ -1,11 +1,11 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
-using Microsoft.Extensions.Options;
-using OpenWish.Application.Models.Configuration;
 
 namespace OpenWish.Application.Services;
 
@@ -213,9 +213,10 @@ public class FriendService(ApplicationDbContext context,
             return false;
         }
 
-        // Generate an invite link using the configured BaseUri
+        // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var inviteLink = $"{baseUri}/register?invite=" + Uri.EscapeDataString(emailAddress);
+        var inviteData = $"{emailAddress}|{senderUserId}";
+        var inviteLink = $"{baseUri}/Account/Register?invite=" + Uri.EscapeDataString(inviteData);
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
 
         await _notificationService.CreateNotificationAsync(
@@ -263,6 +264,63 @@ public class FriendService(ApplicationDbContext context,
             .ToListAsync();
 
         return _mapper.Map<IEnumerable<ApplicationUserModel>>(users);
+    }
+
+    public async Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId)
+    {
+        // Check if both users exist
+        var newUser = await _context.Users.FindAsync(newUserId);
+        var inviter = await _context.Users.FindAsync(inviterUserId);
+
+        if (newUser == null || inviter == null)
+        {
+            return false;
+        }
+
+        // Check if they are already friends
+        var existingFriendship = await _context.Friends
+            .AnyAsync(f =>
+                ((f.UserId == newUserId && f.FriendUserId == inviterUserId) ||
+                 (f.UserId == inviterUserId && f.FriendUserId == newUserId)) &&
+                !f.Deleted);
+
+        if (existingFriendship)
+        {
+            return true; // They are already friends
+        }
+
+        // Create friendship records in both directions
+        var friendship1 = new Friend
+        {
+            UserId = newUserId,
+            FriendUserId = inviterUserId,
+            FriendshipDate = DateTimeOffset.UtcNow,
+            CreatedOn = DateTimeOffset.UtcNow,
+            UpdatedOn = DateTimeOffset.UtcNow
+        };
+
+        var friendship2 = new Friend
+        {
+            UserId = inviterUserId,
+            FriendUserId = newUserId,
+            FriendshipDate = DateTimeOffset.UtcNow,
+            CreatedOn = DateTimeOffset.UtcNow,
+            UpdatedOn = DateTimeOffset.UtcNow
+        };
+
+        _context.Friends.Add(friendship1);
+        _context.Friends.Add(friendship2);
+
+        // Create notification for the inviter
+        await _notificationService.CreateNotificationAsync(
+            newUserId,
+            inviterUserId,
+            "Friend Invitation Accepted",
+            $"{newUser.UserName ?? newUser.Email} has joined OpenWish and is now your friend.",
+            "FriendAccept");
+
+        await _context.SaveChangesAsync();
+        return true;
     }
 
     private static bool IsValidEmail(string email)

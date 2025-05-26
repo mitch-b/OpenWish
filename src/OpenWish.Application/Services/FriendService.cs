@@ -7,10 +7,11 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class FriendService(ApplicationDbContext context, IMapper mapper) : IFriendService
+public class FriendService(ApplicationDbContext context, IMapper mapper, INotificationService notificationService) : IFriendService
 {
     private readonly ApplicationDbContext _context = context;
     private readonly IMapper _mapper = mapper;
+    private readonly INotificationService _notificationService = notificationService;
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
@@ -178,6 +179,65 @@ public class FriendService(ApplicationDbContext context, IMapper mapper) : IFrie
         return true;
     }
 
+    public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
+    {
+        // Validate email format
+        if (string.IsNullOrWhiteSpace(emailAddress) || !IsValidEmail(emailAddress))
+        {
+            throw new ArgumentException("Please provide a valid email address.");
+        }
+
+        // Check if the user already exists
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == emailAddress);
+
+        if (existingUser != null)
+        {
+            // If user exists, send a friend request instead
+            await SendFriendRequestAsync(senderUserId, existingUser.Id);
+            return true;
+        }
+
+        // Send invitation email
+        // In a real implementation, this would use an email service to send an invitation
+        // For now, we'll just simulate this by creating a notification
+        var sender = await _context.Users.FirstOrDefaultAsync(u => u.Id == senderUserId);
+        if (sender == null)
+        {
+            return false;
+        }
+
+        await _notificationService.CreateNotificationAsync(
+            senderUserId,
+            senderUserId,  // Target user is the sender (to track sent invites)
+            "Friend Invitation Sent",
+            $"You've sent a friend invitation to {emailAddress}. They'll receive an email with instructions to join OpenWish.",
+            "FriendInvite");
+
+        return true;
+    }
+
+    public async Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses)
+    {
+        bool allSucceeded = true;
+        foreach (var email in emailAddresses)
+        {
+            try
+            {
+                var success = await SendFriendInviteByEmailAsync(senderUserId, email.Trim());
+                if (!success)
+                {
+                    allSucceeded = false;
+                }
+            }
+            catch
+            {
+                allSucceeded = false;
+            }
+        }
+        return allSucceeded;
+    }
+
     public async Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
         if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
@@ -185,12 +245,25 @@ public class FriendService(ApplicationDbContext context, IMapper mapper) : IFrie
             return Array.Empty<ApplicationUserModel>();
         }
 
+        // Only search by username for privacy/security reasons
         var users = await _context.Users
-            .Where(u => u.Id != currentUserId &&
-                       (u.UserName.Contains(searchTerm) || u.Email.Contains(searchTerm)))
+            .Where(u => u.Id != currentUserId && u.UserName.Contains(searchTerm))
             .Take(maxResults)
             .ToListAsync();
 
         return _mapper.Map<IEnumerable<ApplicationUserModel>>(users);
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

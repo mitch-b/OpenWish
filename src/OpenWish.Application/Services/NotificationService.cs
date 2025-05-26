@@ -54,6 +54,27 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         return _mapper.Map<NotificationModel>(notification);
     }
 
+    public async Task<NotificationModel> CreateNotificationAsync(string senderUserId, string targetUserId, string title, string message, string type)
+    {
+        var notification = new Notification
+        {
+            UserId = targetUserId,
+            SenderUserId = senderUserId,
+            Title = title,
+            Message = message,
+            Type = type,
+            Date = DateTimeOffset.UtcNow,
+            IsRead = false,
+            CreatedOn = DateTimeOffset.UtcNow,
+            UpdatedOn = DateTimeOffset.UtcNow
+        };
+
+        _context.Notifications.Add(notification);
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<NotificationModel>(notification);
+    }
+
     public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
     {
         var notification = await _context.Notifications.FindAsync(notificationId);

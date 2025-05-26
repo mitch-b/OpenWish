@@ -28,6 +28,22 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
             ?? throw new HttpRequestException("Failed to create notification");
     }
 
+    public async Task<NotificationModel> CreateNotificationAsync(string senderUserId, string targetUserId, string title, string message, string type)
+    {
+        var notificationData = new
+        {
+            SenderUserId = senderUserId,
+            Title = title,
+            Message = message,
+            Type = type
+        };
+
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/user/{targetUserId}/detailed", notificationData);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<NotificationModel>()
+            ?? throw new HttpRequestException("Failed to create notification");
+    }
+
     public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
     {
         var response = await _httpClient.PutAsync($"{BaseUrl}/{notificationId}/read", null);

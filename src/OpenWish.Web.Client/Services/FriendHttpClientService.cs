@@ -61,6 +61,20 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
+    public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
+    {
+        var response = await _httpClient.PostAsync($"{BaseUrl}/invite/{senderUserId}?email={Uri.EscapeDataString(emailAddress)}", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/invite/{senderUserId}/batch", emailAddresses);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
     public async Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>($"{BaseUrl}/search?term={Uri.EscapeDataString(searchTerm)}&userId={currentUserId}&max={maxResults}")

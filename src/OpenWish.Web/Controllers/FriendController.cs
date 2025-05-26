@@ -75,6 +75,34 @@ public class FriendController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("invite/{senderUserId}")]
+    public async Task<IActionResult> SendFriendInviteByEmail(string senderUserId, [FromQuery] string email)
+    {
+        try
+        {
+            var result = await _friendService.SendFriendInviteByEmailAsync(senderUserId, email);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("invite/{senderUserId}/batch")]
+    public async Task<IActionResult> SendFriendInvitesByEmail(string senderUserId, [FromBody] List<string> emails)
+    {
+        try
+        {
+            var result = await _friendService.SendFriendInvitesByEmailAsync(senderUserId, emails);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> SearchUsers([FromQuery] string term, [FromQuery] string userId, [FromQuery] int max = 10)
     {

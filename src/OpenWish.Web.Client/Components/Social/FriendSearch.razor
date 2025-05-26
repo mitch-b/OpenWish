@@ -5,46 +5,90 @@
 @inject IUserContextService UserContextService
 
 <div class="friend-search">
-    <div class="input-group mb-3">
-        <input type="text" class="form-control" placeholder="Search for users by name or email"
-               @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
-        <button class="btn btn-outline-primary" type="button" @onclick="Search">
-            <i class="bi bi-search"></i> Search
-        </button>
-    </div>
+    <ul class="nav nav-tabs mb-3" id="findFriendsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" 
+                    type="button" role="tab" aria-controls="search" aria-selected="true">
+                Search by Username
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="invite-tab" data-bs-toggle="tab" data-bs-target="#invite" 
+                    type="button" role="tab" aria-controls="invite" aria-selected="false">
+                Invite by Email
+            </button>
+        </li>
+    </ul>
     
-    @if (_searching)
-    {
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Searching...</span>
-        </div>
-    }
-    else if (_searchPerformed && !_searchResults.Any())
-    {
-        <div class="alert alert-info">
-            No users found matching your search.
-        </div>
-    }
-    else if (_searchPerformed)
-    {
-        <div class="list-group">
-            @foreach (var user in _searchResults)
+    <div class="tab-content" id="findFriendsTabsContent">
+        <!-- Search by Username Tab -->
+        <div class="tab-pane fade show active" id="search" role="tabpanel" aria-labelledby="search-tab">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" placeholder="Search for users by username"
+                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                <button class="btn btn-outline-primary" type="button" @onclick="Search">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+            
+            @if (_searching)
             {
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-person-circle me-2"></i>
-                        @user.UserName
-                        <small class="text-muted ms-2">@user.Email</small>
-                    </div>
-                    <div>
-                        <button class="btn btn-outline-primary btn-sm" @onclick="() => SendFriendRequest(user.Id)">
-                            <i class="bi bi-person-plus"></i> Add Friend
-                        </button>
-                    </div>
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+            }
+            else if (_searchPerformed && !_searchResults.Any())
+            {
+                <div class="alert alert-info">
+                    No users found matching your search.
+                </div>
+            }
+            else if (_searchPerformed)
+            {
+                <div class="list-group">
+                    @foreach (var user in _searchResults)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-person-circle me-2"></i>
+                                @user.UserName
+                            </div>
+                            <div>
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => SendFriendRequest(user.Id)">
+                                    <i class="bi bi-person-plus"></i> Add Friend
+                                </button>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </div>
-    }
+        
+        <!-- Invite by Email Tab -->
+        <div class="tab-pane fade" id="invite" role="tabpanel" aria-labelledby="invite-tab">
+            <div class="form-group mb-3">
+                <label for="emailInvites" class="form-label">Email Addresses</label>
+                <textarea id="emailInvites" class="form-control" rows="3" 
+                          placeholder="Enter email addresses (separate multiple emails with commas)"
+                          @bind="inviteEmails"></textarea>
+                <div class="form-text">
+                    An invitation will be sent to these email addresses to join OpenWish and connect with you.
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
+                @if (_sendingInvites)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span class="ms-1">Sending...</span>
+                }
+                else
+                {
+                    <span><i class="bi bi-envelope"></i> Send Invitations</span>
+                }
+            </button>
+        </div>
+    </div>
     
     @if (_error)
     {
@@ -52,15 +96,31 @@
             @_errorMessage
         </div>
     }
+    
+    @if (_success)
+    {
+        <div class="alert alert-success mt-3">
+            @_successMessage
+        </div>
+    }
 </div>
 
 @code {
+    // Search by username variables
     private string searchTerm = "";
     private List<ApplicationUserModel> _searchResults = [];
     private bool _searching = false;
     private bool _searchPerformed = false;
+    
+    // Invite by email variables
+    private string inviteEmails = "";
+    private bool _sendingInvites = false;
+    
+    // Shared feedback variables
     private bool _error = false;
+    private bool _success = false;
     private string _errorMessage = "An error occurred. Please try again.";
+    private string _successMessage = "";
     private string? _currentUserId;
     
     private async Task HandleSearch(KeyboardEventArgs args)
@@ -76,6 +136,7 @@
         if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
         {
             _error = true;
+            _success = false;
             _errorMessage = "Please enter at least 2 characters to search.";
             return;
         }
@@ -84,6 +145,7 @@
         {
             _searching = true;
             _error = false;
+            _success = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
             
             if (_currentUserId != null)
@@ -96,6 +158,7 @@
         catch
         {
             _error = true;
+            _success = false;
             _errorMessage = "An error occurred while searching. Please try again.";
         }
         finally
@@ -117,19 +180,90 @@
                 
                 // Remove the user from search results after sending request
                 _searchResults.RemoveAll(u => u.Id == userId);
+                _success = true;
+                _error = false;
+                _successMessage = "Friend request sent successfully.";
                 StateHasChanged();
             }
         }
         catch (InvalidOperationException ex)
         {
             _error = true;
+            _success = false;
             _errorMessage = ex.Message;
             StateHasChanged();
         }
         catch
         {
             _error = true;
+            _success = false;
             _errorMessage = "An error occurred while sending friend request. Please try again.";
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SendEmailInvites()
+    {
+        if (string.IsNullOrWhiteSpace(inviteEmails))
+        {
+            _error = true;
+            _success = false;
+            _errorMessage = "Please enter at least one email address.";
+            return;
+        }
+        
+        try
+        {
+            _sendingInvites = true;
+            _error = false;
+            _success = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                // Split emails by comma and clean up
+                var emails = inviteEmails.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim())
+                    .Where(e => !string.IsNullOrWhiteSpace(e))
+                    .ToList();
+                
+                if (!emails.Any())
+                {
+                    _error = true;
+                    _errorMessage = "Please enter at least one valid email address.";
+                    return;
+                }
+                
+                bool result = await FriendService.SendFriendInvitesByEmailAsync(_currentUserId, emails);
+                
+                if (result)
+                {
+                    _success = true;
+                    _successMessage = emails.Count == 1 
+                        ? "Invitation sent successfully."
+                        : $"Invitations sent successfully to {emails.Count} email addresses.";
+                    inviteEmails = ""; // Clear the input field
+                }
+                else
+                {
+                    _error = true;
+                    _errorMessage = "Some invitations could not be sent. Please check the email addresses and try again.";
+                }
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            _error = true;
+            _errorMessage = ex.Message;
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "An error occurred while sending invitations. Please try again.";
+        }
+        finally
+        {
+            _sendingInvites = false;
             StateHasChanged();
         }
     }

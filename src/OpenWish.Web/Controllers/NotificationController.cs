@@ -37,6 +37,19 @@ public class NotificationController : ControllerBase
         return Ok(notification);
     }
 
+    [HttpPost("user/{targetUserId}/detailed")]
+    public async Task<IActionResult> CreateDetailedNotification(string targetUserId, [FromBody] DetailedNotificationRequest request)
+    {
+        var notification = await _notificationService.CreateNotificationAsync(
+            request.SenderUserId,
+            targetUserId,
+            request.Title,
+            request.Message,
+            request.Type);
+
+        return Ok(notification);
+    }
+
     [HttpPut("{notificationId}/read")]
     public async Task<IActionResult> MarkAsRead(int notificationId)
     {
@@ -57,4 +70,12 @@ public class NotificationController : ControllerBase
         var result = await _notificationService.DeleteNotificationAsync(notificationId);
         return Ok(result);
     }
+}
+
+public class DetailedNotificationRequest
+{
+    public string SenderUserId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
 }

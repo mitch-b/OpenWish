@@ -82,9 +82,9 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
-    public async Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
+    public Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>($"{BaseUrl}/search?term={Uri.EscapeDataString(searchTerm)}&userId={currentUserId}&max={maxResults}")
-            ?? Array.Empty<ApplicationUserModel>();
+        // Username search removed for privacy/security reasons
+        return Task.FromResult<IEnumerable<ApplicationUserModel>>(Array.Empty<ApplicationUserModel>());
     }
 }

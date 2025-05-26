@@ -184,7 +184,6 @@ flowchart TD
   - Sending friend requests
   - Accepting/rejecting requests
   - Retrieving friend lists
-  - Searching for potential friends
   - Sending email invitations
   - Creating friendships from email invitations
 - Friend relationships are bi-directional with a single record

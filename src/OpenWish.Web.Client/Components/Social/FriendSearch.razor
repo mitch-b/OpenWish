@@ -5,89 +5,33 @@
 @inject IUserContextService UserContextService
 
 <div class="friend-search">
-    <ul class="nav nav-tabs mb-3" id="findFriendsTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" 
-                    type="button" role="tab" aria-controls="search" aria-selected="true">
-                Search by Username
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="invite-tab" data-bs-toggle="tab" data-bs-target="#invite" 
-                    type="button" role="tab" aria-controls="invite" aria-selected="false">
-                Invite by Email
-            </button>
-        </li>
-    </ul>
+    <h4>Invite a Friend</h4>
+    <p class="text-muted mb-4">
+        Connect with friends by sending them an invitation via email.
+    </p>
     
-    <div class="tab-content" id="findFriendsTabsContent">
-        <!-- Search by Username Tab -->
-        <div class="tab-pane fade show active" id="search" role="tabpanel" aria-labelledby="search-tab">
-            <div class="input-group mb-3">
-                <input type="text" class="form-control" placeholder="Search for users by username"
-                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
-                <button class="btn btn-outline-primary" type="button" @onclick="Search">
-                    <i class="bi bi-search"></i> Search
-                </button>
+    <div class="invite-form">
+        <div class="form-group mb-3">
+            <label for="emailInvites" class="form-label">Email Addresses</label>
+            <textarea id="emailInvites" class="form-control" rows="3" 
+                      placeholder="Enter email addresses (separate multiple emails with commas)"
+                      @bind="inviteEmails"></textarea>
+            <div class="form-text">
+                An invitation will be sent to these email addresses to join OpenWish and connect with you.
             </div>
-            
-            @if (_searching)
-            {
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Searching...</span>
-                </div>
-            }
-            else if (_searchPerformed && !_searchResults.Any())
-            {
-                <div class="alert alert-info">
-                    No users found matching your search.
-                </div>
-            }
-            else if (_searchPerformed)
-            {
-                <div class="list-group">
-                    @foreach (var user in _searchResults)
-                    {
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-person-circle me-2"></i>
-                                @user.UserName
-                            </div>
-                            <div>
-                                <button class="btn btn-outline-primary btn-sm" @onclick="() => SendFriendRequest(user.Id)">
-                                    <i class="bi bi-person-plus"></i> Add Friend
-                                </button>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
         </div>
         
-        <!-- Invite by Email Tab -->
-        <div class="tab-pane fade" id="invite" role="tabpanel" aria-labelledby="invite-tab">
-            <div class="form-group mb-3">
-                <label for="emailInvites" class="form-label">Email Addresses</label>
-                <textarea id="emailInvites" class="form-control" rows="3" 
-                          placeholder="Enter email addresses (separate multiple emails with commas)"
-                          @bind="inviteEmails"></textarea>
-                <div class="form-text">
-                    An invitation will be sent to these email addresses to join OpenWish and connect with you.
-                </div>
-            </div>
-            
-            <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
-                @if (_sendingInvites)
-                {
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                    <span class="ms-1">Sending...</span>
-                }
-                else
-                {
-                    <span><i class="bi bi-envelope"></i> Send Invitations</span>
-                }
-            </button>
-        </div>
+        <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
+            @if (_sendingInvites)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="ms-1">Sending...</span>
+            }
+            else
+            {
+                <span><i class="bi bi-envelope"></i> Send Invitations</span>
+            }
+        </button>
     </div>
     
     @if (_error)
@@ -106,12 +50,6 @@
 </div>
 
 @code {
-    // Search by username variables
-    private string searchTerm = "";
-    private List<ApplicationUserModel> _searchResults = [];
-    private bool _searching = false;
-    private bool _searchPerformed = false;
-    
     // Invite by email variables
     private string inviteEmails = "";
     private bool _sendingInvites = false;
@@ -122,85 +60,6 @@
     private string _errorMessage = "An error occurred. Please try again.";
     private string _successMessage = "";
     private string? _currentUserId;
-    
-    private async Task HandleSearch(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-        {
-            await Search();
-        }
-    }
-    
-    private async Task Search()
-    {
-        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
-        {
-            _error = true;
-            _success = false;
-            _errorMessage = "Please enter at least 2 characters to search.";
-            return;
-        }
-        
-        try
-        {
-            _searching = true;
-            _error = false;
-            _success = false;
-            _currentUserId ??= await UserContextService.GetUserIdAsync();
-            
-            if (_currentUserId != null)
-            {
-                var results = await FriendService.SearchUsersAsync(searchTerm, _currentUserId);
-                _searchResults = results.ToList();
-                _searchPerformed = true;
-            }
-        }
-        catch
-        {
-            _error = true;
-            _success = false;
-            _errorMessage = "An error occurred while searching. Please try again.";
-        }
-        finally
-        {
-            _searching = false;
-            StateHasChanged();
-        }
-    }
-    
-    private async Task SendFriendRequest(string userId)
-    {
-        try
-        {
-            _currentUserId ??= await UserContextService.GetUserIdAsync();
-            
-            if (_currentUserId != null)
-            {
-                await FriendService.SendFriendRequestAsync(_currentUserId, userId);
-                
-                // Remove the user from search results after sending request
-                _searchResults.RemoveAll(u => u.Id == userId);
-                _success = true;
-                _error = false;
-                _successMessage = "Friend request sent successfully.";
-                StateHasChanged();
-            }
-        }
-        catch (InvalidOperationException ex)
-        {
-            _error = true;
-            _success = false;
-            _errorMessage = ex.Message;
-            StateHasChanged();
-        }
-        catch
-        {
-            _error = true;
-            _success = false;
-            _errorMessage = "An error occurred while sending friend request. Please try again.";
-            StateHasChanged();
-        }
-    }
     
     private async Task SendEmailInvites()
     {

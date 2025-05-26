@@ -219,14 +219,14 @@ public class FriendService(ApplicationDbContext context,
         // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{emailAddress}|{senderUserId}";
-        
+
         // Ensure proper path format with leading slash but avoiding double slashes
         var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
         var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
-        
+
         // Log the generated link for debugging
         _logger.LogInformation("Generated friend invite link: {Link}", inviteLink);
-        
+
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
 
         await _notificationService.CreateNotificationAsync(
@@ -260,20 +260,10 @@ public class FriendService(ApplicationDbContext context,
         return allSucceeded;
     }
 
-    public async Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
+    public Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
-        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
-        {
-            return [];
-        }
-
-        // Only search by username for privacy/security reasons
-        var users = await _context.Users
-            .Where(u => u.Id != currentUserId && u.UserName.Contains(searchTerm))
-            .Take(maxResults)
-            .ToListAsync();
-
-        return _mapper.Map<IEnumerable<ApplicationUserModel>>(users);
+        // Username search functionality removed for security/privacy reasons
+        return Task.FromResult<IEnumerable<ApplicationUserModel>>(Array.Empty<ApplicationUserModel>());
     }
 
     public async Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId)

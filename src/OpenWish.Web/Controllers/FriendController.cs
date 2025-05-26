@@ -117,10 +117,5 @@ public class FriendController : ControllerBase
         }
     }
 
-    [HttpGet("search")]
-    public async Task<IActionResult> SearchUsers([FromQuery] string term, [FromQuery] string userId, [FromQuery] int max = 10)
-    {
-        var users = await _friendService.SearchUsersAsync(term, userId, max);
-        return Ok(users);
-    }
+    // Search by username functionality removed for security/privacy reasons
 }

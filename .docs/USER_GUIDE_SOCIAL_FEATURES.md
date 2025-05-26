@@ -11,17 +11,12 @@ This guide explains how to use the social features in OpenWish, including managi
 
 ### Sending Friend Requests
 
-1. On the **Friends** page, use the search box to find users by name.
-2. Click the **Add Friend** button next to the user you want to befriend.
-3. A friend request will be sent to that user.
+You can invite friends to join OpenWish through email:
 
-### Inviting Friends by Email
-
-1. On the **Friends** page, click the **Invite by Email** tab.
-2. Enter one or more email addresses, separated by commas.
-3. Click **Send Invitations**.
-4. An email will be sent to each address with a link to register.
-5. When someone registers using your invite link, they will be automatically added as your friend.
+1. On the **Friends** page, enter one or more email addresses, separated by commas.
+2. Click **Send Invitations**.
+3. An email will be sent to each address with a link to register.
+4. When someone registers using your invite link, they will be automatically added as your friend.
 
 ### Responding to Friend Requests
 

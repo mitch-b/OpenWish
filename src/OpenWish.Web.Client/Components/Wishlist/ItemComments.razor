@@ -1,0 +1,168 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
+
+<div class="item-comments">
+    <h5 class="mb-3">Comments</h5>
+
+    @if (_loading)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        @if (!_comments.Any())
+        {
+            <div class="text-muted mb-3">No comments yet.</div>
+        }
+        else
+        {
+            <div class="comment-list mb-3">
+                @foreach (var comment in _comments)
+                {
+                    <div class="comment-item d-flex mb-2 p-2 @(comment.UserId == _currentUserId ? "bg-light" : "")">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between">
+                                <div class="fw-bold">
+                                    <i class="bi bi-person-circle"></i> @(comment.User?.UserName ?? "Unknown User")
+                                </div>
+                                <small class="text-muted">
+                                    @comment.CreatedOn.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                                </small>
+                            </div>
+                            <div class="mt-1">@comment.Text</div>
+                        </div>
+                        @if (comment.UserId == _currentUserId || _isWishlistOwner)
+                        {
+                            <div class="ms-2">
+                                <button class="btn btn-sm btn-link text-danger" @onclick="() => DeleteComment(comment.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="comment-form">
+            <div class="form-floating mb-2">
+                <textarea class="form-control" placeholder="Add a comment..." id="commentText" rows="2" style="height: 100px"
+                          @bind="commentText"></textarea>
+                <label for="commentText">Add a comment...</label>
+            </div>
+            <button class="btn btn-primary" @onclick="AddComment" disabled="@(string.IsNullOrWhiteSpace(commentText))">
+                <i class="bi bi-chat"></i> Comment
+            </button>
+        </div>
+    }
+
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-3">
+            @_errorMessage
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int WishlistId { get; set; }
+
+    [Parameter]
+    public int ItemId { get; set; }
+    
+    [Parameter]
+    public bool IsWishlistOwner { get; set; }
+    
+    private List<ItemCommentModel> _comments = [];
+    private string commentText = "";
+    private bool _loading = true;
+    private bool _error = false;
+    private string _errorMessage = "An error occurred. Please try again.";
+    private string? _currentUserId;
+    private bool _isWishlistOwner => IsWishlistOwner;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadComments();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadComments();
+    }
+
+    private async Task LoadComments()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            var comments = await WishlistService.GetItemCommentsAsync(WishlistId, ItemId);
+            _comments = comments.ToList();
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to load comments. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AddComment()
+    {
+        if (string.IsNullOrWhiteSpace(commentText))
+            return;
+
+        try
+        {
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await WishlistService.AddCommentToItemAsync(WishlistId, ItemId, _currentUserId, commentText);
+                commentText = "";
+                await LoadComments();
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to add comment. Please try again.";
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteComment(int commentId)
+    {
+        try
+        {
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
+                await LoadComments();
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to delete comment. Please try again.";
+            StateHasChanged();
+        }
+    }
+}

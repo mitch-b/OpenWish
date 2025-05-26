@@ -26,9 +26,15 @@ public static class ServiceCollectionExtensions
             EnableMultipleHttp2Connections = true
         });
 
+        // Core services
+        services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IWishlistService, WishlistService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IProductService, ProductService>();
+        
+        // Social features
+        services.AddScoped<IFriendService, FriendService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         services.AddAutoMapper(typeof(OpenWishProfile).Assembly);
 

@@ -8,4 +8,6 @@ public class WishlistModel : BaseEntityModel
     public bool IsCollaborative { get; set; }
     public int ItemCount { get; set; }
     public ICollection<WishlistItemModel> Items { get; set; } = [];
+    public ICollection<WishlistPermissionModel> Permissions { get; set; } = [];
+    public bool IsPrivate { get; set; }
 }

@@ -1,0 +1,136 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+
+<div class="friend-search">
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" placeholder="Search for users by name or email"
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+        <button class="btn btn-outline-primary" type="button" @onclick="Search">
+            <i class="bi bi-search"></i> Search
+        </button>
+    </div>
+    
+    @if (_searching)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Searching...</span>
+        </div>
+    }
+    else if (_searchPerformed && !_searchResults.Any())
+    {
+        <div class="alert alert-info">
+            No users found matching your search.
+        </div>
+    }
+    else if (_searchPerformed)
+    {
+        <div class="list-group">
+            @foreach (var user in _searchResults)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-person-circle me-2"></i>
+                        @user.UserName
+                        <small class="text-muted ms-2">@user.Email</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" @onclick="() => SendFriendRequest(user.Id)">
+                            <i class="bi bi-person-plus"></i> Add Friend
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-3">
+            @_errorMessage
+        </div>
+    }
+</div>
+
+@code {
+    private string searchTerm = "";
+    private List<ApplicationUserModel> _searchResults = [];
+    private bool _searching = false;
+    private bool _searchPerformed = false;
+    private bool _error = false;
+    private string _errorMessage = "An error occurred. Please try again.";
+    private string? _currentUserId;
+    
+    private async Task HandleSearch(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await Search();
+        }
+    }
+    
+    private async Task Search()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm) || searchTerm.Length < 2)
+        {
+            _error = true;
+            _errorMessage = "Please enter at least 2 characters to search.";
+            return;
+        }
+        
+        try
+        {
+            _searching = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                var results = await FriendService.SearchUsersAsync(searchTerm, _currentUserId);
+                _searchResults = results.ToList();
+                _searchPerformed = true;
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "An error occurred while searching. Please try again.";
+        }
+        finally
+        {
+            _searching = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SendFriendRequest(string userId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                await FriendService.SendFriendRequestAsync(_currentUserId, userId);
+                
+                // Remove the user from search results after sending request
+                _searchResults.RemoveAll(u => u.Id == userId);
+                StateHasChanged();
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = true;
+            _errorMessage = ex.Message;
+            StateHasChanged();
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "An error occurred while sending friend request. Please try again.";
+            StateHasChanged();
+        }
+    }
+}

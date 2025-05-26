@@ -1,0 +1,104 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+
+<div class="friend-list">
+    <h4 class="mb-3">Friends</h4>
+    
+    @if (_loading)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else if (!_friends.Any())
+    {
+        <div class="alert alert-info">
+            You don't have any friends yet. Find users to connect with!
+        </div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var friend in _friends)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-person-circle me-2"></i>
+                        @friend.UserName
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => RemoveFriend(friend.Id)">
+                            <i class="bi bi-person-dash"></i> Remove
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-3">
+            An error occurred while loading your friends. Please try again.
+        </div>
+    }
+</div>
+
+@code {
+    private List<ApplicationUserModel> _friends = [];
+    private bool _loading = true;
+    private bool _error = false;
+    private string? _currentUserId;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFriends();
+    }
+    
+    private async Task LoadFriends()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                var friends = await FriendService.GetFriendsAsync(_currentUserId);
+                _friends = friends.ToList();
+            }
+        }
+        catch
+        {
+            _error = true;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task RemoveFriend(string friendId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                await FriendService.RemoveFriendAsync(_currentUserId, friendId);
+                await LoadFriends();
+            }
+        }
+        catch
+        {
+            _error = true;
+            StateHasChanged();
+        }
+    }
+}

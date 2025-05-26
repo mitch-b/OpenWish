@@ -121,4 +121,147 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
         return NoContent();
     }
+    
+    // Wishlist sharing endpoints
+    [HttpPost("{wishlistId}/permissions")]
+    public async Task<ActionResult<WishlistPermissionModel>> ShareWishlist(int wishlistId, [FromBody] ShareRequest request)
+    {
+        var permission = await _wishlistService.ShareWishlistAsync(wishlistId, request.UserId, request.PermissionType);
+        return Ok(permission);
+    }
+    
+    [HttpPost("{wishlistId}/share-link")]
+    public async Task<ActionResult<string>> CreateSharingLink(int wishlistId, [FromBody] SharingLinkRequest request)
+    {
+        var token = await _wishlistService.CreateSharingLinkAsync(wishlistId, request.PermissionType, request.Expiration);
+        return Ok(token);
+    }
+    
+    [HttpPost("accept-link/{token}")]
+    public async Task<ActionResult<bool>> AcceptSharingLink(string token, [FromBody] AcceptLinkRequest request)
+    {
+        var result = await _wishlistService.AcceptSharingLinkAsync(token, request.UserId);
+        return Ok(result);
+    }
+    
+    [HttpGet("{wishlistId}/permissions")]
+    public async Task<ActionResult<IEnumerable<WishlistPermissionModel>>> GetWishlistPermissions(int wishlistId)
+    {
+        var permissions = await _wishlistService.GetWishlistPermissionsAsync(wishlistId);
+        return Ok(permissions);
+    }
+    
+    [HttpDelete("{wishlistId}/permissions/{userId}")]
+    public async Task<ActionResult<bool>> RemovePermission(int wishlistId, string userId)
+    {
+        var result = await _wishlistService.RemoveWishlistPermissionAsync(wishlistId, userId);
+        return Ok(result);
+    }
+    
+    [HttpGet("shared-with-me")]
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetSharedWithMe()
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        
+        var wishlists = await _wishlistService.GetSharedWithMeWishlistsAsync(userId);
+        return Ok(wishlists);
+    }
+    
+    [HttpGet("{wishlistId}/can-access/{userId}")]
+    public async Task<ActionResult<bool>> CanUserAccess(int wishlistId, string userId)
+    {
+        var result = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+        return Ok(result);
+    }
+    
+    [HttpGet("{wishlistId}/can-edit/{userId}")]
+    public async Task<ActionResult<bool>> CanUserEdit(int wishlistId, string userId)
+    {
+        var result = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+        return Ok(result);
+    }
+    
+    // Item comments endpoints
+    [HttpPost("{wishlistId}/items/{itemId}/comments")]
+    public async Task<ActionResult<ItemCommentModel>> AddComment(int wishlistId, int itemId, [FromBody] CommentRequest request)
+    {
+        var comment = await _wishlistService.AddCommentToItemAsync(wishlistId, itemId, request.UserId, request.Text);
+        return Ok(comment);
+    }
+    
+    [HttpGet("{wishlistId}/items/{itemId}/comments")]
+    public async Task<ActionResult<IEnumerable<ItemCommentModel>>> GetComments(int wishlistId, int itemId)
+    {
+        var comments = await _wishlistService.GetItemCommentsAsync(wishlistId, itemId);
+        return Ok(comments);
+    }
+    
+    [HttpDelete("comments/{commentId}")]
+    public async Task<ActionResult<bool>> RemoveComment(int commentId, [FromQuery] string userId)
+    {
+        var result = await _wishlistService.RemoveItemCommentAsync(commentId, userId);
+        return Ok(result);
+    }
+    
+    // Item reservations endpoints
+    [HttpPost("{wishlistId}/items/{itemId}/reserve")]
+    public async Task<ActionResult<bool>> ReserveItem(int wishlistId, int itemId, [FromBody] ReservationRequest request)
+    {
+        var result = await _wishlistService.ReserveItemAsync(wishlistId, itemId, request.UserId, request.IsAnonymous);
+        return Ok(result);
+    }
+    
+    [HttpDelete("{wishlistId}/items/{itemId}/reservation")]
+    public async Task<ActionResult<bool>> CancelReservation(int wishlistId, int itemId, [FromQuery] string userId)
+    {
+        var result = await _wishlistService.CancelReservationAsync(wishlistId, itemId, userId);
+        return Ok(result);
+    }
+    
+    [HttpGet("{wishlistId}/items/{itemId}/reservation")]
+    public async Task<ActionResult<ItemReservationModel>> GetReservation(int wishlistId, int itemId)
+    {
+        var reservation = await _wishlistService.GetItemReservationAsync(wishlistId, itemId);
+        return Ok(reservation);
+    }
+    
+    [HttpGet("items/{itemId}/is-reserved")]
+    public async Task<ActionResult<bool>> IsItemReserved(int itemId)
+    {
+        var isReserved = await _wishlistService.IsItemReservedAsync(itemId);
+        return Ok(isReserved);
+    }
+    
+    public class ShareRequest
+    {
+        public string UserId { get; set; }
+        public string PermissionType { get; set; }
+    }
+    
+    public class SharingLinkRequest
+    {
+        public string PermissionType { get; set; }
+        public TimeSpan? Expiration { get; set; }
+    }
+    
+    public class AcceptLinkRequest
+    {
+        public string UserId { get; set; }
+    }
+    
+    public class CommentRequest
+    {
+        public string UserId { get; set; }
+        public string Text { get; set; }
+    }
+    
+    public class ReservationRequest
+    {
+        public string UserId { get; set; }
+        public bool IsAnonymous { get; set; }
+    }
 }

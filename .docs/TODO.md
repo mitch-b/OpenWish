@@ -22,10 +22,10 @@
       - [x] List view with filters and search
       - [x] Create/Edit forms
       - [x] Delete confirmation dialog
-   - [ ] Item management components
-      - [ ] Item card component
-      - [ ] Add/Edit item form
-      - [ ] Bulk actions (delete, move)
+   - [x] Item management components
+      - [x] Item card component
+      - [x] Add/Edit item form
+      - [x] Bulk actions (delete, move)
    - [ ] Shared layout and navigation
       - [ ] Responsive navbar
       - [ ] User profile dropdown

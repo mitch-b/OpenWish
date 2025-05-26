@@ -1,0 +1,165 @@
+@using OpenWish.Shared.Extensions
+
+<div class="card wishlist-item-card mb-3">
+    <div class="row g-0">
+        @if (!string.IsNullOrEmpty(Item.Image))
+        {
+            <div class="col-md-4">
+                <img src="@Item.Image" class="img-fluid rounded-start" alt="@Item.Name">
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    @RenderCardContent()
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-12">
+                <div class="card-body">
+                    @RenderCardContent()
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public WishlistItemModel Item { get; set; } = new();
+    [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+
+    private RenderFragment RenderCardContent() => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "card-content");
+
+        // Card Title
+        builder.OpenElement(2, "h5");
+        builder.AddAttribute(3, "class", "card-title");
+        builder.AddContent(4, Item.Name);
+        builder.CloseElement();
+        
+        // Priority Badge
+        builder.OpenElement(5, "div");
+        builder.AddAttribute(6, "class", $"priority-badge {GetPriorityClass()}");
+        builder.AddContent(7, GetPriorityText());
+        builder.CloseElement();
+        
+        // Description
+        if (!string.IsNullOrEmpty(Item.Description))
+        {
+            builder.OpenElement(8, "p");
+            builder.AddAttribute(9, "class", "card-text");
+            builder.AddContent(10, Item.Description);
+            builder.CloseElement();
+        }
+        
+        // Card Details
+        builder.OpenElement(11, "div");
+        builder.AddAttribute(12, "class", "card-details");
+        
+        // Price
+        if (Item.Price.HasValue)
+        {
+            builder.OpenElement(13, "p");
+            builder.AddAttribute(14, "class", "card-text");
+            builder.OpenElement(15, "strong");
+            builder.AddContent(16, "Price: ");
+            builder.CloseElement();
+            builder.AddContent(17, Item.Price?.ToString("C"));
+            builder.CloseElement();
+        }
+        
+        // Where to Buy
+        if (!string.IsNullOrEmpty(Item.WhereToBuy))
+        {
+            builder.OpenElement(18, "p");
+            builder.AddAttribute(19, "class", "card-text");
+            builder.OpenElement(20, "strong");
+            builder.AddContent(21, "Where to Buy: ");
+            builder.CloseElement();
+            builder.AddContent(22, Item.WhereToBuy);
+            builder.CloseElement();
+        }
+        
+        // URL
+        if (!string.IsNullOrEmpty(Item.Url))
+        {
+            builder.OpenElement(23, "p");
+            builder.AddAttribute(24, "class", "card-text");
+            builder.OpenElement(25, "a");
+            builder.AddAttribute(26, "href", Item.Url);
+            builder.AddAttribute(27, "target", "_blank");
+            builder.AddAttribute(28, "class", "btn btn-sm btn-outline-primary");
+            builder.OpenElement(29, "i");
+            builder.AddAttribute(30, "class", "bi bi-link-45deg");
+            builder.CloseElement();
+            builder.AddContent(31, " View Product");
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+        
+        // Created Date
+        builder.OpenElement(32, "p");
+        builder.AddAttribute(33, "class", "card-text");
+        builder.OpenElement(34, "small");
+        builder.AddAttribute(35, "class", "text-muted");
+        builder.AddContent(36, $"Added: {Item.CreatedOn.ToLocalHumanizedString()}");
+        builder.CloseElement();
+        builder.CloseElement();
+        
+        builder.CloseElement(); // Close card-details
+
+        // Card Actions
+        if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+        {
+            builder.OpenElement(37, "div");
+            builder.AddAttribute(38, "class", "card-actions");
+            
+            if (OnEdit.HasDelegate)
+            {
+                builder.OpenElement(39, "button");
+                builder.AddAttribute(40, "class", "btn btn-sm btn-primary");
+                builder.AddAttribute(41, "onclick", EventCallback.Factory.Create(this, () => OnEdit.InvokeAsync(Item)));
+                builder.OpenElement(42, "i");
+                builder.AddAttribute(43, "class", "bi bi-pencil");
+                builder.CloseElement();
+                builder.AddContent(44, " Edit");
+                builder.CloseElement();
+            }
+            
+            if (OnDelete.HasDelegate)
+            {
+                builder.OpenElement(45, "button");
+                builder.AddAttribute(46, "class", "btn btn-sm btn-danger");
+                builder.AddAttribute(47, "onclick", EventCallback.Factory.Create(this, () => OnDelete.InvokeAsync(Item)));
+                builder.OpenElement(48, "i");
+                builder.AddAttribute(49, "class", "bi bi-trash");
+                builder.CloseElement();
+                builder.AddContent(50, " Delete");
+                builder.CloseElement();
+            }
+            
+            builder.CloseElement(); // Close card-actions
+        }
+        
+        builder.CloseElement(); // Close card-content
+    };
+
+    private string GetPriorityClass() => Item.Priority switch
+    {
+        1 => "priority-high",
+        2 => "priority-medium",
+        3 => "priority-low",
+        _ => "priority-none"
+    };
+
+    private string GetPriorityText() => Item.Priority switch
+    {
+        1 => "High Priority",
+        2 => "Medium Priority",
+        3 => "Low Priority",
+        _ => "No Priority"
+    };
+}

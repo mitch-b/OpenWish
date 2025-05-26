@@ -1,0 +1,52 @@
+<div class="row g-3">
+    @foreach (var item in Items)
+    {
+        <div class="col-md-6 col-lg-4">
+            @if (EditingItemId == item.Id)
+            {
+                <div class="card">
+                    <div class="card-body">
+                        <WishlistItemForm
+                            Model="@item"
+                            OnSubmit="@HandleEditSubmit"
+                            OnCancel="@HandleOnCancel" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <WishlistItemCard 
+                    Item="@item" 
+                    OnEdit="@(OnEdit.HasDelegate ? item => StartEdit(item.Id) : null)" 
+                    OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
+    [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+    
+    private int? EditingItemId;
+    
+    private void StartEdit(int itemId)
+    {
+        EditingItemId = itemId;
+    }
+    
+    private async Task HandleEditSubmit(WishlistItemModel item)
+    {
+        if (OnEdit.HasDelegate)
+        {
+            await OnEdit.InvokeAsync(item);
+        }
+        EditingItemId = null;
+    }
+    
+    private async Task HandleOnCancel(WishlistItemModel item)
+    {
+        EditingItemId = null;
+    }
+}

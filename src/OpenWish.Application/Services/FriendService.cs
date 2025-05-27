@@ -83,6 +83,13 @@ public class FriendService(ApplicationDbContext context,
             throw new InvalidOperationException("Users are already friends");
         }
 
+        // Check if a deleted friendship exists between these users
+        var existingDeletedFriendship = await _context.Friends
+            .AnyAsync(f =>
+                ((f.UserId == requesterId && f.FriendUserId == receiverId) ||
+                (f.UserId == receiverId && f.FriendUserId == requesterId)) &&
+                f.Deleted);
+
         // Check for existing pending requests
         var existingRequest = await _context.FriendRequests
             .FirstOrDefaultAsync(fr =>
@@ -93,6 +100,24 @@ public class FriendService(ApplicationDbContext context,
         if (existingRequest != null)
         {
             throw new InvalidOperationException("A friend request already exists between these users");
+        }
+
+        // Look for previously created but rejected or completed request
+        var previousRequest = await _context.FriendRequests
+            .FirstOrDefaultAsync(fr =>
+                fr.RequesterId == requesterId && fr.ReceiverId == receiverId &&
+                (fr.Status == "Rejected" || fr.Status == "Accepted" || fr.Deleted));
+
+        if (previousRequest != null)
+        {
+            // Reuse the existing request record
+            previousRequest.Status = "Pending";
+            previousRequest.RequestDate = DateTimeOffset.UtcNow;
+            previousRequest.UpdatedOn = DateTimeOffset.UtcNow;
+            previousRequest.Deleted = false;
+
+            await _context.SaveChangesAsync();
+            return _mapper.Map<FriendRequestModel>(previousRequest);
         }
 
         // Create new request
@@ -146,27 +171,58 @@ public class FriendService(ApplicationDbContext context,
         request.Status = "Accepted";
         request.UpdatedOn = DateTimeOffset.UtcNow;
 
-        // Create friendship records in both directions (bidirectional friendship)
-        var friendship1 = new Friend
-        {
-            UserId = request.RequesterId,
-            FriendUserId = request.ReceiverId,
-            FriendshipDate = DateTimeOffset.UtcNow,
-            CreatedOn = DateTimeOffset.UtcNow,
-            UpdatedOn = DateTimeOffset.UtcNow
-        };
+        // Check for existing friendship records (including soft-deleted ones)
+        var existingFriendship1 = await _context.Friends
+            .FirstOrDefaultAsync(f => f.UserId == request.RequesterId && f.FriendUserId == request.ReceiverId);
 
-        var friendship2 = new Friend
-        {
-            UserId = request.ReceiverId,
-            FriendUserId = request.RequesterId,
-            FriendshipDate = DateTimeOffset.UtcNow,
-            CreatedOn = DateTimeOffset.UtcNow,
-            UpdatedOn = DateTimeOffset.UtcNow
-        };
+        var existingFriendship2 = await _context.Friends
+            .FirstOrDefaultAsync(f => f.UserId == request.ReceiverId && f.FriendUserId == request.RequesterId);
 
-        _context.Friends.Add(friendship1);
-        _context.Friends.Add(friendship2);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        // Reactivate or create first friendship record
+        if (existingFriendship1 != null)
+        {
+            // Reactivate existing record
+            existingFriendship1.Deleted = false;
+            existingFriendship1.UpdatedOn = now;
+            existingFriendship1.FriendshipDate = now;
+        }
+        else
+        {
+            // Create new record
+            var friendship1 = new Friend
+            {
+                UserId = request.RequesterId,
+                FriendUserId = request.ReceiverId,
+                FriendshipDate = now,
+                CreatedOn = now,
+                UpdatedOn = now
+            };
+            _context.Friends.Add(friendship1);
+        }
+
+        // Reactivate or create second friendship record
+        if (existingFriendship2 != null)
+        {
+            // Reactivate existing record
+            existingFriendship2.Deleted = false;
+            existingFriendship2.UpdatedOn = now;
+            existingFriendship2.FriendshipDate = now;
+        }
+        else
+        {
+            // Create new record
+            var friendship2 = new Friend
+            {
+                UserId = request.ReceiverId,
+                FriendUserId = request.RequesterId,
+                FriendshipDate = now,
+                CreatedOn = now,
+                UpdatedOn = now
+            };
+            _context.Friends.Add(friendship2);
+        }
 
         await _context.SaveChangesAsync();
         return true;
@@ -277,39 +333,70 @@ public class FriendService(ApplicationDbContext context,
             return false;
         }
 
-        // Check if they are already friends
-        var existingFriendship = await _context.Friends
+        // Check if they are already active friends
+        var existingActiveFriendship = await _context.Friends
             .AnyAsync(f =>
                 ((f.UserId == newUserId && f.FriendUserId == inviterUserId) ||
                  (f.UserId == inviterUserId && f.FriendUserId == newUserId)) &&
                 !f.Deleted);
 
-        if (existingFriendship)
+        if (existingActiveFriendship)
         {
             return true; // They are already friends
         }
 
-        // Create friendship records in both directions
-        var friendship1 = new Friend
-        {
-            UserId = newUserId,
-            FriendUserId = inviterUserId,
-            FriendshipDate = DateTimeOffset.UtcNow,
-            CreatedOn = DateTimeOffset.UtcNow,
-            UpdatedOn = DateTimeOffset.UtcNow
-        };
+        DateTimeOffset now = DateTimeOffset.UtcNow;
 
-        var friendship2 = new Friend
-        {
-            UserId = inviterUserId,
-            FriendUserId = newUserId,
-            FriendshipDate = DateTimeOffset.UtcNow,
-            CreatedOn = DateTimeOffset.UtcNow,
-            UpdatedOn = DateTimeOffset.UtcNow
-        };
+        // Check for existing friendship records (including soft-deleted ones)
+        var existingFriendship1 = await _context.Friends
+            .FirstOrDefaultAsync(f => f.UserId == newUserId && f.FriendUserId == inviterUserId);
 
-        _context.Friends.Add(friendship1);
-        _context.Friends.Add(friendship2);
+        var existingFriendship2 = await _context.Friends
+            .FirstOrDefaultAsync(f => f.UserId == inviterUserId && f.FriendUserId == newUserId);
+
+        // Reactivate or create first friendship record
+        if (existingFriendship1 != null)
+        {
+            // Reactivate existing record
+            existingFriendship1.Deleted = false;
+            existingFriendship1.UpdatedOn = now;
+            existingFriendship1.FriendshipDate = now;
+        }
+        else
+        {
+            // Create new record
+            var friendship1 = new Friend
+            {
+                UserId = newUserId,
+                FriendUserId = inviterUserId,
+                FriendshipDate = now,
+                CreatedOn = now,
+                UpdatedOn = now
+            };
+            _context.Friends.Add(friendship1);
+        }
+
+        // Reactivate or create second friendship record
+        if (existingFriendship2 != null)
+        {
+            // Reactivate existing record
+            existingFriendship2.Deleted = false;
+            existingFriendship2.UpdatedOn = now;
+            existingFriendship2.FriendshipDate = now;
+        }
+        else
+        {
+            // Create new record
+            var friendship2 = new Friend
+            {
+                UserId = inviterUserId,
+                FriendUserId = newUserId,
+                FriendshipDate = now,
+                CreatedOn = now,
+                UpdatedOn = now
+            };
+            _context.Friends.Add(friendship2);
+        }
 
         // Create notification for the inviter
         await _notificationService.CreateNotificationAsync(

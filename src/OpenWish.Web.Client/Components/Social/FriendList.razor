@@ -30,7 +30,7 @@
                         @friend.UserName
                     </div>
                     <div>
-                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => RemoveFriend(friend.Id)">
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => ShowRemoveConfirmation(friend)">
                             <i class="bi bi-person-dash"></i> Remove
                         </button>
                     </div>
@@ -47,11 +47,14 @@
     }
 </div>
 
+<FriendRemoveConfirmationDialog @ref="_removeConfirmationDialog" OnConfirm="ConfirmRemoveFriend" />
+
 @code {
     private List<ApplicationUserModel> _friends = [];
     private bool _loading = true;
     private bool _error = false;
     private string? _currentUserId;
+    private FriendRemoveConfirmationDialog _removeConfirmationDialog;
     
     protected override async Task OnInitializedAsync()
     {
@@ -83,7 +86,14 @@
         }
     }
     
-    private async Task RemoveFriend(string friendId)
+    private void ShowRemoveConfirmation(ApplicationUserModel friend)
+    {
+        string title = "Remove Friend";
+        string message = $"Are you sure you want to remove {friend.UserName} from your friends list?";
+        _removeConfirmationDialog.Show(title, message, friend.Id);
+    }
+    
+    private async Task ConfirmRemoveFriend(string friendId)
     {
         try
         {

@@ -20,6 +20,14 @@
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
+        <div class="mb-3 form-check">
+            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
+            <label class="form-check-label" for="isPrivate">
+                Private Wishlist (only you can see it - uncheck to make it visible to friends)
+            </label>
+            <ValidationMessage For="@(() => Model.IsPrivate)" />
+        </div>
+
         <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
             @if (OnCancel.HasDelegate)

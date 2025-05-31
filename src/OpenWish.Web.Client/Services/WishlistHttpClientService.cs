@@ -16,7 +16,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await response.Content.ReadFromJsonAsync<WishlistModel>();
     }
 
-    public async Task<WishlistModel> GetWishlistAsync(int id)
+    public async Task<WishlistModel> GetWishlistAsync(int id, string? userId = null)
     {
         return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{id}");
     }

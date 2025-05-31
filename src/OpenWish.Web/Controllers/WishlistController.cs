@@ -29,12 +29,25 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     [HttpGet("{id}")]
     public async Task<ActionResult<WishlistModel>> GetWishlist(int id)
     {
-        var wishlist = await _wishlistService.GetWishlistAsync(id);
-        if (wishlist == null)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var wishlist = await _wishlistService.GetWishlistAsync(id, userId);
+            return Ok(wishlist);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound();
         }
-        return Ok(wishlist);
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpPost]
@@ -74,52 +87,145 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     [HttpGet("{wishlistId}/items")]
     public async Task<ActionResult<IEnumerable<WishlistItemModel>>> GetWishlistItems(int wishlistId)
     {
-        var items = await _wishlistService.GetWishlistItemsAsync(wishlistId);
-        return Ok(items);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            // Check if user can access the wishlist first
+            var canAccess = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+            if (!canAccess)
+            {
+                return Forbid();
+            }
+
+            var items = await _wishlistService.GetWishlistItemsAsync(wishlistId);
+            return Ok(items);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet("{wishlistId}/items/{itemId}")]
     public async Task<ActionResult<WishlistItemModel>> GetWishlistItem(int wishlistId, int itemId)
     {
-        var item = await _wishlistService.GetWishlistItemAsync(wishlistId, itemId);
-        if (item == null)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            // Check if user can access the wishlist first
+            var canAccess = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+            if (!canAccess)
+            {
+                return Forbid();
+            }
+
+            var item = await _wishlistService.GetWishlistItemAsync(wishlistId, itemId);
+            return Ok(item);
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound();
         }
-        return Ok(item);
     }
 
     [HttpPost("{wishlistId}/items")]
     public async Task<ActionResult<WishlistItemModel>> AddItemToWishlist(int wishlistId, WishlistItemModel item)
     {
-        var addedItem = await _wishlistService.AddItemToWishlistAsync(wishlistId, item);
-        return CreatedAtAction(nameof(GetWishlistItem), new { wishlistId, itemId = addedItem.WishlistId }, addedItem);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            // Check if user can edit the wishlist
+            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            if (!canEdit)
+            {
+                return Forbid();
+            }
+
+            var addedItem = await _wishlistService.AddItemToWishlistAsync(wishlistId, item);
+            return CreatedAtAction(nameof(GetWishlistItem), new { wishlistId, itemId = addedItem.WishlistId }, addedItem);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPut("{wishlistId}/items/{itemId}")]
     public async Task<IActionResult> UpdateWishlistItem(int wishlistId, int itemId, WishlistItemModel item)
     {
-        if (itemId != item.WishlistId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (itemId != item.Id)
         {
             return BadRequest();
         }
-        var updatedItem = await _wishlistService.UpdateWishlistItemAsync(wishlistId, itemId, item);
-        if (updatedItem == null)
+
+        try
+        {
+            // Check if user can edit the wishlist
+            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            if (!canEdit)
+            {
+                return Forbid();
+            }
+
+            var updatedItem = await _wishlistService.UpdateWishlistItemAsync(wishlistId, itemId, item);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound();
         }
-        return NoContent();
     }
 
     [HttpDelete("{wishlistId}/items/{itemId}")]
     public async Task<IActionResult> RemoveItemFromWishlist(int wishlistId, int itemId)
     {
-        var result = await _wishlistService.RemoveItemFromWishlistAsync(wishlistId, itemId);
-        if (!result)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            // Check if user can edit the wishlist
+            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            if (!canEdit)
+            {
+                return Forbid();
+            }
+
+            var result = await _wishlistService.RemoveItemFromWishlistAsync(wishlistId, itemId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound();
         }
-        return NoContent();
     }
 
     // Wishlist sharing endpoints

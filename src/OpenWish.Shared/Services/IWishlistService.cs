@@ -5,7 +5,7 @@ namespace OpenWish.Shared.Services;
 public interface IWishlistService
 {
     Task<WishlistModel> CreateWishlistAsync(WishlistModel wishlist, string ownerId);
-    Task<WishlistModel> GetWishlistAsync(int id);
+    Task<WishlistModel> GetWishlistAsync(int id, string? userId = null);
     Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId);
     Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlist);
     Task DeleteWishlistAsync(int id);

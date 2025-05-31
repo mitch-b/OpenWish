@@ -32,7 +32,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         return resultModel;
     }
 
-    public async Task<WishlistModel> GetWishlistAsync(int id)
+    public async Task<WishlistModel> GetWishlistAsync(int id, string? userId = null)
     {
         var wishlistEntity = await _context.Wishlists
             .Where(w => !w.Deleted)
@@ -43,6 +43,16 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         if (wishlistEntity == null)
         {
             throw new KeyNotFoundException($"Wishlist {id} not found");
+        }
+
+        // Check authorization if userId is provided
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var canAccess = await CanUserAccessWishlistAsync(id, userId);
+            if (!canAccess)
+            {
+                throw new UnauthorizedAccessException($"Access denied to wishlist {id}");
+            }
         }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
@@ -383,20 +393,45 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
-        // Check if user is owner
-        var isOwner = await _context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.OwnerId == userId && !w.Deleted);
+        var wishlist = await _context.Wishlists
+            .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted);
 
-        if (isOwner)
+        if (wishlist == null)
+        {
+            return false;
+        }
+
+        // Check if user is owner
+        if (wishlist.OwnerId == userId)
         {
             return true;
         }
 
-        // Check if user has permission
+        // Check if user has explicit permission
         var hasPermission = await _context.WishlistPermissions
             .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
-        return hasPermission;
+        if (hasPermission)
+        {
+            return true;
+        }
+
+        // Check if user is a friend and wishlist is not private
+        if (!wishlist.IsPrivate)
+        {
+            var isFriend = await _context.Friends
+                .AnyAsync(f =>
+                    ((f.UserId == userId && f.FriendUserId == wishlist.OwnerId) ||
+                    (f.UserId == wishlist.OwnerId && f.FriendUserId == userId)) &&
+                    !f.Deleted);
+
+            if (isFriend)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)

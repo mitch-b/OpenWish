@@ -1,6 +1,11 @@
 @page "/friends"
 @using OpenWish.Web.Client.Components.Social
+@using OpenWish.Web.Client.Components.Wishlist
+@using OpenWish.Shared.Services
 @attribute [Authorize]
+
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
 
 @rendermode InteractiveAuto
 
@@ -9,45 +14,143 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-12 mb-4">
-            <h2>Manage Friends</h2>
-            <p class="text-muted">Connect with friends to share and collaborate on wishlists.</p>
+            <h2>Friends & Wishlists</h2>
+            <p class="text-muted">Connect with friends and explore their wishlists.</p>
         </div>
     </div>
-    
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Find Friends</h5>
-                </div>
-                <div class="card-body">
-                    <FriendSearch />
+
+    <ul class="nav nav-tabs mb-3" id="friendsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "manage" ? "active" : "")" id="manage-tab" 
+                    @onclick='() => SetActiveTab("manage")' type="button" role="tab">
+                <i class="bi bi-people me-2"></i>Manage Friends
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "wishlists" ? "active" : "")" id="wishlists-tab" 
+                    @onclick='() => SetActiveTab("wishlists")' type="button" role="tab">
+                <i class="bi bi-list-ul me-2"></i>Friends' Wishlists
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="friendsTabsContent">
+        @if (activeTab == "manage")
+        {
+            <div class="tab-pane fade show active">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Find Friends</h5>
+                            </div>
+                            <div class="card-body">
+                                <FriendSearch />
+                            </div>
+                        </div>
+                        
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Friend Requests</h5>
+                            </div>
+                            <div class="card-body">
+                                <FriendRequestList />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">My Friends</h5>
+                            </div>
+                            <div class="card-body">
+                                <FriendList />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Friend Requests</h5>
-                </div>
-                <div class="card-body">
-                    <FriendRequestList />
-                </div>
+        }
+        else if (activeTab == "wishlists")
+        {
+            <div class="tab-pane fade show active">
+                @if (loading)
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else if (friendsWishlists?.Any() == true)
+                {
+                    <div class="row">
+                        @foreach (var wishlist in friendsWishlists)
+                        {
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <WishlistCard Wishlist="@wishlist" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No public wishlists from your friends yet. When your friends create public wishlists, they'll appear here.
+                    </div>
+                }
             </div>
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">My Friends</h5>
-                </div>
-                <div class="card-body">
-                    <FriendList />
-                </div>
-            </div>
-        </div>
+        }
     </div>
 </div>
 
 @code {
-    // This page just composes other components, so no code needed here
+    private string activeTab = "manage";
+    private bool loading = false;
+    private IEnumerable<WishlistModel>? friendsWishlists;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (activeTab == "wishlists")
+        {
+            await LoadFriendsWishlists();
+        }
+    }
+
+    private async Task SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        
+        if (tab == "wishlists" && friendsWishlists == null)
+        {
+            await LoadFriendsWishlists();
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task LoadFriendsWishlists()
+    {
+        try
+        {
+            loading = true;
+            var userId = await UserContextService.GetUserIdAsync();
+            if (userId != null)
+            {
+                friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(userId);
+            }
+        }
+        catch (Exception)
+        {
+            // Handle error silently for now
+            friendsWishlists = new List<WishlistModel>();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
 }

@@ -18,7 +18,11 @@
                 <WishlistItemCard 
                     Item="@item" 
                     OnEdit="@(OnEdit.HasDelegate ? item => StartEdit(item.Id) : null)" 
-                    OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)" />
+                    OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)"
+                    ShowInteractions="@ShowInteractions"
+                    WishlistId="@WishlistId"
+                    OwnerId="@OwnerId"
+                    IsOwner="@IsOwner" />
             }
         </div>
     }
@@ -28,6 +32,10 @@
     [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+    [Parameter] public bool ShowInteractions { get; set; } = false;
+    [Parameter] public int WishlistId { get; set; }
+    [Parameter] public string OwnerId { get; set; } = "";
+    [Parameter] public bool IsOwner { get; set; } = false;
     
     private int? EditingItemId;
     

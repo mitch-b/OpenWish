@@ -117,6 +117,11 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/shared-with-me");
     }
 
+    public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/friends");
+    }
+
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-access/{userId}");

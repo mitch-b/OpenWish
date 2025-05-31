@@ -360,6 +360,27 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
     }
 
+    public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
+    {
+        // Get all friends of the current user
+        var friendIds = await _context.Friends
+            .Where(f => f.UserId == userId && !f.Deleted)
+            .Select(f => f.FriendUserId)
+            .Union(_context.Friends
+                .Where(f => f.FriendUserId == userId && !f.Deleted)
+                .Select(f => f.UserId))
+            .ToListAsync();
+
+        // Get public wishlists (non-private) from friends
+        var wishlists = await _context.Wishlists
+            .Where(w => friendIds.Contains(w.OwnerId) && !w.Deleted && !w.IsPrivate)
+            .Include(w => w.Owner)
+            .Include(w => w.Items)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
+    }
+
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
         // Check if user is owner

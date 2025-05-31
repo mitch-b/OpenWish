@@ -22,12 +22,50 @@
             </div>
         }
     </div>
+    
+    @if (ShowInteractions)
+    {
+        <div class="card-footer">
+            <div class="d-flex gap-2">
+                @if (!IsOwner)
+                {
+                    <button class="btn btn-sm btn-outline-success" @onclick="() => ShowReservation = !ShowReservation">
+                        <i class="bi bi-gift"></i> Reserve
+                    </button>
+                }
+                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowComments = !ShowComments">
+                    <i class="bi bi-chat"></i> Comments
+                </button>
+            </div>
+            
+            @if (ShowReservation && !IsOwner)
+            {
+                <div class="mt-3">
+                    <ItemReservation WishlistId="@WishlistId" ItemId="@Item.Id" OwnerId="@OwnerId" />
+                </div>
+            }
+            
+            @if (ShowComments)
+            {
+                <div class="mt-3">
+                    <ItemComments WishlistId="@WishlistId" ItemId="@Item.Id" IsWishlistOwner="@IsOwner" />
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public WishlistItemModel Item { get; set; } = new();
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+    [Parameter] public bool ShowInteractions { get; set; } = false;
+    [Parameter] public int WishlistId { get; set; }
+    [Parameter] public string OwnerId { get; set; } = "";
+    [Parameter] public bool IsOwner { get; set; } = false;
+
+    private bool ShowComments { get; set; } = false;
+    private bool ShowReservation { get; set; } = false;
 
     private RenderFragment RenderCardContent() => builder =>
     {

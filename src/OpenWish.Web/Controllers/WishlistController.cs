@@ -171,6 +171,19 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(wishlists);
     }
 
+    [HttpGet("friends")]
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetFriendsWishlists()
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var wishlists = await _wishlistService.GetFriendsWishlistsAsync(userId);
+        return Ok(wishlists);
+    }
+
     [HttpGet("{wishlistId}/can-access/{userId}")]
     public async Task<ActionResult<bool>> CanUserAccess(int wishlistId, string userId)
     {

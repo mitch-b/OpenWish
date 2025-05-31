@@ -89,22 +89,26 @@ else
                     {
                         @if (ViewMode == "list")
                         {
-                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
+                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                         else
                         {
-                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
+                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                     }
                     else
                     {
                         @if (ViewMode == "list")
                         {
-                            <WishlistItemList Items="@_filteredItems" />
+                            <WishlistItemList Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
+                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                         else
                         {
-                            <WishlistCardView Items="@_filteredItems" />
+                            <WishlistCardView Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
+                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                     }
                 }

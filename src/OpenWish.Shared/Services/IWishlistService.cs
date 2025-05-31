@@ -17,6 +17,7 @@ public interface IWishlistService
     Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsAsync(int wishlistId);
     Task<bool> RemoveWishlistPermissionAsync(int wishlistId, string userId);
     Task<IEnumerable<WishlistModel>> GetSharedWithMeWishlistsAsync(string userId);
+    Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId);
     Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId);
     Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId);
 

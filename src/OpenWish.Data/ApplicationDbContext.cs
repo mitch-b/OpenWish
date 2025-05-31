@@ -21,6 +21,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Comment> Comments { get; set; }
     public DbSet<ItemReaction> ItemReactions { get; set; }
 
+    // Social features
+    public DbSet<Friend> Friends { get; set; }
+    public DbSet<FriendRequest> FriendRequests { get; set; }
+    public DbSet<WishlistPermission> WishlistPermissions { get; set; }
+    public DbSet<ItemComment> ItemComments { get; set; }
+    public DbSet<ItemReservation> ItemReservations { get; set; }
+    public DbSet<ActivityLog> ActivityLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -120,6 +128,93 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(eu => eu.User)
             .WithMany(u => u.EventUsers)
             .HasForeignKey(eu => eu.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Social features - Friend relationships
+        modelBuilder.Entity<Friend>()
+            .HasKey(f => new { f.UserId, f.FriendUserId });
+
+        modelBuilder.Entity<Friend>()
+            .HasOne(f => f.User)
+            .WithMany(u => u.Friends)
+            .HasForeignKey(f => f.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<Friend>()
+            .HasOne(f => f.FriendUser)
+            .WithMany()
+            .HasForeignKey(f => f.FriendUserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Friend requests
+        modelBuilder.Entity<FriendRequest>()
+            .HasOne(fr => fr.Requester)
+            .WithMany(u => u.SentFriendRequests)
+            .HasForeignKey(fr => fr.RequesterId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<FriendRequest>()
+            .HasOne(fr => fr.Receiver)
+            .WithMany(u => u.ReceivedFriendRequests)
+            .HasForeignKey(fr => fr.ReceiverId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Wishlist permissions
+        modelBuilder.Entity<WishlistPermission>()
+            .HasOne(wp => wp.User)
+            .WithMany(u => u.WishlistPermissions)
+            .HasForeignKey(wp => wp.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<WishlistPermission>()
+            .HasOne(wp => wp.Wishlist)
+            .WithMany()
+            .HasForeignKey(wp => wp.WishlistId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Item comments
+        modelBuilder.Entity<ItemComment>()
+            .HasOne(ic => ic.User)
+            .WithMany()
+            .HasForeignKey(ic => ic.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ItemComment>()
+            .HasOne(ic => ic.WishlistItem)
+            .WithMany()
+            .HasForeignKey(ic => ic.WishlistItemId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Item reservations
+        modelBuilder.Entity<ItemReservation>()
+            .HasOne(ir => ir.User)
+            .WithMany()
+            .HasForeignKey(ir => ir.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ItemReservation>()
+            .HasOne(ir => ir.WishlistItem)
+            .WithMany()
+            .HasForeignKey(ir => ir.WishlistItemId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Activity logs
+        modelBuilder.Entity<ActivityLog>()
+            .HasOne(al => al.User)
+            .WithMany(u => u.Activities)
+            .HasForeignKey(al => al.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ActivityLog>()
+            .HasOne(al => al.Wishlist)
+            .WithMany()
+            .HasForeignKey(al => al.WishlistId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<ActivityLog>()
+            .HasOne(al => al.WishlistItem)
+            .WithMany()
+            .HasForeignKey(al => al.WishlistItemId)
             .OnDelete(DeleteBehavior.NoAction);
 
         SqlDefaultValueAttributeConvention.Apply(modelBuilder);

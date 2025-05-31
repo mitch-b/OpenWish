@@ -1,0 +1,200 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
+
+<div class="item-reservation">
+    @if (_loading)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        @if (_isReserved)
+        {
+            <div class="alert alert-success mb-2">
+                @if (_myReservation)
+                {
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>You have reserved this item.</strong>
+                            <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="CancelReservation">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        @if (_reservation.IsAnonymous)
+                        {
+                            <strong>This item has been reserved</strong>
+                        }
+                        else
+                        {
+                            <strong>Reserved by @(_reservation.User?.UserName ?? "Unknown User")</strong>
+                        }
+                        <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="anonymousCheckbox" @bind="_anonymous" />
+                <label class="form-check-label" for="anonymousCheckbox">
+                    Reserve anonymously
+                </label>
+            </div>
+            
+            <button class="btn btn-success w-100" @onclick="ReserveItem">
+                <i class="bi bi-gift"></i> I'll Get This
+            </button>
+        }
+    }
+    
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-2">
+            @_errorMessage
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int WishlistId { get; set; }
+
+    [Parameter]
+    public int ItemId { get; set; }
+    
+    [Parameter]
+    public string OwnerId { get; set; }
+
+    private bool _loading = true;
+    private bool _error = false;
+    private string _errorMessage = "An error occurred. Please try again.";
+    private bool _isReserved = false;
+    private bool _myReservation = false;
+    private bool _anonymous = false;
+    private ItemReservationModel _reservation = new ItemReservationModel();
+    private string? _currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckReservation();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CheckReservation();
+    }
+
+    private async Task CheckReservation()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            // Check if the current user is the wishlist owner
+            if (_currentUserId == OwnerId)
+            {
+                _loading = false;
+                _isReserved = false;
+                return; // Wishlist owners can't reserve their own items
+            }
+
+            var reservation = await WishlistService.GetItemReservationAsync(WishlistId, ItemId);
+            
+            if (reservation != null)
+            {
+                _isReserved = true;
+                _reservation = reservation;
+                _myReservation = reservation.UserId == _currentUserId;
+            }
+            else
+            {
+                _isReserved = false;
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to check reservation status. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ReserveItem()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                var result = await WishlistService.ReserveItemAsync(WishlistId, ItemId, _currentUserId, _anonymous);
+                
+                if (result)
+                {
+                    await CheckReservation();
+                }
+                else
+                {
+                    _error = true;
+                    _errorMessage = "This item has already been reserved by someone else.";
+                }
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to reserve this item. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CancelReservation()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await WishlistService.CancelReservationAsync(WishlistId, ItemId, _currentUserId);
+                await CheckReservation();
+            }
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "Failed to cancel the reservation. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}

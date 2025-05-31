@@ -2,10 +2,18 @@ namespace OpenWish.Data.Entities;
 
 public class Event : BaseEntity
 {
-    public string Name { get; set; }
+    public Event()
+    {
+        EventUsers = new List<EventUser>();
+        EventWishlists = new List<Wishlist>();
+        GiftExchanges = new List<GiftExchange>();
+        PairingRules = new List<CustomPairingRule>();
+    }
+
+    public required string Name { get; set; }
     public DateTimeOffset Date { get; set; }
     public string? Description { get; set; }
-    public ApplicationUser CreatedBy { get; set; } // Creator of the event
+    public required ApplicationUser CreatedBy { get; set; } // Creator of the event
     public ICollection<EventUser> EventUsers { get; set; } // Users invited to the event
     public ICollection<Wishlist> EventWishlists { get; set; } // Wishlists tied to the event
     public Event? CopiedFromEvent { get; set; } // Reference to a past event if copied

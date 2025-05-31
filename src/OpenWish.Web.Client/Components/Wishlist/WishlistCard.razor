@@ -20,6 +20,14 @@ else
                 {
                     <span class="badge bg-info">Collaborative</span>
                 }
+                @if (Wishlist.IsPrivate)
+                {
+                    <span class="badge bg-secondary">Private</span>
+                }
+                else
+                {
+                    <span class="badge bg-success">Visible to Friends</span>
+                }
             </p>
             <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">Created by @Wishlist.Owner?.UserName</small>

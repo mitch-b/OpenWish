@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using OpenWish.Data.Entities
+@using OpenWish.Shared.Services
 @using OpenWish.Web.Services
 
 @inject UserManager<ApplicationUser> UserManager
@@ -16,6 +17,7 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IBaseUriService BaseUriService
+@inject IFriendService FriendService
 
 <PageTitle>Register</PageTitle>
 
@@ -58,14 +60,43 @@
 
 @code {
     private IEnumerable<IdentityError>? identityErrors;
+    private string? inviterUserId;
 
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+    
+    [SupplyParameterFromQuery]
+    private string? invite { get; set; }
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    protected override void OnInitialized()
+    {
+        // Process invite parameter if present
+        if (!string.IsNullOrEmpty(invite))
+        {
+            try
+            {
+                // The invite parameter contains email|userId
+                var inviteData = Uri.UnescapeDataString(invite).Split('|');
+                if (inviteData.Length == 2)
+                {
+                    Input.Email = inviteData[0]; // Pre-fill email field
+                    inviterUserId = inviteData[1]; // Store inviter user ID for friendship creation
+                }
+            }
+            catch
+            {
+                // If there's an error parsing the invite parameter, ignore it
+                Logger.LogWarning("Invalid invite parameter received: {Invite}", invite);
+            }
+        }
+        
+        base.OnInitialized();
+    }
 
     public async Task RegisterUser(EditContext editContext)
     {
@@ -92,6 +123,21 @@
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        // If registration is from an invite, create the friendship
+        if (!string.IsNullOrEmpty(inviterUserId))
+        {
+            try
+            {
+                await FriendService.CreateFriendshipFromInviteAsync(userId, inviterUserId);
+                Logger.LogInformation("Created friendship between new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
+            }
+            catch (Exception ex)
+            {
+                // Log error but continue with registration
+                Logger.LogError(ex, "Failed to create friendship between new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
+            }
+        }
 
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {

@@ -1,0 +1,149 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+
+<div class="friend-requests">
+    <h4 class="mb-3">Friend Requests</h4>
+    
+    @if (_loading)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else if (!_receivedRequests.Any())
+    {
+        <div class="alert alert-info">
+            No pending friend requests.
+        </div>
+    }
+    else
+    {
+        <div class="list-group">
+            @foreach (var request in _receivedRequests)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-person-circle me-2"></i>
+                        @request.Requester?.UserName
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" @onclick="() => AcceptRequest(request.Id)">
+                            <i class="bi bi-check"></i> Accept
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => RejectRequest(request.Id)">
+                            <i class="bi bi-x"></i> Reject
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    
+    @if (_sentRequests.Any())
+    {
+        <h5 class="mt-4 mb-3">Sent Requests</h5>
+        <div class="list-group">
+            @foreach (var request in _sentRequests)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-person-circle me-2"></i>
+                        @request.Receiver?.UserName
+                    </div>
+                    <div>
+                        <span class="badge bg-secondary">Pending</span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-3">
+            An error occurred while loading friend requests. Please try again.
+        </div>
+    }
+</div>
+
+@code {
+    private List<FriendRequestModel> _receivedRequests = [];
+    private List<FriendRequestModel> _sentRequests = [];
+    private bool _loading = true;
+    private bool _error = false;
+    private string? _currentUserId;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRequests();
+    }
+    
+    private async Task LoadRequests()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                var receivedRequests = await FriendService.GetReceivedFriendRequestsAsync(_currentUserId);
+                _receivedRequests = receivedRequests.ToList();
+                
+                var sentRequests = await FriendService.GetSentFriendRequestsAsync(_currentUserId);
+                _sentRequests = sentRequests.ToList();
+            }
+        }
+        catch
+        {
+            _error = true;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task AcceptRequest(int requestId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                await FriendService.AcceptFriendRequestAsync(requestId, _currentUserId);
+                await LoadRequests();
+            }
+        }
+        catch
+        {
+            _error = true;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task RejectRequest(int requestId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                await FriendService.RejectFriendRequestAsync(requestId, _currentUserId);
+                await LoadRequests();
+            }
+        }
+        catch
+        {
+            _error = true;
+            StateHasChanged();
+        }
+    }
+}

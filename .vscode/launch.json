@@ -11,13 +11,19 @@
             "args": [],
             "cwd": "${workspaceFolder}/src",
             // For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console
-            "console": "internalConsole",
+            "console": "integratedTerminal",
             "stopAtEntry": false,
             "env": {
             },
             "launchSettingsFilePath": "${workspaceFolder}/src/OpenWish.AppHost/Properties/launchSettings.json",
             "launchSettingsProfile": "https",
             "requireExactSource": false
+        },
+        {
+            "name": "Attach to .NET Process",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
         }
     ]
 }

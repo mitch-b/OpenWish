@@ -89,22 +89,26 @@ else
                     {
                         @if (ViewMode == "list")
                         {
-                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
+                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                         else
                         {
-                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" />
+                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
+                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                     }
                     else
                     {
                         @if (ViewMode == "list")
                         {
-                            <WishlistItemList Items="@_filteredItems" />
+                            <WishlistItemList Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
+                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                         else
                         {
-                            <WishlistCardView Items="@_filteredItems" />
+                            <WishlistCardView Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
+                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
                         }
                     }
                 }
@@ -147,9 +151,23 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
-        await SetupSecurity();
-        await LoadItems();
+        try
+        {
+            _currentUserId = await UserContextService.GetUserIdAsync();
+            _wishlist = await WishlistService.GetWishlistAsync(WishlistId, _currentUserId);
+            await SetupSecurity();
+            await LoadItems();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Redirect to access denied or navigate away
+            NavigationManager.NavigateTo("/wishlists", replace: true);
+        }
+        catch (KeyNotFoundException)
+        {
+            // Wishlist not found, redirect to wishlists
+            NavigationManager.NavigateTo("/wishlists", replace: true);
+        }
     }
 
     private async Task LoadItems()
@@ -230,8 +248,7 @@ else
 
     private async Task SetupSecurity()
     {
-        if (_wishlist == null) return;
-        _currentUserId ??= await UserContextService.GetUserIdAsync();
+        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) return;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
         _canEdit = _isOwner || _wishlist.IsCollaborative;

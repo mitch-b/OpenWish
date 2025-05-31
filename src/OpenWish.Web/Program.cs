@@ -106,6 +106,7 @@ using (var scope = app.Services.CreateScope())
 {
     var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
+
     if (openWishSettings.OwnDatabaseUpgrades)
     {
         await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

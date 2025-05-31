@@ -1,0 +1,129 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+
+<div class="friend-search">
+    <h4>Invite a Friend</h4>
+    <p class="text-muted mb-4">
+        Connect with friends by sending them an invitation via email.
+    </p>
+    
+    <div class="invite-form">
+        <div class="form-group mb-3">
+            <label for="emailInvites" class="form-label">Email Addresses</label>
+            <textarea id="emailInvites" class="form-control" rows="3" 
+                      placeholder="Enter email addresses (separate multiple emails with commas)"
+                      @bind="inviteEmails"></textarea>
+            <div class="form-text">
+                An invitation will be sent to these email addresses to join OpenWish and connect with you.
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
+            @if (_sendingInvites)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="ms-1">Sending...</span>
+            }
+            else
+            {
+                <span><i class="bi bi-envelope"></i> Send Invitations</span>
+            }
+        </button>
+    </div>
+    
+    @if (_error)
+    {
+        <div class="alert alert-danger mt-3">
+            @_errorMessage
+        </div>
+    }
+    
+    @if (_success)
+    {
+        <div class="alert alert-success mt-3">
+            @_successMessage
+        </div>
+    }
+</div>
+
+@code {
+    // Invite by email variables
+    private string inviteEmails = "";
+    private bool _sendingInvites = false;
+    
+    // Shared feedback variables
+    private bool _error = false;
+    private bool _success = false;
+    private string _errorMessage = "An error occurred. Please try again.";
+    private string _successMessage = "";
+    private string? _currentUserId;
+    
+    private async Task SendEmailInvites()
+    {
+        if (string.IsNullOrWhiteSpace(inviteEmails))
+        {
+            _error = true;
+            _success = false;
+            _errorMessage = "Please enter at least one email address.";
+            return;
+        }
+        
+        try
+        {
+            _sendingInvites = true;
+            _error = false;
+            _success = false;
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+            
+            if (_currentUserId != null)
+            {
+                // Split emails by comma and clean up
+                var emails = inviteEmails.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(e => e.Trim())
+                    .Where(e => !string.IsNullOrWhiteSpace(e))
+                    .ToList();
+                
+                if (!emails.Any())
+                {
+                    _error = true;
+                    _errorMessage = "Please enter at least one valid email address.";
+                    return;
+                }
+                
+                bool result = await FriendService.SendFriendInvitesByEmailAsync(_currentUserId, emails);
+                
+                if (result)
+                {
+                    _success = true;
+                    _successMessage = emails.Count == 1 
+                        ? "Invitation sent successfully."
+                        : $"Invitations sent successfully to {emails.Count} email addresses.";
+                    inviteEmails = ""; // Clear the input field
+                }
+                else
+                {
+                    _error = true;
+                    _errorMessage = "Some invitations could not be sent. Please check the email addresses and try again.";
+                }
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            _error = true;
+            _errorMessage = ex.Message;
+        }
+        catch
+        {
+            _error = true;
+            _errorMessage = "An error occurred while sending invitations. Please try again.";
+        }
+        finally
+        {
+            _sendingInvites = false;
+            StateHasChanged();
+        }
+    }
+}

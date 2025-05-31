@@ -21,11 +21,21 @@ public class OpenWishProfile : Profile
         CreateMap<EventModel, Event>()
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
+            .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.Date.ToUniversalTime()))
             .ReverseMap()
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => (src.Tags ?? string.Empty).Split(",", StringSplitOptions.RemoveEmptyEntries)))
             .ForMember(dest => dest.EventUsers, opt => opt.MapFrom(src => src.EventUsers)) // map from EF entity to DtoModel
             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy));  // map from EF entity to DtoModel
         CreateMap<EventUserModel, EventUser>()
             .ReverseMap();
+
+        // Social feature mappings
+        CreateMap<FriendModel, Friend>().ReverseMap();
+        CreateMap<FriendRequestModel, FriendRequest>().ReverseMap();
+        CreateMap<WishlistPermissionModel, WishlistPermission>().ReverseMap();
+        CreateMap<ItemCommentModel, ItemComment>().ReverseMap();
+        CreateMap<ItemReservationModel, ItemReservation>().ReverseMap();
+        CreateMap<ActivityLogModel, ActivityLog>().ReverseMap();
+        CreateMap<NotificationModel, Notification>().ReverseMap();
     }
 }

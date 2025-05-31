@@ -18,7 +18,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddScoped<IWebAssemblyHostEnvironment, ServerHostEnvironment>();
 
-        services.AddScoped<IEmailSender<ApplicationUser>, OpenWishEmailSender>();
+        // Register the application-level email sender and the ASP.NET Identity adapter
+        services.AddScoped<IEmailSender<ApplicationUser>, IdentityEmailSenderAdapter>();
         services.AddScoped<IBaseUriService, BaseUriService>();
 
         services.AddScoped<IUserContextService, UserContextService>();

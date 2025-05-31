@@ -57,16 +57,31 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        _wishlist = await WishlistService.GetWishlistAsync(WishlistId);
-        await SetupSecurity();
+        try
+        {
+            _currentUserId = await UserContextService.GetUserIdAsync();
+            _wishlist = await WishlistService.GetWishlistAsync(WishlistId, _currentUserId);
+            await SetupSecurity();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Redirect to access denied or navigate away
+            NavigationManager.NavigateTo("/wishlists", replace: true);
+        }
+        catch (KeyNotFoundException)
+        {
+            // Wishlist not found, redirect to wishlists
+            NavigationManager.NavigateTo("/wishlists", replace: true);
+        }
     }
 
-    private async Task SetupSecurity()
+    private Task SetupSecurity()
     {
-        if (_wishlist == null) return;
-        _currentUserId ??= await UserContextService.GetUserIdAsync();
+        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) 
+            return Task.CompletedTask;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
+        return Task.CompletedTask;
     }
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)

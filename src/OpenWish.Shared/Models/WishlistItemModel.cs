@@ -11,8 +11,8 @@ public class WishlistItemModel : BaseEntityModel
     public int WishlistId { get; set; }
     public bool IsPrivate { get; set; } // Indicates if the item is private
     public int? Priority { get; set; } // Priority level (e.g., 1 = High, 2 = Medium, 3 = Low)
-    //public ICollection<Comment> Comments { get; set; } // Comments on the item
-    //public ICollection<ItemReaction> Reactions { get; set; } // Reactions to the item
+    public ICollection<ItemCommentModel> Comments { get; set; } = [];
+    public ICollection<ItemReservationModel> Reservations { get; set; } = [];
     public int? OrderIndex { get; set; } // Determines the order of items in the wishlist
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
 }

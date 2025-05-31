@@ -1,0 +1,255 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IWishlistService WishlistService
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<h5>Share Wishlist</h5>
+
+<h6 class="mt-3">Share with friends</h6>
+@if (_loading)
+{
+    <div class="spinner-border spinner-border-sm" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+else if (!_friends.Any())
+{
+    <div class="alert alert-info">
+        <p>You don't have any friends yet to share with.</p>
+        <a href="/friends" class="btn btn-primary">Find Friends</a>
+    </div>
+}
+else
+{
+    <div class="form-group mb-3">
+        <select class="form-select" @bind="selectedFriendId">
+            <option value="">Select a friend</option>
+            @foreach (var friend in _friends)
+            {
+                <option value="@friend.Id">@friend.UserName</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label>Permission type:</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="permissionType" id="viewOnly" value="View" checked @onchange="OnPermissionTypeViewChanged" />
+            <label class="form-check-label" for="viewOnly">
+                View Only
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="permissionType" id="edit" value="Edit" @onchange="OnPermissionTypeEditChanged" />
+            <label class="form-check-label" for="edit">
+                Edit Items
+            </label>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" @onclick="ShareWithFriend" disabled="@(string.IsNullOrEmpty(selectedFriendId))">
+        <i class="bi bi-share"></i> Share
+    </button>
+}
+
+<h6 class="mt-4">Create sharing link</h6>
+<div class="form-group mb-3">
+    <label>Permission type:</label>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="linkPermission" id="linkViewOnly" value="View" checked @onchange="OnLinkPermissionTypeViewChanged" />
+        <label class="form-check-label" for="linkViewOnly">
+            View Only
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="linkPermission" id="linkEdit" value="Edit" @onchange="OnLinkPermissionTypeEditChanged" />
+        <label class="form-check-label" for="linkEdit">
+            Edit Items
+        </label>
+    </div>
+</div>
+
+<div class="form-group mb-3">
+    <label>Link expires after:</label>
+    <select class="form-select" @bind="expirationDays">
+        <option value="1">1 day</option>
+        <option value="7">7 days</option>
+        <option value="30">30 days</option>
+        <option value="0">Never expires</option>
+    </select>
+</div>
+
+<button class="btn btn-primary" @onclick="GenerateLink">
+    <i class="bi bi-link"></i> Generate Link
+</button>
+
+@if (!string.IsNullOrEmpty(sharingLink))
+{
+    <div class="mt-3">
+        <div class="input-group">
+            <input type="text" class="form-control" readonly value="@sharingLink" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="CopyToClipboard">
+                <i class="bi bi-clipboard"></i> Copy
+            </button>
+        </div>
+    </div>
+}
+
+@if (_error)
+{
+    <div class="alert alert-danger mt-3">
+        @errorMessage
+    </div>
+}
+
+@if (_success)
+{
+    <div class="alert alert-success mt-3">
+        @successMessage
+    </div>
+}
+
+@code {
+    private void OnPermissionTypeViewChanged(ChangeEventArgs e)
+    {
+        permissionType = "View";
+    }
+
+    private void OnPermissionTypeEditChanged(ChangeEventArgs e)
+    {
+        permissionType = "Edit";
+    }
+
+    private void OnLinkPermissionTypeViewChanged(ChangeEventArgs e)
+    {
+        linkPermissionType = "View";
+    }
+
+    private void OnLinkPermissionTypeEditChanged(ChangeEventArgs e)
+    {
+        linkPermissionType = "Edit";
+    }
+    [Parameter]
+    public int WishlistId { get; set; }
+
+    private List<ApplicationUserModel> _friends = [];
+    private bool _loading = true;
+    private bool _error = false;
+    private string errorMessage = "An error occurred. Please try again.";
+    private bool _success = false;
+    private string successMessage = "";
+
+    private string selectedFriendId = "";
+    private string permissionType = "View";
+    private string linkPermissionType = "View";
+    private int expirationDays = 7;
+    private string sharingLink = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFriends();
+    }
+
+    private async Task LoadFriends()
+    {
+        try
+        {
+            _loading = true;
+            _error = false;
+
+            var currentUserId = await UserContextService.GetUserIdAsync();
+
+            if (currentUserId != null)
+            {
+                _friends = (await FriendService.GetFriendsAsync(currentUserId)).ToList();
+            }
+        }
+        catch
+        {
+            _error = true;
+            errorMessage = "Could not load your friends. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShareWithFriend()
+    {
+        try
+        {
+            _error = false;
+            _success = false;
+
+            if (string.IsNullOrEmpty(selectedFriendId))
+            {
+                _error = true;
+                errorMessage = "Please select a friend to share with.";
+                return;
+            }
+
+            await WishlistService.ShareWishlistAsync(WishlistId, selectedFriendId, permissionType);
+
+            _success = true;
+            successMessage = "Wishlist shared successfully!";
+            selectedFriendId = "";
+        }
+        catch
+        {
+            _error = true;
+            errorMessage = "Failed to share wishlist. Please try again.";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task GenerateLink()
+    {
+        try
+        {
+            _error = false;
+            _success = false;
+
+            TimeSpan? expiration = expirationDays > 0 ? TimeSpan.FromDays(expirationDays) : null;
+
+            var token = await WishlistService.CreateSharingLinkAsync(WishlistId, linkPermissionType, expiration);
+
+            var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+            sharingLink = $"{baseUrl}/wishlist/share/{token}";
+
+            _success = true;
+            successMessage = "Link generated successfully!";
+        }
+        catch
+        {
+            _error = true;
+            errorMessage = "Failed to generate sharing link. Please try again.";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", sharingLink);
+
+            _success = true;
+            successMessage = "Link copied to clipboard!";
+            StateHasChanged();
+        }
+        catch
+        {
+            _error = true;
+            errorMessage = "Failed to copy to clipboard. Please copy the link manually.";
+            StateHasChanged();
+        }
+    }
+}

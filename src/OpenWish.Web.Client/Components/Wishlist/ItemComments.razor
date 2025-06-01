@@ -97,6 +97,15 @@
         await LoadComments();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _error && _currentUserId == null)
+        {
+            // If we had an error during SSR and no user ID, try again after first render
+            await LoadComments();
+        }
+    }
+
     private async Task LoadComments()
     {
         try
@@ -108,10 +117,11 @@
             var comments = await WishlistService.GetItemCommentsAsync(WishlistId, ItemId);
             _comments = comments.ToList();
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
-            _errorMessage = "Failed to load comments. Please try again.";
+            _errorMessage = "Failed to load comments. This may be resolved when the page becomes interactive.";
+            System.Diagnostics.Debug.WriteLine($"LoadComments error: {ex.Message}");
         }
         finally
         {
@@ -136,11 +146,17 @@
                 commentText = "";
                 await LoadComments();
             }
+            else
+            {
+                _error = true;
+                _errorMessage = "Please log in to add comments.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
             _errorMessage = "Failed to add comment. Please try again.";
+            System.Diagnostics.Debug.WriteLine($"AddComment error: {ex.Message}");
             StateHasChanged();
         }
     }
@@ -157,11 +173,17 @@
                 await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
                 await LoadComments();
             }
+            else
+            {
+                _error = true;
+                _errorMessage = "Please log in to delete comments.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
             _errorMessage = "Failed to delete comment. Please try again.";
+            System.Diagnostics.Debug.WriteLine($"DeleteComment error: {ex.Message}");
             StateHasChanged();
         }
     }

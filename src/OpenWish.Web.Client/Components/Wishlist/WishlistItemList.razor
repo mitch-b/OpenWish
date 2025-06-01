@@ -34,7 +34,7 @@
                             @if (!string.IsNullOrEmpty(item.Url))
                             {
                                 <a href="@item.Url" target="_blank" class="ms-2 text-decoration-none">
-                                    <i class="bi bi-box-arrow-up-right"></i>
+                                    🔗
                                 </a>
                             }
                         </td>
@@ -59,7 +59,7 @@
                                         class="btn btn-sm btn-primary"
                                         @onclick="() => StartEdit(item.Id)"
                                         title="Edit item">
-                                        <i class="bi bi-pencil"></i>
+                                        ✏️
                                     </button>
                                 }
                                 @if (OnDelete.HasDelegate)
@@ -68,7 +68,7 @@
                                         class="btn btn-sm btn-danger"
                                         @onclick="() => ShowDeleteConfirm(item)"
                                         title="Delete item">
-                                        <i class="bi bi-trash"></i>
+                                        🗑️
                                     </button>
                                 }
                                 @if (ShowInteractions)
@@ -77,7 +77,7 @@
                                         class="btn btn-sm btn-outline-secondary"
                                         @onclick="() => ToggleInteractions(item.Id)"
                                         title="Show interactions">
-                                        <i class="bi bi-chevron-@(ExpandedInteractions.Contains(item.Id) ? "up" : "down")"></i>
+                                        @(ExpandedInteractions.Contains(item.Id) ? "⬆️" : "⬇️")
                                     </button>
                                 }
                             </div>

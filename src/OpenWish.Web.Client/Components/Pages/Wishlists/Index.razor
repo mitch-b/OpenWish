@@ -3,6 +3,7 @@
 
 @using Microsoft.Extensions.Logging
 @using OpenWish.Web.Client.Components.Wishlist
+@using OpenWish.Shared.Services
 
 @inject ILogger<Index> Logger
 @inject IUserContextService UserContextService
@@ -10,59 +11,122 @@
 
 @rendermode InteractiveAuto
 
-<h3>My Wishlists</h3>
-
-<div class="mb-3 d-flex justify-content-between align-items-center">
-    <a href="/wishlists/new" class="btn btn-primary">Create New Wishlist</a>
-    <div class="d-flex gap-2">
-        <div class="input-group">
-            <input type="text" class="form-control" placeholder="Search..." 
-                   @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
-            <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
-                <i class="bi bi-search"></i> Search
-            </button>
-        </div>
-        <select class="form-select" style="width: auto" @bind="filterBy">
-            <option value="all">All Wishlists</option>
-            <option value="collaborative">Collaborative Only</option>
-            <option value="private">Private Only</option>
-        </select>
-        <select class="form-select" style="width: auto" @bind="sortBy" @bind:after="HandleSort">
-            <option value="nameAsc">Name (A-Z)</option>
-            <option value="nameDesc">Name (Z-A)</option>
-            <option value="recent">Most Recent</option>
-            <option value="oldest">Oldest</option>
-            <option value="itemCount">Most Items</option>
-        </select>
-    </div>
-</div>
-
-@if (filteredWishlists == null)
-{
-    <p>Loading...</p>
-}
-else if (!filteredWishlists.Any())
-{
-    <p>No wishlists found. Create one to get started!</p>
-}
-else
-{
+<div class="container mt-4">
     <div class="row">
-        @foreach (var wishlist in filteredWishlists)
+        <div class="col-12 mb-4">
+            <h2>Wishlists</h2>
+            <p class="text-muted">Manage your wishlists and explore friends' wishlists.</p>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-3" id="wishlistTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "my-wishlists" ? "active" : "")" id="my-wishlists-tab" 
+                    @onclick='() => SetActiveTab("my-wishlists")' type="button" role="tab">
+                <i class="bi bi-list-ul me-2"></i>My Wishlists
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(activeTab == "friends-wishlists" ? "active" : "")" id="friends-wishlists-tab" 
+                    @onclick='() => SetActiveTab("friends-wishlists")' type="button" role="tab">
+                <i class="bi bi-people me-2"></i>Friends' Wishlists
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="wishlistTabsContent">
+        @if (activeTab == "my-wishlists")
         {
-            <div class="col-md-4 mb-4">
-                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+            <div class="tab-pane fade show active">
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <a href="/wishlists/new" class="btn btn-primary">Create New Wishlist</a>
+                    <div class="d-flex gap-2">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Search..." 
+                                   @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                            <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                        <select class="form-select" style="width: auto" @bind="filterBy">
+                            <option value="all">All Wishlists</option>
+                            <option value="collaborative">Collaborative Only</option>
+                            <option value="private">Private Only</option>
+                        </select>
+                        <select class="form-select" style="width: auto" @bind="sortBy" @bind:after="HandleSort">
+                            <option value="nameAsc">Name (A-Z)</option>
+                            <option value="nameDesc">Name (Z-A)</option>
+                            <option value="recent">Most Recent</option>
+                            <option value="oldest">Oldest</option>
+                            <option value="itemCount">Most Items</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (filteredWishlists == null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (!filteredWishlists.Any())
+                {
+                    <p>No wishlists found. Create one to get started!</p>
+                }
+                else
+                {
+                    <div class="row">
+                        @foreach (var wishlist in filteredWishlists)
+                        {
+                            <div class="col-md-4 mb-4">
+                                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (activeTab == "friends-wishlists")
+        {
+            <div class="tab-pane fade show active">
+                @if (loadingFriendsWishlists)
+                {
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else if (friendsWishlists?.Any() == true)
+                {
+                    <div class="row">
+                        @foreach (var wishlist in friendsWishlists)
+                        {
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <WishlistCard Wishlist="@wishlist" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No public wishlists from your friends yet. When your friends create public wishlists, they'll appear here.
+                    </div>
+                }
             </div>
         }
     </div>
-}
+</div>
 
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     private IEnumerable<WishlistModel>? wishlists;
     private IEnumerable<WishlistModel>? filteredWishlists;
+    private IEnumerable<WishlistModel>? friendsWishlists;
     private string? _userId;
+    private string activeTab = "my-wishlists";
+    private bool loadingFriendsWishlists = false;
     
     // Filter and sort properties
     private string searchTerm = "";
@@ -74,12 +138,58 @@ else
         try
         {
             _userId = await UserContextService.GetUserIdAsync();
-            await LoadWishlists();
+            if (_userId != null)
+            {
+                await LoadWishlists();
+            }
+            else
+            {
+                // During SSR, authentication might not be ready yet
+                // The component will re-render when it becomes interactive
+                wishlists = new List<WishlistModel>();
+                ApplyFiltersAndSort();
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing the Index component.");
+            // Set empty collections to prevent null reference errors
+            wishlists = new List<WishlistModel>();
+            ApplyFiltersAndSort();
         }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && (_userId == null || !wishlists?.Any() == true))
+        {
+            // If we didn't get user data during SSR, try again after first render
+            try
+            {
+                _userId = await UserContextService.GetUserIdAsync();
+                if (_userId != null)
+                {
+                    await LoadWishlists();
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading user data after first render.");
+            }
+        }
+    }
+
+    private async Task SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        
+        if (tab == "friends-wishlists" && friendsWishlists == null)
+        {
+            await LoadFriendsWishlists();
+        }
+        
+        StateHasChanged();
     }
 
     private async Task LoadWishlists()
@@ -88,6 +198,44 @@ else
         {
             wishlists = await WishlistService.GetUserWishlistsAsync(_userId);
             ApplyFiltersAndSort();
+        }
+    }
+
+    private async Task LoadFriendsWishlists()
+    {
+        Logger.LogInformation($"LoadFriendsWishlists START {DateTime.Now:O} Task: {Task.CurrentId}");
+        try
+        {
+            loadingFriendsWishlists = true;
+            if (_userId != null)
+            {
+                friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(_userId);
+            }
+            else
+            {
+                // If userId is null (e.g., during SSR), retry getting it
+                _userId = await UserContextService.GetUserIdAsync();
+                if (_userId != null)
+                {
+                    friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(_userId);
+                }
+                else
+                {
+                    friendsWishlists = new List<WishlistModel>();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading friends' wishlists");
+            // Handle error gracefully - show empty list rather than crashing
+            friendsWishlists = new List<WishlistModel>();
+        }
+        finally
+        {
+            loadingFriendsWishlists = false;
+            Logger.LogInformation($"LoadFriendsWishlists END {DateTime.Now:O} Task: {Task.CurrentId}");
+            StateHasChanged();
         }
     }
 

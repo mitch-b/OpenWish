@@ -96,13 +96,33 @@
         await CheckReservation();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _error && _currentUserId == null)
+        {
+            // If we had an error during SSR and no user ID, try again after first render
+            await CheckReservation();
+        }
+    }
+
+    [Inject] private ILogger<ItemReservation> Logger { get; set; } = default!;
+
     private async Task CheckReservation()
     {
+        Logger.LogInformation($"CheckReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
             _error = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            // If no user ID available (e.g., during SSR), don't show reservation options
+            if (_currentUserId == null)
+            {
+                _loading = false;
+                _isReserved = false;
+                return;
+            }
 
             // Check if the current user is the wishlist owner
             if (_currentUserId == OwnerId)
@@ -125,20 +145,24 @@
                 _isReserved = false;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            // Handle errors gracefully - could be SSR issues or actual service errors
             _error = true;
-            _errorMessage = "Failed to check reservation status. Please try again.";
+            _errorMessage = "Failed to check reservation status. This may be resolved when the page becomes interactive.";
+            Logger.LogError(ex, "CheckReservation error");
         }
         finally
         {
             _loading = false;
+            Logger.LogInformation($"CheckReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
 
     private async Task ReserveItem()
     {
+        Logger.LogInformation($"ReserveItem START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -159,21 +183,29 @@
                     _errorMessage = "This item has already been reserved by someone else.";
                 }
             }
+            else
+            {
+                _error = true;
+                _errorMessage = "Please log in to reserve items.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
             _errorMessage = "Failed to reserve this item. Please try again.";
+            Logger.LogError(ex, "ReserveItem error");
         }
         finally
         {
             _loading = false;
+            Logger.LogInformation($"ReserveItem END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
 
     private async Task CancelReservation()
     {
+        Logger.LogInformation($"CancelReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -194,6 +226,7 @@
         finally
         {
             _loading = false;
+            Logger.LogInformation($"CancelReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }

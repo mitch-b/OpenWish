@@ -15,25 +15,49 @@ public class UserContextService : IUserContextService
 
     public async Task<string?> GetUserIdAsync()
     {
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        try
+        {
+            var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-        return user.FindFirstValue(ClaimTypes.NameIdentifier);
+            return user.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+        catch
+        {
+            // During SSR or if authentication state is not available
+            return null;
+        }
     }
 
     public async Task<string?> GetUserNameAsync()
     {
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        try
+        {
+            var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-        return user.Identity?.Name;
+            return user.Identity?.Name;
+        }
+        catch
+        {
+            // During SSR or if authentication state is not available
+            return null;
+        }
     }
 
     public async Task<bool> IsAuthenticatedAsync()
     {
-        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        try
+        {
+            var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-        return user.Identity?.IsAuthenticated ?? false;
+            return user.Identity?.IsAuthenticated ?? false;
+        }
+        catch
+        {
+            // During SSR or if authentication state is not available
+            return false;
+        }
     }
 }

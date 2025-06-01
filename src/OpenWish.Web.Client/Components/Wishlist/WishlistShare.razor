@@ -4,6 +4,7 @@
 @inject IWishlistService WishlistService
 @inject IFriendService FriendService
 @inject IUserContextService UserContextService
+@inject ILogger<WishlistShare> Logger
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
@@ -156,6 +157,7 @@ else
 
     private async Task LoadFriends()
     {
+        Logger.LogInformation($"LoadFriends START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -176,6 +178,7 @@ else
         finally
         {
             _loading = false;
+            Logger.LogInformation($"LoadFriends END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }

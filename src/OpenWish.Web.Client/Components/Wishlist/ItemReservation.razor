@@ -96,6 +96,15 @@
         await CheckReservation();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _error && _currentUserId == null)
+        {
+            // If we had an error during SSR and no user ID, try again after first render
+            await CheckReservation();
+        }
+    }
+
     private async Task CheckReservation()
     {
         try
@@ -103,6 +112,14 @@
             _loading = true;
             _error = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            // If no user ID available (e.g., during SSR), don't show reservation options
+            if (_currentUserId == null)
+            {
+                _loading = false;
+                _isReserved = false;
+                return;
+            }
 
             // Check if the current user is the wishlist owner
             if (_currentUserId == OwnerId)
@@ -125,10 +142,13 @@
                 _isReserved = false;
             }
         }
-        catch
+        catch (Exception ex)
         {
+            // Handle errors gracefully - could be SSR issues or actual service errors
             _error = true;
-            _errorMessage = "Failed to check reservation status. Please try again.";
+            _errorMessage = "Failed to check reservation status. This may be resolved when the page becomes interactive.";
+            // Log the actual error for debugging
+            System.Diagnostics.Debug.WriteLine($"CheckReservation error: {ex.Message}");
         }
         finally
         {
@@ -159,11 +179,17 @@
                     _errorMessage = "This item has already been reserved by someone else.";
                 }
             }
+            else
+            {
+                _error = true;
+                _errorMessage = "Please log in to reserve items.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
             _errorMessage = "Failed to reserve this item. Please try again.";
+            System.Diagnostics.Debug.WriteLine($"ReserveItem error: {ex.Message}");
         }
         finally
         {

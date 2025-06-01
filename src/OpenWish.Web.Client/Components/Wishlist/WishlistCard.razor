@@ -76,8 +76,16 @@ else
     {
         if (Wishlist != null)
         {
-            var currentUserId = await UserContextService.GetUserIdAsync();
-            isCurrentUserOwner = !string.IsNullOrEmpty(currentUserId) && currentUserId == Wishlist.OwnerId;
+            try
+            {
+                var currentUserId = await UserContextService.GetUserIdAsync();
+                isCurrentUserOwner = !string.IsNullOrEmpty(currentUserId) && currentUserId == Wishlist.OwnerId;
+            }
+            catch
+            {
+                // During SSR, authentication might not be available yet
+                isCurrentUserOwner = false;
+            }
         }
     }
 

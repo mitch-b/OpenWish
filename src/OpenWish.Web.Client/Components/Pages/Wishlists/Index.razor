@@ -138,11 +138,45 @@
         try
         {
             _userId = await UserContextService.GetUserIdAsync();
-            await LoadWishlists();
+            if (_userId != null)
+            {
+                await LoadWishlists();
+            }
+            else
+            {
+                // During SSR, authentication might not be ready yet
+                // The component will re-render when it becomes interactive
+                wishlists = new List<WishlistModel>();
+                ApplyFiltersAndSort();
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing the Index component.");
+            // Set empty collections to prevent null reference errors
+            wishlists = new List<WishlistModel>();
+            ApplyFiltersAndSort();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && (_userId == null || !wishlists?.Any() == true))
+        {
+            // If we didn't get user data during SSR, try again after first render
+            try
+            {
+                _userId = await UserContextService.GetUserIdAsync();
+                if (_userId != null)
+                {
+                    await LoadWishlists();
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading user data after first render.");
+            }
         }
     }
 
@@ -176,11 +210,24 @@
             {
                 friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(_userId);
             }
+            else
+            {
+                // If userId is null (e.g., during SSR), retry getting it
+                _userId = await UserContextService.GetUserIdAsync();
+                if (_userId != null)
+                {
+                    friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(_userId);
+                }
+                else
+                {
+                    friendsWishlists = new List<WishlistModel>();
+                }
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading friends' wishlists");
-            // Handle error silently for now
+            // Handle error gracefully - show empty list rather than crashing
             friendsWishlists = new List<WishlistModel>();
         }
         finally

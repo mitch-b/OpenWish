@@ -1,6 +1,9 @@
 @inject IWishlistService WishlistService
 @inject ILogger<WishlistCard> Logger
 @inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
+
+@using OpenWish.Shared.Services
 
 @if (Wishlist == null)
 {
@@ -31,25 +34,28 @@ else
             </p>
             <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">Created by @Wishlist.Owner?.UserName</small>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-outline-secondary btn-sm kebab-menu"
-                            type="button"
-                            id="dropdownMenu@(Wishlist.Id)"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                            @onclick:stopPropagation="true">
-                        ⋮
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
-                        <li>
-                            <button class="dropdown-item text-danger"
-                                    @onclick:stopPropagation="true"
-                                    @onclick="ShowDeleteDialog">
-                                Delete
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+                @if (isCurrentUserOwner)
+                {
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-outline-secondary btn-sm kebab-menu"
+                                type="button"
+                                id="dropdownMenu@(Wishlist.Id)"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                                @onclick:stopPropagation="true">
+                            ⋮
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
+                            <li>
+                                <button class="dropdown-item text-danger"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="ShowDeleteDialog">
+                                    Delete
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -63,7 +69,17 @@ else
     [Parameter]
     public EventCallback<WishlistModel> OnDelete { get; set; }
 
-    private WishlistDeleteDialog deleteDialog;
+    private WishlistDeleteDialog deleteDialog = default!;
+    private bool isCurrentUserOwner = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Wishlist != null)
+        {
+            var currentUserId = await UserContextService.GetUserIdAsync();
+            isCurrentUserOwner = !string.IsNullOrEmpty(currentUserId) && currentUserId == Wishlist.OwnerId;
+        }
+    }
 
     private void ShowDeleteDialog()
     {

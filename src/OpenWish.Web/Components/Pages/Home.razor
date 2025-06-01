@@ -7,7 +7,7 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
-@inject INotificationService NotificationService
+
 
 @rendermode InteractiveServer
 
@@ -142,21 +142,7 @@
                                 </div>
                             }
                             
-                            @if (_unreadNotificationCount > 0)
-                            {
-                                <div class="col-12">
-                                    <div class="card border-primary">
-                                        <div class="card-body">
-                                            <h6 class="card-title text-primary">
-                                                <span style="font-size: 1.1rem;">🔔</span> Notifications
-                                                <span class="badge bg-primary ms-2">@_unreadNotificationCount</span>
-                                            </h6>
-                                            <p class="card-text small mb-2">You have unread notifications</p>
-                                            <button class="btn btn-primary btn-sm" @onclick="ShowNotifications">View All</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
+
                             
                             @if (_upcomingEvents?.Any() == true)
                             {
@@ -256,7 +242,7 @@
     private List<EventModel>? _events;
     private List<EventModel>? _upcomingEvents;
     private IEnumerable<FriendRequestModel>? _pendingFriendRequests;
-    private int _unreadNotificationCount;
+
     private string? _userId;
     
     protected override async Task OnInitializedAsync()
@@ -267,7 +253,7 @@
             await LoadFeaturedWishlists();
             await LoadEvents();
             await LoadFriendRequests();
-            await LoadNotificationCount();
+
         }
     }
 
@@ -311,21 +297,7 @@
         }
     }
 
-    private async Task LoadNotificationCount()
-    {
-        if (_userId is not null)
-        {
-            try
-            {
-                _unreadNotificationCount = await NotificationService.GetUnreadNotificationCountAsync(_userId);
-            }
-            catch
-            {
-                // Handle gracefully if notification service is not available
-                _unreadNotificationCount = 0;
-            }
-        }
-    }
+
 
     private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {
@@ -337,9 +309,5 @@
         await LoadEvents();
     }
 
-    private void ShowNotifications()
-    {
-        // For now, this could navigate to a notifications page
-        // or we could implement a modal/dropdown here in the future
-    }
+
 }

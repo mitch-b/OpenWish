@@ -1,0 +1,305 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+@inject INotificationService NotificationService
+@inject IUserContextService UserContextService
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<div class="notification-flyout-container position-relative">
+    <!-- Notification Bell Button -->
+    <button class="btn btn-link text-decoration-none notification-bell" 
+            @onclick="ToggleFlyout" 
+            @onclick:stopPropagation="true"
+            type="button">
+        <span style="font-size: 1.2rem;">🔔</span>
+        @if (_unreadCount > 0)
+        {
+            <span class="badge bg-danger position-absolute translate-middle rounded-pill notification-badge">
+                @(_unreadCount > 99 ? "99+" : _unreadCount.ToString())
+            </span>
+        }
+    </button>
+
+    <!-- Flyout Panel -->
+    @if (_isVisible)
+    {
+        <div class="notification-flyout shadow-lg" @onclick:stopPropagation="true">
+            <div class="notification-header d-flex justify-content-between align-items-center p-3 border-bottom">
+                <h6 class="mb-0">Notifications</h6>
+                <div class="d-flex gap-2">
+                    @if (_notifications?.Any(n => !n.IsRead) == true)
+                    {
+                        <button class="btn btn-sm btn-outline-primary" @onclick="MarkAllAsRead" disabled="@_isLoading">
+                            Mark All Read
+                        </button>
+                    }
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="CloseFlyout">
+                        ✕
+                    </button>
+                </div>
+            </div>
+            
+            <div class="notification-content">
+                @if (_isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">Loading notifications...</div>
+                    </div>
+                }
+                else if (_notifications?.Any() == true)
+                {
+                    <div class="notification-list">
+                        @foreach (var notification in _notifications.Take(20))
+                        {
+                            <div class="notification-item @(notification.IsRead ? "read" : "unread")" 
+                                 @onmouseenter="() => MarkAsReadOnHover(notification)"
+                                 @ontouchstart="() => MarkAsReadOnTouch(notification)">
+                                <div class="d-flex justify-content-between align-items-start p-3">
+                                    <div class="notification-body flex-grow-1">
+                                        @if (!string.IsNullOrEmpty(notification.Title))
+                                        {
+                                            <div class="notification-title fw-semibold mb-1">@notification.Title</div>
+                                        }
+                                        <div class="notification-message small">@notification.Message</div>
+                                        <div class="notification-date text-muted small">@notification.Date.ToString("MMM dd, yyyy HH:mm")</div>
+                                    </div>
+                                    <div class="notification-actions">
+                                        @if (!notification.IsRead)
+                                        {
+                                            <span class="unread-indicator bg-primary rounded-circle"></span>
+                                        }
+                                        <button class="btn btn-sm btn-outline-danger ms-2" 
+                                                @onclick="() => ShowDeleteConfirmation(notification)" 
+                                                @onclick:stopPropagation="true">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    @if (_notifications.Count() > 20)
+                    {
+                        <div class="text-center p-3 border-top">
+                            <small class="text-muted">Showing 20 of @_notifications.Count() notifications</small>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center p-4 text-muted">
+                        <div style="font-size: 2rem;">📭</div>
+                        <div class="mt-2">No notifications</div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (_showDeleteConfirmation && _notificationToDelete != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title">Delete Notification</h6>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Are you sure you want to delete this notification?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="ConfirmDelete" disabled="@_isDeleting">
+                        @if (_isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isVisible = false;
+    private bool _isLoading = false;
+    private bool _isDeleting = false;
+    private bool _showDeleteConfirmation = false;
+    private int _unreadCount = 0;
+    private string? _userId;
+    private IEnumerable<NotificationModel>? _notifications;
+    private NotificationModel? _notificationToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await UserContextService.GetUserIdAsync();
+        if (_userId != null)
+        {
+            await LoadNotificationCount();
+        }
+    }
+
+    private async Task LoadNotificationCount()
+    {
+        if (_userId is not null)
+        {
+            try
+            {
+                _unreadCount = await NotificationService.GetUnreadNotificationCountAsync(_userId);
+                StateHasChanged();
+            }
+            catch
+            {
+                _unreadCount = 0;
+            }
+        }
+    }
+
+    private async Task LoadNotifications()
+    {
+        if (_userId is not null)
+        {
+            _isLoading = true;
+            try
+            {
+                _notifications = await NotificationService.GetUserNotificationsAsync(_userId, includeRead: true);
+            }
+            catch
+            {
+                _notifications = new List<NotificationModel>();
+            }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    private async Task ToggleFlyout()
+    {
+        _isVisible = !_isVisible;
+        if (_isVisible && _notifications == null)
+        {
+            await LoadNotifications();
+        }
+        StateHasChanged();
+    }
+
+    private void CloseFlyout()
+    {
+        _isVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task MarkAsReadOnHover(NotificationModel notification)
+    {
+        if (!notification.IsRead)
+        {
+            await MarkNotificationAsRead(notification);
+        }
+    }
+
+    private async Task MarkAsReadOnTouch(NotificationModel notification)
+    {
+        // For mobile devices, mark as read on touch
+        if (!notification.IsRead)
+        {
+            await MarkNotificationAsRead(notification);
+        }
+    }
+
+    private async Task MarkNotificationAsRead(NotificationModel notification)
+    {
+        try
+        {
+            var success = await NotificationService.MarkNotificationAsReadAsync(notification.Id);
+            if (success)
+            {
+                notification.IsRead = true;
+                await LoadNotificationCount();
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Handle gracefully
+        }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        if (_userId is not null)
+        {
+            try
+            {
+                var success = await NotificationService.MarkAllNotificationsAsReadAsync(_userId);
+                if (success)
+                {
+                    if (_notifications != null)
+                    {
+                        foreach (var notification in _notifications)
+                        {
+                            notification.IsRead = true;
+                        }
+                    }
+                    await LoadNotificationCount();
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // Handle gracefully
+            }
+        }
+    }
+
+    private void ShowDeleteConfirmation(NotificationModel notification)
+    {
+        _notificationToDelete = notification;
+        _showDeleteConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteConfirmation = false;
+        _notificationToDelete = null;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_notificationToDelete != null)
+        {
+            _isDeleting = true;
+            try
+            {
+                var success = await NotificationService.DeleteNotificationAsync(_notificationToDelete.Id);
+                if (success)
+                {
+                    _notifications = _notifications?.Where(n => n.Id != _notificationToDelete.Id);
+                    await LoadNotificationCount();
+                }
+            }
+            catch
+            {
+                // Handle gracefully
+            }
+            finally
+            {
+                _isDeleting = false;
+                _showDeleteConfirmation = false;
+                _notificationToDelete = null;
+                StateHasChanged();
+            }
+        }
+    }
+}

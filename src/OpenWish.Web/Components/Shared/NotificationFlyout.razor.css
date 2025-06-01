@@ -1,0 +1,128 @@
+.notification-flyout-container {
+    display: inline-block;
+}
+
+.notification-bell {
+    color: #6c757d;
+    padding: 0.375rem 0.5rem;
+    border: none;
+    background: none;
+    position: relative;
+}
+
+.notification-bell:hover {
+    color: #495057;
+}
+
+.notification-badge {
+    top: 0;
+    right: 0;
+    font-size: 0.65rem;
+    min-width: 1.2em;
+    height: 1.2em;
+    line-height: 1.2em;
+    padding: 0;
+}
+
+.notification-flyout {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 400px;
+    max-height: 600px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    z-index: 1050;
+    overflow: hidden;
+}
+
+.notification-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.notification-content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.notification-list {
+    background: white;
+}
+
+.notification-item {
+    border-bottom: 1px solid #f1f3f4;
+    transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #fff3cd;
+}
+
+.notification-item.unread:hover {
+    background-color: #ffeaa7;
+}
+
+.notification-item.read {
+    background-color: white;
+}
+
+.notification-body {
+    min-width: 0;
+}
+
+.notification-title {
+    font-size: 0.9rem;
+    color: #212529;
+}
+
+.notification-message {
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+.notification-date {
+    font-size: 0.75rem;
+    color: #adb5bd;
+    margin-top: 0.25rem;
+}
+
+.notification-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.unread-indicator {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .notification-flyout {
+        width: 350px;
+        right: -75px;
+    }
+}
+
+@media (max-width: 576px) {
+    .notification-flyout {
+        width: 300px;
+        right: -125px;
+    }
+}
+
+/* Ensure flyout is visible on small screens */
+@media (max-width: 400px) {
+    .notification-flyout {
+        width: 280px;
+        right: -150px;
+    }
+}

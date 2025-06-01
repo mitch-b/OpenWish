@@ -25,6 +25,7 @@ jobs:
           wget https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh -O dotnet-install.sh
           chmod +x dotnet-install.sh
           ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
+          rm -f dotnet-install.sh
           echo "DOTNET_ROOT=/usr/share/dotnet" >> $GITHUB_ENV
           echo "/usr/share/dotnet" >> $GITHUB_PATH
 

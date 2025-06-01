@@ -6,10 +6,15 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
+        <div class="top-row px-4 d-flex justify-content-between align-items-center">
             <a href="https://github.com/mitch-b/OpenWish" target="_blank">
                 <img src="images/github.svg" alt="GitHub" class="github" />
             </a>
+            <AuthorizeView>
+                <Authorized>
+                    <NotificationFlyout />
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">

@@ -250,10 +250,16 @@
         _userId = await UserContextService.GetUserIdAsync();
         if (_userId != null)
         {
-            await LoadFeaturedWishlists();
-            await LoadEvents();
-            await LoadFriendRequests();
-
+            try
+            {
+                await LoadFeaturedWishlists();
+                await LoadEvents();
+                await LoadFriendRequests();
+            }
+            catch
+            {
+                // Handle gracefully if any loading fails
+            }
         }
     }
 
@@ -261,7 +267,14 @@
     {
         if (_userId is not null)
         {
-            _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId)).ToList();
+            try
+            {
+                _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId)).ToList();
+            }
+            catch
+            {
+                _featuredWishlists = new List<WishlistModel>();
+            }
         }
     }
 
@@ -269,15 +282,23 @@
     {
         if (_userId is not null)
         {
-            var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
-            _events = allEvents;
-            
-            // Filter upcoming events for the next 30 days
-            var thirtyDaysFromNow = DateTimeOffset.UtcNow.AddDays(30);
-            _upcomingEvents = allEvents
-                .Where(e => e.Date <= thirtyDaysFromNow && e.Date >= DateTimeOffset.UtcNow)
-                .OrderBy(e => e.Date)
-                .ToList();
+            try
+            {
+                var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
+                _events = allEvents;
+                
+                // Filter upcoming events for the next 30 days
+                var thirtyDaysFromNow = DateTimeOffset.UtcNow.AddDays(30);
+                _upcomingEvents = allEvents
+                    .Where(e => e.Date <= thirtyDaysFromNow && e.Date >= DateTimeOffset.UtcNow)
+                    .OrderBy(e => e.Date)
+                    .ToList();
+            }
+            catch
+            {
+                _events = new List<EventModel>();
+                _upcomingEvents = new List<EventModel>();
+            }
         }
     }
 

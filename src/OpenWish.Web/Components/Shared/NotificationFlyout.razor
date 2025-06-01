@@ -29,7 +29,7 @@
                 <div class="d-flex gap-2">
                     @if (_notifications?.Any(n => !n.IsRead) == true)
                     {
-                        <button class="btn btn-sm btn-outline-primary" @onclick="MarkAllAsRead" disabled="@_isLoading">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="MarkAllAsRead" disabled="@(_isLoading || _isMarkingRead)">
                             Mark All Read
                         </button>
                     }
@@ -133,6 +133,7 @@
     private bool _isLoading = false;
     private bool _isDeleting = false;
     private bool _showDeleteConfirmation = false;
+    private bool _isMarkingRead = false;
     private int _unreadCount = 0;
     private string? _userId;
     private IEnumerable<NotificationModel>? _notifications;
@@ -165,7 +166,7 @@
 
     private async Task LoadNotifications()
     {
-        if (_userId is not null)
+        if (_userId is not null && !_isLoading)
         {
             _isLoading = true;
             try
@@ -218,6 +219,9 @@
 
     private async Task MarkNotificationAsRead(NotificationModel notification)
     {
+        if (_isMarkingRead) return;
+        
+        _isMarkingRead = true;
         try
         {
             var success = await NotificationService.MarkNotificationAsReadAsync(notification.Id);
@@ -232,12 +236,17 @@
         {
             // Handle gracefully
         }
+        finally
+        {
+            _isMarkingRead = false;
+        }
     }
 
     private async Task MarkAllAsRead()
     {
-        if (_userId is not null)
+        if (_userId is not null && !_isMarkingRead)
         {
+            _isMarkingRead = true;
             try
             {
                 var success = await NotificationService.MarkAllNotificationsAsReadAsync(_userId);
@@ -257,6 +266,10 @@
             catch
             {
                 // Handle gracefully
+            }
+            finally
+            {
+                _isMarkingRead = false;
             }
         }
     }
@@ -280,12 +293,13 @@
         if (_notificationToDelete != null)
         {
             _isDeleting = true;
+            var notificationIdToDelete = _notificationToDelete.Id;
             try
             {
-                var success = await NotificationService.DeleteNotificationAsync(_notificationToDelete.Id);
+                var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete);
                 if (success)
                 {
-                    _notifications = _notifications?.Where(n => n.Id != _notificationToDelete.Id);
+                    _notifications = _notifications?.Where(n => n.Id != notificationIdToDelete).ToList();
                     await LoadNotificationCount();
                 }
             }

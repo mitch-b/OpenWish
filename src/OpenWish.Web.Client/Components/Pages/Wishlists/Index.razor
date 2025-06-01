@@ -203,6 +203,7 @@
 
     private async Task LoadFriendsWishlists()
     {
+        Logger.LogInformation($"LoadFriendsWishlists START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             loadingFriendsWishlists = true;
@@ -233,6 +234,7 @@
         finally
         {
             loadingFriendsWishlists = false;
+            Logger.LogInformation($"LoadFriendsWishlists END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }

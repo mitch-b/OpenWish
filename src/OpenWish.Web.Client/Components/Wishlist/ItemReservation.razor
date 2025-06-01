@@ -105,8 +105,11 @@
         }
     }
 
+    [Inject] private ILogger<ItemReservation> Logger { get; set; } = default!;
+
     private async Task CheckReservation()
     {
+        Logger.LogInformation($"CheckReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -147,18 +150,19 @@
             // Handle errors gracefully - could be SSR issues or actual service errors
             _error = true;
             _errorMessage = "Failed to check reservation status. This may be resolved when the page becomes interactive.";
-            // Log the actual error for debugging
-            System.Diagnostics.Debug.WriteLine($"CheckReservation error: {ex.Message}");
+            Logger.LogError(ex, "CheckReservation error");
         }
         finally
         {
             _loading = false;
+            Logger.LogInformation($"CheckReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
 
     private async Task ReserveItem()
     {
+        Logger.LogInformation($"ReserveItem START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -189,17 +193,19 @@
         {
             _error = true;
             _errorMessage = "Failed to reserve this item. Please try again.";
-            System.Diagnostics.Debug.WriteLine($"ReserveItem error: {ex.Message}");
+            Logger.LogError(ex, "ReserveItem error");
         }
         finally
         {
             _loading = false;
+            Logger.LogInformation($"ReserveItem END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
 
     private async Task CancelReservation()
     {
+        Logger.LogInformation($"CancelReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
@@ -220,6 +226,7 @@
         finally
         {
             _loading = false;
+            Logger.LogInformation($"CancelReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }

@@ -10,7 +10,7 @@
 		"ghcr.io/devcontainers/features/dotnet:2": {
 			"workloads": "aspire"
 		},
-		"ghcr.io/devcontainers/features/docker-in-docker:2.12.2": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2.12.4": {
 			"version": "latest"
 		},
 	},

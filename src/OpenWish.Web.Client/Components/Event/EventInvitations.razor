@@ -194,7 +194,7 @@
     [Parameter] public bool IsOwner { get; set; }
 
     private List<EventUserModel> _invitations = new();
-    private IEnumerable<ApplicationUserModel> _friends = Enumerable.Empty<ApplicationUserModel>();
+    private IEnumerable<ApplicationUserModel>? _friends = null;
     private bool _isLoading = true;
     private bool _showInviteModal = false;
     private bool _isSending = false;
@@ -287,12 +287,12 @@
                 }
 
                 await EventService.InviteUserToEventAsync(EventId, userId, _selectedFriendId);
-                var friend = _friends.FirstOrDefault(f => f.Id == _selectedFriendId);
+                var friend = _friends?.FirstOrDefault(f => f.Id == _selectedFriendId);
                 _successMessage = $"Invitation sent to {friend?.UserName ?? "user"}";
             }
 
             await LoadInvitations();
-            await Task.Delay(2000);
+            await Task.Delay(1000);
             HideInviteModal();
         }
         catch (Exception ex)

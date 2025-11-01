@@ -153,10 +153,7 @@ public class EventService(
         }
 
         // Verify inviter is the event creator or has permission
-        if (eventEntity.CreatedBy.Id != inviterId)
-        {
-            throw new UnauthorizedAccessException("Only the event creator can invite users");
-        }
+        ValidateEventCreatorPermission(eventEntity, inviterId);
 
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
@@ -221,10 +218,7 @@ public class EventService(
         }
 
         // Verify inviter is the event creator
-        if (eventEntity.CreatedBy.Id != inviterId)
-        {
-            throw new UnauthorizedAccessException("Only the event creator can invite users");
-        }
+        ValidateEventCreatorPermission(eventEntity, inviterId);
 
         // Check if user with this email exists
         var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -306,11 +300,13 @@ public class EventService(
         await _context.SaveChangesAsync();
 
         // Notify event creator
+        var user = await _context.Users.FindAsync(userId);
+        var userName = user?.UserName ?? user?.Email ?? "A user";
         await _notificationService.CreateNotificationAsync(
             userId,
             eventUser.Event.CreatedBy.Id,
             "Invitation Accepted",
-            $"A user has accepted the invitation to {eventUser.Event.Name}",
+            $"{userName} has accepted the invitation to {eventUser.Event.Name}",
             "EventInviteAccept");
 
         return true;
@@ -345,6 +341,7 @@ public class EventService(
     {
         var eventUser = await _context.EventUsers
             .Include(eu => eu.Event)
+                .ThenInclude(e => e.CreatedBy)
             .FirstOrDefaultAsync(eu => eu.Id == eventUserId && !eu.Deleted);
 
         if (eventUser == null)
@@ -353,10 +350,7 @@ public class EventService(
         }
 
         // Verify inviter is the event creator
-        if (eventUser.Event.CreatedBy.Id != inviterId)
-        {
-            throw new UnauthorizedAccessException("Only the event creator can cancel invitations");
-        }
+        ValidateEventCreatorPermission(eventUser.Event, inviterId);
 
         eventUser.Deleted = true;
         eventUser.UpdatedOn = DateTimeOffset.UtcNow;
@@ -369,6 +363,7 @@ public class EventService(
     {
         var eventUser = await _context.EventUsers
             .Include(eu => eu.Event)
+                .ThenInclude(e => e.CreatedBy)
             .Include(eu => eu.User)
             .FirstOrDefaultAsync(eu => eu.Id == eventUserId && !eu.Deleted);
 
@@ -378,10 +373,7 @@ public class EventService(
         }
 
         // Verify inviter is the event creator
-        if (eventUser.Event.CreatedBy.Id != inviterId)
-        {
-            throw new UnauthorizedAccessException("Only the event creator can resend invitations");
-        }
+        ValidateEventCreatorPermission(eventUser.Event, inviterId);
 
         if (eventUser.Status != "Pending")
         {
@@ -425,5 +417,13 @@ public class EventService(
         await _context.SaveChangesAsync();
 
         return true;
+    }
+
+    private static void ValidateEventCreatorPermission(Event eventEntity, string userId)
+    {
+        if (eventEntity.CreatedBy.Id != userId)
+        {
+            throw new UnauthorizedAccessException("Only the event creator can perform this action");
+        }
     }
 }

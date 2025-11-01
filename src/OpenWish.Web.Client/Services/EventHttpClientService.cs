@@ -67,7 +67,8 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
 
     public async Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId)
     {
-        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventId}/invitations");
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventId}/invitations")
+            ?? Enumerable.Empty<EventUserModel>();
     }
 
     public async Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId)

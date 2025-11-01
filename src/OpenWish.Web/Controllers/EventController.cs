@@ -106,4 +106,145 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
         return NoContent();
     }
+
+    // Event Invitation Endpoints
+
+    [HttpPost("{eventId}/invitations/user/{userId}")]
+    public async Task<ActionResult<EventUserModel>> InviteUserToEvent(int eventId, string userId)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var invitation = await _eventService.InviteUserToEventAsync(eventId, inviterId, userId);
+            return Ok(invitation);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("{eventId}/invitations/email")]
+    public async Task<ActionResult<EventUserModel>> InviteByEmailToEvent(int eventId, [FromBody] InviteByEmailRequest request)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var invitation = await _eventService.InviteByEmailToEventAsync(eventId, inviterId, request.Email);
+            return Ok(invitation);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("{eventId}/invitations")]
+    public async Task<ActionResult<IEnumerable<EventUserModel>>> GetEventInvitations(int eventId)
+    {
+        var invitations = await _eventService.GetEventInvitationsAsync(eventId);
+        return Ok(invitations);
+    }
+
+    [HttpPost("invitations/{eventUserId}/accept")]
+    public async Task<IActionResult> AcceptEventInvitation(int eventUserId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var result = await _eventService.AcceptEventInvitationAsync(eventUserId, userId);
+        if (!result)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
+    [HttpPost("invitations/{eventUserId}/reject")]
+    public async Task<IActionResult> RejectEventInvitation(int eventUserId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var result = await _eventService.RejectEventInvitationAsync(eventUserId, userId);
+        if (!result)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
+    [HttpDelete("invitations/{eventUserId}")]
+    public async Task<IActionResult> CancelEventInvitation(int eventUserId)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.CancelEventInvitationAsync(eventUserId, inviterId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
+    [HttpPost("invitations/{eventUserId}/resend")]
+    public async Task<IActionResult> ResendEventInvitation(int eventUserId)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.ResendEventInvitationAsync(eventUserId, inviterId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
 }

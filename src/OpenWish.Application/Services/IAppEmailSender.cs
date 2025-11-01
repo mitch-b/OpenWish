@@ -9,5 +9,6 @@ public interface IAppEmailSender
     Task SendPasswordResetCodeAsync(string toEmail, string resetCode);
     Task SendPasswordResetLinkAsync(string toEmail, string resetLink);
     Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink);
+    Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink);
     Task SendEmailAsync(string toEmail, string subject, string message);
 }

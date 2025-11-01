@@ -3,6 +3,7 @@ namespace OpenWish.Data.Entities;
 public class Wishlist : BaseEntity
 {
     public string Name { get; set; }
+    public string? Icon { get; set; } // Optional emoji or single character icon
     public string OwnerId { get; set; } // Nullable if shared directly to event
     public ApplicationUser Owner { get; set; }
     public int? EventId { get; set; } // Nullable if a personal wishlist

@@ -15,7 +15,7 @@ else
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
                 <h5 class="card-title mb-1">@Wishlist.Name</h5>
-                <span style="font-size: 1.5rem;">📋</span>
+                <span style="font-size: 1.5rem;">@(string.IsNullOrEmpty(Wishlist.Icon) ? "📋" : Wishlist.Icon)</span>
             </div>
             <p class="card-text">
                 <span class="badge bg-primary">@Wishlist.Items?.Count items</span>

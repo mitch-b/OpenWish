@@ -12,6 +12,14 @@
             <ValidationMessage For="@(() => Model.Name)" />
         </div>
 
+        <div class="mb-3">
+            <label for="icon" class="form-label">Icon (emoji or single character)</label>
+            <InputText id="icon" class="form-control" maxlength="1" placeholder="📋"
+            @bind-Value="@Model!.Icon" />
+            <div class="form-text">Choose an emoji or letter to represent your wishlist (optional)</div>
+            <ValidationMessage For="@(() => Model.Icon)" />
+        </div>
+
         <div class="mb-3 form-check">
             <InputCheckbox id="isCollaborative" class="form-check-input" @bind-Value="@Model!.IsCollaborative" />
             <label class="form-check-label" for="isCollaborative">

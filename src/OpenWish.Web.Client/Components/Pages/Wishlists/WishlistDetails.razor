@@ -22,7 +22,13 @@ else
     <div class="wishlist-header mb-4">
         <div class="d-flex justify-content-between align-items-start">
             <div>
-                <h2>@_wishlist.Name</h2>
+                <h2>
+                    @if (!string.IsNullOrEmpty(_wishlist.Icon))
+                    {
+                        <span style="font-size: 1.2em; margin-right: 0.3em;">@_wishlist.Icon</span>
+                    }
+                    @_wishlist.Name
+                </h2>
                 @if (_wishlist.IsCollaborative)
                 {
                     <span class="badge bg-info">Collaborative Wishlist</span>

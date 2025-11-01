@@ -81,6 +81,15 @@
         await LoadRequests();
     }
     
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _error && _currentUserId == null)
+        {
+            // If we had an error during SSR and no user ID, try again after first render
+            await LoadRequests();
+        }
+    }
+    
     private async Task LoadRequests()
     {
         try

@@ -14,6 +14,7 @@ using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
 using OpenWish.Web.Extensions;
+using OpenWish.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
 // Email configuration without building a secondary service provider
 var openWishSettings = builder.Configuration.GetSection(nameof(OpenWishSettings)).Get<OpenWishSettings>()
@@ -90,37 +92,7 @@ if (builder.Environment.IsDevelopment() && builder.Configuration is IConfigurati
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// // fix Codespaces thinking Navigation BaseUri was localhost
-var forwardingOptions = new ForwardedHeadersOptions()
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-};
-
-forwardingOptions.KnownNetworks.Clear();
-forwardingOptions.KnownProxies.Clear();
-
-app.UseForwardedHeaders(forwardingOptions);
-
-// Apply migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var migrationSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
-        ?? throw new InvalidOperationException("OpenWishSettings not found.");
-
-    if (migrationSettings.OwnDatabaseUpgrades)
-    {
-        await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var waitSeconds = 3;
-        Console.WriteLine($"Applying migrations after {waitSeconds} seconds...");
-        await Task.Delay(TimeSpan.FromSeconds(waitSeconds));
-        await db.Database.MigrateAsync();
-    }
-    else
-    {
-        Console.WriteLine("Skipping migrations...");
-    }
-}
+// Migrations now handled by DatabaseMigrationHostedService.
 
 app.MapDefaultEndpoints();
 

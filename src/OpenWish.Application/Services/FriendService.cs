@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
@@ -10,14 +11,14 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class FriendService(ApplicationDbContext context,
+public class FriendService(IServiceScopeFactory scopeFactory,
     IMapper mapper,
     INotificationService notificationService,
     IAppEmailSender emailSender,
     IOptions<OpenWishSettings> openWishSettings,
     ILogger<FriendService> logger) : IFriendService
 {
-    private readonly ApplicationDbContext _context = context;
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly IMapper _mapper = mapper;
     private readonly INotificationService _notificationService = notificationService;
     private readonly IAppEmailSender _emailSender = emailSender;
@@ -26,7 +27,10 @@ public class FriendService(ApplicationDbContext context,
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
-        var friends = await _context.Friends
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var friends = await context.Friends
+            .AsNoTracking()
             .Include(f => f.FriendUser)
             .Where(f => f.UserId == userId && !f.Deleted)
             .Select(f => f.FriendUser)
@@ -37,7 +41,9 @@ public class FriendService(ApplicationDbContext context,
 
     public async Task<bool> AreFriendsAsync(string userId, string otherUserId)
     {
-        return await _context.Friends
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await context.Friends
             .AnyAsync(f =>
                 ((f.UserId == userId && f.FriendUserId == otherUserId) ||
                 (f.UserId == otherUserId && f.FriendUserId == userId)) &&
@@ -47,10 +53,11 @@ public class FriendService(ApplicationDbContext context,
     public async Task<bool> RemoveFriendAsync(string userId, string friendId)
     {
         // Find the friendship records in both directions (as friendship is reciprocal)
-        var friendship1 = await _context.Friends
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var friendship1 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == userId && f.FriendUserId == friendId && !f.Deleted);
-
-        var friendship2 = await _context.Friends
+    var friendship2 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == friendId && f.FriendUserId == userId && !f.Deleted);
 
         if (friendship1 == null && friendship2 == null)
@@ -71,7 +78,7 @@ public class FriendService(ApplicationDbContext context,
             friendship2.UpdatedOn = DateTimeOffset.UtcNow;
         }
 
-        await _context.SaveChangesAsync();
+    await context.SaveChangesAsync();
         return true;
     }
 
@@ -83,15 +90,19 @@ public class FriendService(ApplicationDbContext context,
             throw new InvalidOperationException("Users are already friends");
         }
 
+    using var scope = _scopeFactory.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
         // Check if a deleted friendship exists between these users
-        var existingDeletedFriendship = await _context.Friends
+    var existingDeletedFriendship = await context.Friends
             .AnyAsync(f =>
                 ((f.UserId == requesterId && f.FriendUserId == receiverId) ||
                 (f.UserId == receiverId && f.FriendUserId == requesterId)) &&
                 f.Deleted);
 
         // Check for existing pending requests
-        var existingRequest = await _context.FriendRequests
+        var existingRequest = await context.FriendRequests
+            .AsNoTracking()
             .FirstOrDefaultAsync(fr =>
                 (fr.RequesterId == requesterId && fr.ReceiverId == receiverId ||
                 fr.RequesterId == receiverId && fr.ReceiverId == requesterId) &&
@@ -103,7 +114,7 @@ public class FriendService(ApplicationDbContext context,
         }
 
         // Look for previously created but rejected or completed request
-        var previousRequest = await _context.FriendRequests
+    var previousRequest = await context.FriendRequests
             .FirstOrDefaultAsync(fr =>
                 fr.RequesterId == requesterId && fr.ReceiverId == receiverId &&
                 (fr.Status == "Rejected" || fr.Status == "Accepted" || fr.Deleted));
@@ -116,7 +127,7 @@ public class FriendService(ApplicationDbContext context,
             previousRequest.UpdatedOn = DateTimeOffset.UtcNow;
             previousRequest.Deleted = false;
 
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
             return _mapper.Map<FriendRequestModel>(previousRequest);
         }
 
@@ -131,15 +142,18 @@ public class FriendService(ApplicationDbContext context,
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.FriendRequests.Add(newRequest);
-        await _context.SaveChangesAsync();
+    context.FriendRequests.Add(newRequest);
+    await context.SaveChangesAsync();
 
         return _mapper.Map<FriendRequestModel>(newRequest);
     }
 
     public async Task<IEnumerable<FriendRequestModel>> GetReceivedFriendRequestsAsync(string userId)
     {
-        var requests = await _context.FriendRequests
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var requests = await context.FriendRequests
+            .AsNoTracking()
             .Include(fr => fr.Requester)
             .Where(fr => fr.ReceiverId == userId && fr.Status == "Pending" && !fr.Deleted)
             .ToListAsync();
@@ -149,7 +163,10 @@ public class FriendService(ApplicationDbContext context,
 
     public async Task<IEnumerable<FriendRequestModel>> GetSentFriendRequestsAsync(string userId)
     {
-        var requests = await _context.FriendRequests
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var requests = await context.FriendRequests
+            .AsNoTracking()
             .Include(fr => fr.Receiver)
             .Where(fr => fr.RequesterId == userId && fr.Status == "Pending" && !fr.Deleted)
             .ToListAsync();
@@ -159,7 +176,9 @@ public class FriendService(ApplicationDbContext context,
 
     public async Task<bool> AcceptFriendRequestAsync(int requestId, string userId)
     {
-        var request = await _context.FriendRequests
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var request = await context.FriendRequests
             .FirstOrDefaultAsync(fr => fr.Id == requestId && fr.ReceiverId == userId && fr.Status == "Pending" && !fr.Deleted);
 
         if (request == null)
@@ -172,10 +191,9 @@ public class FriendService(ApplicationDbContext context,
         request.UpdatedOn = DateTimeOffset.UtcNow;
 
         // Check for existing friendship records (including soft-deleted ones)
-        var existingFriendship1 = await _context.Friends
+    var existingFriendship1 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == request.RequesterId && f.FriendUserId == request.ReceiverId);
-
-        var existingFriendship2 = await _context.Friends
+    var existingFriendship2 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == request.ReceiverId && f.FriendUserId == request.RequesterId);
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -199,7 +217,7 @@ public class FriendService(ApplicationDbContext context,
                 CreatedOn = now,
                 UpdatedOn = now
             };
-            _context.Friends.Add(friendship1);
+            context.Friends.Add(friendship1);
         }
 
         // Reactivate or create second friendship record
@@ -221,16 +239,18 @@ public class FriendService(ApplicationDbContext context,
                 CreatedOn = now,
                 UpdatedOn = now
             };
-            _context.Friends.Add(friendship2);
+            context.Friends.Add(friendship2);
         }
 
-        await _context.SaveChangesAsync();
+    await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> RejectFriendRequestAsync(int requestId, string userId)
     {
-        var request = await _context.FriendRequests
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var request = await context.FriendRequests
             .FirstOrDefaultAsync(fr => fr.Id == requestId && fr.ReceiverId == userId && fr.Status == "Pending" && !fr.Deleted);
 
         if (request == null)
@@ -242,7 +262,7 @@ public class FriendService(ApplicationDbContext context,
         request.Status = "Rejected";
         request.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+    await context.SaveChangesAsync();
         return true;
     }
 
@@ -255,7 +275,9 @@ public class FriendService(ApplicationDbContext context,
         }
 
         // Check if the user already exists
-        var existingUser = await _context.Users
+    using var scope = _scopeFactory.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var existingUser = await context.Users
             .FirstOrDefaultAsync(u => u.Email == emailAddress);
 
         if (existingUser != null)
@@ -266,7 +288,7 @@ public class FriendService(ApplicationDbContext context,
         }
 
         // Send invitation email using the application email sender
-        var sender = await _context.Users.FirstOrDefaultAsync(u => u.Id == senderUserId);
+    var sender = await context.Users.FirstOrDefaultAsync(u => u.Id == senderUserId);
         if (sender == null)
         {
             return false;
@@ -325,8 +347,10 @@ public class FriendService(ApplicationDbContext context,
     public async Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId)
     {
         // Check if both users exist
-        var newUser = await _context.Users.FindAsync(newUserId);
-        var inviter = await _context.Users.FindAsync(inviterUserId);
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var newUser = await context.Users.FindAsync(newUserId);
+        var inviter = await context.Users.FindAsync(inviterUserId);
 
         if (newUser == null || inviter == null)
         {
@@ -334,7 +358,7 @@ public class FriendService(ApplicationDbContext context,
         }
 
         // Check if they are already active friends
-        var existingActiveFriendship = await _context.Friends
+    var existingActiveFriendship = await context.Friends
             .AnyAsync(f =>
                 ((f.UserId == newUserId && f.FriendUserId == inviterUserId) ||
                  (f.UserId == inviterUserId && f.FriendUserId == newUserId)) &&
@@ -348,10 +372,9 @@ public class FriendService(ApplicationDbContext context,
         DateTimeOffset now = DateTimeOffset.UtcNow;
 
         // Check for existing friendship records (including soft-deleted ones)
-        var existingFriendship1 = await _context.Friends
+    var existingFriendship1 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == newUserId && f.FriendUserId == inviterUserId);
-
-        var existingFriendship2 = await _context.Friends
+    var existingFriendship2 = await context.Friends
             .FirstOrDefaultAsync(f => f.UserId == inviterUserId && f.FriendUserId == newUserId);
 
         // Reactivate or create first friendship record
@@ -373,7 +396,7 @@ public class FriendService(ApplicationDbContext context,
                 CreatedOn = now,
                 UpdatedOn = now
             };
-            _context.Friends.Add(friendship1);
+            context.Friends.Add(friendship1);
         }
 
         // Reactivate or create second friendship record
@@ -395,7 +418,7 @@ public class FriendService(ApplicationDbContext context,
                 CreatedOn = now,
                 UpdatedOn = now
             };
-            _context.Friends.Add(friendship2);
+            context.Friends.Add(friendship2);
         }
 
         // Create notification for the inviter
@@ -406,7 +429,7 @@ public class FriendService(ApplicationDbContext context,
             $"{newUser.UserName ?? newUser.Email} has joined OpenWish and is now your friend.",
             "FriendAccept");
 
-        await _context.SaveChangesAsync();
+    await context.SaveChangesAsync();
         return true;
     }
 

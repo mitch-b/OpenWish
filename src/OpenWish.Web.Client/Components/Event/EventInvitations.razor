@@ -51,16 +51,16 @@
                 {
                     <div class="list-group-item">
                         <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                                <div class="d-flex align-items-center">
+                            <div class="flex-grow-1 me-2" style="min-width: 0;">
+                                <div class="d-flex align-items-center" style="overflow: hidden;">
                                     @if (invitation.User != null)
                                     {
-                                        <strong>@invitation.User.UserName</strong>
-                                        <small class="text-muted ms-2">(@invitation.User.Email)</small>
+                                        <strong class="text-truncate">@invitation.User.UserName</strong>
+                                        <small class="text-muted ms-2 text-truncate">(@invitation.User.Email)</small>
                                     }
                                     else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
                                     {
-                                        <strong>@invitation.InviteeEmail</strong>
+                                        <strong class="text-truncate">@invitation.InviteeEmail</strong>
                                         <small class="text-muted ms-2">(Not registered)</small>
                                     }
                                 </div>
@@ -73,7 +73,7 @@
                             </div>
                             @if (IsOwner && invitation.Status == "Pending")
                             {
-                                <div class="btn-group">
+                                <div class="btn-group flex-shrink-0">
                                     <button class="btn btn-outline-secondary btn-sm" 
                                             @onclick="() => HandleResendInvitation(invitation.Id)"
                                             title="Resend invitation">
@@ -83,6 +83,21 @@
                                             @onclick="() => HandleCancelInvitation(invitation.Id)"
                                             title="Cancel invitation">
                                         <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            }
+                            else if (!IsOwner && IsCurrentUserInvitee(invitation) && invitation.Status == "Pending")
+                            {
+                                <div class="btn-group flex-shrink-0">
+                                    <button class="btn btn-success btn-sm" 
+                                            @onclick="() => HandleAcceptInvitation(invitation.Id)"
+                                            title="Accept invitation">
+                                        <i class="bi bi-check-lg"></i> Accept
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            @onclick="() => HandleRejectInvitation(invitation.Id)"
+                                            title="Reject invitation">
+                                        <i class="bi bi-x-lg"></i> Reject
                                     </button>
                                 </div>
                             }
@@ -192,6 +207,7 @@
 @code {
     [Parameter] public int EventId { get; set; }
     [Parameter] public bool IsOwner { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
 
     private List<EventUserModel> _invitations = new();
     private IEnumerable<ApplicationUserModel>? _friends = null;
@@ -211,6 +227,14 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadInvitations();
+    }
+
+    private bool IsCurrentUserInvitee(EventUserModel invitation)
+    {
+        if (string.IsNullOrEmpty(CurrentUserId))
+            return false;
+        
+        return invitation.UserId == CurrentUserId;
     }
 
     private async Task LoadInvitations()
@@ -302,6 +326,40 @@
         finally
         {
             _isSending = false;
+        }
+    }
+
+    private async Task HandleAcceptInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.AcceptEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleRejectInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.RejectEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
         }
     }
 

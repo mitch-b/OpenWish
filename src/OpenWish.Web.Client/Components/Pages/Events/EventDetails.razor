@@ -126,7 +126,7 @@ else
             </div>
 
             <div class="col-md-4">
-                <EventInvitations EventId="@EventId" IsOwner="@_isOwner" />
+                <EventInvitations EventId="@EventId" IsOwner="@_isOwner" CurrentUserId="@_currentUserId" />
 
                 @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
                 {

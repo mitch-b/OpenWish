@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OpenWish.Data;
@@ -11,9 +12,11 @@ using OpenWish.Data;
 namespace OpenWish.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251101230706_AddWishlistIcon")]
+    partial class AddWishlistIcon
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -440,11 +443,11 @@ namespace OpenWish.Data.Migrations
 
             modelBuilder.Entity("OpenWish.Data.Entities.EventUser", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
+                    b.Property<int>("EventId")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()
@@ -454,14 +457,11 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("Deleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("EventId")
+                    b.Property<int>("Id")
                         .HasColumnType("integer");
 
                     b.Property<DateTimeOffset>("InvitationDate")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("InviteeEmail")
-                        .HasColumnType("text");
 
                     b.Property<bool>("IsAccepted")
                         .HasColumnType("boolean");
@@ -475,21 +475,12 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTimeOffset>("UpdatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("timezone('utc', now())");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
+                    b.HasKey("EventId", "UserId");
 
                     b.HasIndex("UserId");
 
@@ -1367,7 +1358,8 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
                         .WithMany("EventUsers")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Event");
 

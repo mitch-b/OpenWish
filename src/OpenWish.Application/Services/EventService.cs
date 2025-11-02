@@ -308,6 +308,7 @@ public class EventService(
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventUser = await context.EventUsers
                 .Include(eu => eu.Event)
+                    .ThenInclude(e => e.CreatedBy)
                 .FirstOrDefaultAsync(eu => eu.Id == eventUserId && eu.UserId == userId && !eu.Deleted);
 
         if (eventUser == null)
@@ -326,15 +327,24 @@ public class EventService(
 
         await context.SaveChangesAsync();
 
-        // Notify event creator
+        // Notify event creator (guard against missing navigation)
         var user = await context.Users.FindAsync(userId);
         var userName = user?.UserName ?? user?.Email ?? "A user";
-        await _notificationService.CreateNotificationAsync(
-            userId,
-            eventUser.Event.CreatedBy.Id,
-            "Invitation Accepted",
-            $"{userName} has accepted the invitation to {eventUser.Event.Name}",
-            "EventInviteAccept");
+        var creatorId = eventUser.Event.CreatedBy?.Id;
+
+        if (!string.IsNullOrEmpty(creatorId))
+        {
+            await _notificationService.CreateNotificationAsync(
+                userId,
+                creatorId,
+                "Invitation Accepted",
+                $"{userName} has accepted the invitation to {eventUser.Event.Name}",
+                "EventInviteAccept");
+        }
+        else
+        {
+            _logger.LogWarning("Event creator not loaded for EventUserId {EventUserId} (EventId {EventId})", eventUserId, eventUser.EventId);
+        }
 
         return true;
     }

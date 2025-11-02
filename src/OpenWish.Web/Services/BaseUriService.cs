@@ -1,7 +1,7 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
-using System.Text.RegularExpressions;
 
 namespace OpenWish.Web.Services;
 

@@ -1,6 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Components;
 using OpenWish.Web.Services;
-using System.Diagnostics.CodeAnalysis;
 
 namespace OpenWish.Web.Components.Account;
 

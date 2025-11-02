@@ -1,7 +1,7 @@
+using System.Net.Http.Json;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
-using System.Net.Http.Json;
 
 namespace OpenWish.Web.Client.Services;
 

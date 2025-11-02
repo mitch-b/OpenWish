@@ -1,3 +1,5 @@
+using FluentEmail.Core;
+using FluentEmail.Smtp;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -44,7 +46,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         // HMM... https://github.com/dotnet/efcore/issues/34431
         .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
         .EnableSensitiveDataLogging()
-    );
+);
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -57,34 +59,33 @@ builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
 
-using (var provider = builder.Services.BuildServiceProvider())
+// Email configuration without building a secondary service provider
+var openWishSettings = builder.Configuration.GetSection(nameof(OpenWishSettings)).Get<OpenWishSettings>()
+    ?? throw new InvalidOperationException("OpenWishSettings not found.");
+
+if (!string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) &&
+    !string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpHost))
 {
-    var configuration = provider.GetRequiredService<IConfiguration>();
-    Console.WriteLine("Configuration: " + (configuration as IConfigurationRoot).GetDebugView());
-
-    var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
-        ?? throw new InvalidOperationException("OpenWishSettings not found.");
-
-    // setup email from configuration
-    if (!string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpFrom)
-        && !string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpHost))
-    {
-        builder.Services
-            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom)
-            .AddSmtpSender(
-                openWishSettings?.EmailConfig?.SmtpHost,
-                openWishSettings?.EmailConfig?.SmtpPort ?? 587,
-                openWishSettings?.EmailConfig?.SmtpUser,
-                openWishSettings?.EmailConfig?.SmtpPass);
-    }
-    else
-    {
-        Console.WriteLine("Full email configuration not found. Email will not work.");
-        // register service so Services that depend on IFluentEmail can be registered
-        builder.Services
-            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom);
-    }
+    builder.Services
+        .AddFluentEmail(openWishSettings.EmailConfig.SmtpFrom)
+        .AddSmtpSender(
+            openWishSettings.EmailConfig.SmtpHost,
+            openWishSettings.EmailConfig.SmtpPort ?? 587,
+            openWishSettings.EmailConfig.SmtpUser,
+            openWishSettings.EmailConfig.SmtpPass);
 }
+else
+{
+    Console.WriteLine("Full email configuration not found. Email will not work.");
+    builder.Services.AddFluentEmail(openWishSettings.EmailConfig?.SmtpFrom ?? "no-reply@openwish.local");
+}
+
+#if DEBUG
+if (builder.Environment.IsDevelopment() && builder.Configuration is IConfigurationRoot root)
+{
+    Console.WriteLine(root.GetDebugView());
+}
+#endif
 
 builder.Services.AddControllers();
 
@@ -104,10 +105,10 @@ app.UseForwardedHeaders(forwardingOptions);
 // Apply migrations on startup
 using (var scope = app.Services.CreateScope())
 {
-    var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
+    var migrationSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
         ?? throw new InvalidOperationException("OpenWishSettings not found.");
 
-    if (openWishSettings.OwnDatabaseUpgrades)
+    if (migrationSettings.OwnDatabaseUpgrades)
     {
         await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var waitSeconds = 3;

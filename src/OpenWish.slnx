@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/.build/">
+    <File Path="../.github/workflows/docker-image.yml" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="nuget.config" />
+  </Folder>
+  <Folder Name="/.docs/">
+    <File Path="../.docs/DEVELOPING.md" />
+    <File Path="../.docs/TODO.md" />
+    <File Path="../LICENSE" />
+    <File Path="../README.md" />
+  </Folder>
+  <Project Path="OpenWish.AppHost/OpenWish.AppHost.csproj" />
+  <Project Path="OpenWish.Application/OpenWish.Application.csproj" />
+  <Project Path="OpenWish.Data/OpenWish.Data.csproj" />
+  <Project Path="OpenWish.ServiceDefaults/OpenWish.ServiceDefaults.csproj" />
+  <Project Path="OpenWish.Shared/OpenWish.Shared.csproj" />
+  <Project Path="OpenWish.Web.Client/OpenWish.Web.Client.csproj" />
+  <Project Path="OpenWish.Web/OpenWish.Web.csproj" />
+</Solution>

@@ -32,7 +32,3 @@ jobs:
       - name: Verify .NET installation
         run: |
           dotnet --version
-
-      - name: Install Aspire workload
-        run: |
-          dotnet workload install aspire

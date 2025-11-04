@@ -1,9 +1,11 @@
-<button class="theme-toggle btn btn-sm btn-outline-secondary" @onclick="ToggleAsync" title="Toggle dark/light theme">
+<button type="button" class="theme-toggle btn btn-sm btn-outline-secondary" @onclick="ToggleAsync" title="Toggle dark/light theme">
     @(_currentTheme == "dark" ? "Light Mode" : "Dark Mode")
 </button>
 
 @code {
     private string _currentTheme = "light";
+    private DotNetObjectReference<ThemeToggle>? _dotNetRef;
+    private bool _registered;
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -11,15 +13,63 @@
     {
         if (firstRender)
         {
-            // defer to ensure theme.js is loaded
-            _currentTheme = await JS.InvokeAsync<string>("theme.getPreferred");
+            // Get actual current applied theme (dataset wins)
+            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            // Register for future changes dispatched by theme.js
+            await JS.InvokeVoidAsync("theme.registerChangeHandler", _dotNetRef);
+            _registered = true;
             StateHasChanged();
         }
     }
 
     private async Task ToggleAsync()
     {
-        _currentTheme = await JS.InvokeAsync<string>("theme.toggle");
-        StateHasChanged(); // ensure re-render even if assignment optimized
+        try
+        {
+            var next = await JS.InvokeAsync<string>("theme.toggle");
+            _currentTheme = next;
+            if (string.IsNullOrEmpty(_currentTheme))
+            {
+                // Fallback probe
+                _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+            }
+        }
+        catch (JSException jsEx)
+        {
+            Console.Error.WriteLine($"[ThemeToggle] JS error toggling theme: {jsEx.Message}");
+            // Last-chance manual DOM flip if interop signature mismatch
+            await JS.InvokeVoidAsync("eval", "(function(){var d=document.documentElement;var c=d.dataset.theme||'light';var n=c==='dark'?'light':'dark';d.dataset.theme=n;d.classList.toggle('dark', n==='dark');})()");
+            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ThemeToggle] Unexpected error: {ex.Message}");
+            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+        }
+        StateHasChanged();
     }
+
+    [JSInvokable]
+    public Task OnThemeChanged(string theme)
+    {
+        if (!string.Equals(_currentTheme, theme, StringComparison.Ordinal))
+        {
+            _currentTheme = theme;
+            StateHasChanged();
+        }
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_registered && _dotNetRef != null)
+        {
+            try { await JS.InvokeVoidAsync("theme.unregisterChangeHandler", _dotNetRef); } catch { /* no-op */ }
+        }
+        _dotNetRef?.Dispose();
+    }
+}
+
+@code { // partial class for JSInvokable (if needed by tooling separation)
 }

@@ -1,5 +1,6 @@
 // Theme management utilities
 window.theme = (function () {
+    const _themeHandlers = new WeakMap();
     function getPreferred() {
         try {
             var t = localStorage.getItem('theme');
@@ -29,10 +30,35 @@ window.theme = (function () {
         return next;
     }
 
+    function getCurrent() {
+        return document.documentElement.dataset.theme || getPreferred();
+    }
+
+    function registerChangeHandler(dotNetObj) {
+        if (!dotNetObj) return;
+        const handler = function (e) {
+            try { dotNetObj.invokeMethodAsync('OnThemeChanged', e.detail.theme); } catch (err) { /* no-op */ }
+        };
+        window.addEventListener('theme:changed', handler);
+        _themeHandlers.set(dotNetObj, handler);
+    }
+
+    function unregisterChangeHandler(dotNetObj) {
+        if (!dotNetObj) return;
+        const handler = _themeHandlers.get(dotNetObj);
+        if (handler) {
+            window.removeEventListener('theme:changed', handler);
+            _themeHandlers.delete(dotNetObj);
+        }
+    }
+
     return {
         getPreferred: getPreferred,
         apply: apply,
-        toggle: toggle
+        toggle: toggle,
+        getCurrent: getCurrent,
+        registerChangeHandler: registerChangeHandler,
+        unregisterChangeHandler: unregisterChangeHandler
     };
 })();
 

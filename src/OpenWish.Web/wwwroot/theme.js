@@ -67,6 +67,24 @@ window.theme = (function () {
     };
 })();
 
+// Global wrapper functions for Blazor JSInterop compatibility
+// Blazor's JS.InvokeAsync works better with top-level functions
+window.themeGetCurrent = function() {
+    return window.theme.getCurrent();
+};
+
+window.themeToggle = function() {
+    return window.theme.toggle();
+};
+
+window.themeRegisterChangeHandler = function(dotNetObj) {
+    return window.theme.registerChangeHandler(dotNetObj);
+};
+
+window.themeUnregisterChangeHandler = function(dotNetObj) {
+    return window.theme.unregisterChangeHandler(dotNetObj);
+};
+
 // Ensure theme applied if early inline script failed or host was re-rendered without dataset
 try {
     // Always ensure body class syncs with dataset on load (even if early script already set data-theme)

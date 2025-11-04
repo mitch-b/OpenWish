@@ -16,10 +16,10 @@
         if (firstRender)
         {
             // Get actual current applied theme (dataset wins)
-            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+            _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
             _dotNetRef = DotNetObjectReference.Create(this);
             // Register for future changes dispatched by theme.js
-            await JS.InvokeVoidAsync("theme.registerChangeHandler", _dotNetRef);
+            await JS.InvokeVoidAsync("themeRegisterChangeHandler", _dotNetRef);
             _registered = true;
             StateHasChanged();
         }
@@ -29,12 +29,12 @@
     {
         try
         {
-            var next = await JS.InvokeAsync<string>("theme.toggle");
+            var next = await JS.InvokeAsync<string>("themeToggle");
             _currentTheme = next;
             if (string.IsNullOrEmpty(_currentTheme))
             {
                 // Fallback probe
-                _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+                _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
             }
         }
         catch (JSException jsEx)
@@ -42,12 +42,12 @@
             Console.Error.WriteLine($"[ThemeToggle] JS error toggling theme: {jsEx.Message}");
             // Last-chance manual DOM flip if interop signature mismatch
             await JS.InvokeVoidAsync("eval", "(function(){var d=document.documentElement;var c=d.dataset.theme||'light';var n=c==='dark'?'light':'dark';d.dataset.theme=n;d.classList.toggle('dark', n==='dark');})()");
-            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+            _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"[ThemeToggle] Unexpected error: {ex.Message}");
-            _currentTheme = await JS.InvokeAsync<string>("theme.getCurrent");
+            _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
         }
         StateHasChanged();
     }
@@ -67,7 +67,7 @@
     {
         if (_registered && _dotNetRef != null)
         {
-            try { await JS.InvokeVoidAsync("theme.unregisterChangeHandler", _dotNetRef); } catch { /* no-op */ }
+            try { await JS.InvokeVoidAsync("themeUnregisterChangeHandler", _dotNetRef); } catch { /* no-op */ }
         }
         _dotNetRef?.Dispose();
     }

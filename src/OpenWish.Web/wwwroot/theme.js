@@ -12,8 +12,13 @@ window.theme = (function () {
     }
 
     function apply(t) {
+        // Set dataset + html class
         document.documentElement.dataset.theme = t;
         document.documentElement.classList.toggle('dark', t === 'dark');
+        // Also mirror a body class (some CSS targets body.dark for scrollbars)
+        if (document.body) {
+            document.body.classList.toggle('dark', t === 'dark');
+        }
         try { localStorage.setItem('theme', t); } catch (e) { }
         // persist for server-side awareness (optional usage later)
         document.cookie = 'ow_theme=' + t + ';path=/;SameSite=Lax;max-age=31536000';
@@ -64,8 +69,11 @@ window.theme = (function () {
 
 // Ensure theme applied if early inline script failed or host was re-rendered without dataset
 try {
+    // Always ensure body class syncs with dataset on load (even if early script already set data-theme)
     if (!document.documentElement.dataset.theme) {
         window.theme.apply(window.theme.getPreferred());
+    } else if (document.body) {
+        document.body.classList.toggle('dark', document.documentElement.dataset.theme === 'dark');
     }
 } catch (e) { /* no-op */ }
 

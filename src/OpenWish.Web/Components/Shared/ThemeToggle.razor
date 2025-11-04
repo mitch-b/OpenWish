@@ -1,0 +1,24 @@
+<button class="theme-toggle btn btn-sm btn-outline-secondary" @onclick="ToggleAsync" title="Toggle dark/light theme">
+    @(_currentTheme == "dark" ? "Light Mode" : "Dark Mode")
+</button>
+
+@code {
+    private string _currentTheme = "light";
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // defer to ensure theme.js is loaded
+            _currentTheme = await JS.InvokeAsync<string>("theme.getPreferred");
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleAsync()
+    {
+        _currentTheme = await JS.InvokeAsync<string>("theme.toggle");
+    }
+}

@@ -1,0 +1,21 @@
+.theme-toggle {
+    white-space: nowrap;
+}
+
+.theme-toggle {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-muted);
+}
+
+.theme-toggle:hover {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .theme-toggle {
+        background: var(--color-surface);
+        color: var(--color-text);
+    }
+}

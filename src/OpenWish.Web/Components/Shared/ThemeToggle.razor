@@ -1,4 +1,5 @@
 @implements IAsyncDisposable
+@rendermode InteractiveServer
 
 <button type="button" class="theme-toggle btn btn-sm btn-outline-secondary" @onclick="ToggleAsync" title="Toggle dark/light theme">
     @(_currentTheme == "dark" ? "Light Mode" : "Dark Mode")

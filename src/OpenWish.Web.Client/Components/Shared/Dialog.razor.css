@@ -8,6 +8,7 @@
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
     animation: fadeIn 0.2s ease-in;
+    backdrop-filter: blur(2px);
 }
 
 .dialog-container.show {
@@ -17,14 +18,17 @@
 }
 
 .dialog {
-    background: white;
-    border-radius: 4px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 6px;
     padding: 1rem;
     min-width: 300px;
     max-width: 90%;
     max-height: 90vh;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
     animation: slideIn 0.2s ease-out;
+    transition: background-color .25s ease, color .25s ease, border-color .25s ease;
 }
 
 .dialog-header {
@@ -40,6 +44,14 @@
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0.25rem;
+    color: var(--color-text);
+    transition: color .2s ease, background-color .2s ease;
+    border-radius: 4px;
+}
+
+.close-button:hover {
+    background: var(--color-surface-alt);
+    color: var(--color-link-hover);
 }
 
 @keyframes fadeIn {

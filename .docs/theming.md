@@ -14,17 +14,32 @@ OpenWish supports a built-in light and dark theme.
 Add new semantic colors to both light and dark blocks in `theme.css` and then reference them using `var(--color-your-token)` in component `.razor.css` files.
 
  
-### Semantic Tokens Added
+### Semantic Tokens
 
-The following tokens exist for both light and dark themes:
+The following tokens exist for both light and dark themes (each supplies `*-bg`, `*-border`, and `*-text` variants):
 
-| Token | Purpose |
-|-------|---------|
-| `--color-success-*` | Success states (background/border/text) |
-| `--color-warning-*` | Warning states |
-| `--color-info-*` | Informational states |
+| Token Prefix | Purpose |
+|--------------|---------|
+| `--color-success-*` | Success states |
+| `--color-warning-*` | Warning / caution |
+| `--color-info-*` | Informational / neutral emphasis |
+| `--color-danger-*` | Error / destructive / critical |
 
-Helper classes (`.badge-success`, `.badge-warning`, `.badge-info`) are available in `app.css` for quick inline usage.
+Bootstrap subtle/background/border overrides (`--bs-*`) are mapped to these tokens for consistent component theming. Legacy `--color-error-*` remains for backward compatibility; prefer `--color-danger-*` moving forward.
+
+Helper classes (`.badge-success`, `.badge-warning`, `.badge-info`, `.badge-danger`) are available in `app.css` for quick inline usage.
+
+### Theme Persistence Strategies
+
+To ensure the theme persists across Blazor navigation and SPA-like transitions, several resilience mechanisms are in place:
+
+1. Early inline script sets `data-theme` before CSS loads (prevents flash).
+2. `theme.js` applies a guard if `data-theme` is missing.
+3. `blazor:navigation-end` listener reapplies the persisted theme.
+4. History API hooks (`pushState`, `replaceState`, `popstate`) trigger reapplication for client-side route changes.
+5. A `MutationObserver` watches for accidental removal of `data-theme` and restores it.
+
+If introducing new rendering flows or replacing the root HTML, retain the early script and include `theme.js` in `<head>` so components can immediately access the API.
 
 ## Accessibility
 

@@ -4,12 +4,13 @@
 }
 
     .table th {
-        background: #f8f9fa;
-        color: #4C51BF;
+        background: var(--color-surface-alt);
+        color: var(--color-link-hover);
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.875rem;
         padding: 1rem;
+        transition: background-color .25s ease, color .25s ease;
     }
 
     .table td {
@@ -22,12 +23,12 @@
     }
 
         .table tbody tr:hover {
-            background-color: rgba(108, 99, 255, 0.05);
+            background-color: rgba(31, 111, 235, 0.08);
         }
 
 .btn-edit {
-    background: #4C51BF;
-    color: white;
+    background: var(--color-primary-bg);
+    color: var(--color-text);
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 4px;
@@ -35,7 +36,7 @@
 }
 
     .btn-edit:hover {
-        background: #3c4099;
+        background: var(--color-link-hover);
     }
 
 .tooltip-container {
@@ -45,21 +46,22 @@
 }
 
     .tooltip-container .tooltip-text {
-        visibility: hidden;
-        width: 200px;
-        background-color: #555;
-        color: #fff;
-        text-align: center;
-        border-radius: 6px;
-        padding: 5px 0;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%; /* Position the tooltip above the text */
-        left: 50%;
-        margin-left: -100px; /* Center the tooltip */
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--color-surface-alt);
+            color: var(--color-text);
+            text-align: center;
+            border: 1px solid var(--color-border-muted);
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the text */
+            left: 50%;
+            margin-left: -100px; /* Center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s, background-color .25s ease, color .25s ease;
+        }
 
         .tooltip-container .tooltip-text::after {
             content: "";
@@ -69,7 +71,7 @@
             margin-left: -5px;
             border-width: 5px;
             border-style: solid;
-            border-color: #555 transparent transparent transparent;
+            border-color: var(--color-surface-alt) transparent transparent transparent;
         }
 
     .tooltip-container:hover .tooltip-text {
@@ -86,23 +88,23 @@
 }
 
 .priority-high {
-    background-color: #f8d7da;
-    color: #842029;
+    background-color: var(--color-danger-bg, #f8d7da);
+    color: var(--color-danger-text, #842029);
 }
 
 .priority-medium {
-    background-color: #fff3cd;
-    color: #664d03;
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
 }
 
 .priority-low {
-    background-color: #d1e7dd;
-    color: #0f5132;
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
 }
 
 .priority-none {
-    background-color: #e2e3e5;
-    color: #41464b;
+    background-color: var(--color-surface-alt);
+    color: var(--bs-secondary-color);
 }
 
 .item-name {

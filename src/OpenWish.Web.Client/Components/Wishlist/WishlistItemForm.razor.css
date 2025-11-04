@@ -1,32 +1,37 @@
 .form-control {
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--color-border-muted);
     border-radius: 6px;
     padding: 0.75rem;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color .25s ease, color .25s ease;
+    background: var(--color-surface);
+    color: var(--color-text);
 }
 
 .form-control:focus {
-    border-color: #4C51BF;
-    box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
+    border-color: var(--color-link-hover);
+    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.25);
+    background: var(--color-surface-alt);
 }
 
 .form-label {
     font-weight: 600;
-    color: #4a5568;
+    color: var(--bs-secondary-color);
     margin-bottom: 0.5rem;
+    transition: color .25s ease;
 }
 
 .btn-primary {
-    background: #4C51BF;
+    background: var(--color-primary-bg);
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 6px;
     font-weight: 600;
     transition: background-color 0.2s;
+    color: var(--color-text);
 }
 
 .btn-primary:hover {
-    background: #3c4099;
+    background: var(--color-link-hover);
 }
 
 .url-import-section {
@@ -34,7 +39,9 @@
 }
 
 .url-import-section .card {
-    border-left: 4px solid #4C51BF;
+    border-left: 4px solid var(--color-primary-bg);
+    background: var(--color-surface-alt);
+    transition: background-color .25s ease, border-color .25s ease;
 }
 
 .form-check-input {

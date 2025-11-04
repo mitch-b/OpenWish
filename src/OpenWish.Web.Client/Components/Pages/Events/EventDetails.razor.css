@@ -1,10 +1,11 @@
 .event-header {
-    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-link-hover) 100%);
+    color: var(--color-text);
     padding: 2rem;
     border-radius: 8px;
     margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: background .25s ease, color .25s ease;
 }
 
 .event-header h1 {
@@ -18,12 +19,12 @@
 }
 
 .card h3 {
-    color: #2D3748;
+    color: var(--color-text);
     margin-bottom: 1.5rem;
 }
 
 .card h5 {
-    color: #4A5568;
+    color: var(--bs-secondary-color);
     font-size: 1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
@@ -31,9 +32,10 @@
 
 .list-group-item {
     border: none;
-    background: #F7FAFC;
+    background: var(--color-surface-alt);
     margin-bottom: 0.5rem;
     border-radius: 6px !important;
+    transition: background-color .25s ease;
 }
 .bi {
     display: inline-block;

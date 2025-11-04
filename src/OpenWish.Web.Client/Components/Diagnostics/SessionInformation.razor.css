@@ -1,15 +1,16 @@
 ﻿.session-information {
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--color-border-muted);
     padding: 20px;
     margin: 20px 0;
     border-radius: 10px;
-    background-color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease;
+    background-color: var(--color-surface);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    transition: box-shadow 0.3s ease, background-color .25s ease, border-color .25s ease, color .25s ease;
+    color: var(--color-text);
 }
 
     .session-information:hover {
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
     }
 
     .session-information .header {
@@ -17,7 +18,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #e0e0e0;
+        border-bottom: 1px solid var(--color-border-muted);
         padding-bottom: 10px;
         margin-bottom: 10px;
     }
@@ -25,13 +26,13 @@
         .session-information .header h3 {
             margin: 0;
             font-size: 1.5rem;
-            color: #333;
+            color: var(--color-text);
         }
 
         .session-information .header p {
             margin: 0;
             font-size: 1rem;
-            color: #666;
+            color: var(--bs-secondary-color);
         }
 
     .session-information .details {
@@ -43,8 +44,8 @@
     }
 
     .session-information .toggle-button {
-        background-color: #007bff;
-        color: white;
+        background-color: var(--color-primary-bg);
+        color: var(--color-text);
         border: none;
         padding: 10px 20px;
         border-radius: 5px;
@@ -53,20 +54,24 @@
     }
 
         .session-information .toggle-button:hover {
-            background-color: #0056b3;
+            background-color: var(--color-link-hover);
         }
 
 .badge {
     padding: 5px 10px;
     border-radius: 5px;
-    color: white;
     font-size: 0.875rem;
+    font-weight: 600;
 }
 
 .bg-success {
-    background-color: #28a745;
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
+    border: 1px solid var(--color-success-border);
 }
 
 .bg-warning {
-    background-color: #ffc107;
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    border: 1px solid var(--color-warning-border);
 }

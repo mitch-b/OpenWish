@@ -20,5 +20,6 @@
     private async Task ToggleAsync()
     {
         _currentTheme = await JS.InvokeAsync<string>("theme.toggle");
+        StateHasChanged(); // ensure re-render even if assignment optimized
     }
 }

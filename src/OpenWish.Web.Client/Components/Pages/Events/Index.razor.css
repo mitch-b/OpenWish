@@ -1,17 +1,20 @@
 .events-header {
-    background: linear-gradient(135deg, #4C51BF 0%, #6B46C1 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-link-hover) 100%);
+    color: var(--color-text);
     padding: 3rem;
     margin-bottom: 2rem;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: background .25s ease, color .25s ease;
 }
 
 .empty-state {
-    background: white;
+    background: var(--color-surface);
     border-radius: 8px;
     padding: 3rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: background-color .25s ease, color .25s ease;
+    color: var(--color-text);
 }
 
 .empty-state-icon {
@@ -20,13 +23,15 @@
 }
 
 .btn-light {
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255,255,255,0.9);
     border: none;
     font-weight: 600;
     transition: all 0.2s;
+    color: var(--color-text);
 }
 
 .btn-light:hover {
-    background: white;
+    background: #fff;
     transform: translateY(-2px);
+    color: var(--color-text);
 }

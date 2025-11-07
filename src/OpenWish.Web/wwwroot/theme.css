@@ -17,7 +17,8 @@
     --color-surface: #f6f8fa;
     --color-surface-alt: #eef1f4;
     /* Navigation */
-    --color-nav-text: #15202b;
+    /* Navigation text on dark gradient sidebar needs light contrast */
+    --color-nav-text: #f8f9fa;
     --color-nav-icon: #ffffff;
     --color-nav-active-bg: rgba(0,0,0,0.08);
     --color-nav-hover-bg: rgba(0,0,0,0.04);

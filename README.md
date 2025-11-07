@@ -28,7 +28,7 @@ TODO
 * Add comments to items (authenticated user)
 * Add users and share wishlists (admin user)
 * Allow anonymous access (optional feature)
-* Built-in light/dark theme with automatic system preference detection and manual toggle
+* Built-in light/dark theme with automatic system preference detection and manual toggle (now a sun/moon slider control)
 
 ## AI Described Features
 

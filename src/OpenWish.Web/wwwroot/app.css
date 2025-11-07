@@ -123,3 +123,84 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Feature cards - dark mode aware */
+.feature-card {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-muted);
+    border-radius: .75rem;
+    transition: background-color .25s ease, color .25s ease, box-shadow .25s ease;
+    position: relative;
+}
+.feature-card:hover, .feature-card:focus-within {
+    background: var(--color-surface-alt);
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .feature-card { transition: none; }
+}
+
+/* Theme toggle switch */
+.theme-toggle-switch { display:inline-block; position:relative; }
+.theme-toggle-input { position:absolute; opacity:0; width:0; height:0; }
+.theme-toggle-track {
+    display:flex;
+    align-items:center;
+    background: var(--color-surface);
+    border:1px solid var(--color-border-muted);
+    height:30px;
+    border-radius:30px;
+    padding:1px 6px;
+    cursor:pointer;
+    width:68px;
+    position:relative;
+    font-size:.8rem;
+    user-select:none;
+    line-height:1;
+    transition: background-color .25s ease, border-color .25s ease;
+}
+.theme-toggle-track .toggle-icon { pointer-events:none; font-size:.9rem; position:absolute; top:50%; transform:translateY(-50%); z-index:1; }
+.theme-toggle-track .sun { color:#f6c851; left:8px; }
+.theme-toggle-track .moon { color:#7788ff; right:8px; }
+.theme-toggle-track .toggle-thumb {
+    position:absolute;
+    top:50%;
+    left:2px;
+    width:28px;
+    height:28px;
+    background: var(--color-primary-bg);
+    border-radius:50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    transform:translateY(-50%);
+    transition: left .3s ease, background-color .3s ease;
+    z-index:2;
+}
+.theme-toggle-input:checked + .theme-toggle-track .toggle-thumb { left: calc(100% - 30px); }
+.theme-toggle-input:focus + .theme-toggle-track { outline:2px solid var(--color-link); outline-offset:2px; }
+:root[data-theme='dark'] .theme-toggle-track { background: var(--color-surface-alt); }
+:root[data-theme='dark'] .theme-toggle-track .toggle-thumb { background: var(--color-link); }
+@media (prefers-reduced-motion: reduce) { .theme-toggle-track .toggle-thumb { transition:none; } }
+
+/* Improved dark theme placeholders */
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder,
+:root[data-theme='dark'] .form-control::placeholder { color:#b3bdc7 !important; }
+:root[data-theme='dark'] input:focus::placeholder,
+:root[data-theme='dark'] textarea:focus::placeholder,
+:root[data-theme='dark'] .form-control:focus::placeholder { color:#9aa3ad !important; }
+
+/* Dark mode floating label contrast */
+:root[data-theme='dark'] .form-floating > label { color:#cdd5dc; transition:color .25s ease; }
+:root[data-theme='dark'] .form-floating > .form-control:focus ~ label,
+:root[data-theme='dark'] .form-floating > .form-control:not(:placeholder-shown) ~ label { color:#e6edf3; }
+
+/* Danger / error surfaces consistent with theme tokens */
+:root[data-theme='dark'] .alert-danger,
+:root[data-theme='dark'] .card.border-danger,
+:root[data-theme='dark'] .blazor-error-boundary {
+    background-color: var(--color-danger-bg) !important;
+    color: var(--color-danger-text) !important;
+    border:1px solid var(--color-danger-border) !important;
+}

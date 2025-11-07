@@ -50,7 +50,7 @@
                 </div>
                 <div class="row g-4">
                     <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
                             <span style="font-size: 2.5rem;">🎁</span>
                             <h3 class="mt-3">Smart Wishlists</h3>
                             <p>Create detailed wishlists with photos, links, and priorities. Never receive duplicate gifts again!</p>
@@ -58,7 +58,7 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
                             <span style="font-size: 2.5rem;">🎉</span>
                             <h3 class="mt-3">Event Planning Made Easy</h3>
                             <p>Organize Secret Santa exchanges, birthday parties, and holiday celebrations with built-in coordination tools.</p>
@@ -66,7 +66,7 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 bg-light rounded shadow-sm">
+                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
                             <span style="font-size: 2.5rem;">💝</span>
                             <h3 class="mt-3">Social & Secure</h3>
                             <p>Connect with family and friends while keeping gift surprises safe. Anonymous reservations ensure the magic!</p>
@@ -122,7 +122,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Notifications and Requests -->
                     <div class="col-md-4">
                         <div class="row g-3">
@@ -141,9 +141,9 @@
                                     </div>
                                 </div>
                             }
-                            
 
-                            
+
+
                             @if (_upcomingEvents?.Any() == true)
                             {
                                 <div class="col-12">
@@ -163,7 +163,7 @@
                 </div>
             </div>
         }
-        
+
         @if (_featuredWishlists != null || _events != null)
         {
             <div class="featured-section container py-5">
@@ -244,7 +244,7 @@
     private IEnumerable<FriendRequestModel>? _pendingFriendRequests;
 
     private string? _userId;
-    
+
     protected override async Task OnInitializedAsync()
     {
         _userId = await UserContextService.GetUserIdAsync();
@@ -286,7 +286,7 @@
             {
                 var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
                 _events = allEvents;
-                
+
                 // Filter upcoming events for the next 30 days
                 var thirtyDaysFromNow = DateTimeOffset.UtcNow.AddDays(30);
                 _upcomingEvents = allEvents

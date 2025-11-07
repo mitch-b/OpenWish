@@ -1,9 +1,14 @@
 @implements IAsyncDisposable
 @rendermode InteractiveAuto
 
-<button type="button" class="theme-toggle btn btn-sm btn-outline-secondary" @onclick="ToggleAsync" title="Toggle dark/light theme">
-    @(_currentTheme == "dark" ? "Light Mode" : "Dark Mode")
-</button>
+<div class="theme-toggle-switch" title="Toggle dark/light theme">
+    <input id="themeToggleSwitch" type="checkbox" class="theme-toggle-input" @onchange="ToggleAsync" aria-label="Toggle dark or light theme" @attributes="GetCheckedAttr()" />
+    <label for="themeToggleSwitch" class="theme-toggle-track">
+        <span class="toggle-icon sun" aria-hidden="true">☀️</span>
+        <span class="toggle-icon moon" aria-hidden="true">🌙</span>
+        <span class="toggle-thumb"></span>
+    </label>
+</div>
 
 @code {
     private string _currentTheme = "light";
@@ -16,32 +21,27 @@
     {
         if (firstRender)
         {
-            // Get actual current applied theme (dataset wins)
             _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
             _dotNetRef = DotNetObjectReference.Create(this);
-            // Register for future changes dispatched by theme.js
             await JS.InvokeVoidAsync("themeRegisterChangeHandler", _dotNetRef);
             _registered = true;
             StateHasChanged();
         }
     }
 
+    private IReadOnlyDictionary<string, object> GetCheckedAttr() =>
+        _currentTheme == "dark" ? new Dictionary<string, object>{{"checked","checked"}} : new Dictionary<string, object>();
+
     private async Task ToggleAsync()
     {
         try
         {
             var next = await JS.InvokeAsync<string>("themeToggle");
-            _currentTheme = next;
-            if (string.IsNullOrEmpty(_currentTheme))
-            {
-                // Fallback probe
-                _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
-            }
+            _currentTheme = string.IsNullOrEmpty(next) ? await JS.InvokeAsync<string>("themeGetCurrent") : next;
         }
         catch (JSException jsEx)
         {
             Console.Error.WriteLine($"[ThemeToggle] JS error toggling theme: {jsEx.Message}");
-            // Last-chance manual DOM flip if interop signature mismatch
             await JS.InvokeVoidAsync("eval", "(function(){var d=document.documentElement;var c=d.dataset.theme||'light';var n=c==='dark'?'light':'dark';d.dataset.theme=n;d.classList.toggle('dark', n==='dark');})()");
             _currentTheme = await JS.InvokeAsync<string>("themeGetCurrent");
         }
@@ -68,11 +68,8 @@
     {
         if (_registered && _dotNetRef != null)
         {
-            try { await JS.InvokeVoidAsync("themeUnregisterChangeHandler", _dotNetRef); } catch { /* no-op */ }
+            try { await JS.InvokeVoidAsync("themeUnregisterChangeHandler", _dotNetRef); } catch { }
         }
         _dotNetRef?.Dispose();
     }
-}
-
-@code { // partial class for JSInvokable (if needed by tooling separation)
 }

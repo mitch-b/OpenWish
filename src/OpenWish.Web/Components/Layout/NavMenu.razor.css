@@ -105,8 +105,15 @@
     color: var(--color-nav-icon);
 }
 
+
 .nav-scrollable {
     display: none;
+}
+
+.nav-scrollable nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .navbar-toggler:checked ~ .nav-scrollable {
@@ -126,4 +133,35 @@
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }
+
+    .nav-scrollable nav {
+        height: calc(100vh - 3.5rem);
+    }
+}
+
+.nav-footer {
+    border-top: 1px solid var(--color-nav-toggle-border);
+    padding-top: 1rem;
+    padding-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.nav-footer .nav-link {
+    color: var(--color-nav-text);
+    background: none;
+    padding: 0;
+    height: auto;
+    display: flex;
+    align-items: center;
+}
+
+.nav-footer .theme-toggle-host {
+    justify-content: flex-start;
+}
+
+.nav-footer .version {
+    font-size: 0.8rem;
+    opacity: 0.75;
 }

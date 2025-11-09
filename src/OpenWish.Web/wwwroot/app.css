@@ -44,6 +44,20 @@ h1:focus {
     color: #e50000;
 }
 
+.quick-actions-section {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border:1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    padding-inline: 2rem;
+    box-shadow: 0 0.75rem 2rem rgba(0,0,0,0.08);
+    transition: background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+:root[data-theme='dark'] .quick-actions-section {
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.45);
+}
+
 /* Semantic helper badges */
 .badge-success {
     background: var(--color-success-bg);

@@ -4,7 +4,7 @@
 @inject IJSRuntime JSRuntime
 
 <div class="url-import-section mb-4">
-    <div class="card bg-light">
+    <div class="card">
         <div class="card-body">
             <h5 class="card-title">Import from URL</h5>
             <div class="input-group">
@@ -117,30 +117,30 @@
         {
             isLoading = true;
             StateHasChanged();
-            
+
             var product = await ProductService.TryScrapeProductFromUrl(url);
             if (product != null)
             {
                 // Only update empty fields
                 if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
                     Model.Name = product.Name;
-                    
+
                 if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
                     Model.Description = product.Description;
-                    
+
                 if (!Model.Price.HasValue && product.Price.HasValue)
                     Model.Price = product.Price;
-                    
+
                 if (string.IsNullOrWhiteSpace(Model.Url))
                     Model.Url = url;
-                    
+
                 if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
                     Model.WhereToBuy = new Uri(url).Host.Replace("www.", "");
-                    
+
                 // Set default priority if not set
                 if (!Model.Priority.HasValue)
                     Model.Priority = 2; // Medium priority by default
-                
+
                 await JSRuntime.InvokeVoidAsync("alert", "Product details imported successfully!");
             }
             else

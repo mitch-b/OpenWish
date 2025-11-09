@@ -152,6 +152,19 @@ h1:focus {
     box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.08);
 }
 
+/* Ensure tab navigation stays legible across themes */
+.nav-tabs .nav-link {
+    color: var(--color-text);
+    transition: color .25s ease, background-color .25s ease, border-color .25s ease;
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    border-color: var(--color-border-muted) var(--color-border-muted) transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .feature-card { transition: none; }
 }

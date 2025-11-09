@@ -34,6 +34,10 @@
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
     --bs-secondary-color: #6c757d;
+    --bs-nav-tabs-link-active-color: var(--color-text);
+    --bs-nav-tabs-link-active-bg: var(--color-surface);
+    --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
+    --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
     /* Status / semantic tokens */
     --color-success-bg: #d1e7dd;
     --color-success-border: #0f5132;
@@ -100,6 +104,10 @@
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
     --bs-secondary-color: #8b949e;
+    --bs-nav-tabs-link-active-color: var(--color-text);
+    --bs-nav-tabs-link-active-bg: var(--color-surface);
+    --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
+    --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
     /* Status / semantic tokens */
     --color-success-bg: #132d1f;
     --color-success-border: #2ea043;

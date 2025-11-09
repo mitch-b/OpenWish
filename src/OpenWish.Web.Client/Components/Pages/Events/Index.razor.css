@@ -27,11 +27,11 @@
     border: none;
     font-weight: 600;
     transition: all 0.2s;
-    color: var(--color-text);
+    color: #0d1117;
 }
 
 .btn-light:hover {
     background: #fff;
     transform: translateY(-2px);
-    color: var(--color-text);
+    color: #0d1117;
 }

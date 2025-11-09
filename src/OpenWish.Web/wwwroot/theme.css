@@ -53,13 +53,17 @@
     --bs-info: #0dcaf0;
     --bs-danger: #dc3545;
     --bs-success-bg-subtle: var(--color-success-bg);
+    --bs-success-text-emphasis: var(--color-success-text);
     --bs-warning-bg-subtle: var(--color-warning-bg);
+    --bs-warning-text-emphasis: var(--color-warning-text);
     --bs-info-bg-subtle: var(--color-info-bg);
+    --bs-info-text-emphasis: var(--color-info-text);
     --bs-success-border-subtle: var(--color-success-border);
     --bs-warning-border-subtle: var(--color-warning-border);
     --bs-info-border-subtle: var(--color-info-border);
     --bs-danger-bg-subtle: var(--color-danger-bg);
     --bs-danger-border-subtle: var(--color-danger-border);
+    --bs-danger-text-emphasis: var(--color-danger-text);
 }
 
 /* Dark theme */
@@ -97,9 +101,9 @@
     --bs-secondary-bg: var(--color-surface-alt);
     --bs-secondary-color: #8b949e;
     /* Status / semantic tokens */
-    --color-success-bg: #1e2d24;
-    --color-success-border: #238636;
-    --color-success-text: #3fb950;
+    --color-success-bg: #132d1f;
+    --color-success-border: #2ea043;
+    --color-success-text: #7ee787;
     --color-warning-bg: #2e2817;
     --color-warning-border: #9e6a03;
     --color-warning-text: #e3b341;
@@ -110,18 +114,22 @@
     --color-danger-border: #a40e26;
     --color-danger-text: #ff7b72;
     /* Bootstrap semantic overrides */
-    --bs-success: #3fb950;
+    --bs-success: #2ea043;
     --bs-warning: #e3b341;
     --bs-info: #58a6ff;
     --bs-danger: #ff7b72;
     --bs-success-bg-subtle: var(--color-success-bg);
+    --bs-success-text-emphasis: var(--color-success-text);
     --bs-warning-bg-subtle: var(--color-warning-bg);
+    --bs-warning-text-emphasis: var(--color-warning-text);
     --bs-info-bg-subtle: var(--color-info-bg);
+    --bs-info-text-emphasis: var(--color-info-text);
     --bs-success-border-subtle: var(--color-success-border);
     --bs-warning-border-subtle: var(--color-warning-border);
     --bs-info-border-subtle: var(--color-info-border);
     --bs-danger-bg-subtle: var(--color-danger-bg);
     --bs-danger-border-subtle: var(--color-danger-border);
+    --bs-danger-text-emphasis: var(--color-danger-text);
 }
 
 body.dark {

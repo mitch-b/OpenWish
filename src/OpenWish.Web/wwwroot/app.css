@@ -197,6 +197,24 @@ h1:focus {
 :root[data-theme='dark'] .form-floating > .form-control:not(:placeholder-shown) ~ label { color:#e6edf3; }
 
 /* Danger / error surfaces consistent with theme tokens */
+:root[data-theme='dark'] .alert-success,
+:root[data-theme='dark'] .card.border-success {
+    background-color: var(--color-success-bg) !important;
+    color: var(--color-success-text) !important;
+    border:1px solid var(--color-success-border) !important;
+}
+:root[data-theme='dark'] .alert-warning,
+:root[data-theme='dark'] .card.border-warning {
+    background-color: var(--color-warning-bg) !important;
+    color: var(--color-warning-text) !important;
+    border:1px solid var(--color-warning-border) !important;
+}
+:root[data-theme='dark'] .alert-info,
+:root[data-theme='dark'] .card.border-info {
+    background-color: var(--color-info-bg) !important;
+    color: var(--color-info-text) !important;
+    border:1px solid var(--color-info-border) !important;
+}
 :root[data-theme='dark'] .alert-danger,
 :root[data-theme='dark'] .card.border-danger,
 :root[data-theme='dark'] .blazor-error-boundary {

@@ -38,6 +38,11 @@
     --bs-nav-tabs-link-active-bg: var(--color-surface);
     --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
     --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
+    --bs-dropdown-bg: var(--color-dropdown-bg);
+    --bs-dropdown-border-color: var(--color-dropdown-border);
+    --bs-dropdown-link-color: var(--color-text);
+    --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
+    --bs-dropdown-link-hover-color: var(--color-text);
     /* Status / semantic tokens */
     --color-success-bg: #d1e7dd;
     --color-success-border: #0f5132;
@@ -51,6 +56,13 @@
     --color-danger-bg: #f8d7da;
     --color-danger-border: #842029;
     --color-danger-text: #842029;
+    --color-dropdown-bg: var(--color-surface);
+    --color-dropdown-border: var(--color-border-muted);
+    --color-dropdown-hover-bg: rgba(27, 31, 35, 0.06);
+    --color-dropdown-danger-hover-bg: rgba(220, 53, 69, 0.16);
+    --color-danger-solid: #dc3545;
+    --color-danger-solid-hover: #bb2d3b;
+    --color-danger-solid-active: #a52834;
     /* Bootstrap semantic overrides */
     --bs-success: #198754;
     --bs-warning: #ffc107;
@@ -108,6 +120,11 @@
     --bs-nav-tabs-link-active-bg: var(--color-surface);
     --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
     --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
+    --bs-dropdown-bg: var(--color-dropdown-bg);
+    --bs-dropdown-border-color: var(--color-dropdown-border);
+    --bs-dropdown-link-color: var(--color-text);
+    --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
+    --bs-dropdown-link-hover-color: var(--color-text);
     /* Status / semantic tokens */
     --color-success-bg: #132d1f;
     --color-success-border: #2ea043;
@@ -121,6 +138,13 @@
     --color-danger-bg: #2c1517;
     --color-danger-border: #a40e26;
     --color-danger-text: #ff7b72;
+    --color-dropdown-bg: var(--color-surface);
+    --color-dropdown-border: var(--color-border-muted);
+    --color-dropdown-hover-bg: rgba(255, 255, 255, 0.08);
+    --color-dropdown-danger-hover-bg: rgba(182, 35, 36, 0.32);
+    --color-danger-solid: #da3633;
+    --color-danger-solid-hover: #b62324;
+    --color-danger-solid-active: #982119;
     /* Bootstrap semantic overrides */
     --bs-success: #2ea043;
     --bs-warning: #e3b341;

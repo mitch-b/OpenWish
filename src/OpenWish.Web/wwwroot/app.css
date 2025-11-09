@@ -20,6 +20,58 @@ a:hover, .btn-link:hover {
     border-color: var(--color-primary-border);
 }
 
+/* Danger actions stay legible across themes */
+.btn-danger {
+    --bs-btn-bg: var(--color-danger-solid);
+    --bs-btn-border-color: var(--color-danger-solid);
+    --bs-btn-hover-bg: var(--color-danger-solid-hover);
+    --bs-btn-hover-border-color: var(--color-danger-solid-hover);
+    --bs-btn-active-bg: var(--color-danger-solid-active);
+    --bs-btn-active-border-color: var(--color-danger-solid-active);
+    --bs-btn-focus-shadow-rgb: 214, 73, 78;
+}
+
+.btn-outline-danger {
+    --bs-btn-color: var(--color-danger-solid-hover);
+    --bs-btn-border-color: var(--color-danger-solid-hover);
+    --bs-btn-hover-bg: var(--color-danger-solid);
+    --bs-btn-hover-border-color: var(--color-danger-solid);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--color-danger-solid-active);
+    --bs-btn-active-border-color: var(--color-danger-solid-active);
+    --bs-btn-active-color: #fff;
+    --bs-btn-focus-shadow-rgb: 214, 73, 78;
+}
+
+/* Dropdown hover states tuned for dark mode */
+.dropdown-menu {
+    background-color: var(--color-dropdown-bg);
+    border: 1px solid var(--color-dropdown-border);
+    color: var(--color-text);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.14);
+}
+
+.dropdown-item {
+    color: inherit;
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--color-dropdown-hover-bg);
+    color: var(--color-text);
+}
+
+.dropdown-item.text-danger {
+    color: var(--color-danger-text);
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus {
+    background-color: var(--color-dropdown-danger-hover-bg);
+    color: var(--color-danger-text);
+}
+
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
     box-shadow: 0 0 0 0.1rem var(--color-bg), 0 0 0 0.25rem var(--color-link);
 }

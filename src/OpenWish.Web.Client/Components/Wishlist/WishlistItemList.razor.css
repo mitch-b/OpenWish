@@ -1,6 +1,8 @@
 .table {
     border-collapse: separate;
     border-spacing: 0;
+    color: var(--color-text);
+    background-color: var(--color-surface);
 }
 
     .table th {
@@ -11,15 +13,20 @@
         font-size: 0.875rem;
         padding: 1rem;
         transition: background-color .25s ease, color .25s ease;
+        border-color: var(--color-border-muted);
     }
 
     .table td {
         padding: 1rem;
         vertical-align: middle;
+        color: inherit;
+        border-color: var(--color-border-muted);
     }
 
     .table tbody tr {
         transition: background-color 0.2s;
+        color: inherit;
+        border-color: var(--color-border-muted);
     }
 
         .table tbody tr:hover {

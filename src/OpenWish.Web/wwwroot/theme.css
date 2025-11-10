@@ -34,6 +34,9 @@
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
     --bs-secondary-color: #6c757d;
+    --bs-card-bg: var(--color-surface);
+    --bs-card-border-color: var(--color-border-muted);
+    --bs-card-color: var(--color-text);
     --bs-nav-tabs-link-active-color: var(--color-text);
     --bs-nav-tabs-link-active-bg: var(--color-surface);
     --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
@@ -116,6 +119,9 @@
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
     --bs-secondary-color: #8b949e;
+    --bs-card-bg: var(--color-surface);
+    --bs-card-border-color: var(--color-border-muted);
+    --bs-card-color: var(--color-text);
     --bs-nav-tabs-link-active-color: var(--color-text);
     --bs-nav-tabs-link-active-bg: var(--color-surface);
     --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);

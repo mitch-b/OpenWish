@@ -42,12 +42,16 @@ builder.Services.AddAuthentication(options =>
 var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+Action<DbContextOptionsBuilder> configureDbContext = options =>
+{
     options.UseNpgsql(connectionString)
         // HMM... https://github.com/dotnet/efcore/issues/34431
         .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
-        .EnableSensitiveDataLogging()
-);
+        .EnableSensitiveDataLogging();
+};
+
+//builder.Services.AddDbContext<ApplicationDbContext>(configureDbContext);
+builder.Services.AddDbContextFactory<ApplicationDbContext>(configureDbContext);
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

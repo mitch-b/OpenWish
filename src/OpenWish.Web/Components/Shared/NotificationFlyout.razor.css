@@ -110,24 +110,12 @@
 }
 
 /* Mobile responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .notification-flyout {
-        width: 350px;
-        right: -75px;
-    }
-}
-
-@media (max-width: 576px) {
-    .notification-flyout {
-        width: 300px;
-        right: -125px;
-    }
-}
-
-/* Ensure flyout is visible on small screens */
-@media (max-width: 400px) {
-    .notification-flyout {
-        width: 280px;
-        right: -150px;
+        position: fixed;
+        right: 0.5rem;
+        left: auto;
+        width: calc(100vw - 1rem);
+        max-width: 400px;
     }
 }

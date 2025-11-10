@@ -159,7 +159,7 @@ else
 
     private Task SetupSecurity()
     {
-        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) 
+        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId))
             return Task.CompletedTask;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;

@@ -10,15 +10,15 @@
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
     padding: 4rem 2rem;
-    background: #f8f9fa;
+    background: var(--color-surface);
 }
 
 .feature-card {
     text-align: center;
     padding: 2rem;
-    background: white;
+    background: var(--color-bg);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.12);
 }
 
 .featured-section {

@@ -55,6 +55,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<EventUser>()
             .HasOne(eu => eu.User)
             .WithMany()
+            .HasForeignKey(eu => eu.UserId)
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<GiftExchange>()
@@ -116,7 +117,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .OnDelete(DeleteBehavior.NoAction);
 
         modelBuilder.Entity<EventUser>()
-            .HasKey(eu => new { eu.EventId, eu.UserId });
+            .HasKey(eu => eu.Id);
 
         modelBuilder.Entity<EventUser>()
             .HasOne(eu => eu.Event)

@@ -3,6 +3,8 @@
 
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Event
+@using System.Collections.Generic
+@using System.Linq
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
@@ -84,19 +86,61 @@ else
                                 <h5>Created By</h5>
                                 <p class="mb-4">@_event.CreatedBy.UserName</p>
 
-                                <h5>Participants (@_event.EventUsers.Count)</h5>
+                                @{
+                                    var participants = GetParticipantList().ToList();
+                                    var hasOwner = _event.CreatedBy != null;
+                                    var participantCount = participants.Count + (hasOwner ? 1 : 0);
+                                }
+                                <h5>Participants &amp; Invites (@participantCount)</h5>
                                 <div class="list-group">
-                                    @foreach (var participant in _event.EventUsers)
+                                    @if (hasOwner)
                                     {
-                                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                                            @participant.User.UserName
-                                            <span class="badge bg-primary">@participant.Role</span>
+                                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>@GetOwnerDisplayName()</strong>
+                                                @if (GetOwnerContactDetail() is { } ownerContact)
+                                                {
+                                                    <div class="small text-muted">@ownerContact</div>
+                                                }
+                                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                                    <span class="badge bg-secondary">Owner</span>
+                                                </div>
+                                            </div>
                                         </div>
+                                    }
+
+                                    @foreach (var participant in participants)
+                                    {
+                                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>@GetParticipantDisplayName(participant)</strong>
+                                                @if (GetParticipantContactDetail(participant) is { } contact)
+                                                {
+                                                    <div class="small text-muted">@contact</div>
+                                                }
+                                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                                    <span class="badge bg-primary">@participant.Role</span>
+                                                    <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    @if (!hasOwner && participants.Count == 0)
+                                    {
+                                        <div class="list-group-item text-muted">No participants yet.</div>
                                     }
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-4">
+                    <EventWishlistManager EventId="@EventId"
+                                           Event="@_event"
+                                           CurrentUserId="@_currentUserId"
+                                           OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
 
                 @* @if (_event.EventWishlists.Any())
@@ -126,6 +170,8 @@ else
             </div>
 
             <div class="col-md-4">
+                <EventInvitations EventId="@EventId" IsOwner="@_isOwner" CurrentUserId="@_currentUserId" />
+
                 @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
                 {
                     <div class="card shadow-sm">
@@ -165,5 +211,95 @@ else
     {
         _event = await EventService.GetEventAsync(EventId);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
+    }
+
+    private IEnumerable<EventUserModel> GetParticipantList() =>
+        _event?.EventUsers?
+            .Where(eu => !IsOwner(eu))
+            .OrderBy(eu => GetStatusSortOrder(eu))
+            .ThenBy(eu => GetParticipantDisplayName(eu), StringComparer.OrdinalIgnoreCase)
+        ?? Enumerable.Empty<EventUserModel>();
+
+    private bool IsOwner(EventUserModel eventUser) =>
+        !string.IsNullOrWhiteSpace(_event?.CreatedBy?.Id) &&
+        string.Equals(eventUser.User?.Id, _event!.CreatedBy!.Id, StringComparison.Ordinal);
+
+    private static int GetStatusSortOrder(EventUserModel eventUser) => GetNormalizedStatus(eventUser) switch
+    {
+        "Accepted" => 0,
+        "Pending" => 1,
+        "Rejected" => 2,
+        _ => 3
+    };
+
+    private static string GetStatusBadgeClass(EventUserModel eventUser) => GetNormalizedStatus(eventUser) switch
+    {
+        "Accepted" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Rejected" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private static string GetParticipantDisplayName(EventUserModel eventUser)
+    {
+        if (!string.IsNullOrWhiteSpace(eventUser.User?.UserName))
+        {
+            return eventUser.User.UserName!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
+        {
+            return eventUser.InviteeEmail!;
+        }
+
+        return "Pending Invitation";
+    }
+
+    private static string? GetParticipantContactDetail(EventUserModel eventUser)
+    {
+        if (!string.IsNullOrWhiteSpace(eventUser.User?.Email))
+        {
+            return eventUser.User.Email!;
+        }
+
+        return eventUser.InviteeEmail;
+    }
+
+    private string GetOwnerDisplayName()
+    {
+        if (!string.IsNullOrWhiteSpace(_event?.CreatedBy?.UserName))
+        {
+            return _event!.CreatedBy!.UserName!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_event?.CreatedBy?.Email))
+        {
+            return _event!.CreatedBy!.Email!;
+        }
+
+        return "Event Owner";
+    }
+
+    private string? GetOwnerContactDetail() =>
+        string.IsNullOrWhiteSpace(_event?.CreatedBy?.Email) ? null : _event!.CreatedBy!.Email!;
+
+    private static string GetNormalizedStatus(EventUserModel eventUser)
+    {
+        if (!string.IsNullOrWhiteSpace(eventUser.Status))
+        {
+            return eventUser.Status;
+        }
+
+        return eventUser.IsAccepted ? "Accepted" : "Pending";
+    }
+
+    private Task HandleWishlistsChanged(IReadOnlyList<WishlistModel> wishlists)
+    {
+        if (_event != null)
+        {
+            _event.EventWishlists = wishlists.ToList();
+        }
+
+        return Task.CompletedTask;
     }
 }

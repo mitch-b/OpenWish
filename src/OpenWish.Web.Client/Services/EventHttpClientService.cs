@@ -1,7 +1,9 @@
+using System;
+using System.Linq;
+using System.Net.Http.Json;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
-using System.Net.Http.Json;
 
 namespace OpenWish.Web.Client.Services;
 
@@ -48,6 +50,79 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
     {
         var response = await httpClient.DeleteAsync($"api/events/{eventId}/users/{userId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    {
+        return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventId}/wishlists")
+            ?? Enumerable.Empty<WishlistModel>();
+    }
+
+    public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/wishlists", wishlistModel);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created wishlist.");
+    }
+
+    public async Task<WishlistModel> AttachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        var request = new AttachWishlistToEventRequest { WishlistId = wishlistId };
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/wishlists/attach", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize attached wishlist.");
+    }
+
+    public async Task<bool> DetachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        var response = await httpClient.DeleteAsync($"api/events/{eventId}/wishlists/{wishlistId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<EventUserModel> InviteUserToEventAsync(int eventId, string inviterId, string userId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/invitations/user/{userId}", new { });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+    }
+
+    public async Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/invitations/email", new { Email = email });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+    }
+
+    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId)
+    {
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventId}/invitations")
+            ?? Enumerable.Empty<EventUserModel>();
+    }
+
+    public async Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId)
+    {
+        var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/accept", null);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RejectEventInvitationAsync(int eventUserId, string userId)
+    {
+        var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/reject", null);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId)
+    {
+        var response = await httpClient.DeleteAsync($"api/events/invitations/{eventUserId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId)
+    {
+        var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/resend", null);
         return response.IsSuccessStatusCode;
     }
 }

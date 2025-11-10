@@ -28,6 +28,7 @@ TODO
 * Add comments to items (authenticated user)
 * Add users and share wishlists (admin user)
 * Allow anonymous access (optional feature)
+* Built-in light/dark theme with automatic system preference detection and manual toggle (now a sun/moon slider control)
 
 ## AI Described Features
 
@@ -35,7 +36,7 @@ OpenWish is designed to facilitate gift-giving events and wishlists with social 
 
 ### Core Features
 
-* User Management: 
+* User Management:
   * Supports identity/authentication
 * Event System:
   * Create and manage events with configurable budgets

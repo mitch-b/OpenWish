@@ -1,3 +1,5 @@
+using FluentEmail.Core;
+using FluentEmail.Smtp;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +14,7 @@ using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
 using OpenWish.Web.Extensions;
+using OpenWish.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,12 +42,13 @@ builder.Services.AddAuthentication(options =>
 var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+{
     options.UseNpgsql(connectionString)
         // HMM... https://github.com/dotnet/efcore/issues/34431
         .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
-        .EnableSensitiveDataLogging()
-    );
+        .EnableSensitiveDataLogging();
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -56,70 +60,40 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
 builder.Services.AddOpenWishWebServices();
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
-using (var provider = builder.Services.BuildServiceProvider())
+// Email configuration without building a secondary service provider
+var openWishSettings = builder.Configuration.GetSection(nameof(OpenWishSettings)).Get<OpenWishSettings>()
+    ?? throw new InvalidOperationException("OpenWishSettings not found.");
+
+if (!string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) &&
+    !string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpHost))
 {
-    var configuration = provider.GetRequiredService<IConfiguration>();
-    Console.WriteLine("Configuration: " + (configuration as IConfigurationRoot).GetDebugView());
-
-    var openWishSettings = provider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
-        ?? throw new InvalidOperationException("OpenWishSettings not found.");
-
-    // setup email from configuration
-    if (!string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpFrom)
-        && !string.IsNullOrWhiteSpace(openWishSettings?.EmailConfig?.SmtpHost))
-    {
-        builder.Services
-            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom)
-            .AddSmtpSender(
-                openWishSettings?.EmailConfig?.SmtpHost,
-                openWishSettings?.EmailConfig?.SmtpPort ?? 587,
-                openWishSettings?.EmailConfig?.SmtpUser,
-                openWishSettings?.EmailConfig?.SmtpPass);
-    }
-    else
-    {
-        Console.WriteLine("Full email configuration not found. Email will not work.");
-        // register service so Services that depend on IFluentEmail can be registered
-        builder.Services
-            .AddFluentEmail(openWishSettings?.EmailConfig?.SmtpFrom);
-    }
+    builder.Services
+        .AddFluentEmail(openWishSettings.EmailConfig.SmtpFrom)
+        .AddSmtpSender(
+            openWishSettings.EmailConfig.SmtpHost,
+            openWishSettings.EmailConfig.SmtpPort ?? 587,
+            openWishSettings.EmailConfig.SmtpUser,
+            openWishSettings.EmailConfig.SmtpPass);
 }
+else
+{
+    Console.WriteLine("Full email configuration not found. Email will not work.");
+    builder.Services.AddFluentEmail(openWishSettings.EmailConfig?.SmtpFrom ?? "no-reply@openwish.local");
+}
+
+#if DEBUG
+if (builder.Environment.IsDevelopment() && builder.Configuration is IConfigurationRoot root)
+{
+    Console.WriteLine(root.GetDebugView());
+}
+#endif
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
-
-// // fix Codespaces thinking Navigation BaseUri was localhost
-var forwardingOptions = new ForwardedHeadersOptions()
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-};
-
-forwardingOptions.KnownNetworks.Clear();
-forwardingOptions.KnownProxies.Clear();
-
-app.UseForwardedHeaders(forwardingOptions);
-
-// Apply migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var openWishSettings = scope.ServiceProvider.GetRequiredService<IOptions<OpenWishSettings>>()?.Value
-        ?? throw new InvalidOperationException("OpenWishSettings not found.");
-
-    if (openWishSettings.OwnDatabaseUpgrades)
-    {
-        await using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var waitSeconds = 3;
-        Console.WriteLine($"Applying migrations after {waitSeconds} seconds...");
-        await Task.Delay(TimeSpan.FromSeconds(waitSeconds));
-        await db.Database.MigrateAsync();
-    }
-    else
-    {
-        Console.WriteLine("Skipping migrations...");
-    }
-}
+// Migrations now handled by DatabaseMigrationHostedService.
 
 app.MapDefaultEndpoints();
 

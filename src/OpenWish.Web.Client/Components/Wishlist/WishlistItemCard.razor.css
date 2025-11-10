@@ -1,11 +1,13 @@
 .wishlist-item-card {
     transition: transform 0.2s ease;
     height: 100%;
+    background-color: var(--color-surface);
+    color: var(--color-text);
 }
 
 .wishlist-item-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .card-title {
@@ -34,21 +36,21 @@
 }
 
 .priority-high {
-    background-color: #f8d7da;
-    color: #842029;
+    background-color: var(--color-danger-bg, #f8d7da);
+    color: var(--color-danger-text, #842029);
 }
 
 .priority-medium {
-    background-color: #fff3cd;
-    color: #664d03;
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
 }
 
 .priority-low {
-    background-color: #d1e7dd;
-    color: #0f5132;
+    background-color: var(--color-success-bg);
+    color: var(--color-success-text);
 }
 
 .priority-none {
-    background-color: #e2e3e5;
-    color: #41464b;
+    background-color: var(--color-surface-alt);
+    color: var(--bs-secondary-color);
 }

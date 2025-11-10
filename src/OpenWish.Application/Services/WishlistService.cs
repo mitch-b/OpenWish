@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using OpenWish.Data;
@@ -7,19 +9,36 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class WishlistService(ApplicationDbContext context, IMapper mapper, IActivityService activityService) : IWishlistService
+public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFactory, IMapper mapper, IActivityService activityService) : IWishlistService
 {
-    private readonly ApplicationDbContext _context = context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
     private readonly IMapper _mapper = mapper;
     private readonly IActivityService _activityService = activityService;
 
     public async Task<WishlistModel> CreateWishlistAsync(WishlistModel wishlistModel, string ownerId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = _mapper.Map<Wishlist>(wishlistModel);
         wishlistEntity.OwnerId = ownerId;
 
-        var entry = _context.Wishlists.Add(wishlistEntity);
-        await _context.SaveChangesAsync();
+        if (wishlistModel.EventId.HasValue)
+        {
+            var eventEntity = await context.Events
+                .Include(e => e.CreatedBy)
+                .Include(e => e.EventUsers)
+                .FirstOrDefaultAsync(e => e.Id == wishlistModel.EventId.Value && !e.Deleted)
+                ?? throw new KeyNotFoundException($"Event {wishlistModel.EventId.Value} not found");
+
+            if (!IsEventMember(eventEntity, ownerId))
+            {
+                throw new UnauthorizedAccessException("You must be part of the event to create a wishlist for it.");
+            }
+
+            wishlistEntity.EventId = wishlistModel.EventId;
+        }
+
+        var entry = context.Wishlists.Add(wishlistEntity);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -34,7 +53,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<WishlistModel> GetWishlistAsync(int id, string? userId = null)
     {
-        var wishlistEntity = await _context.Wishlists
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlistEntity = await context.Wishlists
             .Where(w => !w.Deleted)
             .Include(w => w.Items)
             .Include(w => w.Owner)
@@ -48,7 +68,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         // Check authorization if userId is provided
         if (!string.IsNullOrEmpty(userId))
         {
-            var canAccess = await CanUserAccessWishlistAsync(id, userId);
+            var canAccess = await CanUserAccessWishlistInternalAsync(context, id, userId);
             if (!canAccess)
             {
                 throw new UnauthorizedAccessException($"Access denied to wishlist {id}");
@@ -61,7 +81,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
     {
-        var wishlistEntities = await _context.Wishlists
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlistEntities = await context.Wishlists
             .Where(w => !w.Deleted && w.OwnerId == userId)
             .Include(w => w.Items)
             .Include(w => w.Owner)
@@ -73,14 +94,15 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlistModel)
     {
-        var existingWishlist = await _context.Wishlists.FindAsync(id)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existingWishlist = await context.Wishlists.FindAsync(id)
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
 
         // Map updated values to existing entity
         _mapper.Map(wishlistModel, existingWishlist);
         existingWishlist.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -95,7 +117,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task DeleteWishlistAsync(int id)
     {
-        var wishlist = await _context.Wishlists.FindAsync(id)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists.FindAsync(id)
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
 
         wishlist.Deleted = true;
@@ -108,24 +131,25 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             $"Deleted wishlist: {wishlist.Name}",
             wishlist.Id);
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel itemModel)
     {
-        var wishlist = await _context.Wishlists.FindAsync(wishlistId)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists.FindAsync(wishlistId)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
 
         var itemEntity = _mapper.Map<WishlistItem>(itemModel);
         itemEntity.WishlistId = wishlistId;
         itemEntity.CreatedOn = DateTimeOffset.UtcNow;
         itemEntity.UpdatedOn = DateTimeOffset.UtcNow;
-        itemEntity.OrderIndex = await _context.WishlistItems
+        itemEntity.OrderIndex = await context.WishlistItems
             .Where(i => i.WishlistId == wishlistId)
             .CountAsync();
 
-        var entry = _context.WishlistItems.Add(itemEntity);
-        await _context.SaveChangesAsync();
+        var entry = context.WishlistItems.Add(itemEntity);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -141,7 +165,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
     {
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
 
         if (item == null)
@@ -149,10 +174,10 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             return false;
         }
 
-        var wishlist = await _context.Wishlists.FindAsync(wishlistId);
+        var wishlist = await context.Wishlists.FindAsync(wishlistId);
 
-        _context.WishlistItems.Remove(item);
-        await _context.SaveChangesAsync();
+        context.WishlistItems.Remove(item);
+        await context.SaveChangesAsync();
 
         // Log activity
         if (wishlist != null)
@@ -169,7 +194,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<WishlistItemModel> GetWishlistItemAsync(int wishlistId, int itemId)
     {
-        var itemEntity = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var itemEntity = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
 
         if (itemEntity == null)
@@ -183,7 +209,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsAsync(int wishlistId)
     {
-        var itemEntities = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var itemEntities = await context.WishlistItems
             .Where(i => i.WishlistId == wishlistId && !i.Deleted)
             .OrderBy(i => i.OrderIndex)
             .ToListAsync();
@@ -194,7 +221,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
     {
-        var existingItem = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existingItem = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
@@ -202,10 +230,10 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         _mapper.Map(itemModel, existingItem);
         existingItem.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         // Log activity
-        var wishlist = await _context.Wishlists.FindAsync(wishlistId);
+        var wishlist = await context.Wishlists.FindAsync(wishlistId);
         if (wishlist != null)
         {
             await _activityService.LogActivityAsync(
@@ -223,18 +251,19 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     // Wishlist sharing and permissions
     public async Task<WishlistPermissionModel> ShareWishlistAsync(int wishlistId, string userId, string permissionType)
     {
-        var wishlist = await _context.Wishlists.FindAsync(wishlistId)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists.FindAsync(wishlistId)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
 
         // Check if permission already exists
-        var existingPermission = await _context.WishlistPermissions
+        var existingPermission = await context.WishlistPermissions
             .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
         if (existingPermission != null)
         {
             existingPermission.PermissionType = permissionType;
             existingPermission.UpdatedOn = DateTimeOffset.UtcNow;
-            await _context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             var updatedModel = _mapper.Map<WishlistPermissionModel>(existingPermission);
             return updatedModel;
@@ -250,8 +279,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.WishlistPermissions.Add(newPermission);
-        await _context.SaveChangesAsync();
+        context.WishlistPermissions.Add(newPermission);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -265,7 +294,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<string> CreateSharingLinkAsync(int wishlistId, string permissionType, TimeSpan? expiration = null)
     {
-        var wishlist = await _context.Wishlists.FindAsync(wishlistId)
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists.FindAsync(wishlistId)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
 
         // Create a unique token
@@ -282,8 +312,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.WishlistPermissions.Add(permission);
-        await _context.SaveChangesAsync();
+        context.WishlistPermissions.Add(permission);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -297,7 +327,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> AcceptSharingLinkAsync(string token, string userId)
     {
-        var permission = await _context.WishlistPermissions
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var permission = await context.WishlistPermissions
             .FirstOrDefaultAsync(wp => wp.InvitationToken == token && !wp.Deleted);
 
         if (permission == null)
@@ -316,7 +347,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         permission.InvitationToken = null;
         permission.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -330,7 +361,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsAsync(int wishlistId)
     {
-        var permissions = await _context.WishlistPermissions
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var permissions = await context.WishlistPermissions
             .Include(wp => wp.User)
             .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)
             .ToListAsync();
@@ -340,7 +372,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> RemoveWishlistPermissionAsync(int wishlistId, string userId)
     {
-        var permission = await _context.WishlistPermissions
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var permission = await context.WishlistPermissions
             .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
         if (permission == null)
@@ -351,13 +384,14 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         permission.Deleted = true;
         permission.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<IEnumerable<WishlistModel>> GetSharedWithMeWishlistsAsync(string userId)
     {
-        var wishlists = await _context.WishlistPermissions
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlists = await context.WishlistPermissions
             .Where(wp => wp.UserId == userId && !wp.Deleted)
             .Include(wp => wp.Wishlist)
                 .ThenInclude(w => w.Owner)
@@ -372,17 +406,18 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         // Get all friends of the current user
-        var friendIds = await _context.Friends
+        var friendIds = await context.Friends
             .Where(f => f.UserId == userId && !f.Deleted)
             .Select(f => f.FriendUserId)
-            .Union(_context.Friends
+            .Union(context.Friends
                 .Where(f => f.FriendUserId == userId && !f.Deleted)
                 .Select(f => f.UserId))
             .ToListAsync();
 
         // Get public wishlists (non-private) from friends
-        var wishlists = await _context.Wishlists
+        var wishlists = await context.Wishlists
             .Where(w => friendIds.Contains(w.OwnerId) && !w.Deleted && !w.IsPrivate)
             .Include(w => w.Owner)
             .Include(w => w.Items)
@@ -393,7 +428,13 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
-        var wishlist = await _context.Wishlists
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await CanUserAccessWishlistInternalAsync(context, wishlistId, userId);
+    }
+
+    private static async Task<bool> CanUserAccessWishlistInternalAsync(ApplicationDbContext context, int wishlistId, string userId)
+    {
+        var wishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted);
 
         if (wishlist == null)
@@ -401,14 +442,12 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             return false;
         }
 
-        // Check if user is owner
         if (wishlist.OwnerId == userId)
         {
             return true;
         }
 
-        // Check if user has explicit permission
-        var hasPermission = await _context.WishlistPermissions
+        var hasPermission = await context.WishlistPermissions
             .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
         if (hasPermission)
@@ -416,10 +455,9 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             return true;
         }
 
-        // Check if user is a friend and wishlist is not private
         if (!wishlist.IsPrivate)
         {
-            var isFriend = await _context.Friends
+            var isFriend = await context.Friends
                 .AnyAsync(f =>
                     ((f.UserId == userId && f.FriendUserId == wishlist.OwnerId) ||
                     (f.UserId == wishlist.OwnerId && f.FriendUserId == userId)) &&
@@ -431,35 +469,49 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             }
         }
 
+        if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
+        {
+            return true;
+        }
+
         return false;
     }
 
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)
     {
-        // Check if user is owner
-        var isOwner = await _context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.OwnerId == userId && !w.Deleted);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .Where(w => w.Id == wishlistId && !w.Deleted)
+            .Select(w => new { w.OwnerId, w.IsCollaborative, w.EventId })
+            .FirstOrDefaultAsync();
 
-        if (isOwner)
+        if (wishlist == null)
+        {
+            return false;
+        }
+
+        if (wishlist.OwnerId == userId)
         {
             return true;
         }
 
-        // Check if wishlist is collaborative
-        var isCollaborative = await _context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.IsCollaborative && !w.Deleted);
-
-        if (isCollaborative)
+        if (wishlist.IsCollaborative)
         {
-            // Check if user has at least view permission
-            var hasPermission = await _context.WishlistPermissions
+            if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
+            {
+                return true;
+            }
+
+            var hasCollabPermission = await context.WishlistPermissions
                 .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
-            return hasPermission;
+            if (hasCollabPermission)
+            {
+                return true;
+            }
         }
 
-        // Check if user has edit or admin permission
-        var hasEditPermission = await _context.WishlistPermissions
+        var hasEditPermission = await context.WishlistPermissions
             .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId &&
                     (wp.PermissionType == "Edit" || wp.PermissionType == "Admin") &&
                     !wp.Deleted);
@@ -471,7 +523,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     public async Task<ItemCommentModel> AddCommentToItemAsync(int wishlistId, int itemId, string userId, string text)
     {
         // Verify item exists
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
@@ -484,8 +537,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.ItemComments.Add(comment);
-        await _context.SaveChangesAsync();
+        context.ItemComments.Add(comment);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -501,11 +554,12 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsAsync(int wishlistId, int itemId)
     {
         // Verify item exists
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
-        var comments = await _context.ItemComments
+        var comments = await context.ItemComments
             .Include(c => c.User)
             .Where(c => c.WishlistItemId == itemId && !c.Deleted)
             .OrderBy(c => c.CreatedOn)
@@ -516,7 +570,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
     {
-        var comment = await _context.ItemComments.FindAsync(commentId);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var comment = await context.ItemComments.FindAsync(commentId);
 
         if (comment == null || comment.Deleted)
         {
@@ -529,7 +584,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         if (!isCommentAuthor)
         {
             // Check if user is wishlist owner
-            var item = await _context.WishlistItems
+            var item = await context.WishlistItems
                 .Include(i => i.Wishlist)
                 .FirstOrDefaultAsync(i => i.Id == comment.WishlistItemId);
 
@@ -544,7 +599,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         comment.Deleted = true;
         comment.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
@@ -552,12 +607,13 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     public async Task<bool> ReserveItemAsync(int wishlistId, int itemId, string userId, bool isAnonymous = false)
     {
         // Verify item exists
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
         // Check if item is already reserved
-        var existingReservation = await _context.ItemReservations
+        var existingReservation = await context.ItemReservations
             .FirstOrDefaultAsync(r => r.WishlistItemId == itemId && !r.Deleted);
 
         if (existingReservation != null)
@@ -575,8 +631,8 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.ItemReservations.Add(reservation);
-        await _context.SaveChangesAsync();
+        context.ItemReservations.Add(reservation);
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -592,11 +648,12 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     public async Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId)
     {
         // Verify item exists
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
-        var reservation = await _context.ItemReservations
+        var reservation = await context.ItemReservations
             .FirstOrDefaultAsync(r => r.WishlistItemId == itemId && r.UserId == userId && !r.Deleted);
 
         if (reservation == null)
@@ -607,7 +664,7 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
         reservation.Deleted = true;
         reservation.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -623,11 +680,12 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
     public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId)
     {
         // Verify item exists
-        var item = await _context.WishlistItems
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
-        var reservation = await _context.ItemReservations
+        var reservation = await context.ItemReservations
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.WishlistItemId == itemId && !r.Deleted);
 
@@ -636,7 +694,30 @@ public class WishlistService(ApplicationDbContext context, IMapper mapper, IActi
 
     public async Task<bool> IsItemReservedAsync(int itemId)
     {
-        return await _context.ItemReservations
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.ItemReservations
             .AnyAsync(r => r.WishlistItemId == itemId && !r.Deleted);
+    }
+
+    private static bool IsEventMember(Event eventEntity, string userId)
+    {
+        if (string.Equals(eventEntity.CreatedBy?.Id, userId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return eventEntity.EventUsers.Any(eu =>
+            !eu.Deleted &&
+            string.Equals(eu.UserId, userId, StringComparison.Ordinal));
+    }
+
+    private static async Task<bool> IsEventMemberAsync(ApplicationDbContext context, int eventId, string userId)
+    {
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted);
+
+        return eventEntity != null && IsEventMember(eventEntity, userId);
     }
 }

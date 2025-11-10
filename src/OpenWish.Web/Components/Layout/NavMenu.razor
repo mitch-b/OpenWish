@@ -1,11 +1,12 @@
 ﻿@using OpenWish.Web.Services
+@using OpenWish.Web.Client.Components.Shared
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
 @inject IBaseUriService BaseUriService
 @inject IAppVersionService AppVersionService
 
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar">
     <div class="container-fluid">
         <a class="navbar-brand" href="">📃 OpenWish</a>
     </div>
@@ -67,8 +68,11 @@
             </NotAuthorized>
         </AuthorizeView>
 
-        <div class="nav-item px-3">
-            <p class="nav-link">
+        <div class="nav-footer px-3 mt-auto">
+            <div class="nav-link theme-toggle-host">
+                <ThemeToggle />
+            </div>
+            <p class="nav-link version">
                 <span>@AppVersionService.GetAppVersion()</span>
             </p>
         </div>

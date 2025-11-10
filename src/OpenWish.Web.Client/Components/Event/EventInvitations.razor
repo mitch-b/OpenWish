@@ -1,0 +1,561 @@
+@using System.Linq
+@using System.Net.Http
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject IFriendService FriendService
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3>Event Invitations</h3>
+            @if (IsOwner)
+            {
+                <button class="btn btn-primary btn-sm" @onclick="ShowInviteModal">
+                    <i class="bi bi-person-plus"></i> Invite
+                </button>
+            }
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (_invitations.Any())
+        {
+            <div class="btn-group mb-3" role="group">
+                <button type="button" class="btn btn-sm @(_filter == "All" ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="@(() => _filter = "All")">
+                    All (@_invitations.Count())
+                </button>
+                <button type="button" class="btn btn-sm @(_filter == "Pending" ? "btn-warning" : "btn-outline-warning")"
+                        @onclick="@(() => _filter = "Pending")">
+                    Pending (@_invitations.Count(i => i.Status == "Pending"))
+                </button>
+                <button type="button" class="btn btn-sm @(_filter == "Accepted" ? "btn-success" : "btn-outline-success")"
+                        @onclick="@(() => _filter = "Accepted")">
+                    Accepted (@_invitations.Count(i => i.Status == "Accepted"))
+                </button>
+                <button type="button" class="btn btn-sm @(_filter == "Rejected" ? "btn-danger" : "btn-outline-danger")"
+                        @onclick="@(() => _filter = "Rejected")">
+                    Rejected (@_invitations.Count(i => i.Status == "Rejected"))
+                </button>
+            </div>
+
+            <div class="list-group">
+                @foreach (var invitation in FilteredInvitations)
+                {
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1 me-2" style="min-width: 0;">
+                                <div class="d-flex align-items-center" style="overflow: hidden;">
+                                    @if (invitation.User != null)
+                                    {
+                                        <strong class="text-truncate">@invitation.User.UserName</strong>
+                                        <small class="text-muted ms-2 text-truncate">(@invitation.User.Email)</small>
+                                    }
+                                    else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
+                                    {
+                                        <strong class="text-truncate">@invitation.InviteeEmail</strong>
+                                        <small class="text-muted ms-2">(Not registered)</small>
+                                    }
+                                </div>
+                                <div class="mt-1">
+                                    <span class="badge @GetStatusBadgeClass(invitation.Status)">@invitation.Status</span>
+                                    <small class="text-muted ms-2">
+                                        Invited @invitation.InvitationDate.ToString("MMM dd, yyyy")
+                                    </small>
+                                </div>
+                            </div>
+                            @if (IsOwner && invitation.Status == "Pending")
+                            {
+                                <div class="btn-group flex-shrink-0">
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            @onclick="() => HandleResendInvitation(invitation.Id)"
+                                            title="Resend invitation">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => HandleCancelInvitation(invitation.Id)"
+                                            title="Cancel invitation">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            }
+                            else if (!IsOwner && IsCurrentUserInvitee(invitation) && invitation.Status == "Pending")
+                            {
+                                <div class="btn-group flex-shrink-0">
+                                    <button class="btn btn-success btn-sm"
+                                            @onclick="() => HandleAcceptInvitation(invitation.Id)"
+                                            title="Accept invitation">
+                                        <i class="bi bi-check-lg"></i> Accept
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => HandleRejectInvitation(invitation.Id)"
+                                            title="Reject invitation">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted text-center py-3">No invitations yet.</p>
+        }
+    </div>
+</div>
+
+@if (_showInviteModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Invite to Event</h5>
+                    <button type="button" class="btn-close" @onclick="HideInviteModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger">@_errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success">@_successMessage</div>
+                    }
+
+                    <div class="mb-3">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link @(_inviteMode == "email" ? "active" : "")"
+                                        @onclick="SetInviteModeEmailAsync"
+                                        type="button">
+                                    By Email
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link @(_inviteMode == "friends" ? "active" : "")"
+                                        @onclick="SetInviteModeFriendsAsync"
+                                        type="button">
+                                    From Friends
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    @if (_inviteMode == "email")
+                    {
+                        <div class="mb-3">
+                            <label for="emailInput" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="emailInput"
+                                   @bind="_emailToInvite"
+                                   placeholder="friend@example.com" />
+                        </div>
+                    }
+                    else
+                    {
+                        @if (_friends == null)
+                        {
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading friends...</span>
+                                </div>
+                            </div>
+                        }
+                        else if (_friends.Count == 0)
+                        {
+                            <p class="text-muted">You don't have any friends yet.</p>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Select Friends</label>
+                                <input class="form-control form-control-sm mb-2"
+                                       type="search"
+                                       placeholder="Search friends..."
+                                       @bind="_friendSearchTerm"
+                                       @bind:event="oninput" />
+                                @{ var filteredFriends = FilteredFriends.ToList(); }
+                                @if (filteredFriends.Any())
+                                {
+                                    <div class="friend-list border rounded overflow-auto">
+                                        @foreach (var friend in filteredFriends)
+                                        {
+                                            var isSelected = _selectedFriendIds.Contains(friend.Id);
+                                            <label class="friend-option border-bottom" for="friend-@friend.Id">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       id="friend-@friend.Id"
+                                                       checked="@isSelected"
+                                                       @onchange="args => ToggleFriendSelection(friend.Id, args.Value is bool selected && selected)" />
+                                                <div class="friend-option__content">
+                                                    <span>@(friend.UserName ?? friend.Email ?? "Unnamed Friend")</span>
+                                                    @if (!string.IsNullOrWhiteSpace(friend.Email))
+                                                    {
+                                                        <small class="text-muted">@friend.Email</small>
+                                                    }
+                                                </div>
+                                            </label>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No friends match your search.</p>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@(_isSending || (_inviteMode == "friends" && !_selectedFriendIds.Any()))">
+                        @if (_isSending)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Send Invitation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@code {
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public bool IsOwner { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+
+    private List<EventUserModel> _invitations = new();
+    private List<ApplicationUserModel>? _friends = null;
+    private readonly HashSet<string> _selectedFriendIds = new();
+    private bool _isLoading = true;
+    private bool _showInviteModal = false;
+    private bool _isSending = false;
+    private string _filter = "All";
+    private string _inviteMode = "email";
+    private string _emailToInvite = string.Empty;
+    private string _friendSearchTerm = string.Empty;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private IEnumerable<EventUserModel> FilteredInvitations =>
+        _filter == "All" ? _invitations : _invitations.Where(i => i.Status == _filter);
+
+    private IEnumerable<ApplicationUserModel> FilteredFriends =>
+        string.IsNullOrWhiteSpace(_friendSearchTerm)
+            ? _friends ?? Enumerable.Empty<ApplicationUserModel>()
+            : (_friends ?? Enumerable.Empty<ApplicationUserModel>())
+                .Where(friend =>
+                    (!string.IsNullOrEmpty(friend.UserName) && friend.UserName.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(friend.Email) && friend.Email.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvitations();
+    }
+
+    private bool IsCurrentUserInvitee(EventUserModel invitation)
+    {
+        if (string.IsNullOrEmpty(CurrentUserId))
+            return false;
+
+        return invitation.UserId == CurrentUserId;
+    }
+
+    private async Task LoadInvitations()
+    {
+        _isLoading = true;
+        try
+        {
+            var invitations = await EventService.GetEventInvitationsAsync(EventId);
+            _invitations = invitations.ToList();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ShowInviteModal()
+    {
+        _showInviteModal = true;
+        _errorMessage = null;
+        _successMessage = null;
+        _emailToInvite = string.Empty;
+        _selectedFriendIds.Clear();
+        _friendSearchTerm = string.Empty;
+
+        await EnsureFriendsLoadedAsync();
+    }
+
+    private void HideInviteModal()
+    {
+        _showInviteModal = false;
+        _errorMessage = null;
+        _successMessage = null;
+    }
+
+    private async Task HandleSendInvitation()
+    {
+        _isSending = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                _errorMessage = "You must be logged in to send invitations.";
+                return;
+            }
+
+            if (_inviteMode == "email")
+            {
+                if (string.IsNullOrWhiteSpace(_emailToInvite))
+                {
+                    _errorMessage = "Please enter an email address.";
+                    return;
+                }
+
+                await EventService.InviteByEmailToEventAsync(EventId, userId, _emailToInvite);
+                _successMessage = $"Invitation sent to {_emailToInvite}";
+            }
+            else
+            {
+                if (!_selectedFriendIds.Any())
+                {
+                    _errorMessage = "Please select at least one friend to invite.";
+                    return;
+                }
+
+                var invitedFriends = new List<(string Id, string Name)>();
+                var failedFriends = new List<string>();
+
+                foreach (var friendId in _selectedFriendIds.ToList())
+                {
+                    var friend = _friends?.FirstOrDefault(f => f.Id == friendId);
+                    var friendName = friend?.UserName ?? friend?.Email ?? "Friend";
+
+                    try
+                    {
+                        await EventService.InviteUserToEventAsync(EventId, userId, friendId);
+                        invitedFriends.Add((friendId, friendName));
+                    }
+                    catch (HttpRequestException)
+                    {
+                        failedFriends.Add(friendName);
+                    }
+                    catch (Exception ex)
+                    {
+                        failedFriends.Add($"{friendName} ({ex.Message})");
+                    }
+                }
+
+                foreach (var invited in invitedFriends)
+                {
+                    _selectedFriendIds.Remove(invited.Id);
+                }
+
+                if (invitedFriends.Any())
+                {
+                    var invitedNames = invitedFriends.Select(f => f.Name).ToList();
+                    _successMessage = BuildFriendInviteSuccessMessage(invitedNames);
+                }
+
+                if (failedFriends.Any())
+                {
+                    _errorMessage = failedFriends.Count == 1
+                        ? $"Could not invite {failedFriends[0]}."
+                        : $"Could not invite {failedFriends.Count} friends: {string.Join(", ", failedFriends)}.";
+                }
+
+                if (!invitedFriends.Any())
+                {
+                    return;
+                }
+            }
+
+            await LoadInvitations();
+
+            if (string.IsNullOrEmpty(_errorMessage))
+            {
+                await Task.Delay(1000);
+                HideInviteModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSending = false;
+        }
+    }
+
+    private Task SetInviteModeEmailAsync()
+    {
+        _inviteMode = "email";
+        return Task.CompletedTask;
+    }
+
+    private async Task SetInviteModeFriendsAsync()
+    {
+        _inviteMode = "friends";
+        await EnsureFriendsLoadedAsync();
+    }
+
+    private async Task EnsureFriendsLoadedAsync()
+    {
+        if (_inviteMode != "friends" || _friends != null)
+        {
+            return;
+        }
+
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                _errorMessage = "You must be logged in to view your friends.";
+                _friends = new List<ApplicationUserModel>();
+                return;
+            }
+
+            var friends = await FriendService.GetFriendsAsync(userId);
+            _friends = friends
+                .OrderBy(f => f.UserName ?? f.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            _friends = new List<ApplicationUserModel>();
+        }
+    }
+
+    private void ToggleFriendSelection(string friendId, bool isSelected)
+    {
+        if (string.IsNullOrEmpty(friendId))
+        {
+            return;
+        }
+
+        if (isSelected)
+        {
+            _selectedFriendIds.Add(friendId);
+        }
+        else
+        {
+            _selectedFriendIds.Remove(friendId);
+        }
+    }
+
+    private static string BuildFriendInviteSuccessMessage(IReadOnlyList<string> friendNames)
+    {
+        if (friendNames.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (friendNames.Count == 1)
+        {
+            return $"Invitation sent to {friendNames[0]}.";
+        }
+
+        var previewNames = friendNames.Take(3).ToList();
+        var suffix = friendNames.Count > previewNames.Count
+            ? $" and {friendNames.Count - previewNames.Count} more"
+            : string.Empty;
+
+        return $"Invitations sent to {string.Join(", ", previewNames)}{suffix}.";
+    }
+
+    private async Task HandleAcceptInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.AcceptEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleRejectInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.RejectEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleResendInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.ResendEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleCancelInvitation(int invitationId)
+    {
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await EventService.CancelEventInvitationAsync(invitationId, userId);
+                await LoadInvitations();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "Pending" => "bg-warning text-dark",
+        "Accepted" => "bg-success",
+        "Rejected" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

@@ -7,9 +7,9 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class ActivityService(ApplicationDbContext context, IMapper mapper) : IActivityService
+public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFactory, IMapper mapper) : IActivityService
 {
-    private readonly ApplicationDbContext _context = context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
     private readonly IMapper _mapper = mapper;
 
     public async Task<ActivityLogModel> LogActivityAsync(
@@ -19,6 +19,7 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
         int? wishlistId = null,
         int? wishlistItemId = null)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var activityLog = new ActivityLog
         {
             UserId = userId,
@@ -30,15 +31,16 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.ActivityLogs.Add(activityLog);
-        await _context.SaveChangesAsync();
+        context.ActivityLogs.Add(activityLog);
+        await context.SaveChangesAsync();
 
         return _mapper.Map<ActivityLogModel>(activityLog);
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
-        var activities = await _context.ActivityLogs
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var activities = await context.ActivityLogs
             .Where(a => a.UserId == userId)
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
@@ -53,14 +55,15 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
 
     public async Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         // Get list of friends
-        var friendIds = await _context.Friends
+        var friendIds = await context.Friends
             .Where(f => f.UserId == userId && !f.Deleted)
             .Select(f => f.FriendUserId)
             .ToListAsync();
 
         // Get activities from friends
-        var activities = await _context.ActivityLogs
+        var activities = await context.ActivityLogs
             .Where(a => friendIds.Contains(a.UserId))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
@@ -75,7 +78,8 @@ public class ActivityService(ApplicationDbContext context, IMapper mapper) : IAc
 
     public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0)
     {
-        var activities = await _context.ActivityLogs
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var activities = await context.ActivityLogs
             .Where(a => a.WishlistId == wishlistId)
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)

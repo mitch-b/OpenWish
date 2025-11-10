@@ -13,5 +13,5 @@ public class EventModel : BaseEntityModel
     public IEnumerable<string> Tags { get; set; } = [];
     public DateTimeOffset CreatedOn { get; set; }
     public ICollection<EventUserModel> EventUsers { get; set; } // Users invited to the event
-    // public ICollection<Wishlist> EventWishlists { get; set; } // Wishlists tied to the event
+    public ICollection<WishlistModel> EventWishlists { get; set; } = []; // Wishlists tied to the event
 }

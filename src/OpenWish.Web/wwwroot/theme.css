@@ -1,0 +1,205 @@
+/* Theme variable definitions */
+/* Light theme */
+:root[data-theme='light'] {
+    --color-bg: #ffffff;
+    --color-text: #1b1f23;
+    --color-link: #006bb7;
+    --color-link-hover: #004e85;
+    --color-primary-bg: #1b6ec2;
+    --color-primary-border: #1861ac;
+    --color-top-row-bg: #f7f7f7;
+    --color-top-row-border: #d6d5d5;
+    --color-sidebar-gradient-start: #052767;
+    --color-sidebar-gradient-end: #3a0647;
+    --color-error-bg: #b32121;
+    --color-error-text: #ffffff;
+    --color-border-muted: #d0d7de;
+    --color-surface: #f6f8fa;
+    --color-surface-alt: #eef1f4;
+    /* Navigation */
+    /* Navigation text on dark gradient sidebar needs light contrast */
+    --color-nav-text: #f8f9fa;
+    --color-nav-icon: #ffffff;
+    --color-nav-active-bg: rgba(0,0,0,0.08);
+    --color-nav-hover-bg: rgba(0,0,0,0.04);
+    --color-nav-toggle-border: rgba(0,0,0,0.15);
+    --color-nav-toggle-bg: rgba(0,0,0,0.05);
+    /* Bootstrap variable overrides */
+    --bs-body-bg: var(--color-bg);
+    --bs-body-color: var(--color-text);
+    --bs-border-color: var(--color-border-muted);
+    --bs-link-color: var(--color-link);
+    --bs-link-hover-color: var(--color-link-hover);
+    --bs-form-control-bg: var(--color-surface);
+    --bs-form-control-color: var(--color-text);
+    --bs-secondary-bg: var(--color-surface-alt);
+    --bs-secondary-color: #6c757d;
+    --bs-card-bg: var(--color-surface);
+    --bs-card-border-color: var(--color-border-muted);
+    --bs-card-color: var(--color-text);
+    --bs-nav-tabs-link-active-color: var(--color-text);
+    --bs-nav-tabs-link-active-bg: var(--color-surface);
+    --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
+    --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
+    --bs-dropdown-bg: var(--color-dropdown-bg);
+    --bs-dropdown-border-color: var(--color-dropdown-border);
+    --bs-dropdown-link-color: var(--color-text);
+    --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
+    --bs-dropdown-link-hover-color: var(--color-text);
+    /* Status / semantic tokens */
+    --color-success-bg: #d1e7dd;
+    --color-success-border: #0f5132;
+    --color-success-text: #0f5132;
+    --color-warning-bg: #fff3cd;
+    --color-warning-border: #664d03;
+    --color-warning-text: #664d03;
+    --color-info-bg: #cff4fc;
+    --color-info-border: #055160;
+    --color-info-text: #055160;
+    --color-danger-bg: #f8d7da;
+    --color-danger-border: #842029;
+    --color-danger-text: #842029;
+    --color-dropdown-bg: var(--color-surface);
+    --color-dropdown-border: var(--color-border-muted);
+    --color-dropdown-hover-bg: rgba(27, 31, 35, 0.06);
+    --color-dropdown-danger-hover-bg: rgba(220, 53, 69, 0.16);
+    --color-danger-solid: #dc3545;
+    --color-danger-solid-hover: #bb2d3b;
+    --color-danger-solid-active: #a52834;
+    /* Bootstrap semantic overrides */
+    --bs-success: #198754;
+    --bs-warning: #ffc107;
+    --bs-info: #0dcaf0;
+    --bs-danger: #dc3545;
+    --bs-success-bg-subtle: var(--color-success-bg);
+    --bs-success-text-emphasis: var(--color-success-text);
+    --bs-warning-bg-subtle: var(--color-warning-bg);
+    --bs-warning-text-emphasis: var(--color-warning-text);
+    --bs-info-bg-subtle: var(--color-info-bg);
+    --bs-info-text-emphasis: var(--color-info-text);
+    --bs-success-border-subtle: var(--color-success-border);
+    --bs-warning-border-subtle: var(--color-warning-border);
+    --bs-info-border-subtle: var(--color-info-border);
+    --bs-danger-bg-subtle: var(--color-danger-bg);
+    --bs-danger-border-subtle: var(--color-danger-border);
+    --bs-danger-text-emphasis: var(--color-danger-text);
+}
+
+/* Dark theme */
+:root[data-theme='dark'] {
+    --color-bg: #0d1117;
+    --color-text: #e6edf3;
+    --color-link: #58a6ff;
+    --color-link-hover: #1f6feb;
+    --color-primary-bg: #2383e2;
+    --color-primary-border: #1b6ec2;
+    --color-top-row-bg: #1b1f24;
+    --color-top-row-border: #282e33;
+    --color-sidebar-gradient-start: #121e36;
+    --color-sidebar-gradient-end: #2a0f32;
+    --color-error-bg: #b32121;
+    --color-error-text: #ffffff;
+    --color-border-muted: #30363d;
+    --color-surface: #161b22;
+    --color-surface-alt: #212830;
+    /* Navigation */
+    --color-nav-text: #d7d7d7;
+    --color-nav-icon: #ffffff;
+    --color-nav-active-bg: rgba(255,255,255,0.25);
+    --color-nav-hover-bg: rgba(255,255,255,0.12);
+    --color-nav-toggle-border: rgba(255,255,255,0.2);
+    --color-nav-toggle-bg: rgba(255,255,255,0.08);
+    /* Bootstrap variable overrides */
+    --bs-body-bg: var(--color-bg);
+    --bs-body-color: var(--color-text);
+    --bs-border-color: var(--color-border-muted);
+    --bs-link-color: var(--color-link);
+    --bs-link-hover-color: var(--color-link-hover);
+    --bs-form-control-bg: var(--color-surface);
+    --bs-form-control-color: var(--color-text);
+    --bs-secondary-bg: var(--color-surface-alt);
+    --bs-secondary-color: #8b949e;
+    --bs-card-bg: var(--color-surface);
+    --bs-card-border-color: var(--color-border-muted);
+    --bs-card-color: var(--color-text);
+    --bs-nav-tabs-link-active-color: var(--color-text);
+    --bs-nav-tabs-link-active-bg: var(--color-surface);
+    --bs-nav-tabs-link-active-border-color: var(--color-border-muted) var(--color-border-muted) var(--color-surface);
+    --bs-nav-tabs-link-hover-border-color: var(--color-border-muted) var(--color-border-muted) transparent;
+    --bs-dropdown-bg: var(--color-dropdown-bg);
+    --bs-dropdown-border-color: var(--color-dropdown-border);
+    --bs-dropdown-link-color: var(--color-text);
+    --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
+    --bs-dropdown-link-hover-color: var(--color-text);
+    /* Status / semantic tokens */
+    --color-success-bg: #132d1f;
+    --color-success-border: #2ea043;
+    --color-success-text: #7ee787;
+    --color-warning-bg: #2e2817;
+    --color-warning-border: #9e6a03;
+    --color-warning-text: #e3b341;
+    --color-info-bg: #132b36;
+    --color-info-border: #0a6377;
+    --color-info-text: #58a6ff;
+    --color-danger-bg: #2c1517;
+    --color-danger-border: #a40e26;
+    --color-danger-text: #ff7b72;
+    --color-dropdown-bg: var(--color-surface);
+    --color-dropdown-border: var(--color-border-muted);
+    --color-dropdown-hover-bg: rgba(255, 255, 255, 0.08);
+    --color-dropdown-danger-hover-bg: rgba(182, 35, 36, 0.32);
+    --color-danger-solid: #da3633;
+    --color-danger-solid-hover: #b62324;
+    --color-danger-solid-active: #982119;
+    /* Bootstrap semantic overrides */
+    --bs-success: #2ea043;
+    --bs-warning: #e3b341;
+    --bs-info: #58a6ff;
+    --bs-danger: #ff7b72;
+    --bs-success-bg-subtle: var(--color-success-bg);
+    --bs-success-text-emphasis: var(--color-success-text);
+    --bs-warning-bg-subtle: var(--color-warning-bg);
+    --bs-warning-text-emphasis: var(--color-warning-text);
+    --bs-info-bg-subtle: var(--color-info-bg);
+    --bs-info-text-emphasis: var(--color-info-text);
+    --bs-success-border-subtle: var(--color-success-border);
+    --bs-warning-border-subtle: var(--color-warning-border);
+    --bs-info-border-subtle: var(--color-info-border);
+    --bs-danger-bg-subtle: var(--color-danger-bg);
+    --bs-danger-border-subtle: var(--color-danger-border);
+    --bs-danger-text-emphasis: var(--color-danger-text);
+}
+
+body.dark {
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* Generic helpers */
+.surface {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+.surface-alt {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+}
+
+/* Scrollbar theming (WebKit) */
+body.dark ::-webkit-scrollbar {
+    width: 12px;
+}
+body.dark ::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+body.dark ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-muted);
+    border-radius: 6px;
+    border: 3px solid var(--color-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: dark;
+    }
+}

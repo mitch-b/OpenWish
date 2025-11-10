@@ -6,6 +6,7 @@ public class WishlistModel : BaseEntityModel
     public string? Icon { get; set; }
     public string? OwnerId { get; set; }
     public ApplicationUserModel? Owner { get; set; }
+    public int? EventId { get; set; }
     public bool IsCollaborative { get; set; }
     public int ItemCount { get; set; }
     public ICollection<WishlistItemModel> Items { get; set; } = [];

@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -6,7 +7,6 @@ using OpenWish.Application.Models.Configuration;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Services;
 using OpenWish.Web.Services;
-using System.Net.Http.Headers;
 
 namespace OpenWish.Web.Extensions;
 

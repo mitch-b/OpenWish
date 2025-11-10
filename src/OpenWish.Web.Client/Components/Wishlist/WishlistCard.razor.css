@@ -1,14 +1,15 @@
 ﻿.wishlist-card {
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--color-border-muted);
     border-radius: 10px;
-    background-color: #ffffff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    background-color: var(--color-surface);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    transition: box-shadow 0.3s ease, transform 0.3s ease, background-color .25s ease, border-color .25s ease, color .25s ease;
     cursor: pointer;
+    color: var(--color-text);
 }
 
     .wishlist-card:hover {
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.35);
         /*transform: translateY(-5px);*/
     }
 
@@ -16,8 +17,11 @@
     background-color: transparent;
     border: none;
     cursor: pointer;
+    color: var(--color-text);
+    border-radius: 4px;
+    transition: background-color .2s ease;
 }
 
     .kebab-menu:hover {
-        background-color: #f0f0f0;
+        background-color: var(--color-surface-alt);
     }

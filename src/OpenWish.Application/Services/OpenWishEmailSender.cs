@@ -39,6 +39,24 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         return SendEmailAsync(toEmail, subject, body);
     }
 
+    /// <summary>
+    /// Sends an event invitation email.
+    /// </summary>
+    /// <param name="toEmail">Recipient email address</param>
+    /// <param name="inviterName">Name of the user sending the invite</param>
+    /// <param name="eventName">Name of the event</param>
+    /// <param name="inviteLink">Event invitation link</param>
+    /// <returns></returns>
+    public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink)
+    {
+        _logger.LogInformation("Sending event invite email to {Email} for event {EventName} with link {InviteLink}",
+            toEmail, eventName, inviteLink);
+        var subject = $"{inviterName} invited you to {eventName}!";
+        var body = WrapInHtmlFormattedEmail($"<p>{inviterName} has invited you to join the event <strong>{eventName}</strong> on OpenWish.<br/>" +
+            $"<a href='{inviteLink}'>Click here to view and accept the invitation</a>.</p>");
+        return SendEmailAsync(toEmail, subject, body);
+    }
+
     public async Task SendEmailAsync(string toEmail, string subject, string message)
     {
         var response = await _fluentEmail

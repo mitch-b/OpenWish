@@ -1,3 +1,14 @@
+/*
+ * Global Breakpoints Configuration
+ * 
+ * Mobile breakpoint: 767.98px
+ * Usage in media queries: @media (max-width: 767.98px)
+ * 
+ * This value is used consistently across all component CSS files.
+ * To adjust the mobile breakpoint, update this value and all corresponding
+ * @media queries in component-specific CSS files.
+ */
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: var(--color-bg);

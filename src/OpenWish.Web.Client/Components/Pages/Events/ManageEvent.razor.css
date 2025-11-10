@@ -26,3 +26,23 @@
     color: var(--color-text);
     margin-bottom: 1.5rem;
 }
+
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .event-header {
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .event-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .list-group-item {
+        padding: 0.75rem;
+    }
+}

@@ -29,3 +29,23 @@
     transition: background-color .25s ease, color .25s ease;
     color: var(--color-text);
 }
+
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .event-header {
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .event-header h1 {
+        font-size: 1.75rem;
+    }
+
+    .event-content {
+        padding: 1rem;
+    }
+
+    .add-item-section {
+        padding: 1rem;
+    }
+}

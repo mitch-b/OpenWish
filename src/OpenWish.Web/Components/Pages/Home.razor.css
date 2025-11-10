@@ -1,16 +1,29 @@
 .hero-section {
     text-align: center;
-    padding: 4rem 2rem;
+    padding: 2rem 1rem;
     background: linear-gradient(135deg, #6B46C1 0%, #9F7AEA 100%);
     color: white;
+}
+
+@media (min-width: 768px) {
+    .hero-section {
+        padding: 4rem 2rem;
+    }
 }
 
 .features-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    padding: 4rem 2rem;
+    gap: 1.5rem;
+    padding: 2rem 1rem;
     background: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+    .features-section {
+        gap: 2rem;
+        padding: 4rem 2rem;
+    }
 }
 
 .feature-card {
@@ -22,7 +35,13 @@
 }
 
 .featured-section {
-    padding: 4rem 2rem;
+    padding: 2rem 1rem;
+}
+
+@media (min-width: 768px) {
+    .featured-section {
+        padding: 4rem 2rem;
+    }
 }
 
 .wishlist-carousel {

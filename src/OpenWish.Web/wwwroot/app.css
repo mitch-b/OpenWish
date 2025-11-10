@@ -301,3 +301,16 @@ h1:focus {
     color: var(--color-danger-text) !important;
     border:1px solid var(--color-danger-border) !important;
 }
+
+/* Wishlist comments honor theme surfaces */
+.item-comments .comment-item {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: .5rem;
+    transition: background-color .25s ease, border-color .25s ease;
+}
+
+.item-comments .comment-item.comment-item-self {
+    background-color: var(--color-surface-alt);
+    border-color: var(--color-border-muted);
+}

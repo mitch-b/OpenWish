@@ -24,7 +24,7 @@
             <div class="comment-list mb-3">
                 @foreach (var comment in _comments)
                 {
-                    <div class="comment-item d-flex mb-2 p-2 @(comment.UserId == _currentUserId ? "bg-light" : "")">
+                    <div class="comment-item d-flex mb-2 p-2 @(comment.UserId == _currentUserId ? "comment-item-self" : string.Empty)">
                         <div class="flex-grow-1">
                             <div class="d-flex justify-content-between">
                                 <div class="fw-bold">
@@ -75,10 +75,10 @@
 
     [Parameter]
     public int ItemId { get; set; }
-    
+
     [Parameter]
     public bool IsWishlistOwner { get; set; }
-    
+
     private List<ItemCommentModel> _comments = [];
     private string commentText = "";
     private bool _loading = true;

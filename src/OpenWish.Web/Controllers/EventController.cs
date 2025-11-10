@@ -107,6 +107,90 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return NoContent();
     }
 
+    [HttpGet("{eventId}/wishlists")]
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEventWishlists(int eventId)
+    {
+        var wishlists = await _eventService.GetEventWishlistsAsync(eventId);
+        return Ok(wishlists);
+    }
+
+    [HttpPost("{eventId}/wishlists")]
+    public async Task<ActionResult<WishlistModel>> CreateEventWishlist(int eventId, [FromBody] WishlistModel wishlist)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var createdWishlist = await _eventService.CreateEventWishlistAsync(eventId, wishlist, userId);
+            return Ok(createdWishlist);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
+    [HttpPost("{eventId}/wishlists/attach")]
+    public async Task<ActionResult<WishlistModel>> AttachWishlistToEvent(int eventId, [FromBody] AttachWishlistToEventRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var wishlist = await _eventService.AttachWishlistAsync(eventId, request.WishlistId, userId);
+            return Ok(wishlist);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("{eventId}/wishlists/{wishlistId}")]
+    public async Task<IActionResult> DetachWishlistFromEvent(int eventId, int wishlistId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var result = await _eventService.DetachWishlistAsync(eventId, wishlistId, userId);
+            if (!result)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
     // Event Invitation Endpoints
 
     [HttpPost("{eventId}/invitations/user/{userId}")]

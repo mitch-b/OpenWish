@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +28,21 @@ public class EventService(
     private readonly string? _baseUri = openWishSettings.Value.BaseUri;
     private readonly ILogger<EventService> _logger = logger;
 
+    private static bool IsEventOwner(Event eventEntity, string userId) =>
+        string.Equals(eventEntity.CreatedBy?.Id, userId, StringComparison.Ordinal);
+
+    private static bool IsEventMember(Event eventEntity, string userId)
+    {
+        if (IsEventOwner(eventEntity, userId))
+        {
+            return true;
+        }
+
+        return eventEntity.EventUsers.Any(eu =>
+            !eu.Deleted &&
+            string.Equals(eu.UserId, userId, StringComparison.Ordinal));
+    }
+
     public async Task<EventModel> CreateEventAsync(EventModel eventModel, string creatorId)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -53,11 +70,12 @@ public class EventService(
                     .Include(e => e.CreatedBy)
                     .Include(e => e.EventUsers)
                         .ThenInclude(eu => eu.User)
-                    .Include(e => e.EventWishlists)
+                    .Include(e => e.EventWishlists
+                        .Where(w => !w.Deleted))
                         .ThenInclude(ew => ew.Owner)
                     .Include(e => e.GiftExchanges)
                         .ThenInclude(ge => ge.Receiver)
-                    .FirstOrDefaultAsync(e => e.Id == id);
+                    .FirstOrDefaultAsync(e => e.Id == id && !e.Deleted);
 
         if (eventEntity == null)
         {
@@ -73,17 +91,147 @@ public class EventService(
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntities = await context.Events
+            .AsNoTracking()
             .Include(e => e.CreatedBy)
-            .Where(e => e.CreatedBy.Id == userId)
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
-            .Include(e => e.EventWishlists)
+            .Include(e => e.EventWishlists
+                .Where(w => !w.Deleted))
                 .ThenInclude(ew => ew.Owner)
-            .AsNoTracking()
+            .Where(e => !e.Deleted &&
+                (e.CreatedBy.Id == userId ||
+                 e.EventUsers.Any(eu => !eu.Deleted && eu.UserId == userId)))
+            .OrderBy(e => e.Date)
             .ToListAsync();
 
         var eventModels = _mapper.Map<IEnumerable<EventModel>>(eventEntities);
         return eventModels;
+    }
+
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var wishlistEntities = await context.Wishlists
+            .AsNoTracking()
+            .Where(w => w.EventId == eventId && !w.Deleted)
+            .Include(w => w.Owner)
+            .Include(w => w.Items)
+            .OrderBy(w => w.Name)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<WishlistModel>>(wishlistEntities);
+    }
+
+    public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        if (!IsEventMember(eventEntity, ownerId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event to create a wishlist.");
+        }
+
+        var wishlistService = scope.ServiceProvider.GetRequiredService<IWishlistService>();
+        wishlistModel.EventId = eventId;
+
+        return await wishlistService.CreateWishlistAsync(wishlistModel, ownerId);
+    }
+
+    public async Task<WishlistModel> AttachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        var wishlist = await context.Wishlists
+            .Include(w => w.Owner)
+            .Include(w => w.Items)
+            .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
+
+        if (wishlist.EventId.HasValue && wishlist.EventId != eventId)
+        {
+            throw new InvalidOperationException("Wishlist is already attached to another event.");
+        }
+
+        if (!IsEventMember(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event to attach a wishlist.");
+        }
+
+        if (string.IsNullOrEmpty(wishlist.OwnerId))
+        {
+            throw new InvalidOperationException("Wishlist must have an owner before being attached to an event.");
+        }
+
+        if (!IsEventMember(eventEntity, wishlist.OwnerId))
+        {
+            throw new InvalidOperationException("Wishlist owner must be part of the event.");
+        }
+
+        var isWishlistOwner = string.Equals(wishlist.OwnerId, userId, StringComparison.Ordinal);
+
+        if (!isWishlistOwner && !IsEventOwner(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner or event owner can attach this wishlist.");
+        }
+
+        wishlist.EventId = eventId;
+        wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return _mapper.Map<WishlistModel>(wishlist);
+    }
+
+    public async Task<bool> DetachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted);
+
+        if (eventEntity == null)
+        {
+            return false;
+        }
+
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted);
+
+        if (wishlist == null || wishlist.EventId != eventId)
+        {
+            return false;
+        }
+
+        var isWishlistOwner = string.Equals(wishlist.OwnerId, userId, StringComparison.Ordinal);
+
+        if (!isWishlistOwner && !IsEventOwner(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner or event owner can detach this wishlist.");
+        }
+
+        wishlist.EventId = null;
+        wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+        return true;
     }
 
     public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel)
@@ -106,11 +254,19 @@ public class EventService(
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events.FindAsync(id)
+        var eventEntity = await context.Events
+                .Include(e => e.EventWishlists)
+                .FirstOrDefaultAsync(e => e.Id == id)
                 ?? throw new KeyNotFoundException($"Event with id {id} not found");
 
         eventEntity.Deleted = true;
         eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
+
+        foreach (var wishlist in eventEntity.EventWishlists.Where(w => !w.Deleted))
+        {
+            wishlist.EventId = null;
+            wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+        }
 
         await context.SaveChangesAsync();
     }
@@ -153,7 +309,18 @@ public class EventService(
             return false;
         }
 
+        var wishlists = await context.Wishlists
+                .Where(w => w.EventId == eventId && w.OwnerId == userId && !w.Deleted)
+                .ToListAsync();
+
         context.EventUsers.Remove(eventUser);
+
+        foreach (var wishlist in wishlists)
+        {
+            wishlist.EventId = null;
+            wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+
         await context.SaveChangesAsync();
         return true;
     }

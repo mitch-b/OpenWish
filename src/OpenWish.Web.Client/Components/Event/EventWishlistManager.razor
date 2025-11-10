@@ -1,0 +1,591 @@
+@using System
+@using System.Linq
+@using System.Net.Http
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Wishlist
+@inject IEventService EventService
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
+@inject ILogger<EventWishlistManager> Logger
+
+@if (!_hasLoaded && _isLoading)
+{
+    <div class="card shadow-sm event-wishlist-manager">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm event-wishlist-manager">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h4 mb-0">Event Wishlists</h3>
+                @if (_isLoading)
+                {
+                    <span class="text-muted small">Refreshing…</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(_statusMessage))
+            {
+                <div class="alert alert-success" role="alert">@_statusMessage</div>
+            }
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+
+            <section class="mb-4">
+                <h4 class="h5">Your Wishlists</h4>
+                @{ var myWishlists = GetCurrentUserWishlists().ToList(); }
+                @if (!myWishlists.Any())
+                {
+                    <p class="text-muted small mb-2">You have not attached a wishlist to this event yet.</p>
+                }
+                else
+                {
+                    <ul class="list-group mb-3">
+                        @foreach (var wishlist in myWishlists)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="fw-semibold">@wishlist.Name</span>
+                                    <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
+                                </div>
+                                <div class="btn-group">
+                                    <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                    @if (CanDetach(wishlist))
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm"
+                                                disabled="@_isSubmitting"
+                                                @onclick="async () => await HandleDetachWishlistAsync(wishlist.Id)">
+                                            Remove
+                                        </button>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @{ var attachableWishlists = GetAttachableWishlists().ToList(); }
+                <div class="mb-3">
+                    <label class="form-label">Attach an existing wishlist</label>
+                    <div class="input-group">
+                        <select class="form-select"
+                                @bind="_selectedWishlistId"
+                                disabled="@(!attachableWishlists.Any() || _isSubmitting)">
+                            <option value="">Select a wishlist</option>
+                            @foreach (var option in attachableWishlists)
+                            {
+                                <option value="@option.Id">@option.Name</option>
+                            }
+                        </select>
+                        <button class="btn btn-primary"
+                                type="button"
+                                disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
+                                @onclick="AttachSelectedWishlistAsync">
+                            Attach
+                        </button>
+                    </div>
+                    @if (!attachableWishlists.Any())
+                    {
+                        <div class="form-text">All of your wishlists are already part of events. Create a new one below.</div>
+                    }
+                </div>
+
+                <button class="btn btn-link px-0"
+                        type="button"
+                        @onclick="ToggleCreateForm">
+                    @(_showCreateForm ? "Cancel new wishlist" : "Create a new wishlist for this event")
+                </button>
+
+                @if (_showCreateForm)
+                {
+                    <div class="mt-3">
+                        <WishlistForm Model="_draftWishlist"
+                                      OnSubmit="HandleCreateWishlistAsync"
+                                      OnCancel="CancelCreateWishlist" />
+                    </div>
+                }
+            </section>
+
+            <hr />
+
+            @{ var participantGroups = BuildParticipantGroups().ToList(); }
+            <section>
+                <h4 class="h5 mb-3">Participant Wishlists</h4>
+
+                @if (!participantGroups.Any())
+                {
+                    <p class="text-muted small mb-0">We do not have participant details yet.</p>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var participant in participantGroups)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="fw-semibold">@participant.Label</div>
+                                        @if (!string.IsNullOrEmpty(participant.Email))
+                                        {
+                                            <div class="small text-muted">@participant.Email</div>
+                                        }
+                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                            <span class="badge bg-primary">@participant.Role</span>
+                                            @if (!string.Equals(participant.Status, "Owner", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <span class="badge @GetStatusBadgeClass(participant.Status)">@participant.Status</span>
+                                            }
+                                            @if (participant.IsCurrentUser)
+                                            {
+                                                <span class="badge bg-info text-dark">You</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    @if (participant.Wishlists.Any())
+                                    {
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach (var wishlist in participant.Wishlists)
+                                            {
+                                                <li class="d-flex justify-content-between align-items-center mb-2">
+                                                    <div>
+                                                        <span class="fw-semibold">@wishlist.Name</span>
+                                                        <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                                        @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
+                                                        {
+                                                            <button class="btn btn-outline-secondary btn-sm"
+                                                                    disabled="@_isSubmitting"
+                                                                    @onclick="async () => await HandleDetachWishlistAsync(wishlist.Id)">
+                                                                Remove
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted small">No wishlist attached.</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public EventModel? Event { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<WishlistModel>> OnWishlistsChanged { get; set; }
+
+    private readonly List<WishlistModel> _eventWishlists = [];
+    private readonly List<WishlistModel> _userWishlists = [];
+    private WishlistModel _draftWishlist = new() { Name = string.Empty, IsCollaborative = true };
+    private int? _selectedWishlistId;
+    private string? _statusMessage;
+    private string? _errorMessage;
+    private string? _currentUserId;
+    private bool _showCreateForm;
+    private bool _isLoading;
+    private bool _isSubmitting;
+    private bool _isInitialized;
+    private bool _hasLoaded;
+    private bool _isEventOwner;
+    private int _lastEventId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EventId <= 0)
+        {
+            return;
+        }
+
+        await EnsureCurrentUserAsync();
+        EvaluateOwnership();
+
+        if (!_isInitialized || _lastEventId != EventId)
+        {
+            _isInitialized = true;
+            _lastEventId = EventId;
+            await LoadWishlistsAsync();
+        }
+        else if (Event?.EventWishlists != null && Event.EventWishlists.Count != _eventWishlists.Count)
+        {
+            await LoadWishlistsAsync();
+        }
+    }
+
+    private async Task EnsureCurrentUserAsync()
+    {
+        if (!string.IsNullOrEmpty(CurrentUserId))
+        {
+            if (!string.Equals(_currentUserId, CurrentUserId, StringComparison.Ordinal))
+            {
+                _currentUserId = CurrentUserId;
+            }
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            _currentUserId = await UserContextService.GetUserIdAsync();
+        }
+    }
+
+    private void EvaluateOwnership()
+    {
+        _isEventOwner = !string.IsNullOrEmpty(_currentUserId) &&
+                        Event?.CreatedBy?.Id != null &&
+                        string.Equals(Event.CreatedBy.Id, _currentUserId, StringComparison.Ordinal);
+    }
+
+    private async Task LoadWishlistsAsync()
+    {
+        if (_isLoading)
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var wishlists = (await EventService.GetEventWishlistsAsync(EventId)).ToList();
+            _eventWishlists.Clear();
+            _eventWishlists.AddRange(wishlists);
+
+            if (Event is not null)
+            {
+                Event.EventWishlists = wishlists;
+            }
+
+            if (!string.IsNullOrEmpty(_currentUserId))
+            {
+                var userWishlists = (await WishlistService.GetUserWishlistsAsync(_currentUserId)).ToList();
+                _userWishlists.Clear();
+                _userWishlists.AddRange(userWishlists);
+            }
+            else
+            {
+                _userWishlists.Clear();
+            }
+
+            if (OnWishlistsChanged.HasDelegate)
+            {
+                await OnWishlistsChanged.InvokeAsync(_eventWishlists);
+            }
+
+            _hasLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load wishlists for event {EventId}", EventId);
+            _errorMessage ??= "We couldn't load event wishlists. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<WishlistModel> GetCurrentUserWishlists()
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return Enumerable.Empty<WishlistModel>();
+        }
+
+        return _eventWishlists
+            .Where(w => string.Equals(w.OwnerId, _currentUserId, StringComparison.Ordinal))
+            .OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<WishlistModel> GetAttachableWishlists()
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return Enumerable.Empty<WishlistModel>();
+        }
+
+        var attachedIds = _eventWishlists.Select(w => w.Id).ToHashSet();
+
+        return _userWishlists
+            .Where(w => !w.EventId.HasValue && !attachedIds.Contains(w.Id))
+            .OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task AttachSelectedWishlistAsync()
+    {
+        if (!_selectedWishlistId.HasValue || string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        await ExecuteWithFeedback(async () =>
+        {
+            var attached = await EventService.AttachWishlistAsync(EventId, _selectedWishlistId.Value, _currentUserId);
+            _statusMessage = $"Added '{attached.Name}' to this event.";
+        });
+
+        _selectedWishlistId = null;
+    }
+
+    private async Task HandleDetachWishlistAsync(int wishlistId)
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        await ExecuteWithFeedback(async () =>
+        {
+            var removed = await EventService.DetachWishlistAsync(EventId, wishlistId, _currentUserId);
+            if (removed)
+            {
+                _statusMessage = "Wishlist removed from this event.";
+            }
+        });
+    }
+
+    private async Task HandleCreateWishlistAsync(WishlistModel model)
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        await ExecuteWithFeedback(async () =>
+        {
+            model.EventId = EventId;
+            var created = await EventService.CreateEventWishlistAsync(EventId, model, _currentUserId);
+            _statusMessage = $"Created wishlist '{created.Name}'.";
+        });
+
+        _showCreateForm = false;
+        ResetDraftWishlist();
+    }
+
+    private void ToggleCreateForm()
+    {
+        _errorMessage = null;
+        _statusMessage = null;
+
+        if (_showCreateForm)
+        {
+            _showCreateForm = false;
+            return;
+        }
+
+        ResetDraftWishlist();
+        _showCreateForm = true;
+    }
+
+    private void CancelCreateWishlist()
+    {
+        _showCreateForm = false;
+        ResetDraftWishlist();
+    }
+
+    private void ResetDraftWishlist()
+    {
+        _draftWishlist = new WishlistModel
+        {
+            Name = string.Empty,
+            Icon = null,
+            IsCollaborative = true,
+            IsPrivate = false
+        };
+    }
+
+    private bool CanDetach(WishlistModel wishlist)
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return false;
+        }
+
+        return string.Equals(wishlist.OwnerId, _currentUserId, StringComparison.Ordinal) || _isEventOwner;
+    }
+
+    private IReadOnlyList<ParticipantWishlistViewModel> BuildParticipantGroups()
+    {
+        var result = new List<ParticipantWishlistViewModel>();
+
+        if (Event == null)
+        {
+            return result;
+        }
+
+        var wishlistsByOwner = _eventWishlists
+            .Where(w => !string.IsNullOrEmpty(w.OwnerId))
+            .GroupBy(w => w.OwnerId!, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<WishlistModel>)g.OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase).ToList(),
+                StringComparer.Ordinal);
+
+        if (Event.CreatedBy != null)
+        {
+            var ownerId = Event.CreatedBy.Id;
+            wishlistsByOwner.TryGetValue(ownerId, out var ownerWishlists);
+
+            result.Add(new ParticipantWishlistViewModel
+            {
+                Label = Event.CreatedBy.UserName ?? Event.CreatedBy.Email ?? "Event Owner",
+                Email = Event.CreatedBy.Email,
+                UserId = ownerId,
+                Role = "Owner",
+                Status = "Owner",
+                IsOwner = true,
+                IsCurrentUser = string.Equals(ownerId, _currentUserId, StringComparison.Ordinal),
+                Wishlists = ownerWishlists ?? Array.Empty<WishlistModel>()
+            });
+        }
+
+        if (Event.EventUsers != null)
+        {
+            foreach (var participant in Event.EventUsers
+                .OrderBy(eu => eu.User?.UserName ?? eu.User?.Email ?? eu.InviteeEmail ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+            {
+                var participantId = participant.User?.Id;
+                IReadOnlyList<WishlistModel> participantWishlists = Array.Empty<WishlistModel>();
+
+                if (!string.IsNullOrEmpty(participantId) && wishlistsByOwner.TryGetValue(participantId, out var lists))
+                {
+                    participantWishlists = lists;
+                }
+
+                result.Add(new ParticipantWishlistViewModel
+                {
+                    Label = participant.User?.UserName ?? participant.User?.Email ?? participant.InviteeEmail ?? "Participant",
+                    Email = participant.User?.Email ?? participant.InviteeEmail,
+                    UserId = participantId,
+                    InviteeEmail = participant.InviteeEmail,
+                    Role = participant.Role,
+                    Status = NormalizeStatus(participant),
+                    IsOwner = false,
+                    IsCurrentUser = !string.IsNullOrEmpty(participantId) && string.Equals(participantId, _currentUserId, StringComparison.Ordinal),
+                    Wishlists = participantWishlists
+                });
+            }
+        }
+
+        var unownedWishlists = _eventWishlists.Where(w => string.IsNullOrEmpty(w.OwnerId)).ToList();
+        if (unownedWishlists.Any())
+        {
+            result.Add(new ParticipantWishlistViewModel
+            {
+                Label = "Shared Event Lists",
+                Role = "Shared",
+                Status = "Attached",
+                IsOwner = false,
+                IsCurrentUser = false,
+                Wishlists = unownedWishlists
+            });
+        }
+
+        return result;
+    }
+
+    private async Task ExecuteWithFeedback(Func<Task> action)
+    {
+        try
+        {
+            _isSubmitting = true;
+            _errorMessage = null;
+            _statusMessage = null;
+
+            await action();
+            await LoadWishlistsAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Network failure while updating event {EventId}", EventId);
+            _errorMessage = "We could not reach the server. Please try again.";
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "Unauthorized wishlist operation for event {EventId}", EventId);
+            _errorMessage = "You do not have permission to complete that action.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected error while updating wishlists for event {EventId}", EventId);
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string GetItemCountText(WishlistModel wishlist)
+    {
+        var count = wishlist.ItemCount;
+        if (count == 0 && wishlist.Items is { Count: > 0 })
+        {
+            count = wishlist.Items.Count;
+        }
+
+        return count == 1 ? "1 item" : $"{count} items";
+    }
+
+    private static string NormalizeStatus(EventUserModel participant)
+    {
+        if (!string.IsNullOrWhiteSpace(participant.Status))
+        {
+            return participant.Status;
+        }
+
+        return participant.IsAccepted ? "Accepted" : "Pending";
+    }
+
+    private static string GetStatusBadgeClass(string status)
+    {
+        return status.ToLowerInvariant() switch
+        {
+            "accepted" => "bg-success",
+            "pending" => "bg-warning text-dark",
+            "rejected" => "bg-danger",
+            "owner" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private sealed class ParticipantWishlistViewModel
+    {
+        public required string Label { get; init; }
+        public string? Email { get; init; }
+        public string? UserId { get; init; }
+        public string? InviteeEmail { get; init; }
+        public string Role { get; init; } = "Participant";
+        public string Status { get; init; } = "Pending";
+        public bool IsOwner { get; init; }
+        public bool IsCurrentUser { get; init; }
+        public IReadOnlyList<WishlistModel> Wishlists { get; init; } = Array.Empty<WishlistModel>();
+    }
+}

@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using OpenWish.Data;
@@ -18,6 +20,22 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = _mapper.Map<Wishlist>(wishlistModel);
         wishlistEntity.OwnerId = ownerId;
+
+        if (wishlistModel.EventId.HasValue)
+        {
+            var eventEntity = await context.Events
+                .Include(e => e.CreatedBy)
+                .Include(e => e.EventUsers)
+                .FirstOrDefaultAsync(e => e.Id == wishlistModel.EventId.Value && !e.Deleted)
+                ?? throw new KeyNotFoundException($"Event {wishlistModel.EventId.Value} not found");
+
+            if (!IsEventMember(eventEntity, ownerId))
+            {
+                throw new UnauthorizedAccessException("You must be part of the event to create a wishlist for it.");
+            }
+
+            wishlistEntity.EventId = wishlistModel.EventId;
+        }
 
         var entry = context.Wishlists.Add(wishlistEntity);
         await context.SaveChangesAsync();
@@ -451,35 +469,48 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             }
         }
 
+        if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
+        {
+            return true;
+        }
+
         return false;
     }
 
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        // Check if user is owner
-        var isOwner = await context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.OwnerId == userId && !w.Deleted);
+        var wishlist = await context.Wishlists
+            .Where(w => w.Id == wishlistId && !w.Deleted)
+            .Select(w => new { w.OwnerId, w.IsCollaborative, w.EventId })
+            .FirstOrDefaultAsync();
 
-        if (isOwner)
+        if (wishlist == null)
+        {
+            return false;
+        }
+
+        if (wishlist.OwnerId == userId)
         {
             return true;
         }
 
-        // Check if wishlist is collaborative
-        var isCollaborative = await context.Wishlists
-            .AnyAsync(w => w.Id == wishlistId && w.IsCollaborative && !w.Deleted);
-
-        if (isCollaborative)
+        if (wishlist.IsCollaborative)
         {
-            // Check if user has at least view permission
-            var hasPermission = await context.WishlistPermissions
+            if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
+            {
+                return true;
+            }
+
+            var hasCollabPermission = await context.WishlistPermissions
                 .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
 
-            return hasPermission;
+            if (hasCollabPermission)
+            {
+                return true;
+            }
         }
 
-        // Check if user has edit or admin permission
         var hasEditPermission = await context.WishlistPermissions
             .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId &&
                     (wp.PermissionType == "Edit" || wp.PermissionType == "Admin") &&
@@ -666,5 +697,27 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.ItemReservations
             .AnyAsync(r => r.WishlistItemId == itemId && !r.Deleted);
+    }
+
+    private static bool IsEventMember(Event eventEntity, string userId)
+    {
+        if (string.Equals(eventEntity.CreatedBy?.Id, userId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return eventEntity.EventUsers.Any(eu =>
+            !eu.Deleted &&
+            string.Equals(eu.UserId, userId, StringComparison.Ordinal));
+    }
+
+    private static async Task<bool> IsEventMemberAsync(ApplicationDbContext context, int eventId, string userId)
+    {
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted);
+
+        return eventEntity != null && IsEventMember(eventEntity, userId);
     }
 }

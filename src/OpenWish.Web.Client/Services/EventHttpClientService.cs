@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Net.Http.Json;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
@@ -48,6 +50,35 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
     {
         var response = await httpClient.DeleteAsync($"api/events/{eventId}/users/{userId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    {
+        return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventId}/wishlists")
+            ?? Enumerable.Empty<WishlistModel>();
+    }
+
+    public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/wishlists", wishlistModel);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created wishlist.");
+    }
+
+    public async Task<WishlistModel> AttachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        var request = new AttachWishlistToEventRequest { WishlistId = wishlistId };
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/wishlists/attach", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize attached wishlist.");
+    }
+
+    public async Task<bool> DetachWishlistAsync(int eventId, int wishlistId, string userId)
+    {
+        var response = await httpClient.DeleteAsync($"api/events/{eventId}/wishlists/{wishlistId}");
         return response.IsSuccessStatusCode;
     }
 

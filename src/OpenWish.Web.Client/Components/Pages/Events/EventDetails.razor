@@ -3,6 +3,8 @@
 
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Event
+@using System.Collections.Generic
+@using System.Linq
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
@@ -132,6 +134,13 @@ else
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="mt-4">
+                    <EventWishlistManager EventId="@EventId"
+                                           Event="@_event"
+                                           CurrentUserId="@_currentUserId"
+                                           OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
 
                 @* @if (_event.EventWishlists.Any())
@@ -282,5 +291,15 @@ else
         }
 
         return eventUser.IsAccepted ? "Accepted" : "Pending";
+    }
+
+    private Task HandleWishlistsChanged(IReadOnlyList<WishlistModel> wishlists)
+    {
+        if (_event != null)
+        {
+            _event.EventWishlists = wishlists.ToList();
+        }
+
+        return Task.CompletedTask;
     }
 }

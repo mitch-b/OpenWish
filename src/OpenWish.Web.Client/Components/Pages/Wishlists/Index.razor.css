@@ -1,0 +1,48 @@
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .mb-3.d-flex.justify-content-between {
+        flex-direction: column !important;
+        gap: 1rem;
+        align-items: stretch !important;
+    }
+
+    .mb-3.d-flex.justify-content-between > .d-flex {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .input-group {
+        width: 100%;
+    }
+
+    .form-select {
+        width: 100% !important;
+    }
+
+    .btn-primary {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .nav-tabs {
+        flex-wrap: wrap;
+    }
+
+    .nav-tabs .nav-link {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .nav-tabs .nav-link i {
+        display: none;
+    }
+
+    h2 {
+        font-size: 1.75rem;
+    }
+
+    .text-muted {
+        font-size: 0.9rem;
+    }
+}

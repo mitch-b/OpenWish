@@ -75,3 +75,29 @@
     color: var(--color-warning-text);
     border: 1px solid var(--color-warning-border);
 }
+
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .session-information {
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .session-information .header h3 {
+        font-size: 1.25rem;
+    }
+
+    .session-information .header p {
+        font-size: 0.875rem;
+    }
+
+    .session-information .toggle-button {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    .badge {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+}

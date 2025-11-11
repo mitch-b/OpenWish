@@ -1,0 +1,24 @@
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+
+    .d-flex.justify-content-between.align-items-center > .btn {
+        width: 100%;
+    }
+
+    h3 {
+        font-size: 1.5rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+}

@@ -1,3 +1,5 @@
+@using OpenWish.Web.Client.Components.Shared
+
 @inject IEventService EventService
 @inject ILogger<EventCard> Logger
 @inject NavigationManager NavigationManager
@@ -35,7 +37,8 @@ else
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
                         <li>
                             <button class="dropdown-item text-danger"
-                                    @onclick:stopPropagation="true">
+                                    @onclick:stopPropagation="true"
+                                    @onclick="ShowDeleteDialog">
                                 Delete
                             </button>
                         </li>
@@ -47,22 +50,81 @@ else
 
 }
 
+<Dialog @ref="_deleteDialog" Title="@_deleteDialogTitle">
+    <div class="modal-body">
+        <p>@_deleteDialogMessage</p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">
+            @if (_isDeleting)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            }
+            Delete
+        </button>
+        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog" disabled="@_isDeleting">
+            Cancel
+        </button>
+    </div>
+</Dialog>
+
 @code {
     [Parameter]
     public EventModel? Event { get; set; }
+
     [Parameter]
     public EventCallback<EventModel> OnDelete { get; set; }
 
-    private async Task HandleDelete()
+    private Dialog _deleteDialog = default!;
+    private string _deleteDialogTitle = "Delete Event";
+    private string _deleteDialogMessage = string.Empty;
+    private bool _isDeleting;
+
+    private void ShowDeleteDialog()
     {
-        if (Event != null)
+        if (Event is null)
+        {
+            return;
+        }
+
+        _deleteDialogMessage = $"Are you sure you want to delete the event '{Event.Name}'? This action cannot be undone.";
+        _deleteDialog.Show();
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialog.Close();
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (Event is null || _isDeleting)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+
+        try
         {
             Logger.LogInformation("Deleting event {EventId}", Event.Id);
             await EventService.DeleteEventAsync(Event.Id);
+
             if (OnDelete.HasDelegate)
             {
                 await OnDelete.InvokeAsync(Event);
             }
+
+            _deleteDialog.Close();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting event {EventId}", Event.Id);
+        }
+        finally
+        {
+            _isDeleting = false;
+            StateHasChanged();
         }
     }
 

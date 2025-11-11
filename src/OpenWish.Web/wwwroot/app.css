@@ -1,3 +1,14 @@
+/*
+ * Global Breakpoints Configuration
+ * 
+ * Mobile breakpoint: 767.98px
+ * Usage in media queries: @media (max-width: 767.98px)
+ * 
+ * This value is used consistently across all component CSS files.
+ * To adjust the mobile breakpoint, update this value and all corresponding
+ * @media queries in component-specific CSS files.
+ */
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background: var(--color-bg);
@@ -101,9 +112,15 @@ h1:focus {
     color: var(--color-text);
     border:1px solid var(--color-border-muted);
     border-radius: 1rem;
-    padding-inline: 2rem;
+    padding-inline: 1rem;
     box-shadow: 0 0.75rem 2rem rgba(0,0,0,0.08);
     transition: background-color .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+@media (min-width: 768px) {
+    .quick-actions-section {
+        padding-inline: 2rem;
+    }
 }
 
 :root[data-theme='dark'] .quick-actions-section {

@@ -63,3 +63,24 @@
     from { transform: translateY(-10%); }
     to { transform: translateY(0); }
 }
+
+/* Mobile responsive improvements */
+@media (max-width: 767.98px) {
+    .dialog {
+        min-width: 280px;
+        max-width: 95%;
+        padding: 0.75rem;
+    }
+
+    .dialog-header {
+        margin-bottom: 0.75rem;
+    }
+
+    .dialog-header h3 {
+        font-size: 1.25rem;
+    }
+
+    .close-button {
+        font-size: 1.25rem;
+    }
+}

@@ -1,0 +1,232 @@
+@using OpenWish.Web.Client.CustomEvents
+
+@inject IProductService ProductService
+@inject IJSRuntime JSRuntime
+
+@if (IsVisible)
+{
+    <div class="modal-backdrop" @onclick="Cancel"></div>
+    <div class="modal-dialog-container" @onclick:stopPropagation="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(Model?.Id > 0 ? "Edit Item" : "Add New Item")</h5>
+                <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(ImportUrl))
+                {
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span>Importing product details...</span>
+                        </div>
+                    </div>
+                }
+                
+                <div class="url-import-section mb-4">
+                    <label class="form-label">Quick Import from URL</label>
+                    <div class="input-group">
+                        <InputText class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
+                        <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-download"></i>
+                            }
+                            Import
+                        </button>
+                    </div>
+                    <small class="text-muted">Or fill in the details manually below</small>
+                </div>
+
+                <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemModal">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                                <InputText id="name" class="form-control" @bind-Value="@Model!.Name" placeholder="e.g., Wireless Headphones" />
+                                <ValidationMessage For="@(() => Model.Name)" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
+                                    <option value="">None</option>
+                                    <option value="1">High</option>
+                                    <option value="2">Medium</option>
+                                    <option value="3">Low</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <InputTextArea id="description" class="form-control" rows="3" @bind-Value="@Model!.Description" placeholder="Add any details, preferences, or specifications..." />
+                        <ValidationMessage For="@(() => Model.Description)" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="price" class="form-label">Price</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <InputNumber id="price" class="form-control" @bind-Value="@Model!.Price" placeholder="0.00" />
+                                </div>
+                                <ValidationMessage For="@(() => Model.Price)" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="whereToBuy" class="form-label">Where to Buy</label>
+                                <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" placeholder="e.g., Amazon, Target" />
+                                <ValidationMessage For="@(() => Model.WhereToBuy)" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="url" class="form-label">Product Link</label>
+                        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" placeholder="https://..." />
+                        <ValidationMessage For="@(() => Model.Url)" />
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
+                        <label class="form-check-label" for="isPrivate">
+                            Make this item private (only you can see it)
+                        </label>
+                        <ValidationMessage For="@(() => Model.IsPrivate)" />
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> @(Model.Id > 0 ? "Save Changes" : "Add Item")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public WishlistItemModel? Model { get; set; } = new();
+    [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+
+    private bool isLoading;
+    private string ImportUrl { get; set; } = string.Empty;
+
+    public void Show(WishlistItemModel? model = null)
+    {
+        Model = model ?? new WishlistItemModel();
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        IsVisible = false;
+        ImportUrl = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ImportFromUrl()
+    {
+        if (string.IsNullOrWhiteSpace(ImportUrl))
+            return;
+
+        await ProcessUrlImport(ImportUrl);
+    }
+
+    private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
+    {
+        ImportUrl = e.PastedData ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(ImportUrl))
+        {
+            await ProcessUrlImport(ImportUrl);
+        }
+    }
+
+    private async Task ProcessUrlImport(string url)
+    {
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var product = await ProductService.TryScrapeProductFromUrl(url);
+            if (product != null)
+            {
+                // Only update empty fields
+                if (string.IsNullOrWhiteSpace(Model!.Name) && !string.IsNullOrWhiteSpace(product.Name))
+                    Model.Name = product.Name;
+
+                if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
+                    Model.Description = product.Description;
+
+                if (!Model.Price.HasValue && product.Price.HasValue)
+                    Model.Price = product.Price;
+
+                if (string.IsNullOrWhiteSpace(Model.Url))
+                    Model.Url = url;
+
+                if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
+                    Model.WhereToBuy = new Uri(url).Host.Replace("www.", "");
+
+                // Set default priority if not set
+                if (!Model.Priority.HasValue)
+                    Model.Priority = 2; // Medium priority by default
+
+                await JSRuntime.InvokeVoidAsync("alert", "Product details imported successfully!");
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Could not extract product details. Please fill in the form manually.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", "Error processing URL. Please fill in the form manually.");
+        }
+        finally
+        {
+            // Clear the import URL field after processing
+            ImportUrl = string.Empty;
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (OnSubmit.HasDelegate)
+        {
+            await OnSubmit.InvokeAsync(Model);
+            Hide();
+        }
+    }
+
+    private async Task Cancel()
+    {
+        if (OnCancel.HasDelegate)
+        {
+            await OnCancel.InvokeAsync();
+        }
+        Hide();
+    }
+}

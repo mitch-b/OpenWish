@@ -15,7 +15,12 @@
 
 @if (_wishlist == null)
 {
-    <p>Loading...</p>
+    <div class="loading-container">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading wishlist...</p>
+    </div>
 }
 else
 {
@@ -48,93 +53,125 @@ else
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="mb-3 d-flex justify-content-between align-items-center">
-                <div class="btn-group">
-                    <button class="btn @(SortBy == "name" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("name"))">
-                        Name <i class="bi @(SortBy == "name" ? (SortAscending ? "bi-sort-alpha-down" : "bi-sort-alpha-up") : "")"></i>
-                    </button>
-                    <button class="btn @(SortBy == "priority" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("priority"))">
-                        Priority <i class="bi @(SortBy == "priority" ? (SortAscending ? "bi-sort-numeric-down" : "bi-sort-numeric-up") : "")"></i>
-                    </button>
-                    <button class="btn @(SortBy == "price" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("price"))">
-                        Price <i class="bi @(SortBy == "price" ? (SortAscending ? "bi-sort-numeric-down" : "bi-sort-numeric-up") : "")"></i>
-                    </button>
-                </div>
-
-                <div class="d-flex gap-2 align-items-center">
-                    <select class="form-select" style="width: auto" @bind="PriorityFilter">
-                        <option value="all">All Priorities</option>
-                        <option value="1">High Priority</option>
-                        <option value="2">Medium Priority</option>
-                        <option value="3">Low Priority</option>
-                    </select>
-                    
-                    <div class="btn-group" role="group" aria-label="View toggle">
-                        <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("list"))">
-                            <i class="bi bi-list-ul"></i>
-                        </button>
-                        <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("card"))">
-                            <i class="bi bi-grid-3x3-gap"></i>
-                        </button>
-                    </div>
-                </div>
+    <div class="controls-bar mb-3">
+        <div class="controls-left">
+            <div class="btn-group sort-group">
+                <button class="btn @(SortBy == "name" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("name"))">
+                    <i class="bi bi-sort-alpha-down"></i> Name
+                </button>
+                <button class="btn @(SortBy == "priority" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("priority"))">
+                    <i class="bi bi-sort-numeric-down"></i> Priority
+                </button>
+                <button class="btn @(SortBy == "price" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("price"))">
+                    <i class="bi bi-currency-dollar"></i> Price
+                </button>
             </div>
+        </div>
+
+        <div class="controls-right">
+            <select class="form-select priority-filter" @bind="PriorityFilter">
+                <option value="all">All Priorities</option>
+                <option value="1">High Priority</option>
+                <option value="2">Medium Priority</option>
+                <option value="3">Low Priority</option>
+            </select>
             
-            <div class="wishlist-content view-transition">
-                @if (_items != null)
-                {
-                    @if (_filteredItems.Count == 0)
+            <div class="btn-group view-toggle" role="group" aria-label="View toggle">
+                <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("list"))">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+                <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("card"))">
+                    <i class="bi bi-grid-3x3-gap"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="wishlist-content">
+        @if (_items != null)
+        {
+            @if (_filteredItems.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-state-icon">📝</div>
+                    <h4>No items yet</h4>
+                    <p>@(_canEdit ? "Start adding items to your wishlist!" : "This wishlist doesn't have any items matching your filters.")</p>
+                    @if (_canEdit)
                     {
-                        <div class="alert alert-info">
-                            No items match the current filters. Try changing your filter settings or add new items.
-                        </div>
+                        <button class="btn btn-primary" @onclick="ShowAddItemModal">
+                            <i class="bi bi-plus-lg"></i> Add Your First Item
+                        </button>
                     }
-                    else if (_canEdit)
+                </div>
+            }
+            else
+            {
+                @if (ViewMode == "list")
+                {
+                    @if (_canEdit)
                     {
-                        @if (ViewMode == "list")
-                        {
-                            <WishlistItemList Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
-                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
-                        }
-                        else
-                        {
-                            <WishlistCardView Items="@_filteredItems" OnEdit="@HandleItemEdit" OnDelete="@HandleItemDelete" 
-                                            ShowInteractions="true" WishlistId="@WishlistId" OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
-                        }
+                        <WishlistItemList Items="@_filteredItems" 
+                                        OnEdit="@HandleItemEditClick" 
+                                        OnDelete="@HandleItemDelete" 
+                                        ShowInteractions="true" 
+                                        WishlistId="@WishlistId" 
+                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                        IsOwner="@_isOwner" />
                     }
                     else
                     {
-                        @if (ViewMode == "list")
-                        {
-                            <WishlistItemList Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
-                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
-                        }
-                        else
-                        {
-                            <WishlistCardView Items="@_filteredItems" ShowInteractions="true" WishlistId="@WishlistId" 
-                                            OwnerId="@(_wishlist?.OwnerId ?? "")" IsOwner="@_isOwner" />
-                        }
+                        <WishlistItemList Items="@_filteredItems" 
+                                        ShowInteractions="true" 
+                                        WishlistId="@WishlistId" 
+                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                        IsOwner="@_isOwner" />
                     }
                 }
                 else
                 {
-                    <p>Loading...</p>
+                    @if (_canEdit)
+                    {
+                        <WishlistCardView Items="@_filteredItems" 
+                                        OnEdit="@HandleItemEditClick" 
+                                        OnDelete="@HandleItemDelete" 
+                                        ShowInteractions="true" 
+                                        WishlistId="@WishlistId" 
+                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                        IsOwner="@_isOwner" />
+                    }
+                    else
+                    {
+                        <WishlistCardView Items="@_filteredItems" 
+                                        ShowInteractions="true" 
+                                        WishlistId="@WishlistId" 
+                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                        IsOwner="@_isOwner" />
+                    }
                 }
-            </div>
-        </div>
-        <div class="col-md-4">
-            @if (_canEdit)
-            {
-                <div class="add-item-section">
-                    <h4>Add New Item</h4>
-                    <WishlistItemForm Model="@_newItem" OnSubmit="@HandleAddItem" />
-                </div>
             }
-        </div>
+        }
+        else
+        {
+            <div class="loading-container">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p>Loading items...</p>
+            </div>
+        }
     </div>
+
+    @if (_canEdit)
+    {
+        <button class="fab" @onclick="ShowAddItemModal" title="Add New Item">
+            <i class="bi bi-plus-lg"></i>
+        </button>
+    }
 }
+
+<WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
+
+<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
@@ -146,14 +183,15 @@ else
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
     private List<WishlistItemModel> _filteredItems = new();
-    private WishlistItemModel _newItem = new();
+    private WishlistItemModel _modalItem = new();
+    private WishlistItemModal? _itemModal;
     private string? _currentUserId;
     private bool _canEdit;
     private bool _isOwner;
     private string SortBy { get; set; } = "priority";
     private bool SortAscending { get; set; } = true;
     private string PriorityFilter { get; set; } = "all";
-    private string ViewMode { get; set; } = "list"; // "list" or "card"
+    private string ViewMode { get; set; } = "card"; // "list" or "card"
 
     protected override async Task OnInitializedAsync()
     {
@@ -233,17 +271,47 @@ else
         ApplyFiltersAndSort();
     }
 
-    private async Task HandleAddItem(WishlistItemModel item)
+    private void ShowAddItemModal()
     {
-        await WishlistService.AddItemToWishlistAsync(WishlistId, item);
-        _newItem = new WishlistItemModel();
+        _modalItem = new WishlistItemModel();
+        _itemModal?.Show(_modalItem);
+    }
+
+    private void HandleItemEditClick(WishlistItemModel item)
+    {
+        _modalItem = new WishlistItemModel
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            Price = item.Price,
+            Url = item.Url,
+            WhereToBuy = item.WhereToBuy,
+            Priority = item.Priority,
+            IsPrivate = item.IsPrivate,
+            Image = item.Image
+        };
+        _itemModal?.Show(_modalItem);
+    }
+
+    private async Task HandleModalSubmit(WishlistItemModel item)
+    {
+        if (item.Id > 0)
+        {
+            // Edit existing item
+            await WishlistService.UpdateWishlistItemAsync(WishlistId, item.Id, item);
+        }
+        else
+        {
+            // Add new item
+            await WishlistService.AddItemToWishlistAsync(WishlistId, item);
+        }
         await LoadItems();
     }
 
-    private async Task HandleItemEdit(WishlistItemModel item)
+    private void HandleModalCancel()
     {
-        await WishlistService.UpdateWishlistItemAsync(WishlistId, item.Id, item);
-        await LoadItems();
+        _modalItem = new WishlistItemModel();
     }
 
     private async Task HandleItemDelete(WishlistItemModel item)
@@ -252,12 +320,14 @@ else
         await LoadItems();
     }
 
-    private async Task SetupSecurity()
+    private Task SetupSecurity()
     {
-        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) return;
+        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) 
+            return Task.CompletedTask;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
         _canEdit = _isOwner || _wishlist.IsCollaborative;
+        return Task.CompletedTask;
     }
 
     private async Task ShareWishlist()

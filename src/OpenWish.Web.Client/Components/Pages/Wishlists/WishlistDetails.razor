@@ -24,129 +24,378 @@
 }
 else
 {
-    <div class="wishlist-header mb-4">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <h2>
-                    @if (!string.IsNullOrEmpty(_wishlist.Icon))
-                    {
-                        <span style="font-size: 1.2em; margin-right: 0.3em;">@_wishlist.Icon</span>
-                    }
-                    @_wishlist.Name
-                </h2>
-                @if (_wishlist.IsCollaborative)
+    <div class="wishlist-hero">
+        <div class="hero-content">
+            <div class="hero-title">
+                @if (!string.IsNullOrEmpty(_wishlist.Icon))
                 {
-                    <span class="badge bg-info">Collaborative Wishlist</span>
+                    <span class="hero-icon">@_wishlist.Icon</span>
                 }
+                <h1>@_wishlist.Name</h1>
             </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary d-inline-flex align-items-center" @onclick="ShareWishlist">
-                    <i class="bi bi-share me-2"></i> Share
-                </button>
-                @if (_isOwner)
-                {
-                    <a href="/wishlists/@WishlistId/manage" class="btn btn-light d-inline-flex align-items-center">
-                        <i class="bi bi-gear me-2"></i> Manage Wishlist
-                    </a>
-                }
+            @if (_wishlist.IsCollaborative)
+            {
+                <span class="badge badge-collaborative">
+                    <i class="bi bi-people-fill"></i> Collaborative
+                </span>
+            }
+        </div>
+        <div class="hero-actions">
+            <button class="btn btn-secondary" @onclick="ShareWishlist">
+                <i class="bi bi-share"></i>
+                <span class="btn-text">Share</span>
+            </button>
+            @if (_isOwner)
+            {
+                <a href="/wishlists/@WishlistId/manage" class="btn btn-secondary">
+                    <i class="bi bi-gear"></i>
+                    <span class="btn-text">Manage</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="stats-dashboard">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <div class="stat-value">@_items.Count</div>
+                <div class="stat-label">Total Items</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+                <div class="stat-value">@GetTotalPrice()</div>
+                <div class="stat-label">Total Value</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-content">
+                <div class="stat-value">@GetReservedCount()</div>
+                <div class="stat-label">Reserved</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-content">
+                <div class="stat-value">@GetCommentCount()</div>
+                <div class="stat-label">Comments</div>
             </div>
         </div>
     </div>
 
-    <div class="controls-bar mb-3">
-        <div class="controls-left">
-            <div class="btn-group sort-group">
-                <button class="btn @(SortBy == "name" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("name"))">
-                    <i class="bi bi-sort-alpha-down"></i> Name
+    <div class="search-filter-bar">
+        <div class="search-container">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" 
+                   class="search-input" 
+                   placeholder="Search items by name, description, or store..." 
+                   @bind="SearchQuery" 
+                   @bind:event="oninput"
+                   @onkeyup="HandleSearchInput" />
+            @if (!string.IsNullOrEmpty(SearchQuery))
+            {
+                <button class="search-clear" @onclick="ClearSearch">
+                    <i class="bi bi-x-lg"></i>
                 </button>
-                <button class="btn @(SortBy == "priority" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("priority"))">
-                    <i class="bi bi-sort-numeric-down"></i> Priority
-                </button>
-                <button class="btn @(SortBy == "price" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SortItems("price"))">
-                    <i class="bi bi-currency-dollar"></i> Price
-                </button>
-            </div>
+            }
         </div>
+        
+        <button class="btn btn-filter @(_showFilters ? "active" : "")" @onclick="ToggleFilters">
+            <i class="bi bi-funnel"></i>
+            <span class="btn-text">Filters</span>
+            @if (GetActiveFilterCount() > 0)
+            {
+                <span class="filter-count">@GetActiveFilterCount()</span>
+            }
+        </button>
 
-        <div class="controls-right">
-            <select class="form-select priority-filter" @bind="PriorityFilter">
-                <option value="all">All Priorities</option>
-                <option value="1">High Priority</option>
-                <option value="2">Medium Priority</option>
-                <option value="3">Low Priority</option>
-            </select>
-            
-            <div class="btn-group view-toggle" role="group" aria-label="View toggle">
-                <button type="button" class="btn @(ViewMode == "list" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("list"))">
-                    <i class="bi bi-list-ul"></i>
-                </button>
-                <button type="button" class="btn @(ViewMode == "card" ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => SetViewMode("card"))">
-                    <i class="bi bi-grid-3x3-gap"></i>
-                </button>
-            </div>
+        <div class="btn-group view-toggle">
+            <button type="button" class="btn @(ViewMode == "grid" ? "active" : "")" @onclick="@(() => SetViewMode("grid"))" title="Grid View">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+            <button type="button" class="btn @(ViewMode == "list" ? "active" : "")" @onclick="@(() => SetViewMode("list"))" title="List View">
+                <i class="bi bi-list-ul"></i>
+            </button>
         </div>
     </div>
+
+    @if (_showFilters)
+    {
+        <div class="filter-panel">
+            <div class="filter-section">
+                <label class="filter-label">Priority</label>
+                <div class="filter-chips">
+                    <button class="filter-chip @(PriorityFilters.Contains("1") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "1")'>
+                        <span class="priority-dot high"></span> High
+                    </button>
+                    <button class="filter-chip @(PriorityFilters.Contains("2") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "2")'>
+                        <span class="priority-dot medium"></span> Medium
+                    </button>
+                    <button class="filter-chip @(PriorityFilters.Contains("3") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "3")'>
+                        <span class="priority-dot low"></span> Low
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Status</label>
+                <div class="filter-chips">
+                    <button class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
+                        <i class="bi bi-check-circle"></i> Reserved
+                    </button>
+                    <button class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
+                        <i class="bi bi-circle"></i> Available
+                    </button>
+                    <button class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "commented")'>
+                        <i class="bi bi-chat"></i> Has Comments
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Price Range: @GetPriceRangeLabel()</label>
+                <div class="price-range-slider">
+                    <input type="range" 
+                           class="form-range" 
+                           min="0" 
+                           max="@GetMaxPrice()" 
+                           step="10"
+                           @bind="MinPrice" 
+                           @bind:event="oninput"
+                           @onchange="ApplyFiltersAndSort" />
+                    <input type="range" 
+                           class="form-range" 
+                           min="0" 
+                           max="@GetMaxPrice()" 
+                           step="10"
+                           @bind="MaxPrice" 
+                           @bind:event="oninput"
+                           @onchange="ApplyFiltersAndSort" />
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <label class="filter-label">Sort By</label>
+                <div class="sort-options">
+                    <button class="sort-option @(SortBy == "priority" ? "active" : "")" @onclick="@(() => SortItems("priority"))">
+                        <i class="bi bi-star"></i> Priority
+                        @if (SortBy == "priority")
+                        {
+                            <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                        }
+                    </button>
+                    <button class="sort-option @(SortBy == "price" ? "active" : "")" @onclick="@(() => SortItems("price"))">
+                        <i class="bi bi-currency-dollar"></i> Price
+                        @if (SortBy == "price")
+                        {
+                            <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                        }
+                    </button>
+                    <button class="sort-option @(SortBy == "name" ? "active" : "")" @onclick="@(() => SortItems("name"))">
+                        <i class="bi bi-sort-alpha-down"></i> Name
+                        @if (SortBy == "name")
+                        {
+                            <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                        }
+                    </button>
+                    <button class="sort-option @(SortBy == "date" ? "active" : "")" @onclick="@(() => SortItems("date"))">
+                        <i class="bi bi-calendar"></i> Date Added
+                        @if (SortBy == "date")
+                        {
+                            <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn btn-link" @onclick="ClearAllFilters">Clear All</button>
+                <span class="filter-results">Showing @_filteredItems.Count of @_items.Count items</span>
+            </div>
+        </div>
+    }
     
-    <div class="wishlist-content">
+    <div class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
             @if (_filteredItems.Count == 0)
             {
                 <div class="empty-state">
-                    <div class="empty-state-icon">📝</div>
-                    <h4>No items yet</h4>
-                    <p>@(_canEdit ? "Start adding items to your wishlist!" : "This wishlist doesn't have any items matching your filters.")</p>
-                    @if (_canEdit)
+                    @if (_items.Count == 0)
                     {
-                        <button class="btn btn-primary" @onclick="ShowAddItemModal">
-                            <i class="bi bi-plus-lg"></i> Add Your First Item
+                        <div class="empty-icon">🎁</div>
+                        <h3>Your wishlist is empty</h3>
+                        <p>Start adding items you'd love to receive!</p>
+                        @if (_canEdit)
+                        {
+                            <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
+                                <i class="bi bi-plus-lg"></i> Add Your First Item
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-icon">🔍</div>
+                        <h3>No items match your filters</h3>
+                        <p>Try adjusting your search or filter criteria</p>
+                        <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
+                            <i class="bi bi-x-circle"></i> Clear Filters
                         </button>
+                    }
+                </div>
+            }
+            else if (ViewMode == "grid")
+            {
+                <div class="items-grid">
+                    @foreach (var item in _filteredItems)
+                    {
+                        <div class="wishlist-item-card">
+                            @if (!string.IsNullOrEmpty(item.Image))
+                            {
+                                <div class="item-image">
+                                    <img src="@item.Image" alt="@item.Name" />
+                                    @if (item.Reservations.Any())
+                                    {
+                                        <div class="item-badge reserved">
+                                            <i class="bi bi-check-circle-fill"></i> Reserved
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="item-image item-image-placeholder">
+                                    <i class="bi bi-gift"></i>
+                                    @if (item.Reservations.Any())
+                                    {
+                                        <div class="item-badge reserved">
+                                            <i class="bi bi-check-circle-fill"></i> Reserved
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            <div class="item-content">
+                                <div class="item-header">
+                                    <h3 class="item-title">@item.Name</h3>
+                                    @if (item.Priority.HasValue)
+                                    {
+                                        <span class="priority-indicator priority-@item.Priority.Value">
+                                            @GetPriorityIcon(item.Priority.Value)
+                                        </span>
+                                    }
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(item.Description))
+                                {
+                                    <p class="item-description">@item.Description</p>
+                                }
+
+                                <div class="item-meta">
+                                    @if (item.Price.HasValue)
+                                    {
+                                        <span class="item-price">@item.Price.Value.ToString("C")</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.WhereToBuy))
+                                    {
+                                        <span class="item-store">
+                                            <i class="bi bi-shop"></i> @item.WhereToBuy
+                                        </span>
+                                    }
+                                </div>
+
+                                <div class="item-interactions">
+                                    @if (item.Comments.Any())
+                                    {
+                                        <span class="interaction-badge">
+                                            <i class="bi bi-chat-fill"></i> @item.Comments.Count
+                                        </span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(item.Url))
+                                    {
+                                        <a href="@item.Url" target="_blank" class="interaction-badge" title="View Product">
+                                            <i class="bi bi-link-45deg"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="item-actions">
+                                @if (_canEdit)
+                                {
+                                    <button class="btn-icon" @onclick="() => HandleItemEditClick(item)" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn-icon btn-danger" @onclick="() => HandleItemDelete(item)" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                                <button class="btn-icon" @onclick="() => ToggleItemDetails(item.Id)" title="More Details">
+                                    <i class="bi bi-three-dots"></i>
+                                </button>
+                            </div>
+
+                            @if (_expandedItemId == item.Id)
+                            {
+                                <div class="item-details-expanded">
+                                    <div class="details-section">
+                                        <h4><i class="bi bi-info-circle"></i> Details</h4>
+                                        <div class="details-grid">
+                                            <div class="detail-item">
+                                                <span class="detail-label">Added</span>
+                                                <span class="detail-value">@item.CreatedOn.ToString("MMM dd, yyyy")</span>
+                                            </div>
+                                            @if (item.Priority.HasValue)
+                                            {
+                                                <div class="detail-item">
+                                                    <span class="detail-label">Priority</span>
+                                                    <span class="detail-value">@GetPriorityText(item.Priority.Value)</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    @if (item.Reservations.Any() || item.Comments.Any())
+                                    {
+                                        <div class="details-section">
+                                            <h4><i class="bi bi-people"></i> Social</h4>
+                                            @if (item.Reservations.Any())
+                                            {
+                                                <p class="detail-info">✓ This item has been reserved</p>
+                                            }
+                                            @if (item.Comments.Any())
+                                            {
+                                                <p class="detail-info">💬 @item.Comments.Count comment(s)</p>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
                     }
                 </div>
             }
             else
             {
-                @if (ViewMode == "list")
+                @if (_canEdit)
                 {
-                    @if (_canEdit)
-                    {
-                        <WishlistItemList Items="@_filteredItems" 
-                                        OnEdit="@HandleItemEditClick" 
-                                        OnDelete="@HandleItemDelete" 
-                                        ShowInteractions="true" 
-                                        WishlistId="@WishlistId" 
-                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
-                                        IsOwner="@_isOwner" />
-                    }
-                    else
-                    {
-                        <WishlistItemList Items="@_filteredItems" 
-                                        ShowInteractions="true" 
-                                        WishlistId="@WishlistId" 
-                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
-                                        IsOwner="@_isOwner" />
-                    }
+                    <WishlistItemList Items="@_filteredItems" 
+                                    OnEdit="@HandleItemEditClick" 
+                                    OnDelete="@HandleItemDelete" 
+                                    ShowInteractions="true" 
+                                    WishlistId="@WishlistId" 
+                                    OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                    IsOwner="@_isOwner" />
                 }
                 else
                 {
-                    @if (_canEdit)
-                    {
-                        <WishlistCardView Items="@_filteredItems" 
-                                        OnEdit="@HandleItemEditClick" 
-                                        OnDelete="@HandleItemDelete" 
-                                        ShowInteractions="true" 
-                                        WishlistId="@WishlistId" 
-                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
-                                        IsOwner="@_isOwner" />
-                    }
-                    else
-                    {
-                        <WishlistCardView Items="@_filteredItems" 
-                                        ShowInteractions="true" 
-                                        WishlistId="@WishlistId" 
-                                        OwnerId="@(_wishlist?.OwnerId ?? "")" 
-                                        IsOwner="@_isOwner" />
-                    }
+                    <WishlistItemList Items="@_filteredItems" 
+                                    ShowInteractions="true" 
+                                    WishlistId="@WishlistId" 
+                                    OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                                    IsOwner="@_isOwner" />
                 }
             }
         }
@@ -190,8 +439,14 @@ else
     private bool _isOwner;
     private string SortBy { get; set; } = "priority";
     private bool SortAscending { get; set; } = true;
-    private string PriorityFilter { get; set; } = "all";
-    private string ViewMode { get; set; } = "card"; // "list" or "card"
+    private string ViewMode { get; set; } = "grid"; // "grid" or "list"
+    private string SearchQuery { get; set; } = "";
+    private bool _showFilters = false;
+    private HashSet<string> PriorityFilters = new();
+    private HashSet<string> StatusFilters = new();
+    private decimal MinPrice { get; set; } = 0;
+    private decimal MaxPrice { get; set; } = 10000;
+    private int? _expandedItemId = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -224,13 +479,41 @@ else
     {
         var filtered = _items.AsEnumerable();
 
-        // Apply priority filter
-        if (PriorityFilter != "all")
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
         {
-            if (int.TryParse(PriorityFilter, out int priority))
+            var query = SearchQuery.ToLower();
+            filtered = filtered.Where(i => 
+                (i.Name?.ToLower().Contains(query) ?? false) ||
+                (i.Description?.ToLower().Contains(query) ?? false) ||
+                (i.WhereToBuy?.ToLower().Contains(query) ?? false));
+        }
+
+        // Apply priority filters
+        if (PriorityFilters.Any())
+        {
+            filtered = filtered.Where(i => i.Priority.HasValue && PriorityFilters.Contains(i.Priority.Value.ToString()));
+        }
+
+        // Apply status filters
+        if (StatusFilters.Any())
+        {
+            foreach (var status in StatusFilters)
             {
-                filtered = filtered.Where(i => i.Priority == priority);
+                filtered = status switch
+                {
+                    "reserved" => filtered.Where(i => i.Reservations.Any()),
+                    "unreserved" => filtered.Where(i => !i.Reservations.Any()),
+                    "commented" => filtered.Where(i => i.Comments.Any()),
+                    _ => filtered
+                };
             }
+        }
+
+        // Apply price range filter
+        if (MinPrice > 0 || MaxPrice < 10000)
+        {
+            filtered = filtered.Where(i => i.Price.HasValue && i.Price >= MinPrice && i.Price <= MaxPrice);
         }
 
         // Apply sorting
@@ -241,17 +524,102 @@ else
                 : filtered.OrderByDescending(i => i.Name),
                 
             "priority" => SortAscending 
-                ? filtered.OrderBy(i => i.Priority) 
-                : filtered.OrderByDescending(i => i.Priority),
+                ? filtered.OrderBy(i => i.Priority ?? int.MaxValue) 
+                : filtered.OrderByDescending(i => i.Priority ?? int.MinValue),
                 
             "price" => SortAscending 
-                ? filtered.OrderBy(i => i.Price) 
-                : filtered.OrderByDescending(i => i.Price),
+                ? filtered.OrderBy(i => i.Price ?? decimal.MaxValue) 
+                : filtered.OrderByDescending(i => i.Price ?? decimal.MinValue),
+
+            "date" => SortAscending 
+                ? filtered.OrderBy(i => i.CreatedOn) 
+                : filtered.OrderByDescending(i => i.CreatedOn),
                 
             _ => filtered
         };
 
         _filteredItems = filtered.ToList();
+    }
+
+    private string GetTotalPrice()
+    {
+        var total = _items.Where(i => i.Price.HasValue).Sum(i => i.Price!.Value);
+        return total.ToString("C");
+    }
+
+    private int GetReservedCount()
+    {
+        return _items.Count(i => i.Reservations.Any());
+    }
+
+    private int GetCommentCount()
+    {
+        return _items.Sum(i => i.Comments.Count);
+    }
+
+    private void ToggleFilters()
+    {
+        _showFilters = !_showFilters;
+    }
+
+    private void ToggleFilter(HashSet<string> filterSet, string value)
+    {
+        if (filterSet.Contains(value))
+        {
+            filterSet.Remove(value);
+        }
+        else
+        {
+            filterSet.Add(value);
+        }
+        ApplyFiltersAndSort();
+    }
+
+    private void HandleSearchInput()
+    {
+        ApplyFiltersAndSort();
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = "";
+        ApplyFiltersAndSort();
+    }
+
+    private int GetActiveFilterCount()
+    {
+        int count = 0;
+        count += PriorityFilters.Count;
+        count += StatusFilters.Count;
+        if (MinPrice > 0 || MaxPrice < 10000) count++;
+        if (!string.IsNullOrWhiteSpace(SearchQuery)) count++;
+        return count;
+    }
+
+    private void ClearAllFilters()
+    {
+        SearchQuery = "";
+        PriorityFilters.Clear();
+        StatusFilters.Clear();
+        MinPrice = 0;
+        MaxPrice = 10000;
+        ApplyFiltersAndSort();
+    }
+
+    private decimal GetMaxPrice()
+    {
+        if (!_items.Any()) return 1000;
+        var max = _items.Where(i => i.Price.HasValue).Select(i => i.Price!.Value).DefaultIfEmpty(1000).Max();
+        return Math.Ceiling(max / 100) * 100; // Round up to nearest 100
+    }
+
+    private string GetPriceRangeLabel()
+    {
+        if (MinPrice == 0 && MaxPrice >= GetMaxPrice())
+        {
+            return "All Prices";
+        }
+        return $"{MinPrice:C} - {MaxPrice:C}";
     }
 
     private void SortItems(string sortBy)
@@ -350,4 +718,25 @@ else
         ViewMode = mode;
         StateHasChanged();
     }
+
+    private void ToggleItemDetails(int itemId)
+    {
+        _expandedItemId = _expandedItemId == itemId ? null : itemId;
+    }
+
+    private string GetPriorityIcon(int priority) => priority switch
+    {
+        1 => "⭐⭐⭐",
+        2 => "⭐⭐",
+        3 => "⭐",
+        _ => ""
+    };
+
+    private string GetPriorityText(int priority) => priority switch
+    {
+        1 => "High Priority",
+        2 => "Medium Priority",
+        3 => "Low Priority",
+        _ => "No Priority"
+    };
 }

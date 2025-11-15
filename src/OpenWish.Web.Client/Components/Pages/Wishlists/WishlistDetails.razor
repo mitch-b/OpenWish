@@ -683,8 +683,46 @@ else
 
     private async Task HandleItemDelete(WishlistItemModel item)
     {
-        await WishlistService.RemoveItemFromWishlistAsync(WishlistId, item.Id);
-        await LoadItems();
+        // Prompt for confirmation before deleting
+        var name = string.IsNullOrWhiteSpace(item.Name) ? "this item" : $"'{item.Name}'";
+        bool confirmed = false;
+        try
+        {
+            confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {name}?");
+        }
+        catch
+        {
+            // If confirm fails (e.g., JS not available), default to not deleting.
+            confirmed = false;
+        }
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            await WishlistService.RemoveItemFromWishlistAsync(WishlistId, item.Id);
+            await LoadItems();
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Item {name} deleted.");
+            }
+            catch
+            {
+                // Ignore alert failures
+            }
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("alert", $"Failed to delete {name}. Error: {ex.Message}");
+            }
+            catch
+            {
+                // Swallow secondary errors
+            }
+        }
     }
 
     private Task SetupSecurity()

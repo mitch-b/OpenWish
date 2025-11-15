@@ -125,6 +125,38 @@
     flex-wrap: wrap;
 }
 
+.action-buttons .btn-outline-info {
+    color: var(--color-link-hover);
+    border-color: rgba(31, 111, 235, 0.35);
+    background-color: rgba(31, 111, 235, 0.12);
+    font-weight: 600;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:root[data-theme='dark'] .action-buttons .btn-outline-info {
+    color: #d1e9ff;
+    border-color: rgba(88, 166, 255, 0.5);
+    background-color: rgba(88, 166, 255, 0.18);
+}
+
+.action-buttons .btn-outline-info:hover,
+.action-buttons .btn-outline-info:focus {
+    color: #ffffff;
+    background-color: var(--color-link-hover);
+    border-color: var(--color-link-hover);
+    box-shadow: 0 0 0 0.2rem rgba(31, 111, 235, 0.2);
+}
+
+:root[data-theme='dark'] .action-buttons .btn-outline-info:hover,
+:root[data-theme='dark'] .action-buttons .btn-outline-info:focus {
+    color: var(--color-bg);
+    box-shadow: 0 0 0 0.2rem rgba(88, 166, 255, 0.35);
+}
+
+.action-buttons .btn-outline-info:focus-visible {
+    outline: none;
+}
+
 .edit-actions {
     display: flex;
     gap: 0.25rem;

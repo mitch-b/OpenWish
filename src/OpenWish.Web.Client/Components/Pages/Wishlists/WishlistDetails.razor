@@ -63,13 +63,6 @@ else
                 <div class="stat-label">Total Items</div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-content">
-                <div class="stat-value">@GetTotalPrice()</div>
-                <div class="stat-label">Total Value</div>
-            </div>
-        </div>
         @if (!_isOwner)
         {
             <div class="stat-card">
@@ -543,12 +536,6 @@ else
         };
 
         _filteredItems = filtered.ToList();
-    }
-
-    private string GetTotalPrice()
-    {
-        var total = _items.Where(i => i.Price.HasValue).Sum(i => i.Price!.Value);
-        return total.ToString("C");
     }
 
     private int GetReservedCount()

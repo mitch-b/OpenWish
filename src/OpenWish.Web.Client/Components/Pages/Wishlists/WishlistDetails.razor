@@ -655,7 +655,8 @@ else
             WhereToBuy = item.WhereToBuy,
             Priority = item.Priority,
             IsPrivate = item.IsPrivate,
-            Image = item.Image
+            Image = item.Image,
+            WishlistId = WishlistId // ensure WishlistId retained to avoid mapping 0
         };
         _itemModal?.Show(_modalItem);
     }

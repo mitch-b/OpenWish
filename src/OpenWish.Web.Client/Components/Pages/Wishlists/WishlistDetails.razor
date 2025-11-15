@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId:int}"
 
+@using Microsoft.AspNetCore.Components.Web
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Wishlist
 
@@ -73,7 +74,13 @@ else
                 </div>
             </div>
         }
-        <div class="stat-card">
+           <div class="stat-card"
+             role="button"
+             tabindex="0"
+             style="cursor: pointer;"
+               title="Show items with comments"
+             @onclick="FocusCommentsAsync"
+             @onkeydown="HandleCommentsStatKeyDown">
             <div class="stat-icon">💬</div>
             <div class="stat-content">
                 <div class="stat-value">@GetCommentCount()</div>
@@ -386,7 +393,8 @@ else
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
-                                    IsOwner="@_isOwner" />
+                                    IsOwner="@_isOwner"
+                                    @ref="_itemListRef" />
                 }
                 else
                 {
@@ -394,7 +402,8 @@ else
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
-                                    IsOwner="@_isOwner" />
+                                    IsOwner="@_isOwner"
+                                    @ref="_itemListRef" />
                 }
             }
         }
@@ -444,6 +453,8 @@ else
     private decimal MinPrice { get; set; } = 0;
     private decimal MaxPrice { get; set; } = 10000;
     private int? _expandedItemId = null;
+    private WishlistItemList? _itemListRef;
+    private int? _pendingCommentFocusItemId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -752,6 +763,73 @@ else
     private void ToggleItemDetails(int itemId)
     {
         _expandedItemId = _expandedItemId == itemId ? null : itemId;
+    }
+
+    private async Task FocusCommentsAsync()
+    {
+        if (GetCommentCount() == 0)
+        {
+            await NotifyNoCommentsAsync();
+            return;
+        }
+
+        if (!_filteredItems.Any(i => i.Comments.Any()))
+        {
+            SearchQuery = "";
+            PriorityFilters.Clear();
+            StatusFilters.Clear();
+            StatusFilters.Add("commented");
+            MinPrice = 0;
+            MaxPrice = GetMaxPrice();
+            ApplyFiltersAndSort();
+        }
+
+        var targetItem = _filteredItems.FirstOrDefault(i => i.Comments.Any())
+                         ?? _items.FirstOrDefault(i => i.Comments.Any());
+
+        if (targetItem == null)
+        {
+            await NotifyNoCommentsAsync();
+            return;
+        }
+
+        ViewMode = "list";
+        _showFilters = false;
+        _pendingCommentFocusItemId = targetItem.Id;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task NotifyNoCommentsAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "No comments to display yet.");
+        }
+        catch
+        {
+            // Swallow notification failures when JS interop is unavailable
+        }
+    }
+
+    private async Task HandleCommentsStatKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" || args.Key == " " || args.Key == "Space")
+        {
+            await FocusCommentsAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (_pendingCommentFocusItemId.HasValue && ViewMode == "list" && _itemListRef is not null)
+        {
+            var targetId = _pendingCommentFocusItemId.Value;
+            _pendingCommentFocusItemId = null;
+            await _itemListRef.ExpandItemAsync(targetId);
+        }
     }
 
     private string GetPriorityIcon(int priority) => priority switch

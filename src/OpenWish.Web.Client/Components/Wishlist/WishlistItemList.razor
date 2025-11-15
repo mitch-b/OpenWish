@@ -15,7 +15,8 @@
         <tbody>
             @foreach (var item in Items)
             {
-                <tr>
+                <tr @key="item.Id"
+                    tabindex="-1">
                     <td>
                         <span class="item-name">@item.Name</span>
                         @if (!string.IsNullOrEmpty(item.Url))
@@ -149,6 +150,19 @@
             await OnDelete.InvokeAsync(itemToDelete);
             itemToDelete = null;
         }
+    }
+
+    public Task ExpandItemAsync(int itemId)
+    {
+        if (!ShowInteractions)
+        {
+            return Task.CompletedTask;
+        }
+
+        ExpandedInteractions.Clear();
+        ExpandedInteractions.Add(itemId);
+
+        return InvokeAsync(StateHasChanged);
     }
 
     private string GetPriorityClass(int? priority) => priority switch

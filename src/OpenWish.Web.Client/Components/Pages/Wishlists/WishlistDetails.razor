@@ -89,10 +89,10 @@ else
     <div class="search-filter-bar">
         <div class="search-container">
             <i class="bi bi-search search-icon"></i>
-            <input type="text" 
-                   class="search-input" 
-                   placeholder="Search items by name, description, or store..." 
-                   @bind="SearchQuery" 
+            <input type="text"
+                   class="search-input"
+                   placeholder="Search items by name, description, or store..."
+                   @bind="SearchQuery"
                    @bind:event="oninput"
                    @onkeyup="HandleSearchInput" />
             @if (!string.IsNullOrEmpty(SearchQuery))
@@ -102,7 +102,7 @@ else
                 </button>
             }
         </div>
-        
+
         <button class="btn btn-filter @(_showFilters ? "active" : "")" @onclick="ToggleFilters">
             <i class="bi bi-funnel"></i>
             <span class="btn-text">Filters</span>
@@ -158,20 +158,20 @@ else
             <div class="filter-section">
                 <label class="filter-label">Price Range: @GetPriceRangeLabel()</label>
                 <div class="price-range-slider">
-                    <input type="range" 
-                           class="form-range" 
-                           min="0" 
-                           max="@GetMaxPrice()" 
+                    <input type="range"
+                           class="form-range"
+                           min="0"
+                           max="@GetMaxPrice()"
                            step="10"
-                           @bind="MinPrice" 
+                           @bind="MinPrice"
                            @bind:event="oninput"
                            @onchange="ApplyFiltersAndSort" />
-                    <input type="range" 
-                           class="form-range" 
-                           min="0" 
-                           max="@GetMaxPrice()" 
+                    <input type="range"
+                           class="form-range"
+                           min="0"
+                           max="@GetMaxPrice()"
                            step="10"
-                           @bind="MaxPrice" 
+                           @bind="MaxPrice"
                            @bind:event="oninput"
                            @onchange="ApplyFiltersAndSort" />
                 </div>
@@ -217,7 +217,7 @@ else
             </div>
         </div>
     }
-    
+
     <div class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
@@ -277,7 +277,7 @@ else
                                     }
                                 </div>
                             }
-                            
+
                             <div class="item-content">
                                 <div class="item-header">
                                     <h3 class="item-title">@item.Name</h3>
@@ -381,20 +381,20 @@ else
             {
                 @if (_canEdit)
                 {
-                    <WishlistItemList Items="@_filteredItems" 
-                                    OnEdit="@HandleItemEditClick" 
-                                    OnDelete="@HandleItemDelete" 
-                                    ShowInteractions="true" 
-                                    WishlistId="@WishlistId" 
-                                    OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                    <WishlistItemList Items="@_filteredItems"
+                                    OnEdit="@HandleItemEditClick"
+                                    OnDelete="@HandleItemDelete"
+                                    ShowInteractions="true"
+                                    WishlistId="@WishlistId"
+                                    OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner" />
                 }
                 else
                 {
-                    <WishlistItemList Items="@_filteredItems" 
-                                    ShowInteractions="true" 
-                                    WishlistId="@WishlistId" 
-                                    OwnerId="@(_wishlist?.OwnerId ?? "")" 
+                    <WishlistItemList Items="@_filteredItems"
+                                    ShowInteractions="true"
+                                    WishlistId="@WishlistId"
+                                    OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner" />
                 }
             }
@@ -481,7 +481,7 @@ else
         if (!string.IsNullOrWhiteSpace(SearchQuery))
         {
             var query = SearchQuery.ToLower();
-            filtered = filtered.Where(i => 
+            filtered = filtered.Where(i =>
                 (i.Name?.ToLower().Contains(query) ?? false) ||
                 (i.Description?.ToLower().Contains(query) ?? false) ||
                 (i.WhereToBuy?.ToLower().Contains(query) ?? false));
@@ -517,22 +517,22 @@ else
         // Apply sorting
         filtered = SortBy switch
         {
-            "name" => SortAscending 
-                ? filtered.OrderBy(i => i.Name) 
+            "name" => SortAscending
+                ? filtered.OrderBy(i => i.Name)
                 : filtered.OrderByDescending(i => i.Name),
-                
-            "priority" => SortAscending 
-                ? filtered.OrderBy(i => i.Priority ?? int.MaxValue) 
+
+            "priority" => SortAscending
+                ? filtered.OrderBy(i => i.Priority ?? int.MaxValue)
                 : filtered.OrderByDescending(i => i.Priority ?? int.MinValue),
-                
-            "price" => SortAscending 
-                ? filtered.OrderBy(i => i.Price ?? decimal.MaxValue) 
+
+            "price" => SortAscending
+                ? filtered.OrderBy(i => i.Price ?? decimal.MaxValue)
                 : filtered.OrderByDescending(i => i.Price ?? decimal.MinValue),
 
-            "date" => SortAscending 
-                ? filtered.OrderBy(i => i.CreatedOn) 
+            "date" => SortAscending
+                ? filtered.OrderBy(i => i.CreatedOn)
                 : filtered.OrderByDescending(i => i.CreatedOn),
-                
+
             _ => filtered
         };
 
@@ -689,7 +689,7 @@ else
 
     private Task SetupSecurity()
     {
-        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId)) 
+        if (_wishlist == null || string.IsNullOrEmpty(_currentUserId))
             return Task.CompletedTask;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
@@ -700,7 +700,7 @@ else
     private async Task ShareWishlist()
     {
         string wishlistUrl = NavigationManager.Uri;
-        
+
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", wishlistUrl);

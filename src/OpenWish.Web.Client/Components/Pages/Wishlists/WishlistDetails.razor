@@ -70,13 +70,16 @@ else
                 <div class="stat-label">Total Value</div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-content">
-                <div class="stat-value">@GetReservedCount()</div>
-                <div class="stat-label">Reserved</div>
+        @if (!_isOwner)
+        {
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-value">@GetReservedCount()</div>
+                    <div class="stat-label">Reserved</div>
+                </div>
             </div>
-        </div>
+        }
         <div class="stat-card">
             <div class="stat-icon">💬</div>
             <div class="stat-content">
@@ -143,12 +146,15 @@ else
             <div class="filter-section">
                 <label class="filter-label">Status</label>
                 <div class="filter-chips">
-                    <button class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
-                        <i class="bi bi-check-circle"></i> Reserved
-                    </button>
-                    <button class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
-                        <i class="bi bi-circle"></i> Available
-                    </button>
+                    @if (!_isOwner)
+                    {
+                        <button class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
+                            <i class="bi bi-check-circle"></i> Reserved
+                        </button>
+                        <button class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
+                            <i class="bi bi-circle"></i> Available
+                        </button>
+                    }
                     <button class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "commented")'>
                         <i class="bi bi-chat"></i> Has Comments
                     </button>
@@ -257,7 +263,7 @@ else
                             {
                                 <div class="item-image">
                                     <img src="@item.Image" alt="@item.Name" />
-                                    @if (item.Reservations.Any())
+                                    @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
                                             <i class="bi bi-check-circle-fill"></i> Reserved
@@ -269,7 +275,7 @@ else
                             {
                                 <div class="item-image item-image-placeholder">
                                     <i class="bi bi-gift"></i>
-                                    @if (item.Reservations.Any())
+                                    @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
                                             <i class="bi bi-check-circle-fill"></i> Reserved
@@ -361,7 +367,7 @@ else
                                     {
                                         <div class="details-section">
                                             <h4><i class="bi bi-people"></i> Social</h4>
-                                            @if (item.Reservations.Any())
+                                            @if (!_isOwner && item.Reservations.Any())
                                             {
                                                 <p class="detail-info">✓ This item has been reserved</p>
                                             }

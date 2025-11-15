@@ -1,12 +1,12 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0-noble AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS base
 WORKDIR /app
 
-ENV \    
-    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \    
-    LC_ALL=en_US.UTF-8 \    
+ENV \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-noble AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -32,7 +32,7 @@ RUN dotnet publish "OpenWish.Web/OpenWish.Web.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
     /p:UseAppHost=false \
-    --arch $TARGETARCH 
+    --arch $TARGETARCH
     # --self-contained false
 
 FROM base AS final

@@ -2,7 +2,7 @@
 
 Shareable wishlists. A web application intended for selfhosting.
 
-* [.NET 9](https://dot.net/)
+* [.NET 10](https://dot.net/)
 * Blazor App (Server & Client WebAssembly)
 * Entity Framework Core managed data on PostgreSQL
 * Docker images [published](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
@@ -101,7 +101,7 @@ volumes:
   openwish-data:
 ```
 
-See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202501`) for managing upgrades.
+See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web/versions) for published tags. Recommended to use `{year}{month}` tags (ie. `202601`) for managing upgrades.
 
 ## License
 

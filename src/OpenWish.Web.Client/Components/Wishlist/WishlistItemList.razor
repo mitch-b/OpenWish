@@ -15,51 +15,50 @@
         <tbody>
             @foreach (var item in Items)
             {
-                @if (EditingItemId == item.Id)
-                {
-                    <tr>
-                        <td colspan="6">
-                            <WishlistItemForm
-                                Model="@item"
-                                OnSubmit="@HandleEditSubmit"
-                                OnCancel="@HandleOnCancel" />
-                        </td>
-                    </tr>
-                }
-                else
-                {
-                    <tr>
-                        <td>
-                            <span class="item-name">@item.Name</span>
-                            @if (!string.IsNullOrEmpty(item.Url))
+                <tr @key="item.Id"
+                    tabindex="-1">
+                    <td>
+                        <span class="item-name">@item.Name</span>
+                        @if (!string.IsNullOrEmpty(item.Url))
+                        {
+                            <a href="@item.Url" target="_blank" class="ms-2 text-decoration-none" title="View product">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        }
+                    </td>
+                    <td>@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
+                    <td>@(item.Price?.ToString("C") ?? "-")</td>
+                    <td>
+                        <span class="priority-badge @GetPriorityClass(item.Priority)">
+                            @GetPriorityText(item.Priority)
+                        </span>
+                    </td>
+                    <td>
+                        <span class="tooltip-container">
+                            @item.CreatedOn.ToLocalHumanizedString()
+                            <span class="tooltip-text">@item.CreatedOn.ToLocalTime()</span>
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            @if (ShowInteractions)
                             {
-                                <a href="@item.Url" target="_blank" class="ms-2 text-decoration-none">
-                                    🔗
-                                </a>
+                                <button
+                                    class="btn btn-sm btn-outline-info"
+                                    @onclick="() => ToggleInteractions(item.Id)"
+                                    title="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") comments and interactions">
+                                    <i class="bi bi-chat-dots"></i>
+                                    @(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show")
+                                </button>
                             }
-                        </td>
-                        <td>@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
-                        <td>@(item.Price?.ToString("C") ?? "-")</td>
-                        <td>
-                            <span class="priority-badge @GetPriorityClass(item.Priority)">
-                                @GetPriorityText(item.Priority)
-                            </span>
-                        </td>
-                        <td>
-                            <span class="tooltip-container">
-                                @item.CreatedOn.ToLocalHumanizedString()
-                                <span class="tooltip-text">@item.CreatedOn.ToLocalTime()</span>
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group">
+                            <div class="edit-actions">
                                 @if (OnEdit.HasDelegate)
                                 {
                                     <button
                                         class="btn btn-sm btn-primary"
-                                        @onclick="() => StartEdit(item.Id)"
+                                        @onclick="() => HandleEdit(item)"
                                         title="Edit item">
-                                        ✏️
+                                        <i class="bi bi-pencil"></i>
                                     </button>
                                 }
                                 @if (OnDelete.HasDelegate)
@@ -68,41 +67,32 @@
                                         class="btn btn-sm btn-danger"
                                         @onclick="() => ShowDeleteConfirm(item)"
                                         title="Delete item">
-                                        🗑️
-                                    </button>
-                                }
-                                @if (ShowInteractions)
-                                {
-                                    <button
-                                        class="btn btn-sm btn-outline-secondary"
-                                        @onclick="() => ToggleInteractions(item.Id)"
-                                        title="Show interactions">
-                                        @(ExpandedInteractions.Contains(item.Id) ? "⬆️" : "⬇️")
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 }
                             </div>
+                        </div>
+                    </td>
+                </tr>
+                @if (ShowInteractions && ExpandedInteractions.Contains(item.Id))
+                {
+                    <tr class="interaction-row-expanded">
+                        <td colspan="6" class="interaction-row">
+                            <div class="interaction-container">
+                                @if (!IsOwner)
+                                {
+                                    <div class="interaction-section">
+                                        <h6><i class="bi bi-gift"></i> Reserve Item</h6>
+                                        <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" />
+                                    </div>
+                                }
+                                <div class="interaction-section">
+                                    <h6><i class="bi bi-chat-dots"></i> Comments</h6>
+                                    <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" />
+                                </div>
+                            </div>
                         </td>
                     </tr>
-                    @if (ShowInteractions && ExpandedInteractions.Contains(item.Id))
-                    {
-                        <tr>
-                            <td colspan="6" class="interaction-row">
-                                <div class="d-flex gap-3">
-                                    @if (!IsOwner)
-                                    {
-                                        <div class="flex-shrink-0" style="min-width: 300px;">
-                                            <h6>Reserve Item</h6>
-                                            <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" />
-                                        </div>
-                                    }
-                                    <div class="flex-grow-1">
-                                        <h6>Comments</h6>
-                                        <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" />
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    }
                 }
             }
         </tbody>
@@ -120,15 +110,9 @@
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
 
-    private int? EditingItemId;
-    private WishlistDeleteDialog deleteDialog;
+    private WishlistDeleteDialog deleteDialog = default!;
     private WishlistItemModel? itemToDelete;
     private HashSet<int> ExpandedInteractions = new();
-
-    private void StartEdit(int itemId)
-    {
-        EditingItemId = itemId;
-    }
 
     private void ToggleInteractions(int itemId)
     {
@@ -142,18 +126,12 @@
         }
     }
 
-    private async Task HandleEditSubmit(WishlistItemModel item)
+    private async Task HandleEdit(WishlistItemModel item)
     {
         if (OnEdit.HasDelegate)
         {
             await OnEdit.InvokeAsync(item);
         }
-        EditingItemId = null;
-    }
-
-    private async Task HandleOnCancel(WishlistItemModel item)
-    {
-        EditingItemId = null;
     }
 
     private void ShowDeleteConfirm(WishlistItemModel item)
@@ -172,6 +150,19 @@
             await OnDelete.InvokeAsync(itemToDelete);
             itemToDelete = null;
         }
+    }
+
+    public Task ExpandItemAsync(int itemId)
+    {
+        if (!ShowInteractions)
+        {
+            return Task.CompletedTask;
+        }
+
+        ExpandedInteractions.Clear();
+        ExpandedInteractions.Add(itemId);
+
+        return InvokeAsync(StateHasChanged);
     }
 
     private string GetPriorityClass(int? priority) => priority switch

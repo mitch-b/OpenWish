@@ -116,7 +116,7 @@ public class EventService(
             .AsNoTracking()
             .Where(w => w.EventId == eventId && !w.Deleted)
             .Include(w => w.Owner)
-            .Include(w => w.Items)
+            .Include(w => w.Items.Where(i => !i.Deleted))
             .OrderBy(w => w.Name)
             .ToListAsync();
 
@@ -158,7 +158,7 @@ public class EventService(
 
         var wishlist = await context.Wishlists
             .Include(w => w.Owner)
-            .Include(w => w.Items)
+            .Include(w => w.Items.Where(i => !i.Deleted))
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
 

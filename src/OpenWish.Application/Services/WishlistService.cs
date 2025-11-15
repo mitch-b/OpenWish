@@ -55,10 +55,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = await context.Wishlists
-            .Where(w => !w.Deleted)
-            .Include(w => w.Items)
+            .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
-            .FirstOrDefaultAsync(w => w.Id == id);
+            .FirstOrDefaultAsync(w => w.Id == id && !w.Deleted);
 
         if (wishlistEntity == null)
         {
@@ -84,7 +83,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntities = await context.Wishlists
             .Where(w => !w.Deleted && w.OwnerId == userId)
-            .Include(w => w.Items)
+            .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
             .ToListAsync();
 
@@ -144,9 +143,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         itemEntity.WishlistId = wishlistId;
         itemEntity.CreatedOn = DateTimeOffset.UtcNow;
         itemEntity.UpdatedOn = DateTimeOffset.UtcNow;
-        itemEntity.OrderIndex = await context.WishlistItems
-            .Where(i => i.WishlistId == wishlistId)
-            .CountAsync();
+        var maxOrderIndex = await context.WishlistItems
+            .Where(i => i.WishlistId == wishlistId && !i.Deleted)
+            .Select(i => i.OrderIndex ?? -1)
+            .DefaultIfEmpty(-1)
+            .MaxAsync();
+
+        itemEntity.OrderIndex = maxOrderIndex + 1;
 
         var entry = context.WishlistItems.Add(itemEntity);
         await context.SaveChangesAsync();
@@ -167,26 +170,57 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var item = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
+            .Include(i => i.Wishlist)
+            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted);
 
         if (item == null)
         {
             return false;
         }
 
-        var wishlist = await context.Wishlists.FindAsync(wishlistId);
+        var wishlist = item.Wishlist;
+        var utcNow = DateTimeOffset.UtcNow;
 
-        context.WishlistItems.Remove(item);
+        item.Deleted = true;
+        item.UpdatedOn = utcNow;
+
+        // Cascade soft delete to dependents to keep relationships consistent
+        await context.ItemReservations
+            .Where(r => r.WishlistItemId == itemId && !r.Deleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.Deleted, _ => true)
+                .SetProperty(r => r.UpdatedOn, _ => utcNow));
+
+        await context.ItemComments
+            .Where(c => c.WishlistItemId == itemId && !c.Deleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(c => c.Deleted, _ => true)
+                .SetProperty(c => c.UpdatedOn, _ => utcNow));
+
+        await context.ItemReactions
+            .Where(r => r.WishlistItemId == itemId && !r.Deleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(r => r.Deleted, _ => true)
+                .SetProperty(r => r.UpdatedOn, _ => utcNow));
+
+        await context.WillPurchases
+            .Where(wp => wp.WishlistItemId == itemId && !wp.Deleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(wp => wp.Deleted, _ => true)
+                .SetProperty(wp => wp.UpdatedOn, _ => utcNow));
+
         await context.SaveChangesAsync();
 
-        // Log activity
+        wishlist ??= await context.Wishlists.FindAsync(wishlistId);
+
         if (wishlist != null)
         {
             await _activityService.LogActivityAsync(
                 wishlist.OwnerId,
                 "ItemRemoved",
                 $"Removed item: {item.Name} from wishlist {wishlist.Name}",
-                wishlistId);
+                wishlistId,
+                item.Id);
         }
 
         return true;
@@ -196,7 +230,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var itemEntity = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId);
+            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted);
 
         if (itemEntity == null)
         {
@@ -223,7 +257,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingItem = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId)
+            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
 
         // Map updated values to existing entity
@@ -396,7 +430,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(wp => wp.Wishlist)
                 .ThenInclude(w => w.Owner)
             .Include(wp => wp.Wishlist)
-                .ThenInclude(w => w.Items)
+                .ThenInclude(w => w.Items.Where(i => !i.Deleted))
             .Select(wp => wp.Wishlist)
             .Where(w => !w.Deleted)
             .ToListAsync();
@@ -420,7 +454,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var wishlists = await context.Wishlists
             .Where(w => friendIds.Contains(w.OwnerId) && !w.Deleted && !w.IsPrivate)
             .Include(w => w.Owner)
-            .Include(w => w.Items)
+            .Include(w => w.Items.Where(i => !i.Deleted))
             .ToListAsync();
 
         return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
@@ -586,7 +620,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             // Check if user is wishlist owner
             var item = await context.WishlistItems
                 .Include(i => i.Wishlist)
-                .FirstOrDefaultAsync(i => i.Id == comment.WishlistItemId);
+                .FirstOrDefaultAsync(i => i.Id == comment.WishlistItemId && !i.Deleted);
 
             var isWishlistOwner = item?.Wishlist?.OwnerId == userId;
 

@@ -1,5 +1,5 @@
 @attribute [Authorize]
-@page "/wishlists/{WishlistId:int}/items/new"
+@page "/wishlists/{WishlistId}/items/new"
 
 @using OpenWish.Web.Client.Components.Wishlist
 
@@ -21,12 +21,12 @@
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
-    [Parameter] public int WishlistId { get; set; }
+    [Parameter] public string WishlistId { get; set; } = string.Empty;
     private readonly WishlistItemModel _item = new();
 
     private async Task HandleSubmit(WishlistItemModel item)
     {
-        await WishlistService.AddItemToWishlistAsync(WishlistId, item);
+        await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
         NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
     }
 }

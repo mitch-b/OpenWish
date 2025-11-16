@@ -59,7 +59,7 @@ else
                                     <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
                                 </div>
                                 <div class="btn-group">
-                                    <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                    <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
                                     @if (CanDetach(wishlist))
                                     {
                                         <button class="btn btn-outline-secondary btn-sm"
@@ -165,7 +165,7 @@ else
                                                         <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
                                                     </div>
                                                     <div class="btn-group">
-                                                        <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                                        <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
                                                         @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
                                                         {
                                                             <button class="btn btn-outline-secondary btn-sm"

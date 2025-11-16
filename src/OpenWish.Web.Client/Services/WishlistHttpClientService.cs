@@ -185,4 +185,128 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/items/{itemId}/is-reserved");
     }
+
+    // PublicId-based methods
+    public async Task<WishlistModel> GetWishlistByPublicIdAsync(string publicId, string? userId = null)
+    {
+        return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{publicId}");
+    }
+
+    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlist)
+    {
+        var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{publicId}", wishlist);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+    }
+
+    public async Task DeleteWishlistByPublicIdAsync(string publicId)
+    {
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{publicId}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<WishlistPermissionModel> ShareWishlistByPublicIdAsync(string wishlistPublicId, string userId, string permissionType)
+    {
+        var request = new { UserId = userId, PermissionType = permissionType };
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/permissions", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>();
+    }
+
+    public async Task<string> CreateSharingLinkByPublicIdAsync(string wishlistPublicId, string permissionType, TimeSpan? expiration = null)
+    {
+        var request = new { PermissionType = permissionType, Expiration = expiration };
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/share-link", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync();
+    }
+
+    public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsByPublicIdAsync(string wishlistPublicId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistPublicId}/permissions");
+    }
+
+    public async Task<bool> RemoveWishlistPermissionByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/permissions/{userId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-access/{userId}");
+    }
+
+    public async Task<bool> CanUserEditWishlistByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-edit/{userId}");
+    }
+
+    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}");
+    }
+
+    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistPublicId}/items");
+    }
+
+    public async Task<WishlistItemModel> AddItemToWishlistByPublicIdAsync(string wishlistPublicId, WishlistItemModel item)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items", item);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+    }
+
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item)
+    {
+        var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}", item);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+    }
+
+    public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
+    {
+        var request = new { UserId = userId, Text = text };
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
+    }
+
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments");
+    }
+
+    public async Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false)
+    {
+        var request = new { UserId = userId, IsAnonymous = isAnonymous };
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve", request);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId)
+    {
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation?userId={userId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        var response = await _httpClient.GetAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<ItemReservationModel>();
+    }
 }

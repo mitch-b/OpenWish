@@ -145,11 +145,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         itemEntity.UpdatedOn = DateTimeOffset.UtcNow;
         var maxOrderIndex = await context.WishlistItems
             .Where(i => i.WishlistId == wishlistId && !i.Deleted)
-            .Select(i => i.OrderIndex ?? -1)
-            .DefaultIfEmpty(-1)
-            .MaxAsync();
+            .MaxAsync(i => i.OrderIndex);
 
-        itemEntity.OrderIndex = maxOrderIndex + 1;
+        itemEntity.OrderIndex = (maxOrderIndex ?? -1) + 1;
 
         var entry = context.WishlistItems.Add(itemEntity);
         await context.SaveChangesAsync();

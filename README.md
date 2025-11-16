@@ -1,4 +1,4 @@
-# 📃 OpenWish
+# <img src="src/OpenWish.Web/wwwroot/images/openwish-color.svg" alt="OpenWish logo" height="36" style="vertical-align: middle;"> OpenWish
 
 Shareable wishlists. A web application intended for selfhosting.
 

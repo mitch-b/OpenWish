@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace OpenWish.Shared.Models;
 
 public class BaseEntityModel
 {
+    [JsonIgnore]
     public int Id { get; set; }
     public string PublicId { get; set; } = string.Empty;
     public bool Deleted { get; set; }

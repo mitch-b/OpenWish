@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace OpenWish.Shared.Models;
 
 public class EventUserModel : BaseEntityModel
 {
-    public int Id { get; set; }
+    [JsonIgnore]
     public int EventId { get; set; }
     public EventModel? Event { get; set; }
     public string? UserId { get; set; }

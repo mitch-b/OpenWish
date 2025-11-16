@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace OpenWish.Shared.Models;
 
 public class WishlistPermissionModel : BaseEntityModel
 {
+    [JsonIgnore]
     public int WishlistId { get; set; }
     public WishlistModel? Wishlist { get; set; }
 

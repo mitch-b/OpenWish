@@ -8,6 +8,9 @@ public class BaseEntity
     [Key]
     public int Id { get; set; }
 
+    [SqlDefaultValue("gen_random_uuid()")]
+    public string PublicId { get; set; } = Guid.NewGuid().ToString();
+
     public bool Deleted { get; set; }
 
     [Timestamp]

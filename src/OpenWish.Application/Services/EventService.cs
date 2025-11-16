@@ -629,6 +629,161 @@ public class EventService(
         return true;
     }
 
+    // PublicId-based methods for public routes
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .AsNoTracking()
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
+            .Include(e => e.EventWishlists
+                .Where(w => !w.Deleted))
+                .ThenInclude(ew => ew.Owner)
+            .Include(e => e.GiftExchanges)
+                .ThenInclude(ge => ge.Receiver)
+            .FirstOrDefaultAsync(e => e.PublicId == publicId && !e.Deleted);
+
+        if (eventEntity == null)
+        {
+            throw new KeyNotFoundException($"Event with publicId {publicId} not found");
+        }
+
+        var eventModel = _mapper.Map<EventModel>(eventEntity);
+        return eventModel;
+    }
+
+    public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var existingEvent = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == publicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {publicId} not found");
+
+        return await UpdateEventAsync(existingEvent.Id, evt);
+    }
+
+    public async Task DeleteEventByPublicIdAsync(string publicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var existingEvent = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == publicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {publicId} not found");
+
+        await DeleteEventAsync(existingEvent.Id);
+    }
+
+    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant")
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await AddUserToEventAsync(eventEntity.Id, userId, role);
+    }
+
+    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await RemoveUserFromEventAsync(eventEntity.Id, userId);
+    }
+
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await GetEventWishlistsAsync(eventEntity.Id);
+    }
+
+    public async Task<WishlistModel> CreateEventWishlistByPublicIdAsync(string eventPublicId, WishlistModel wishlistModel, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await CreateEventWishlistAsync(eventEntity.Id, wishlistModel, ownerId);
+    }
+
+    public async Task<WishlistModel> AttachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist with publicId {wishlistPublicId} not found");
+
+        return await AttachWishlistAsync(eventEntity.Id, wishlist.Id, userId);
+    }
+
+    public async Task<bool> DetachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist with publicId {wishlistPublicId} not found");
+
+        return await DetachWishlistAsync(eventEntity.Id, wishlist.Id, userId);
+    }
+
+    public async Task<EventUserModel> InviteUserToEventByPublicIdAsync(string eventPublicId, string inviterId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await InviteUserToEventAsync(eventEntity.Id, inviterId, userId);
+    }
+
+    public async Task<EventUserModel> InviteByEmailToEventByPublicIdAsync(string eventPublicId, string inviterId, string email)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await InviteByEmailToEventAsync(eventEntity.Id, inviterId, email);
+    }
+
+    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await GetEventInvitationsAsync(eventEntity.Id);
+    }
+
     private static void ValidateEventCreatorPermission(Event eventEntity, string userId)
     {
         if (eventEntity.CreatedBy.Id != userId)

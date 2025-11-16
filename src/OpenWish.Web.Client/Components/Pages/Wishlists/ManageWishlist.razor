@@ -1,5 +1,5 @@
 @attribute [Authorize]
-@page "/wishlists/{WishlistId:int}/manage"
+@page "/wishlists/{WishlistId}/manage"
 @using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Shared.Models
 @using System.Collections.Generic
@@ -72,7 +72,7 @@ else
                         }
                     </div>
                     <div class="btn-group">
-                        <a href="/events/@_attachedEvent.Id" class="btn btn-outline-primary btn-sm">View Event</a>
+                        <a href="/events/@_attachedEvent.PublicId" class="btn btn-outline-primary btn-sm">View Event</a>
                         <button class="btn btn-outline-secondary btn-sm"
                                 type="button"
                                 disabled="@_eventBusy"
@@ -119,7 +119,7 @@ else
 
 @code {
     [Parameter]
-    public int WishlistId { get; set; }
+    public string WishlistId { get; set; } = string.Empty;
 
     private WishlistModel? _wishlist;
     private WishlistDeleteDialog deleteDialog;
@@ -137,7 +137,7 @@ else
         try
         {
             _currentUserId = await UserContextService.GetUserIdAsync();
-            _wishlist = await WishlistService.GetWishlistAsync(WishlistId, _currentUserId);
+            _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
             await SetupSecurity();
 
             if (_isOwner)
@@ -168,7 +168,7 @@ else
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
-        await WishlistService.UpdateWishlistAsync(WishlistId, updatedWishlist);
+        await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist);
         NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
     }
 
@@ -184,7 +184,7 @@ else
     {
         try
         {
-            await WishlistService.DeleteWishlistAsync(WishlistId);
+            await WishlistService.DeleteWishlistByPublicIdAsync(WishlistId);
             NavigationManager.NavigateTo("/wishlists");
         }
         catch (Exception ex)
@@ -250,9 +250,11 @@ else
 
         await ExecuteEventAction(async () =>
         {
-            await EventService.AttachWishlistAsync(eventId, WishlistId, _currentUserId);
+            // Get the event to get its PublicId
+            var selectedEvent = await EventService.GetEventAsync(eventId);
+            await EventService.AttachWishlistByPublicIdAsync(selectedEvent.PublicId, WishlistId, _currentUserId);
             _wishlist.EventId = eventId;
-            _attachedEvent = await EventService.GetEventAsync(eventId);
+            _attachedEvent = selectedEvent;
             _eventStatusMessage = $"Attached to '{_attachedEvent.Name}'.";
             _selectedEventId = null;
         });
@@ -265,12 +267,12 @@ else
             return;
         }
 
-        var eventId = _attachedEvent.Id;
+        var eventPublicId = _attachedEvent.PublicId;
         var eventName = _attachedEvent.Name;
 
         await ExecuteEventAction(async () =>
         {
-            var removed = await EventService.DetachWishlistAsync(eventId, WishlistId, _currentUserId);
+            var removed = await EventService.DetachWishlistByPublicIdAsync(eventPublicId, WishlistId, _currentUserId);
             if (removed)
             {
                 _wishlist.EventId = null;

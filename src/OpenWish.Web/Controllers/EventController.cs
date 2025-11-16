@@ -27,12 +27,12 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return Ok(events);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<EventModel>> GetEvent(int id)
+    [HttpGet("{publicId}")]
+    public async Task<ActionResult<EventModel>> GetEvent(string publicId)
     {
         try
         {
-            var evt = await _eventService.GetEventAsync(id);
+            var evt = await _eventService.GetEventByPublicIdAsync(publicId);
             return Ok(evt);
         }
         catch (KeyNotFoundException)
@@ -50,19 +50,15 @@ public class EventController(IEventService eventService, ApiUserContextService u
             return Unauthorized();
         }
         var createdEvent = await _eventService.CreateEventAsync(eventModel, userId);
-        return CreatedAtAction(nameof(GetEvent), new { id = createdEvent.Id }, createdEvent);
+        return CreatedAtAction(nameof(GetEvent), new { publicId = createdEvent.PublicId }, createdEvent);
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateEvent(int id, EventModel eventModel)
+    [HttpPut("{publicId}")]
+    public async Task<IActionResult> UpdateEvent(string publicId, EventModel eventModel)
     {
-        if (id != eventModel.Id)
-        {
-            return BadRequest();
-        }
         try
         {
-            await _eventService.UpdateEventAsync(id, eventModel);
+            await _eventService.UpdateEventByPublicIdAsync(publicId, eventModel);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -71,12 +67,12 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteEvent(int id)
+    [HttpDelete("{publicId}")]
+    public async Task<IActionResult> DeleteEvent(string publicId)
     {
         try
         {
-            await _eventService.DeleteEventAsync(id);
+            await _eventService.DeleteEventByPublicIdAsync(publicId);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -85,10 +81,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpPost("{eventId}/users")]
-    public async Task<IActionResult> AddUserToEvent(int eventId, [FromBody] AddUserToEventRequest request)
+    [HttpPost("{eventPublicId}/users")]
+    public async Task<IActionResult> AddUserToEvent(string eventPublicId, [FromBody] AddUserToEventRequest request)
     {
-        var result = await _eventService.AddUserToEventAsync(eventId, request.UserId, request.Role);
+        var result = await _eventService.AddUserToEventByPublicIdAsync(eventPublicId, request.UserId, request.Role);
         if (!result)
         {
             return NotFound();
@@ -96,10 +92,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return NoContent();
     }
 
-    [HttpDelete("{eventId}/users/{userId}")]
-    public async Task<IActionResult> RemoveUserFromEvent(int eventId, string userId)
+    [HttpDelete("{eventPublicId}/users/{userId}")]
+    public async Task<IActionResult> RemoveUserFromEvent(string eventPublicId, string userId)
     {
-        var result = await _eventService.RemoveUserFromEventAsync(eventId, userId);
+        var result = await _eventService.RemoveUserFromEventByPublicIdAsync(eventPublicId, userId);
         if (!result)
         {
             return NotFound();
@@ -107,15 +103,15 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return NoContent();
     }
 
-    [HttpGet("{eventId}/wishlists")]
-    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEventWishlists(int eventId)
+    [HttpGet("{eventPublicId}/wishlists")]
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEventWishlists(string eventPublicId)
     {
-        var wishlists = await _eventService.GetEventWishlistsAsync(eventId);
+        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId);
         return Ok(wishlists);
     }
 
-    [HttpPost("{eventId}/wishlists")]
-    public async Task<ActionResult<WishlistModel>> CreateEventWishlist(int eventId, [FromBody] WishlistModel wishlist)
+    [HttpPost("{eventPublicId}/wishlists")]
+    public async Task<ActionResult<WishlistModel>> CreateEventWishlist(string eventPublicId, [FromBody] WishlistModel wishlist)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -125,7 +121,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
 
         try
         {
-            var createdWishlist = await _eventService.CreateEventWishlistAsync(eventId, wishlist, userId);
+            var createdWishlist = await _eventService.CreateEventWishlistByPublicIdAsync(eventPublicId, wishlist, userId);
             return Ok(createdWishlist);
         }
         catch (KeyNotFoundException ex)
@@ -138,8 +134,8 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpPost("{eventId}/wishlists/attach")]
-    public async Task<ActionResult<WishlistModel>> AttachWishlistToEvent(int eventId, [FromBody] AttachWishlistToEventRequest request)
+    [HttpPost("{eventPublicId}/wishlists/attach")]
+    public async Task<ActionResult<WishlistModel>> AttachWishlistToEvent(string eventPublicId, [FromBody] AttachWishlistToEventRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -149,7 +145,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
 
         try
         {
-            var wishlist = await _eventService.AttachWishlistAsync(eventId, request.WishlistId, userId);
+            var wishlist = await _eventService.AttachWishlistByPublicIdAsync(eventPublicId, request.WishlistPublicId, userId);
             return Ok(wishlist);
         }
         catch (KeyNotFoundException ex)
@@ -166,8 +162,8 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpDelete("{eventId}/wishlists/{wishlistId}")]
-    public async Task<IActionResult> DetachWishlistFromEvent(int eventId, int wishlistId)
+    [HttpDelete("{eventPublicId}/wishlists/{wishlistPublicId}")]
+    public async Task<IActionResult> DetachWishlistFromEvent(string eventPublicId, string wishlistPublicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -177,7 +173,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
 
         try
         {
-            var result = await _eventService.DetachWishlistAsync(eventId, wishlistId, userId);
+            var result = await _eventService.DetachWishlistByPublicIdAsync(eventPublicId, wishlistPublicId, userId);
             if (!result)
             {
                 return NotFound();
@@ -193,8 +189,8 @@ public class EventController(IEventService eventService, ApiUserContextService u
 
     // Event Invitation Endpoints
 
-    [HttpPost("{eventId}/invitations/user/{userId}")]
-    public async Task<ActionResult<EventUserModel>> InviteUserToEvent(int eventId, string userId)
+    [HttpPost("{eventPublicId}/invitations/user/{userId}")]
+    public async Task<ActionResult<EventUserModel>> InviteUserToEvent(string eventPublicId, string userId)
     {
         var inviterId = await _userContextService.GetUserIdAsync();
         if (inviterId is null)
@@ -203,7 +199,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
         try
         {
-            var invitation = await _eventService.InviteUserToEventAsync(eventId, inviterId, userId);
+            var invitation = await _eventService.InviteUserToEventByPublicIdAsync(eventPublicId, inviterId, userId);
             return Ok(invitation);
         }
         catch (KeyNotFoundException ex)
@@ -220,8 +216,8 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpPost("{eventId}/invitations/email")]
-    public async Task<ActionResult<EventUserModel>> InviteByEmailToEvent(int eventId, [FromBody] InviteByEmailRequest request)
+    [HttpPost("{eventPublicId}/invitations/email")]
+    public async Task<ActionResult<EventUserModel>> InviteByEmailToEvent(string eventPublicId, [FromBody] InviteByEmailRequest request)
     {
         var inviterId = await _userContextService.GetUserIdAsync();
         if (inviterId is null)
@@ -230,7 +226,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
         try
         {
-            var invitation = await _eventService.InviteByEmailToEventAsync(eventId, inviterId, request.Email);
+            var invitation = await _eventService.InviteByEmailToEventByPublicIdAsync(eventPublicId, inviterId, request.Email);
             return Ok(invitation);
         }
         catch (KeyNotFoundException ex)
@@ -247,10 +243,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
-    [HttpGet("{eventId}/invitations")]
-    public async Task<ActionResult<IEnumerable<EventUserModel>>> GetEventInvitations(int eventId)
+    [HttpGet("{eventPublicId}/invitations")]
+    public async Task<ActionResult<IEnumerable<EventUserModel>>> GetEventInvitations(string eventPublicId)
     {
-        var invitations = await _eventService.GetEventInvitationsAsync(eventId);
+        var invitations = await _eventService.GetEventInvitationsByPublicIdAsync(eventPublicId);
         return Ok(invitations);
     }
 

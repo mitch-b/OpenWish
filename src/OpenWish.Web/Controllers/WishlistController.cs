@@ -26,8 +26,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(wishlists);
     }
 
-    [HttpGet("{id}")]
-    public async Task<ActionResult<WishlistModel>> GetWishlist(int id)
+    [HttpGet("{publicId}")]
+    public async Task<ActionResult<WishlistModel>> GetWishlist(string publicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -37,7 +37,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
 
         try
         {
-            var wishlist = await _wishlistService.GetWishlistAsync(id, userId);
+            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(publicId, userId);
             return Ok(wishlist);
         }
         catch (KeyNotFoundException)
@@ -62,14 +62,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return CreatedAtAction(nameof(GetWishlist), new { id = createdWishlist.Id }, createdWishlist);
     }
 
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateWishlist(int id, WishlistModel wishlist)
+    [HttpPut("{publicId}")]
+    public async Task<IActionResult> UpdateWishlist(string publicId, WishlistModel wishlist)
     {
-        if (id != wishlist.Id)
-        {
-            return BadRequest();
-        }
-        var updatedWishlist = await _wishlistService.UpdateWishlistAsync(id, wishlist);
+        var updatedWishlist = await _wishlistService.UpdateWishlistByPublicIdAsync(publicId, wishlist);
         if (updatedWishlist == null)
         {
             return NotFound();
@@ -77,15 +73,15 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(updatedWishlist);
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteWishlist(int id)
+    [HttpDelete("{publicId}")]
+    public async Task<IActionResult> DeleteWishlist(string publicId)
     {
-        await _wishlistService.DeleteWishlistAsync(id);
+        await _wishlistService.DeleteWishlistByPublicIdAsync(publicId);
         return NoContent();
     }
 
-    [HttpGet("{wishlistId}/items")]
-    public async Task<ActionResult<IEnumerable<WishlistItemModel>>> GetWishlistItems(int wishlistId)
+    [HttpGet("{wishlistPublicId}/items")]
+    public async Task<ActionResult<IEnumerable<WishlistItemModel>>> GetWishlistItems(string wishlistPublicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -96,13 +92,13 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         try
         {
             // Check if user can access the wishlist first
-            var canAccess = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+            var canAccess = await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId);
             if (!canAccess)
             {
                 return Forbid();
             }
 
-            var items = await _wishlistService.GetWishlistItemsAsync(wishlistId);
+            var items = await _wishlistService.GetWishlistItemsByPublicIdAsync(wishlistPublicId);
             return Ok(items);
         }
         catch (KeyNotFoundException)
@@ -111,8 +107,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
-    [HttpGet("{wishlistId}/items/{itemId}")]
-    public async Task<ActionResult<WishlistItemModel>> GetWishlistItem(int wishlistId, int itemId)
+    [HttpGet("{wishlistPublicId}/items/{itemId}")]
+    public async Task<ActionResult<WishlistItemModel>> GetWishlistItem(string wishlistPublicId, int itemId)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -123,13 +119,13 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         try
         {
             // Check if user can access the wishlist first
-            var canAccess = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+            var canAccess = await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId);
             if (!canAccess)
             {
                 return Forbid();
             }
 
-            var item = await _wishlistService.GetWishlistItemAsync(wishlistId, itemId);
+            var item = await _wishlistService.GetWishlistItemByPublicIdAsync(wishlistPublicId, itemId);
             return Ok(item);
         }
         catch (KeyNotFoundException)
@@ -138,8 +134,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
-    [HttpPost("{wishlistId}/items")]
-    public async Task<ActionResult<WishlistItemModel>> AddItemToWishlist(int wishlistId, WishlistItemModel item)
+    [HttpPost("{wishlistPublicId}/items")]
+    public async Task<ActionResult<WishlistItemModel>> AddItemToWishlist(string wishlistPublicId, WishlistItemModel item)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -150,14 +146,14 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         try
         {
             // Check if user can edit the wishlist
-            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
             if (!canEdit)
             {
                 return Forbid();
             }
 
-            var addedItem = await _wishlistService.AddItemToWishlistAsync(wishlistId, item);
-            return CreatedAtAction(nameof(GetWishlistItem), new { wishlistId, itemId = addedItem.WishlistId }, addedItem);
+            var addedItem = await _wishlistService.AddItemToWishlistByPublicIdAsync(wishlistPublicId, item);
+            return CreatedAtAction(nameof(GetWishlistItem), new { wishlistPublicId, itemId = addedItem.Id }, addedItem);
         }
         catch (KeyNotFoundException)
         {
@@ -165,8 +161,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
-    [HttpPut("{wishlistId}/items/{itemId}")]
-    public async Task<IActionResult> UpdateWishlistItem(int wishlistId, int itemId, WishlistItemModel item)
+    [HttpPut("{wishlistPublicId}/items/{itemId}")]
+    public async Task<IActionResult> UpdateWishlistItem(string wishlistPublicId, int itemId, WishlistItemModel item)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -182,13 +178,13 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         try
         {
             // Check if user can edit the wishlist
-            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
             if (!canEdit)
             {
                 return Forbid();
             }
 
-            var updatedItem = await _wishlistService.UpdateWishlistItemAsync(wishlistId, itemId, item);
+            var updatedItem = await _wishlistService.UpdateWishlistItemByPublicIdAsync(wishlistPublicId, itemId, item);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -197,8 +193,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
-    [HttpDelete("{wishlistId}/items/{itemId}")]
-    public async Task<IActionResult> RemoveItemFromWishlist(int wishlistId, int itemId)
+    [HttpDelete("{wishlistPublicId}/items/{itemId}")]
+    public async Task<IActionResult> RemoveItemFromWishlist(string wishlistPublicId, int itemId)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -209,13 +205,13 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         try
         {
             // Check if user can edit the wishlist
-            var canEdit = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+            var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
             if (!canEdit)
             {
                 return Forbid();
             }
 
-            var result = await _wishlistService.RemoveItemFromWishlistAsync(wishlistId, itemId);
+            var result = await _wishlistService.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, itemId);
             if (!result)
             {
                 return NotFound();
@@ -229,17 +225,17 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     }
 
     // Wishlist sharing endpoints
-    [HttpPost("{wishlistId}/permissions")]
-    public async Task<ActionResult<WishlistPermissionModel>> ShareWishlist(int wishlistId, [FromBody] ShareRequest request)
+    [HttpPost("{wishlistPublicId}/permissions")]
+    public async Task<ActionResult<WishlistPermissionModel>> ShareWishlist(string wishlistPublicId, [FromBody] ShareRequest request)
     {
-        var permission = await _wishlistService.ShareWishlistAsync(wishlistId, request.UserId, request.PermissionType);
+        var permission = await _wishlistService.ShareWishlistByPublicIdAsync(wishlistPublicId, request.UserId, request.PermissionType);
         return Ok(permission);
     }
 
-    [HttpPost("{wishlistId}/share-link")]
-    public async Task<ActionResult<string>> CreateSharingLink(int wishlistId, [FromBody] SharingLinkRequest request)
+    [HttpPost("{wishlistPublicId}/share-link")]
+    public async Task<ActionResult<string>> CreateSharingLink(string wishlistPublicId, [FromBody] SharingLinkRequest request)
     {
-        var token = await _wishlistService.CreateSharingLinkAsync(wishlistId, request.PermissionType, request.Expiration);
+        var token = await _wishlistService.CreateSharingLinkByPublicIdAsync(wishlistPublicId, request.PermissionType, request.Expiration);
         return Ok(token);
     }
 
@@ -250,17 +246,17 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(result);
     }
 
-    [HttpGet("{wishlistId}/permissions")]
-    public async Task<ActionResult<IEnumerable<WishlistPermissionModel>>> GetWishlistPermissions(int wishlistId)
+    [HttpGet("{wishlistPublicId}/permissions")]
+    public async Task<ActionResult<IEnumerable<WishlistPermissionModel>>> GetWishlistPermissions(string wishlistPublicId)
     {
-        var permissions = await _wishlistService.GetWishlistPermissionsAsync(wishlistId);
+        var permissions = await _wishlistService.GetWishlistPermissionsByPublicIdAsync(wishlistPublicId);
         return Ok(permissions);
     }
 
-    [HttpDelete("{wishlistId}/permissions/{userId}")]
-    public async Task<ActionResult<bool>> RemovePermission(int wishlistId, string userId)
+    [HttpDelete("{wishlistPublicId}/permissions/{userId}")]
+    public async Task<ActionResult<bool>> RemovePermission(string wishlistPublicId, string userId)
     {
-        var result = await _wishlistService.RemoveWishlistPermissionAsync(wishlistId, userId);
+        var result = await _wishlistService.RemoveWishlistPermissionByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
 
@@ -290,32 +286,32 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(wishlists);
     }
 
-    [HttpGet("{wishlistId}/can-access/{userId}")]
-    public async Task<ActionResult<bool>> CanUserAccess(int wishlistId, string userId)
+    [HttpGet("{wishlistPublicId}/can-access/{userId}")]
+    public async Task<ActionResult<bool>> CanUserAccess(string wishlistPublicId, string userId)
     {
-        var result = await _wishlistService.CanUserAccessWishlistAsync(wishlistId, userId);
+        var result = await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
 
-    [HttpGet("{wishlistId}/can-edit/{userId}")]
-    public async Task<ActionResult<bool>> CanUserEdit(int wishlistId, string userId)
+    [HttpGet("{wishlistPublicId}/can-edit/{userId}")]
+    public async Task<ActionResult<bool>> CanUserEdit(string wishlistPublicId, string userId)
     {
-        var result = await _wishlistService.CanUserEditWishlistAsync(wishlistId, userId);
+        var result = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
 
     // Item comments endpoints
-    [HttpPost("{wishlistId}/items/{itemId}/comments")]
-    public async Task<ActionResult<ItemCommentModel>> AddComment(int wishlistId, int itemId, [FromBody] CommentRequest request)
+    [HttpPost("{wishlistPublicId}/items/{itemId}/comments")]
+    public async Task<ActionResult<ItemCommentModel>> AddComment(string wishlistPublicId, int itemId, [FromBody] CommentRequest request)
     {
-        var comment = await _wishlistService.AddCommentToItemAsync(wishlistId, itemId, request.UserId, request.Text);
+        var comment = await _wishlistService.AddCommentToItemByPublicIdAsync(wishlistPublicId, itemId, request.UserId, request.Text);
         return Ok(comment);
     }
 
-    [HttpGet("{wishlistId}/items/{itemId}/comments")]
-    public async Task<ActionResult<IEnumerable<ItemCommentModel>>> GetComments(int wishlistId, int itemId)
+    [HttpGet("{wishlistPublicId}/items/{itemId}/comments")]
+    public async Task<ActionResult<IEnumerable<ItemCommentModel>>> GetComments(string wishlistPublicId, int itemId)
     {
-        var comments = await _wishlistService.GetItemCommentsAsync(wishlistId, itemId);
+        var comments = await _wishlistService.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemId);
         return Ok(comments);
     }
 
@@ -327,24 +323,24 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     }
 
     // Item reservations endpoints
-    [HttpPost("{wishlistId}/items/{itemId}/reserve")]
-    public async Task<ActionResult<bool>> ReserveItem(int wishlistId, int itemId, [FromBody] ReservationRequest request)
+    [HttpPost("{wishlistPublicId}/items/{itemId}/reserve")]
+    public async Task<ActionResult<bool>> ReserveItem(string wishlistPublicId, int itemId, [FromBody] ReservationRequest request)
     {
-        var result = await _wishlistService.ReserveItemAsync(wishlistId, itemId, request.UserId, request.IsAnonymous);
+        var result = await _wishlistService.ReserveItemByPublicIdAsync(wishlistPublicId, itemId, request.UserId, request.IsAnonymous);
         return Ok(result);
     }
 
-    [HttpDelete("{wishlistId}/items/{itemId}/reservation")]
-    public async Task<ActionResult<bool>> CancelReservation(int wishlistId, int itemId, [FromQuery] string userId)
+    [HttpDelete("{wishlistPublicId}/items/{itemId}/reservation")]
+    public async Task<ActionResult<bool>> CancelReservation(string wishlistPublicId, int itemId, [FromQuery] string userId)
     {
-        var result = await _wishlistService.CancelReservationAsync(wishlistId, itemId, userId);
+        var result = await _wishlistService.CancelReservationByPublicIdAsync(wishlistPublicId, itemId, userId);
         return Ok(result);
     }
 
-    [HttpGet("{wishlistId}/items/{itemId}/reservation")]
-    public async Task<ActionResult<ItemReservationModel>> GetReservation(int wishlistId, int itemId)
+    [HttpGet("{wishlistPublicId}/items/{itemId}/reservation")]
+    public async Task<ActionResult<ItemReservationModel>> GetReservation(string wishlistPublicId, int itemId)
     {
-        var reservation = await _wishlistService.GetItemReservationAsync(wishlistId, itemId);
+        var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId);
         return Ok(reservation);
     }
 

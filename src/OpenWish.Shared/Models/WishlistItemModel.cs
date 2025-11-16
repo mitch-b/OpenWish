@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OpenWish.Shared.Models;
 
 public class WishlistItemModel : BaseEntityModel
@@ -8,6 +10,7 @@ public class WishlistItemModel : BaseEntityModel
     public string? Description { get; set; }
     public decimal? Price { get; set; }
     public string? WhereToBuy { get; set; }
+    [JsonIgnore]
     public int WishlistId { get; set; }
     public bool IsPrivate { get; set; } // Indicates if the item is private
     public int? Priority { get; set; } // Priority level (e.g., 1 = High, 2 = Medium, 3 = Low)

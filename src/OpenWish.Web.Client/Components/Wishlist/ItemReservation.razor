@@ -69,7 +69,7 @@
 
 @code {
     [Parameter]
-    public int WishlistId { get; set; }
+    public string WishlistId { get; set; } = string.Empty;
 
     [Parameter]
     public int ItemId { get; set; }
@@ -132,7 +132,7 @@
                 return; // Wishlist owners can't reserve their own items
             }
 
-            var reservation = await WishlistService.GetItemReservationAsync(WishlistId, ItemId);
+            var reservation = await WishlistService.GetItemReservationByPublicIdAsync(WishlistId, ItemId);
             
             if (reservation != null)
             {
@@ -171,7 +171,7 @@
 
             if (_currentUserId != null)
             {
-                var result = await WishlistService.ReserveItemAsync(WishlistId, ItemId, _currentUserId, _anonymous);
+                var result = await WishlistService.ReserveItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, _anonymous);
                 
                 if (result)
                 {
@@ -214,7 +214,7 @@
 
             if (_currentUserId != null)
             {
-                await WishlistService.CancelReservationAsync(WishlistId, ItemId, _currentUserId);
+                await WishlistService.CancelReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
                 await CheckReservation();
             }
         }

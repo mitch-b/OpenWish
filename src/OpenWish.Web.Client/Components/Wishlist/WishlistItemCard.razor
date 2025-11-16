@@ -60,7 +60,7 @@
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
     [Parameter] public bool ShowInteractions { get; set; } = false;
-    [Parameter] public int WishlistId { get; set; }
+    [Parameter] public string WishlistId { get; set; } = string.Empty;
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
 

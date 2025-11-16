@@ -71,7 +71,7 @@
 
 @code {
     [Parameter]
-    public int WishlistId { get; set; }
+    public string WishlistId { get; set; } = string.Empty;
 
     [Parameter]
     public int ItemId { get; set; }
@@ -114,7 +114,7 @@
             _error = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
-            var comments = await WishlistService.GetItemCommentsAsync(WishlistId, ItemId);
+            var comments = await WishlistService.GetItemCommentsByPublicIdAsync(WishlistId, ItemId);
             _comments = comments.ToList();
         }
         catch (Exception ex)
@@ -142,7 +142,7 @@
 
             if (_currentUserId != null)
             {
-                await WishlistService.AddCommentToItemAsync(WishlistId, ItemId, _currentUserId, commentText);
+                await WishlistService.AddCommentToItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, commentText);
                 commentText = "";
                 await LoadComments();
             }

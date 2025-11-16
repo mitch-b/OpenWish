@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OpenWish.Shared.Models;
 
 public class WishlistModel : BaseEntityModel
@@ -6,6 +8,7 @@ public class WishlistModel : BaseEntityModel
     public string? Icon { get; set; }
     public string? OwnerId { get; set; }
     public ApplicationUserModel? Owner { get; set; }
+    [JsonIgnore]
     public int? EventId { get; set; }
     public bool IsCollaborative { get; set; }
     public int ItemCount { get; set; }

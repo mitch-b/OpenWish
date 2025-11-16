@@ -59,7 +59,7 @@ else
                                     <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
                                 </div>
                                 <div class="btn-group">
-                                    <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                    <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
                                     @if (CanDetach(wishlist))
                                     {
                                         <button class="btn btn-outline-secondary btn-sm"
@@ -165,7 +165,7 @@ else
                                                         <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
                                                     </div>
                                                     <div class="btn-group">
-                                                        <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">View</a>
+                                                        <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
                                                         @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
                                                         {
                                                             <button class="btn btn-outline-secondary btn-sm"
@@ -194,7 +194,7 @@ else
 }
 
 @code {
-    [Parameter] public int EventId { get; set; }
+    [Parameter] public string EventId { get; set; } = string.Empty;
     [Parameter] public EventModel? Event { get; set; }
     [Parameter] public string? CurrentUserId { get; set; }
     [Parameter] public EventCallback<IReadOnlyList<WishlistModel>> OnWishlistsChanged { get; set; }
@@ -212,11 +212,11 @@ else
     private bool _isInitialized;
     private bool _hasLoaded;
     private bool _isEventOwner;
-    private int _lastEventId;
+    private string _lastEventId = string.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (EventId <= 0)
+        if (string.IsNullOrEmpty(EventId))
         {
             return;
         }
@@ -272,7 +272,7 @@ else
 
         try
         {
-            var wishlists = (await EventService.GetEventWishlistsAsync(EventId)).ToList();
+            var wishlists = (await EventService.GetEventWishlistsByPublicIdAsync(EventId)).ToList();
             _eventWishlists.Clear();
             _eventWishlists.AddRange(wishlists);
 
@@ -346,8 +346,13 @@ else
 
         await ExecuteWithFeedback(async () =>
         {
-            var attached = await EventService.AttachWishlistAsync(EventId, _selectedWishlistId.Value, _currentUserId);
-            _statusMessage = $"Added '{attached.Name}' to this event.";
+            // Find the wishlist to get its PublicId
+            var selectedWishlist = _userWishlists.FirstOrDefault(w => w.Id == _selectedWishlistId.Value);
+            if (selectedWishlist != null)
+            {
+                var attached = await EventService.AttachWishlistByPublicIdAsync(EventId, selectedWishlist.PublicId, _currentUserId);
+                _statusMessage = $"Added '{attached.Name}' to this event.";
+            }
         });
 
         _selectedWishlistId = null;
@@ -362,10 +367,15 @@ else
 
         await ExecuteWithFeedback(async () =>
         {
-            var removed = await EventService.DetachWishlistAsync(EventId, wishlistId, _currentUserId);
-            if (removed)
+            // Find the wishlist to get its PublicId
+            var wishlist = _eventWishlists.FirstOrDefault(w => w.Id == wishlistId);
+            if (wishlist != null)
             {
-                _statusMessage = "Wishlist removed from this event.";
+                var removed = await EventService.DetachWishlistByPublicIdAsync(EventId, wishlist.PublicId, _currentUserId);
+                if (removed)
+                {
+                    _statusMessage = "Wishlist removed from this event.";
+                }
             }
         });
     }
@@ -379,8 +389,8 @@ else
 
         await ExecuteWithFeedback(async () =>
         {
-            model.EventId = EventId;
-            var created = await EventService.CreateEventWishlistAsync(EventId, model, _currentUserId);
+            model.EventId = Event?.Id; // Use the integer ID from the Event model
+            var created = await EventService.CreateEventWishlistByPublicIdAsync(EventId, model, _currentUserId);
             _statusMessage = $"Created wishlist '{created.Name}'.";
         });
 

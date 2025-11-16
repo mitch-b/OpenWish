@@ -1,4 +1,4 @@
-@page "/events/{EventId:int}"
+@page "/events/{EventId}"
 @attribute [Authorize]
 
 @using OpenWish.Shared.Services
@@ -156,7 +156,7 @@ else
                                             <div class="card-body">
                                                 <h5 class="card-title">@wishlist.Name</h5>
                                                 <p class="card-text">Created by @wishlist.Owner.UserName</p>
-                                                <a href="/wishlists/@wishlist.Id" class="btn btn-outline-primary btn-sm">
+                                                <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">
                                                     View Wishlist
                                                 </a>
                                             </div>
@@ -196,7 +196,7 @@ else
 }
 
 @code {
-    [Parameter] public int EventId { get; set; }
+    [Parameter] public string EventId { get; set; } = string.Empty;
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
@@ -209,7 +209,7 @@ else
 
     private async Task LoadEvent()
     {
-        _event = await EventService.GetEventAsync(EventId);
+        _event = await EventService.GetEventByPublicIdAsync(EventId);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
     }
 

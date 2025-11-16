@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="FluentEmail.Core" />
     <PackageReference Include="FluentEmail.Smtp" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />

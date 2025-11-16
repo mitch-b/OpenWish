@@ -11,6 +11,7 @@ public class OpenWishProfile : Profile
         CreateMap<ApplicationUserModel, ApplicationUser>()
             .ReverseMap();
         CreateMap<WishlistModel, Wishlist>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ForMember(dest => dest.Items, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.Owner, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.Event, opt => opt.Ignore())
@@ -19,10 +20,12 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))  // map from EF entity to DtoModel
             .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner)); // map from EF entity to DtoModel
         CreateMap<WishlistItemModel, WishlistItem>()
-            // Prevent client-supplied WishlistId from overwriting the existing FK on update
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+                                                                                                                // Prevent client-supplied WishlistId from overwriting the existing FK on update
             .ForMember(dest => dest.WishlistId, opt => opt.Ignore())
             .ReverseMap();
         CreateMap<EventModel, Event>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.EventWishlists, opt => opt.Ignore())
@@ -33,15 +36,30 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
             .ForMember(dest => dest.EventWishlists, opt => opt.MapFrom(src => src.EventWishlists));  // map from EF entity to DtoModel
         CreateMap<EventUserModel, EventUser>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();
 
         // Social feature mappings
-        CreateMap<FriendModel, Friend>().ReverseMap();
-        CreateMap<FriendRequestModel, FriendRequest>().ReverseMap();
-        CreateMap<WishlistPermissionModel, WishlistPermission>().ReverseMap();
-        CreateMap<ItemCommentModel, ItemComment>().ReverseMap();
-        CreateMap<ItemReservationModel, ItemReservation>().ReverseMap();
-        CreateMap<ActivityLogModel, ActivityLog>().ReverseMap();
-        CreateMap<NotificationModel, Notification>().ReverseMap();
+        CreateMap<FriendModel, Friend>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<FriendRequestModel, FriendRequest>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<WishlistPermissionModel, WishlistPermission>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<ItemCommentModel, ItemComment>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<ItemReservationModel, ItemReservation>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<ActivityLogModel, ActivityLog>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<NotificationModel, Notification>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
     }
 }

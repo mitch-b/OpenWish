@@ -6,20 +6,32 @@ public interface IEventService
 {
     Task<EventModel> CreateEventAsync(EventModel evt, string creatorId);
     Task<EventModel> GetEventAsync(int id);
+    Task<EventModel> GetEventByPublicIdAsync(string publicId);
     Task<IEnumerable<EventModel>> GetUserEventsAsync(string userId);
     Task<EventModel> UpdateEventAsync(int id, EventModel evt);
+    Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt);
     Task DeleteEventAsync(int id);
+    Task DeleteEventByPublicIdAsync(string publicId);
     Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
+    Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant");
     Task<bool> RemoveUserFromEventAsync(int eventId, string userId);
+    Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId);
     Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId);
+    Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId);
     Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId);
+    Task<WishlistModel> CreateEventWishlistByPublicIdAsync(string eventPublicId, WishlistModel wishlistModel, string ownerId);
     Task<WishlistModel> AttachWishlistAsync(int eventId, int wishlistId, string userId);
+    Task<WishlistModel> AttachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId);
     Task<bool> DetachWishlistAsync(int eventId, int wishlistId, string userId);
+    Task<bool> DetachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId);
 
     // Event Invitation methods
     Task<EventUserModel> InviteUserToEventAsync(int eventId, string inviterId, string userId);
+    Task<EventUserModel> InviteUserToEventByPublicIdAsync(string eventPublicId, string inviterId, string userId);
     Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email);
+    Task<EventUserModel> InviteByEmailToEventByPublicIdAsync(string eventPublicId, string inviterId, string email);
     Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId);
+    Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId);
     Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId);
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
     Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId);

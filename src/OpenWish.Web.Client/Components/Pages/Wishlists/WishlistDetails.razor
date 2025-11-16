@@ -1,5 +1,5 @@
 @attribute [Authorize]
-@page "/wishlists/{WishlistId:int}"
+@page "/wishlists/{WishlistId}"
 
 @using Microsoft.AspNetCore.Components.Web
 @using OpenWish.Shared.Services
@@ -433,7 +433,7 @@ else
 @code {
 
     [Parameter]
-    public int WishlistId { get; set; }
+    public string WishlistId { get; set; } = string.Empty;
 
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
@@ -461,7 +461,7 @@ else
         try
         {
             _currentUserId = await UserContextService.GetUserIdAsync();
-            _wishlist = await WishlistService.GetWishlistAsync(WishlistId, _currentUserId);
+            _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
             await SetupSecurity();
             await LoadItems();
         }

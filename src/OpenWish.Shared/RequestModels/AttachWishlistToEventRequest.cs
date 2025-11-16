@@ -2,5 +2,5 @@ namespace OpenWish.Shared.RequestModels;
 
 public class AttachWishlistToEventRequest
 {
-    public int WishlistId { get; set; }
+    public string WishlistPublicId { get; set; } = string.Empty;
 }

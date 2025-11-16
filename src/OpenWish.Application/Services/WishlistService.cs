@@ -78,6 +78,33 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return wishlistModel;
     }
 
+    public async Task<WishlistModel> GetWishlistByPublicIdAsync(string publicId, string? userId = null)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlistEntity = await context.Wishlists
+            .Include(w => w.Items.Where(i => !i.Deleted))
+            .Include(w => w.Owner)
+            .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted);
+
+        if (wishlistEntity == null)
+        {
+            throw new KeyNotFoundException($"Wishlist {publicId} not found");
+        }
+
+        // Check authorization if userId is provided
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var canAccess = await CanUserAccessWishlistInternalAsync(context, wishlistEntity.Id, userId);
+            if (!canAccess)
+            {
+                throw new UnauthorizedAccessException($"Access denied to wishlist {publicId}");
+            }
+        }
+
+        var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
+        return wishlistModel;
+    }
+
     public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -114,11 +141,55 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return updatedModel;
     }
 
+    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlistModel)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existingWishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {publicId} not found");
+
+        // Map updated values to existing entity
+        _mapper.Map(wishlistModel, existingWishlist);
+        existingWishlist.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            existingWishlist.OwnerId,
+            "WishlistUpdated",
+            $"Updated wishlist: {existingWishlist.Name}",
+            existingWishlist.Id);
+
+        var updatedModel = _mapper.Map<WishlistModel>(existingWishlist);
+        return updatedModel;
+    }
+
     public async Task DeleteWishlistAsync(int id)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists.FindAsync(id)
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
+
+        wishlist.Deleted = true;
+        wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+
+        // Log activity
+        await _activityService.LogActivityAsync(
+            wishlist.OwnerId,
+            "WishlistDeleted",
+            $"Deleted wishlist: {wishlist.Name}",
+            wishlist.Id);
+
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteWishlistByPublicIdAsync(string publicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {publicId} not found");
 
         wishlist.Deleted = true;
         wishlist.UpdatedOn = DateTimeOffset.UtcNow;
@@ -729,6 +800,175 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.ItemReservations
             .AnyAsync(r => r.WishlistItemId == itemId && !r.Deleted);
+    }
+
+    // PublicId-based methods for public routes
+    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        var itemEntities = await context.WishlistItems
+            .Where(i => i.WishlistId == wishlist.Id && !i.Deleted)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<WishlistItemModel>>(itemEntities);
+    }
+
+    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        var itemEntity = await context.WishlistItems
+            .FirstOrDefaultAsync(i => i.WishlistId == wishlist.Id && i.Id == itemId && !i.Deleted)
+            ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistPublicId}");
+
+        return _mapper.Map<WishlistItemModel>(itemEntity);
+    }
+
+    public async Task<WishlistItemModel> AddItemToWishlistByPublicIdAsync(string wishlistPublicId, WishlistItemModel itemModel)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await AddItemToWishlistAsync(wishlist.Id, itemModel);
+    }
+
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await RemoveItemFromWishlistAsync(wishlist.Id, itemId);
+    }
+
+    public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await UpdateWishlistItemAsync(wishlist.Id, itemId, item);
+    }
+
+    public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await CanUserAccessWishlistInternalAsync(context, wishlist.Id, userId);
+    }
+
+    public async Task<bool> CanUserEditWishlistByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await CanUserEditWishlistAsync(wishlist.Id, userId);
+    }
+
+    public async Task<WishlistPermissionModel> ShareWishlistByPublicIdAsync(string wishlistPublicId, string userId, string permissionType)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await ShareWishlistAsync(wishlist.Id, userId, permissionType);
+    }
+
+    public async Task<string> CreateSharingLinkByPublicIdAsync(string wishlistPublicId, string permissionType, TimeSpan? expiration = null)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await CreateSharingLinkAsync(wishlist.Id, permissionType, expiration);
+    }
+
+    public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsByPublicIdAsync(string wishlistPublicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await GetWishlistPermissionsAsync(wishlist.Id);
+    }
+
+    public async Task<bool> RemoveWishlistPermissionByPublicIdAsync(string wishlistPublicId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await RemoveWishlistPermissionAsync(wishlist.Id, userId);
+    }
+
+    public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await AddCommentToItemAsync(wishlist.Id, itemId, userId, text);
+    }
+
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await GetItemCommentsAsync(wishlist.Id, itemId);
+    }
+
+    public async Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await ReserveItemAsync(wishlist.Id, itemId, userId, isAnonymous);
+    }
+
+    public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await CancelReservationAsync(wishlist.Id, itemId, userId);
+    }
+
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await GetItemReservationAsync(wishlist.Id, itemId);
     }
 
     private static bool IsEventMember(Event eventEntity, string userId)

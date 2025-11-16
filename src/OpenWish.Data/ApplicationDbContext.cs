@@ -33,6 +33,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(modelBuilder);
 
+        // Add indexes for PublicId on entities that need public access
+        modelBuilder.Entity<Wishlist>()
+            .HasIndex(w => w.PublicId)
+            .IsUnique();
+
+        modelBuilder.Entity<Event>()
+            .HasIndex(e => e.PublicId)
+            .IsUnique();
+
         modelBuilder.Entity<Event>()
             .HasOne(e => e.CopiedFromEvent)
             .WithMany()

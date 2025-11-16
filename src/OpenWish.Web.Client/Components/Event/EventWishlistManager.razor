@@ -194,7 +194,7 @@ else
 }
 
 @code {
-    [Parameter] public int EventId { get; set; }
+    [Parameter] public string EventId { get; set; } = string.Empty;
     [Parameter] public EventModel? Event { get; set; }
     [Parameter] public string? CurrentUserId { get; set; }
     [Parameter] public EventCallback<IReadOnlyList<WishlistModel>> OnWishlistsChanged { get; set; }
@@ -272,7 +272,7 @@ else
 
         try
         {
-            var wishlists = (await EventService.GetEventWishlistsAsync(EventId)).ToList();
+            var wishlists = (await EventService.GetEventWishlistsByPublicIdAsync(EventId)).ToList();
             _eventWishlists.Clear();
             _eventWishlists.AddRange(wishlists);
 

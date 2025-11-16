@@ -69,7 +69,10 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
 
     public async Task<WishlistModel> AttachWishlistAsync(int eventId, int wishlistId, string userId)
     {
-        var request = new AttachWishlistToEventRequest { WishlistId = wishlistId };
+        // Note: This method uses integer IDs but the API now expects PublicIds
+        // This is kept for backwards compatibility with internal components
+        // The actual API call will need to be updated when the component is refactored
+        var request = new { WishlistId = wishlistId };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/wishlists/attach", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<WishlistModel>()

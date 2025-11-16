@@ -40,11 +40,17 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-builder.Services.AddAuthentication().AddGoogle(googleOptions =>
+var googleClientId = builder.Configuration.GetValue<string>("Authentication:Google:ClientId");
+var googleClientSecret = builder.Configuration.GetValue<string>("Authentication:Google:ClientSecret");
+if (!string.IsNullOrWhiteSpace(googleClientId) &&
+    !string.IsNullOrWhiteSpace(googleClientSecret))
 {
-    googleOptions.ClientId = builder.Configuration.GetValue<string>("Authentication:Google:ClientId");
-    googleOptions.ClientSecret = builder.Configuration.GetValue<string>("Authentication:Google:ClientSecret");
-});
+    builder.Services.AddAuthentication().AddGoogle(googleOptions =>
+    {
+        googleOptions.ClientId = googleClientId;
+        googleOptions.ClientSecret = googleClientSecret;
+    });
+}
 
 var connectionString = builder.Configuration.GetConnectionString("OpenWish")
     ?? throw new InvalidOperationException("Connection string 'OpenWish' not found.");

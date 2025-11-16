@@ -1,4 +1,4 @@
-# <img src="src/OpenWish.Web/wwwroot/images/openwish-color.svg" alt="OpenWish logo" height="36" style="vertical-align: middle;"> OpenWish
+# <img src="src/OpenWish.Web/wwwroot/images/openwish-color.svg" alt="OpenWish logo" height="42" style="vertical-align: middle;"> OpenWish
 
 Shareable wishlists. A web application intended for selfhosting.
 
@@ -106,3 +106,4 @@ See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwi
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+

@@ -269,7 +269,9 @@
         {
             try
             {
-                _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId)).ToList();
+                _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId))
+                    .OrderByDescending(GetWishlistActivityTimestamp)
+                    .ToList();
             }
             catch
             {
@@ -285,7 +287,9 @@
             try
             {
                 var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
-                _events = allEvents;
+                _events = allEvents
+                    .OrderByDescending(GetEventActivityTimestamp)
+                    .ToList();
 
                 // Filter upcoming events for the next 30 days
                 var thirtyDaysFromNow = DateTimeOffset.UtcNow.AddDays(30);
@@ -329,6 +333,53 @@
     {
         await LoadEvents();
     }
+
+    private static DateTimeOffset GetWishlistActivityTimestamp(WishlistModel wishlist)
+    {
+        if (wishlist is null)
+        {
+            return DateTimeOffset.MinValue;
+        }
+
+        var latest = GetLaterTimestamp(wishlist.CreatedOn, wishlist.UpdatedOn);
+
+        if (wishlist.Items?.Any() == true)
+        {
+            var itemsLatest = wishlist.Items
+                .Select(item => GetLaterTimestamp(item.CreatedOn, item.UpdatedOn))
+                .DefaultIfEmpty(DateTimeOffset.MinValue)
+                .Max();
+
+            latest = itemsLatest > latest ? itemsLatest : latest;
+        }
+
+        return latest;
+    }
+
+    private static DateTimeOffset GetEventActivityTimestamp(EventModel evt)
+    {
+        if (evt is null)
+        {
+            return DateTimeOffset.MinValue;
+        }
+
+        var latest = GetLaterTimestamp(evt.CreatedOn, evt.UpdatedOn);
+
+        if (evt.EventWishlists?.Any() == true)
+        {
+            var wishlistLatest = evt.EventWishlists
+                .Select(GetWishlistActivityTimestamp)
+                .DefaultIfEmpty(DateTimeOffset.MinValue)
+                .Max();
+
+            latest = wishlistLatest > latest ? wishlistLatest : latest;
+        }
+
+        return latest;
+    }
+
+    private static DateTimeOffset GetLaterTimestamp(DateTimeOffset first, DateTimeOffset second) =>
+        first > second ? first : second;
 
 
 }

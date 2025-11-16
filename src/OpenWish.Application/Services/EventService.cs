@@ -98,6 +98,9 @@ public class EventService(
             .Include(e => e.EventWishlists
                 .Where(w => !w.Deleted))
                 .ThenInclude(ew => ew.Owner)
+            .Include(e => e.EventWishlists
+                .Where(w => !w.Deleted))
+                .ThenInclude(ew => ew.Items.Where(i => !i.Deleted))
             .Where(e => !e.Deleted &&
                 (e.CreatedBy.Id == userId ||
                  e.EventUsers.Any(eu => !eu.Deleted && eu.UserId == userId)))

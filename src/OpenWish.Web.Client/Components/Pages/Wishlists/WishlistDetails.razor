@@ -479,7 +479,7 @@ else
 
     private async Task LoadItems()
     {
-        _items = (await WishlistService.GetWishlistItemsAsync(WishlistId)).ToList();
+        _items = (await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId)).ToList();
         ApplyFiltersAndSort();
     }
 
@@ -660,7 +660,7 @@ else
             Priority = item.Priority,
             IsPrivate = item.IsPrivate,
             Image = item.Image,
-            WishlistId = WishlistId // ensure WishlistId retained to avoid mapping 0
+            WishlistId = _wishlist?.Id ?? 0 // Keep the integer ID for the model
         };
         _itemModal?.Show(_modalItem);
     }
@@ -670,12 +670,12 @@ else
         if (item.Id > 0)
         {
             // Edit existing item
-            await WishlistService.UpdateWishlistItemAsync(WishlistId, item.Id, item);
+            await WishlistService.UpdateWishlistItemByPublicIdAsync(WishlistId, item.Id, item);
         }
         else
         {
             // Add new item
-            await WishlistService.AddItemToWishlistAsync(WishlistId, item);
+            await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
         }
         await LoadItems();
     }
@@ -705,7 +705,7 @@ else
 
         try
         {
-            await WishlistService.RemoveItemFromWishlistAsync(WishlistId, item.Id);
+            await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.Id);
             await LoadItems();
             try
             {

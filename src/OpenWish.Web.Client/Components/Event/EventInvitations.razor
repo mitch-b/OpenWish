@@ -232,7 +232,7 @@
     </div>
 }
 @code {
-    [Parameter] public int EventId { get; set; }
+    [Parameter] public string EventId { get; set; } = string.Empty;
     [Parameter] public bool IsOwner { get; set; }
     [Parameter] public string? CurrentUserId { get; set; }
 
@@ -278,7 +278,7 @@
         _isLoading = true;
         try
         {
-            var invitations = await EventService.GetEventInvitationsAsync(EventId);
+            var invitations = await EventService.GetEventInvitationsByPublicIdAsync(EventId);
             _invitations = invitations.ToList();
         }
         finally
@@ -329,7 +329,7 @@
                     return;
                 }
 
-                await EventService.InviteByEmailToEventAsync(EventId, userId, _emailToInvite);
+                await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, _emailToInvite);
                 _successMessage = $"Invitation sent to {_emailToInvite}";
             }
             else
@@ -350,7 +350,7 @@
 
                     try
                     {
-                        await EventService.InviteUserToEventAsync(EventId, userId, friendId);
+                        await EventService.InviteUserToEventByPublicIdAsync(EventId, userId, friendId);
                         invitedFriends.Add((friendId, friendName));
                     }
                     catch (HttpRequestException)

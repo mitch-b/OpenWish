@@ -60,6 +60,15 @@ else
                                            CurrentUserId="@_currentUserId"
                                            OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
+
+                @if (_event.IsGiftExchange)
+                {
+                    <div class="mt-4">
+                        <GiftExchangeManager Event="@_event"
+                                             CurrentUserId="@_currentUserId"
+                                             OnNamesDrawn="HandleNamesDrawn" />
+                    </div>
+                }
             </div>
             <div class="col-md-4">
                 <EventInvitations EventId="@EventId" IsOwner="true" CurrentUserId="@_currentUserId" />
@@ -266,5 +275,10 @@ else
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task HandleNamesDrawn()
+    {
+        await LoadEvent();
     }
 }

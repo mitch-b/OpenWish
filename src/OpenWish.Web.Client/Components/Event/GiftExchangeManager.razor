@@ -16,6 +16,60 @@
                     <i class="bi bi-check-circle-fill"></i> Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt")
                 </div>
                 <p class="text-muted">All participants have been notified of their gift exchange matches via email.</p>
+                
+                <div class="mt-4">
+                    <h5 class="text-danger">Reset Gift Exchange</h5>
+                    <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
+                    
+                    @if (!_showResetConfirm)
+                    {
+                        <button class="btn btn-outline-danger" @onclick="() => _showResetConfirm = true">
+                            <i class="bi bi-arrow-clockwise"></i> Reset Gift Exchange
+                        </button>
+                    }
+                    else if (!_showFinalConfirm)
+                    {
+                        <div class="alert alert-warning">
+                            <p class="mb-2"><strong>⚠️ First Confirmation</strong></p>
+                            <p class="mb-3">Are you sure you want to reset the gift exchange? This will cancel all current assignments.</p>
+                            <button class="btn btn-warning me-2" @onclick="() => _showFinalConfirm = true">
+                                <i class="bi bi-exclamation-triangle"></i> Yes, Continue
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CancelReset">
+                                Cancel
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            <p class="mb-2"><strong>🚨 Final Confirmation</strong></p>
+                            <p class="mb-3">This action cannot be undone. All participants will receive an email notification about the cancellation.</p>
+                            <button class="btn btn-danger me-2" @onclick="ResetGiftExchange" disabled="@_resetting">
+                                @if (_resetting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span>Resetting...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                    <span>Confirm Reset</span>
+                                }
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CancelReset" disabled="@_resetting">
+                                Cancel
+                            </button>
+                        </div>
+                    }
+
+                    @if (_resetErrorMessage != null)
+                    {
+                        <div class="alert alert-danger mt-3">
+                            <i class="bi bi-exclamation-circle"></i> @_resetErrorMessage
+                        </div>
+                    }
+                </div>
             }
             else
             {
@@ -137,10 +191,14 @@
     private List<CustomPairingRuleModel> _pairingRules = new();
     private List<ApplicationUserModel> _participants = new();
     private bool _drawing = false;
+    private bool _resetting = false;
     private bool _showAddRule = false;
+    private bool _showResetConfirm = false;
+    private bool _showFinalConfirm = false;
     private string? _newRuleSourceId;
     private string? _newRuleTargetId;
     private string? _errorMessage;
+    private string? _resetErrorMessage;
     private int _participantCount = 0;
 
     protected override async Task OnParametersSetAsync()
@@ -164,16 +222,20 @@
             _participants.Add(Event.CreatedBy);
         }
 
-        // Add accepted participants
+        // Add all invited participants (regardless of acceptance status)
         if (Event.EventUsers != null)
         {
-            foreach (var eu in Event.EventUsers.Where(eu => eu.Status == "Accepted" && eu.User != null))
+            foreach (var eu in Event.EventUsers.Where(eu => !eu.IsDeleted && eu.User != null))
             {
                 if (eu.User != null && !_participants.Any(p => p.Id == eu.User.Id))
                 {
                     _participants.Add(eu.User);
                 }
             }
+
+            // Count email-only invitees (not yet registered) as potential participants
+            _participantCount = _participants.Count + Event.EventUsers.Count(eu => !eu.IsDeleted && eu.User == null && !string.IsNullOrEmpty(eu.InviteeEmail));
+            return;
         }
 
         _participantCount = _participants.Count;
@@ -255,5 +317,35 @@
         {
             _errorMessage = ex.Message;
         }
+    }
+
+    private async Task ResetGiftExchange()
+    {
+        if (Event?.PublicId == null) return;
+
+        _resetting = true;
+        _resetErrorMessage = null;
+
+        try
+        {
+            await EventService.ResetGiftExchangeByPublicIdAsync(Event.PublicId, CurrentUserId);
+            await OnNamesDrawn.InvokeAsync();
+            CancelReset();
+        }
+        catch (Exception ex)
+        {
+            _resetErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _resetting = false;
+        }
+    }
+
+    private void CancelReset()
+    {
+        _showResetConfirm = false;
+        _showFinalConfirm = false;
+        _resetErrorMessage = null;
     }
 }

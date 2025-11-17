@@ -888,10 +888,10 @@ public class EventService(
             throw new InvalidOperationException("Names have already been drawn for this event.");
         }
 
-        // Get all participants (owner + accepted users)
+        // Get all participants (owner + all invited users, regardless of acceptance status)
         var participants = new List<string> { eventEntity.CreatedBy.Id };
         participants.AddRange(eventEntity.EventUsers
-            .Where(eu => !eu.Deleted && eu.Status == "Accepted" && !string.IsNullOrEmpty(eu.UserId))
+            .Where(eu => !eu.Deleted && !string.IsNullOrEmpty(eu.UserId))
             .Select(eu => eu.UserId!));
 
         if (participants.Count < 2)
@@ -980,6 +980,98 @@ public class EventService(
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
         return await DrawNamesAsync(eventEntity.Id, ownerId);
+    }
+
+    public async Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
+            .Include(e => e.GiftExchanges)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        ValidateEventCreatorPermission(eventEntity, ownerId);
+
+        if (!eventEntity.IsGiftExchange)
+        {
+            throw new InvalidOperationException("This event is not configured as a gift exchange.");
+        }
+
+        if (!eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("No gift exchange to reset - names have not been drawn yet.");
+        }
+
+        // Delete all gift exchange records
+        var giftExchanges = await context.GiftExchanges
+            .Where(ge => ge.EventId == eventId)
+            .ToListAsync();
+        context.GiftExchanges.RemoveRange(giftExchanges);
+
+        // Reset the NamesDrawnOn timestamp
+        eventEntity.NamesDrawnOn = null;
+        eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        // Send notifications to all participants
+        var baseUri = _baseUri?.TrimEnd('/') ?? "";
+        var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
+
+        // Get all participants (owner + all invited users, regardless of status)
+        var participants = new List<(string userId, string? email)> { (eventEntity.CreatedBy.Id, eventEntity.CreatedBy.Email) };
+
+        foreach (var eu in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        {
+            if (!string.IsNullOrEmpty(eu.UserId) && eu.User?.Email != null)
+            {
+                participants.Add((eu.UserId, eu.User.Email));
+            }
+            else if (!string.IsNullOrEmpty(eu.InviteeEmail))
+            {
+                // Email-only invites (not yet registered)
+                participants.Add((string.Empty, eu.InviteeEmail));
+            }
+        }
+
+        foreach (var (userId, email) in participants)
+        {
+            if (!string.IsNullOrEmpty(email))
+            {
+                await _emailSender.SendGiftExchangeResetEmailAsync(
+                    email,
+                    eventEntity.Name,
+                    eventLink);
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        ownerId,
+                        userId,
+                        "Gift Exchange Reset",
+                        $"The gift exchange for {eventEntity.Name} has been reset.",
+                        "GiftExchangeReset");
+                }
+            }
+        }
+
+        return await GetEventAsync(eventId);
+    }
+
+    public async Task<EventModel> ResetGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await ResetGiftExchangeAsync(eventEntity.Id, ownerId);
     }
 
     private static List<(string giverId, string receiverId)>? DrawNamesWithExclusions(

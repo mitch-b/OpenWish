@@ -381,6 +381,33 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpPost("{eventPublicId}/reset-gift-exchange")]
+    public async Task<ActionResult<EventModel>> ResetGiftExchange(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var eventModel = await _eventService.ResetGiftExchangeByPublicIdAsync(eventPublicId, userId);
+            return Ok(eventModel);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet("{eventPublicId}/my-gift-exchange")]
     public async Task<ActionResult<GiftExchangeModel>> GetMyGiftExchange(string eventPublicId)
     {

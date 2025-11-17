@@ -54,6 +54,13 @@ else
     <div class="container py-5">
         <div class="row g-4">
             <div class="col-md-8">
+                @if (_event.IsGiftExchange && _isOwner)
+                {
+                    <GiftExchangeManager Event="@_event"
+                                         CurrentUserId="@_currentUserId"
+                                         OnNamesDrawn="HandleNamesDrawn" />
+                }
+                
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
                     <GiftExchangeDisplay EventId="@EventId" 
@@ -314,5 +321,10 @@ else
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task HandleNamesDrawn()
+    {
+        await LoadEvent();
     }
 }

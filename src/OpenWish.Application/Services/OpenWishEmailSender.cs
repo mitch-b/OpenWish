@@ -82,6 +82,28 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         return SendEmailAsync(toEmail, subject, body);
     }
 
+    /// <summary>
+    /// Sends a gift exchange reset/cancelled email notification.
+    /// </summary>
+    /// <param name="toEmail">Recipient email address</param>
+    /// <param name="eventName">Name of the event</param>
+    /// <param name="eventLink">Link to event details</param>
+    /// <returns></returns>
+    public Task SendGiftExchangeResetEmailAsync(string toEmail, string eventName, string eventLink)
+    {
+        _logger.LogInformation("Sending gift exchange reset email to {Email} for event {EventName}", toEmail, eventName);
+        var subject = $"Gift Exchange Reset - {eventName}";
+        var body = WrapInHtmlFormattedEmail($"<div style='font-family: Arial, sans-serif; padding: 20px;'>" +
+            $"<h2 style='color: #dc3545;'>Gift Exchange Has Been Reset</h2>" +
+            $"<p>The gift exchange for <strong>{eventName}</strong> has been reset by the event organizer.</p>" +
+            $"<div style='background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;'>" +
+            $"<p style='margin: 0;'>All previous gift assignments have been cancelled. If names are drawn again, you will receive a new assignment.</p>" +
+            $"</div>" +
+            $"<p><a href='{eventLink}' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>View Event Details</a></p>" +
+            $"</div>");
+        return SendEmailAsync(toEmail, subject, body);
+    }
+
     public async Task SendEmailAsync(string toEmail, string subject, string message)
     {
         var response = await _fluentEmail

@@ -41,6 +41,8 @@ public interface IEventService
     // Gift Exchange methods
     Task<EventModel> DrawNamesAsync(int eventId, string ownerId);
     Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId);
+    Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId);
+    Task<EventModel> ResetGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId);
     Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId);
     Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId);
     Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId);

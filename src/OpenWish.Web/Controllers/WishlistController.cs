@@ -98,7 +98,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
                 return Forbid();
             }
 
-            var items = await _wishlistService.GetWishlistItemsByPublicIdAsync(wishlistPublicId);
+            var items = await _wishlistService.GetWishlistItemsByPublicIdAsync(wishlistPublicId, userId);
             return Ok(items);
         }
         catch (KeyNotFoundException)
@@ -125,7 +125,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
                 return Forbid();
             }
 
-            var item = await _wishlistService.GetWishlistItemByPublicIdAsync(wishlistPublicId, itemId);
+            var item = await _wishlistService.GetWishlistItemByPublicIdAsync(wishlistPublicId, itemId, userId);
             return Ok(item);
         }
         catch (KeyNotFoundException)

@@ -56,8 +56,8 @@ else
             <div class="col-md-8">
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
-                    <GiftExchangeDisplay EventId="@EventId" 
-                                         CurrentUserId="@_currentUserId" 
+                    <GiftExchangeDisplay EventId="@EventId"
+                                         CurrentUserId="@_currentUserId"
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
@@ -150,6 +150,15 @@ else
                                            CurrentUserId="@_currentUserId"
                                            OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
+
+                @if (_event.IsGiftExchange && _isOwner)
+                {
+                    <div class="mt-4">
+                        <GiftExchangeManager Event="@_event"
+                                             CurrentUserId="@_currentUserId"
+                                             OnNamesDrawn="HandleNamesDrawn" />
+                    </div>
+                }
 
                 @* @if (_event.EventWishlists.Any())
                 {
@@ -314,5 +323,10 @@ else
         }
 
         return Task.CompletedTask;
+    }
+
+    private async Task HandleNamesDrawn()
+    {
+        await LoadEvent();
     }
 }

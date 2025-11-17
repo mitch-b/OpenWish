@@ -30,9 +30,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{publicId}")]
     public async Task<ActionResult<EventModel>> GetEvent(string publicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
         try
         {
-            var evt = await _eventService.GetEventByPublicIdAsync(publicId);
+            var evt = await _eventService.GetEventByPublicIdAsync(publicId, userId);
             return Ok(evt);
         }
         catch (KeyNotFoundException)
@@ -106,7 +107,13 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{eventPublicId}/wishlists")]
     public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEventWishlists(string eventPublicId)
     {
-        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId, userId);
         return Ok(wishlists);
     }
 
@@ -365,6 +372,33 @@ public class EventController(IEventService eventService, ApiUserContextService u
         try
         {
             var eventModel = await _eventService.DrawNamesByPublicIdAsync(eventPublicId, userId);
+            return Ok(eventModel);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("{eventPublicId}/reset-gift-exchange")]
+    public async Task<ActionResult<EventModel>> ResetGiftExchange(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var eventModel = await _eventService.ResetGiftExchangeByPublicIdAsync(eventPublicId, userId);
             return Ok(eventModel);
         }
         catch (KeyNotFoundException ex)

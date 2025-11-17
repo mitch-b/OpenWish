@@ -53,8 +53,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventId}/wishlists")
             ?? Enumerable.Empty<WishlistModel>();
     }
@@ -130,8 +131,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     }
 
     // PublicId-based methods
-    public async Task<EventModel> GetEventByPublicIdAsync(string publicId)
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{publicId}");
     }
 
@@ -161,8 +163,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventPublicId}/wishlists");
     }
 
@@ -222,6 +225,19 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId)
     {
         var response = await httpClient.PostAsync($"api/events/{eventPublicId}/draw-names", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize event.");
+    }
+
+    public async Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId)
+    {
+        throw new NotImplementedException("Use ResetGiftExchangeByPublicIdAsync instead");
+    }
+
+    public async Task<EventModel> ResetGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/reset-gift-exchange", null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EventModel>()
             ?? throw new InvalidOperationException("Unable to deserialize event.");

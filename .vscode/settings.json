@@ -90,5 +90,6 @@
         "dotnet build": true,
         "dotnet format": true,
         "dotnet test": true,
-    }
+    },
+    "chat.agent.maxRequests": 60
 }

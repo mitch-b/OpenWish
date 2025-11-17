@@ -1,11 +1,22 @@
 .event-header {
     background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-link-hover) 100%);
-    color: var(--color-text);
+    color: #ffffff;
     padding: 2rem;
     border-radius: 8px;
     margin-bottom: 2rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     transition: background .25s ease, color .25s ease;
+}
+
+.event-header p,
+.event-header .lead {
+    color: rgba(255,255,255,0.92);
+}
+
+.event-header .badge {
+    background-color: rgba(255,255,255,0.18);
+    color: #ffffff !important;
+    border: 1px solid rgba(255,255,255,0.25);
 }
 
 .event-header h1 {

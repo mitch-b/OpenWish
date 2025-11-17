@@ -27,6 +27,7 @@ public class OpenWishProfile : Profile
         CreateMap<EventModel, Event>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
+            .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.EventWishlists, opt => opt.Ignore())
             .ForMember(dest => dest.GiftExchanges, opt => opt.Ignore())

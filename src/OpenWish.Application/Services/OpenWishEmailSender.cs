@@ -1,4 +1,5 @@
 using FluentEmail.Core;
+using FluentEmail.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace OpenWish.Application.Services;
@@ -6,10 +7,10 @@ namespace OpenWish.Application.Services;
 /// <summary>
 /// Handles sending emails for account confirmation, password reset, and friend invitations.
 /// </summary>
-public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEmail fluentEmail) : IAppEmailSender
+public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEmailFactory emailFactory) : IAppEmailSender
 {
     private readonly ILogger _logger = logger;
-    private readonly IFluentEmail _fluentEmail = fluentEmail;
+    private readonly IFluentEmailFactory _emailFactory = emailFactory;
 
     public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) =>
         SendEmailAsync(toEmail, "Confirm your email",
@@ -106,10 +107,11 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
 
     public async Task SendEmailAsync(string toEmail, string subject, string message)
     {
-        var response = await _fluentEmail
+        var response = await _emailFactory
+            .Create()
             .To(toEmail)
             .Subject(subject)
-            .Body(WrapInHtmlFormattedEmail(message), true)
+            .Body(message, true)
             .SendAsync();
 
         _logger.LogInformation(response.Successful

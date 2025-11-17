@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -313,13 +314,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsAsync(int wishlistId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var itemEntities = await context.WishlistItems
+        var query = context.WishlistItems
             .Where(i => i.WishlistId == wishlistId && !i.Deleted)
-            .OrderBy(i => i.OrderIndex)
-            .ToListAsync();
+            .OrderBy(i => i.OrderIndex);
 
-        var itemModels = _mapper.Map<IEnumerable<WishlistItemModel>>(itemEntities);
-        return itemModels;
+        return await MapWishlistItemsAsync(context, query);
     }
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
@@ -810,11 +809,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
-        var itemEntities = await context.WishlistItems
+        var query = context.WishlistItems
             .Where(i => i.WishlistId == wishlist.Id && !i.Deleted)
-            .ToListAsync();
+            .OrderBy(i => i.OrderIndex);
 
-        return _mapper.Map<IEnumerable<WishlistItemModel>>(itemEntities);
+        return await MapWishlistItemsAsync(context, query);
     }
 
     public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId)
@@ -969,6 +968,50 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
         return await GetItemReservationAsync(wishlist.Id, itemId);
+    }
+
+    private async Task<List<WishlistItemModel>> MapWishlistItemsAsync(ApplicationDbContext context, IQueryable<WishlistItem> query)
+    {
+        var itemEntities = await query.ToListAsync();
+        if (itemEntities.Count == 0)
+        {
+            return [];
+        }
+
+        var itemModels = _mapper.Map<List<WishlistItemModel>>(itemEntities);
+        var itemIds = itemEntities.Select(i => i.Id).ToList();
+
+        var reservationEntities = await context.ItemReservations
+            .AsNoTracking()
+            .Include(r => r.User)
+            .Where(r => !r.Deleted && itemIds.Contains(r.WishlistItemId))
+            .ToListAsync();
+
+        if (reservationEntities.Count == 0)
+        {
+            return itemModels;
+        }
+
+        var reservationsByItem = reservationEntities
+            .GroupBy(r => r.WishlistItemId)
+            .ToDictionary(
+                g => g.Key,
+                g => (ICollection<ItemReservationModel>)_mapper.Map<List<ItemReservationModel>>(g.ToList()),
+                EqualityComparer<int>.Default);
+
+        foreach (var item in itemModels)
+        {
+            if (reservationsByItem.TryGetValue(item.Id, out var reservations))
+            {
+                item.Reservations = reservations;
+            }
+            else if (item.Reservations.Count > 0)
+            {
+                item.Reservations = [];
+            }
+        }
+
+        return itemModels;
     }
 
     private static bool IsEventMember(Event eventEntity, string userId)

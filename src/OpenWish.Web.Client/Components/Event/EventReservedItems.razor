@@ -1,0 +1,291 @@
+@using System
+@using System.Collections.Generic
+@using OpenWish.Shared.Models
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject ILogger<EventReservedItems> Logger
+
+<div class="card shadow-sm event-reserved-items">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h3 class="h5 mb-1">My Reserved Items</h3>
+                <div class="small text-muted">Quick reference for the gifts you're handling</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                @if (_items.Count > 0)
+                {
+                    <span class="badge bg-primary">@_items.Count</span>
+                }
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        disabled="@_isLoading"
+                        @onclick="RefreshAsync">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <div class="alert alert-danger mb-0">@_errorMessage</div>
+        }
+        else if (_isLoading && !_attemptedLoad)
+        {
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="text-muted small">
+                You haven't reserved any items for this event yet. Explore participant wishlists to start picking gifts.
+            </div>
+        }
+        else
+        {
+            foreach (var ownerGroup in GetOwnerGroups())
+            {
+                <div class="reserved-owner-group mb-4">
+                    <div class="reserved-owner-header d-flex align-items-center mb-2">
+                        <i class="bi bi-person-circle text-secondary me-2"></i>
+                        <div>
+                            <div class="fw-semibold">@ownerGroup.OwnerDisplayName</div>
+                            @if (ownerGroup.OwnerDisplayName == "Shared Event Lists")
+                            {
+                                <div class="small text-muted">Collaborative lists for everyone</div>
+                            }
+                        </div>
+                    </div>
+
+                    @foreach (var wishlist in ownerGroup.Wishlists)
+                    {
+                        <div class="reserved-wishlist mb-3">
+                            <div class="reserved-wishlist-header d-flex justify-content-between align-items-center">
+                                <a href="/wishlists/@wishlist.WishlistPublicId"
+                                   class="fw-semibold text-decoration-none"
+                                   target="_blank" rel="noopener noreferrer">
+                                    <i class="bi bi-card-checklist me-1"></i>@wishlist.WishlistName
+                                </a>
+                                <span class="badge bg-light text-dark">@wishlist.Items.Count</span>
+                            </div>
+
+                            <ul class="list-unstyled reserved-items-list mb-0 mt-2">
+                                @foreach (var item in wishlist.Items)
+                                {
+                                    <li class="reserved-item border rounded-3 p-3 mb-2">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold">@item.ItemName</div>
+
+                                                @if (item.Price.HasValue || !string.IsNullOrWhiteSpace(item.WhereToBuy))
+                                                {
+                                                    <div class="small text-muted mt-1">
+                                                        @if (item.Price.HasValue)
+                                                        {
+                                                            <span>@item.Price.Value.ToString("C")</span>
+                                                        }
+                                                        @if (item.Price.HasValue && !string.IsNullOrWhiteSpace(item.WhereToBuy))
+                                                        {
+                                                            <span class="mx-1">·</span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(item.WhereToBuy))
+                                                        {
+                                                            <span>@item.WhereToBuy</span>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(item.Description))
+                                                {
+                                                    <div class="small text-muted mt-1 text-truncate">@item.Description</div>
+                                                }
+
+                                                <div class="reserved-item-links mt-2 d-flex flex-wrap gap-2">
+                                                    <a href="/wishlists/@wishlist.WishlistPublicId"
+                                                       class="btn btn-sm btn-outline-primary"
+                                                       target="_blank" rel="noopener noreferrer">
+                                                        View wishlist
+                                                    </a>
+                                                    @if (!string.IsNullOrWhiteSpace(item.Url))
+                                                    {
+                                                        <a href="@item.Url"
+                                                           class="btn btn-sm btn-outline-secondary"
+                                                           target="_blank" rel="noopener noreferrer">
+                                                            Product link
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div class="text-end">
+                                                <div class="small text-muted">Reserved @FormatReservationDate(item.ReservedOn)</div>
+                                                @if (item.IsAnonymous)
+                                                {
+                                                    <span class="badge bg-info text-dark mt-2">Anonymous hold</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (_isLoading)
+            {
+                <div class="text-center text-muted small">Refreshing…</div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string EventId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? CurrentUserId { get; set; }
+
+    private readonly List<EventReservedItemModel> _items = new();
+    private string? _userId;
+    private string? _lastEventId;
+    private string? _lastUserId;
+    private bool _isLoading;
+    private bool _attemptedLoad;
+    private string? _errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await EnsureUserAsync();
+
+        if (string.IsNullOrEmpty(EventId) || string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+
+        var shouldReload = !_attemptedLoad ||
+                           !string.Equals(_lastEventId, EventId, StringComparison.Ordinal) ||
+                           !string.Equals(_lastUserId, _userId, StringComparison.Ordinal);
+
+        if (shouldReload)
+        {
+            _lastEventId = EventId;
+            _lastUserId = _userId;
+            await LoadReservedItemsAsync();
+        }
+    }
+
+    private async Task EnsureUserAsync()
+    {
+        if (!string.IsNullOrEmpty(CurrentUserId))
+        {
+            _userId = CurrentUserId;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_userId))
+        {
+            _userId = await UserContextService.GetUserIdAsync();
+        }
+    }
+
+    private async Task LoadReservedItemsAsync()
+    {
+        if (_isLoading || string.IsNullOrEmpty(EventId) || string.IsNullOrEmpty(_userId))
+        {
+            return;
+        }
+
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var items = await EventService.GetReservedItemsForUserByPublicIdAsync(EventId, _userId!);
+            _items.Clear();
+            _items.AddRange(items.OrderBy(i => NormalizeOwnerName(i), StringComparer.OrdinalIgnoreCase)
+                                 .ThenBy(i => i.WishlistName, StringComparer.OrdinalIgnoreCase)
+                                 .ThenBy(i => i.ItemName, StringComparer.OrdinalIgnoreCase));
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "User {UserId} attempted to view reserved items for event {EventId} without permission", _userId, EventId);
+            _errorMessage = "You do not have access to reservation details for this event.";
+            _items.Clear();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            Logger.LogWarning(ex, "Event {EventId} not found when loading reserved items", EventId);
+            _errorMessage = "We could not find this event.";
+            _items.Clear();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load reserved items for event {EventId}", EventId);
+            _errorMessage = "We couldn't load your reserved items. Please try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+            _attemptedLoad = true;
+            StateHasChanged();
+        }
+    }
+
+    private Task RefreshAsync()
+    {
+        if (string.IsNullOrEmpty(EventId) || string.IsNullOrEmpty(_userId))
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadReservedItemsAsync();
+    }
+
+    private IReadOnlyList<OwnerReservationGroup> GetOwnerGroups()
+    {
+        return _items
+            .GroupBy(item => new { item.WishlistOwnerId, OwnerName = NormalizeOwnerName(item) })
+            .OrderBy(group => group.Key.OwnerName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new OwnerReservationGroup(
+                group.Key.OwnerName,
+                group.Key.WishlistOwnerId,
+                group.GroupBy(item => item.WishlistPublicId)
+                    .OrderBy(wishlist => wishlist.First().WishlistName, StringComparer.OrdinalIgnoreCase)
+                    .Select(wishlist => new WishlistReservationGroup(
+                        wishlist.First().WishlistName,
+                        wishlist.Key,
+                        wishlist.OrderBy(i => i.ItemName, StringComparer.OrdinalIgnoreCase).ToList()))
+                    .ToList()))
+            .ToList();
+    }
+
+    private static string NormalizeOwnerName(EventReservedItemModel item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.WishlistOwnerName))
+        {
+            return item.WishlistOwnerName!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.WishlistOwnerEmail))
+        {
+            return item.WishlistOwnerEmail!;
+        }
+
+        return "Shared Event Lists";
+    }
+
+    private static string FormatReservationDate(DateTimeOffset reservedOn)
+    {
+        return reservedOn.ToLocalTime().ToString("MMM d, yyyy");
+    }
+
+    private sealed record OwnerReservationGroup(string OwnerDisplayName, string? OwnerId, IReadOnlyList<WishlistReservationGroup> Wishlists);
+
+    private sealed record WishlistReservationGroup(string WishlistName, string WishlistPublicId, IReadOnlyList<EventReservedItemModel> Items);
+}

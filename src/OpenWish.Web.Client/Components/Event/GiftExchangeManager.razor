@@ -225,7 +225,7 @@
         // Add all invited participants (regardless of acceptance status)
         if (Event.EventUsers != null)
         {
-            foreach (var eu in Event.EventUsers.Where(eu => !eu.IsDeleted && eu.User != null))
+            foreach (var eu in Event.EventUsers.Where(eu => !eu.Deleted && eu.User != null))
             {
                 if (eu.User != null && !_participants.Any(p => p.Id == eu.User.Id))
                 {
@@ -234,7 +234,7 @@
             }
 
             // Count email-only invitees (not yet registered) as potential participants
-            _participantCount = _participants.Count + Event.EventUsers.Count(eu => !eu.IsDeleted && eu.User == null && !string.IsNullOrEmpty(eu.InviteeEmail));
+            _participantCount = _participants.Count + Event.EventUsers.Count(eu => !eu.Deleted && eu.User == null && !string.IsNullOrEmpty(eu.InviteeEmail));
             return;
         }
 

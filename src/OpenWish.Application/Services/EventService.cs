@@ -754,6 +754,69 @@ public class EventService(
         return await DetachWishlistAsync(eventEntity.Id, wishlist.Id, userId);
     }
 
+    public async Task<IEnumerable<EventReservedItemModel>> GetReservedItemsForUserByPublicIdAsync(string eventPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        if (!IsEventMember(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event to view reserved items.");
+        }
+
+        var reservations = await context.ItemReservations
+            .AsNoTracking()
+            .Include(r => r.WishlistItem)
+                .ThenInclude(i => i.Wishlist)
+                    .ThenInclude(w => w.Owner)
+            .Where(r => !r.Deleted &&
+                        r.UserId == userId &&
+                        r.WishlistItem != null &&
+                        !r.WishlistItem.Deleted &&
+                        r.WishlistItem.Wishlist != null &&
+                        !r.WishlistItem.Wishlist.Deleted &&
+                        r.WishlistItem.Wishlist.EventId == eventEntity.Id)
+            .OrderBy(r => r.ReservationDate)
+            .ThenBy(r => r.WishlistItem!.Wishlist!.Name)
+            .ThenBy(r => r.WishlistItem!.Name)
+            .ToListAsync();
+
+        return reservations.Select(reservation =>
+        {
+            var wishlist = reservation.WishlistItem!.Wishlist!;
+            var ownerName = wishlist.Owner?.UserName ?? wishlist.Owner?.Email;
+            if (string.IsNullOrWhiteSpace(ownerName) && string.IsNullOrWhiteSpace(wishlist.OwnerId))
+            {
+                ownerName = "Shared Event List";
+            }
+
+            return new EventReservedItemModel
+            {
+                ItemId = reservation.WishlistItemId,
+                ItemPublicId = reservation.WishlistItem.PublicId,
+                ItemName = reservation.WishlistItem.Name,
+                Description = reservation.WishlistItem.Description,
+                Url = reservation.WishlistItem.Url,
+                Image = reservation.WishlistItem.Image,
+                WhereToBuy = reservation.WishlistItem.WhereToBuy,
+                Price = reservation.WishlistItem.Price,
+                WishlistName = wishlist.Name,
+                WishlistPublicId = wishlist.PublicId,
+                WishlistOwnerId = wishlist.OwnerId,
+                WishlistOwnerName = ownerName,
+                WishlistOwnerEmail = wishlist.Owner?.Email,
+                ReservedOn = reservation.ReservationDate,
+                IsAnonymous = reservation.IsAnonymous
+            };
+        }).ToList();
+    }
+
     public async Task<EventUserModel> InviteUserToEventByPublicIdAsync(string eventPublicId, string inviterId, string userId)
     {
         using var scope = _scopeFactory.CreateScope();

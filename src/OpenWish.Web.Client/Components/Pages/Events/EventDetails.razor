@@ -172,6 +172,11 @@ else
             <div class="col-md-4">
                 <EventInvitations EventId="@EventId" IsOwner="@_isOwner" CurrentUserId="@_currentUserId" />
 
+                <div class="mt-4">
+                    <EventReservedItems EventId="@EventId"
+                                         CurrentUserId="@_currentUserId" />
+                </div>
+
                 @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
                 {
                     <div class="card shadow-sm">

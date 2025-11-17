@@ -24,6 +24,7 @@ public interface IEventService
     Task<WishlistModel> AttachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId);
     Task<bool> DetachWishlistAsync(int eventId, int wishlistId, string userId);
     Task<bool> DetachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId);
+    Task<IEnumerable<EventReservedItemModel>> GetReservedItemsForUserByPublicIdAsync(string eventPublicId, string userId);
 
     // Event Invitation methods
     Task<EventUserModel> InviteUserToEventAsync(int eventId, string inviterId, string userId);

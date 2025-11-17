@@ -187,6 +187,30 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpGet("{eventPublicId}/reservations/mine")]
+    public async Task<ActionResult<IEnumerable<EventReservedItemModel>>> GetMyReservedItems(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var items = await _eventService.GetReservedItemsForUserByPublicIdAsync(eventPublicId, userId);
+            return Ok(items);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
     // Event Invitation Endpoints
 
     [HttpPost("{eventPublicId}/invitations/user/{userId}")]

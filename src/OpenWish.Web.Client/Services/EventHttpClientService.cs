@@ -187,6 +187,12 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<IEnumerable<EventReservedItemModel>> GetReservedItemsForUserByPublicIdAsync(string eventPublicId, string userId)
+    {
+        var items = await httpClient.GetFromJsonAsync<IEnumerable<EventReservedItemModel>>($"api/events/{eventPublicId}/reservations/mine");
+        return items ?? Enumerable.Empty<EventReservedItemModel>();
+    }
+
     public async Task<EventUserModel> InviteUserToEventByPublicIdAsync(string eventPublicId, string inviterId, string userId)
     {
         var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/user/{userId}", null);

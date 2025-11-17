@@ -130,8 +130,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     }
 
     // PublicId-based methods
-    public async Task<EventModel> GetEventByPublicIdAsync(string publicId)
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{publicId}");
     }
 

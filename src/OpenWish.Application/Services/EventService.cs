@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,32 @@ public class EventService(
         return eventEntity.EventUsers.Any(eu =>
             !eu.Deleted &&
             string.Equals(eu.UserId, userId, StringComparison.Ordinal));
+    }
+
+    private static void FilterGiftExchangeVisibility(EventModel eventModel, string? requestingUserId)
+    {
+        if (!eventModel.IsGiftExchange || eventModel.GiftExchanges is null || eventModel.GiftExchanges.Count == 0)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(requestingUserId))
+        {
+            eventModel.GiftExchanges = new List<GiftExchangeModel>();
+            return;
+        }
+
+        if (string.Equals(eventModel.CreatedBy?.Id, requestingUserId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var assignment = eventModel.GiftExchanges
+            .FirstOrDefault(ge => string.Equals(ge.GiverId, requestingUserId, StringComparison.Ordinal));
+
+        eventModel.GiftExchanges = assignment != null
+            ? new List<GiftExchangeModel> { assignment }
+            : new List<GiftExchangeModel>();
     }
 
     public async Task<EventModel> CreateEventAsync(EventModel eventModel, string creatorId)
@@ -107,7 +134,13 @@ public class EventService(
             .OrderBy(e => e.Date)
             .ToListAsync();
 
-        var eventModels = _mapper.Map<IEnumerable<EventModel>>(eventEntities);
+        var eventModels = _mapper.Map<List<EventModel>>(eventEntities);
+
+        foreach (var eventModel in eventModels)
+        {
+            FilterGiftExchangeVisibility(eventModel, userId);
+        }
+
         return eventModels;
     }
 
@@ -633,7 +666,7 @@ public class EventService(
     }
 
     // PublicId-based methods for public routes
-    public async Task<EventModel> GetEventByPublicIdAsync(string publicId)
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -655,6 +688,7 @@ public class EventService(
         }
 
         var eventModel = _mapper.Map<EventModel>(eventEntity);
+        FilterGiftExchangeVisibility(eventModel, requestingUserId);
         return eventModel;
     }
 

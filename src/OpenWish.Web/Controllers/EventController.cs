@@ -30,9 +30,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{publicId}")]
     public async Task<ActionResult<EventModel>> GetEvent(string publicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
         try
         {
-            var evt = await _eventService.GetEventByPublicIdAsync(publicId);
+            var evt = await _eventService.GetEventByPublicIdAsync(publicId, userId);
             return Ok(evt);
         }
         catch (KeyNotFoundException)

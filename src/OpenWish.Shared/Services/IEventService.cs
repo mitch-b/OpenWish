@@ -6,7 +6,7 @@ public interface IEventService
 {
     Task<EventModel> CreateEventAsync(EventModel evt, string creatorId);
     Task<EventModel> GetEventAsync(int id);
-    Task<EventModel> GetEventByPublicIdAsync(string publicId);
+    Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null);
     Task<IEnumerable<EventModel>> GetUserEventsAsync(string userId);
     Task<EventModel> UpdateEventAsync(int id, EventModel evt);
     Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt);

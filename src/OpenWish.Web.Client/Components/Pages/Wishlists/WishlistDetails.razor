@@ -479,7 +479,16 @@ else
 
     private async Task LoadItems()
     {
-        _items = (await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId)).ToList();
+        var requesterId = _currentUserId;
+        if (string.IsNullOrEmpty(requesterId))
+        {
+            requesterId = await UserContextService.GetUserIdAsync();
+        }
+
+        var items = await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId, requesterId);
+        _items = items
+            .Where(ShouldDisplayItem)
+            .ToList();
         ApplyFiltersAndSort();
     }
 
@@ -763,6 +772,16 @@ else
     private void ToggleItemDetails(int itemId)
     {
         _expandedItemId = _expandedItemId == itemId ? null : itemId;
+    }
+
+    private bool ShouldDisplayItem(WishlistItemModel item)
+    {
+        if (_isOwner)
+        {
+            return !item.IsHiddenFromOwner;
+        }
+
+        return !item.IsPrivate;
     }
 
     private async Task FocusCommentsAsync()

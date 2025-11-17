@@ -22,7 +22,7 @@
                 <div class="mb-4">
                     <h5>Ready to Draw Names?</h5>
                     <p class="text-muted">This will randomly assign each participant someone to shop for, respecting any exclusion rules you've set up below.</p>
-                    
+
                     @if (_participantCount < 2)
                     {
                         <div class="alert alert-warning">
@@ -63,10 +63,10 @@
 
                 @if (_pairingRules.Any())
                 {
-                    <div class="list-group mb-3">
+                    <div class="list-group mb-3 pairing-rule-list">
                         @foreach (var rule in _pairingRules)
                         {
-                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="list-group-item d-flex justify-content-between align-items-center pairing-rule-item">
                                 <span>
                                     <strong>@(rule.SourceUser?.UserName ?? "User")</strong> cannot be matched with <strong>@(rule.TargetUser?.UserName ?? "User")</strong>
                                 </span>
@@ -80,7 +80,7 @@
 
                 @if (_showAddRule)
                 {
-                    <div class="card bg-light mb-3">
+                    <div class="card surface-alt pairing-rule-card mb-3">
                         <div class="card-body">
                             <h6>Add Exclusion Rule</h6>
                             <div class="row g-2">
@@ -157,7 +157,7 @@
         if (Event == null) return;
 
         _participants.Clear();
-        
+
         // Add event owner
         if (Event.CreatedBy != null)
         {
@@ -233,7 +233,7 @@
 
             await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, rule, CurrentUserId);
             await LoadPairingRules();
-            
+
             _newRuleSourceId = null;
             _newRuleTargetId = null;
             _showAddRule = false;

@@ -5,6 +5,7 @@
 @using OpenWish.Web.Client.Components.Event
 @using System.Collections.Generic
 @using System.Linq
+@using OpenWish.Shared.Models
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
@@ -53,6 +54,13 @@ else
     <div class="container py-5">
         <div class="row g-4">
             <div class="col-md-8">
+                @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
+                {
+                    <GiftExchangeDisplay EventId="@EventId" 
+                                         CurrentUserId="@_currentUserId" 
+                                         EventWishlists="@_event.EventWishlists" />
+                }
+
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h3>Event Details</h3>

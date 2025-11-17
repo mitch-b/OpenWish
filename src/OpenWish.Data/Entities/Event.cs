@@ -21,6 +21,7 @@ public class Event : BaseEntity
     public decimal? Budget { get; set; } // Budget for the event
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange
     public ICollection<GiftExchange> GiftExchanges { get; set; } // Gift Exchange pairings for the event
+    public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
     public string? Tags { get; set; } // Event-specific tags
     public ICollection<CustomPairingRule> PairingRules { get; set; } // Custom rules for pairing participants
 }

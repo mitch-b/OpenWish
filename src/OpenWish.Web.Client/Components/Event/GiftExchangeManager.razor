@@ -1,0 +1,259 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h3><i class="bi bi-gift"></i> Gift Exchange Management</h3>
+    </div>
+    <div class="card-body">
+        @if (Event?.IsGiftExchange == true)
+        {
+            @if (Event.NamesDrawnOn.HasValue)
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill"></i> Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt")
+                </div>
+                <p class="text-muted">All participants have been notified of their gift exchange matches via email.</p>
+            }
+            else
+            {
+                <div class="mb-4">
+                    <h5>Ready to Draw Names?</h5>
+                    <p class="text-muted">This will randomly assign each participant someone to shop for, respecting any exclusion rules you've set up below.</p>
+
+                    @if (_participantCount < 2)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> You need at least 2 participants to draw names. Currently: @_participantCount participant(s).
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success btn-lg" @onclick="DrawNames" disabled="@_drawing">
+                            @if (_drawing)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Drawing Names...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-shuffle"></i>
+                                <span>Draw Names Now</span>
+                            }
+                        </button>
+                        <p class="text-muted mt-2 small">
+                            <i class="bi bi-people"></i> @_participantCount participants will be included in the draw.
+                        </p>
+                    }
+                </div>
+
+                @if (_errorMessage != null)
+                {
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-circle"></i> @_errorMessage
+                    </div>
+                }
+
+                <hr />
+
+                <h5>Pairing Rules (Optional)</h5>
+                <p class="text-muted small">Add exclusion rules to prevent certain people from being matched together (e.g., spouses, significant others).</p>
+
+                @if (_pairingRules.Any())
+                {
+                    <div class="list-group mb-3 pairing-rule-list">
+                        @foreach (var rule in _pairingRules)
+                        {
+                            <div class="list-group-item d-flex justify-content-between align-items-center pairing-rule-item">
+                                <span>
+                                    <strong>@(rule.SourceUser?.UserName ?? "User")</strong> cannot be matched with <strong>@(rule.TargetUser?.UserName ?? "User")</strong>
+                                </span>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRule(rule.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (_showAddRule)
+                {
+                    <div class="card surface-alt pairing-rule-card mb-3">
+                        <div class="card-body">
+                            <h6>Add Exclusion Rule</h6>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label">Person 1</label>
+                                    <select class="form-select" @bind="_newRuleSourceId">
+                                        <option value="">Select...</option>
+                                        @foreach (var participant in _participants)
+                                        {
+                                            <option value="@participant.Id">@participant.UserName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">Person 2</label>
+                                    <select class="form-select" @bind="_newRuleTargetId">
+                                        <option value="">Select...</option>
+                                        @foreach (var participant in _participants)
+                                        {
+                                            <option value="@participant.Id">@participant.UserName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(string.IsNullOrEmpty(_newRuleSourceId) || string.IsNullOrEmpty(_newRuleTargetId))">
+                                        <i class="bi bi-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-link" @onclick="() => _showAddRule = false">Cancel</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn btn-outline-primary" @onclick="() => _showAddRule = true">
+                        <i class="bi bi-plus-circle"></i> Add Exclusion Rule
+                    </button>
+                }
+            }
+        }
+        else
+        {
+            <p class="text-muted">This event is not configured as a gift exchange.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventModel? Event { get; set; }
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnNamesDrawn { get; set; }
+
+    private List<CustomPairingRuleModel> _pairingRules = new();
+    private List<ApplicationUserModel> _participants = new();
+    private bool _drawing = false;
+    private bool _showAddRule = false;
+    private string? _newRuleSourceId;
+    private string? _newRuleTargetId;
+    private string? _errorMessage;
+    private int _participantCount = 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Event != null)
+        {
+            await LoadPairingRules();
+            LoadParticipants();
+        }
+    }
+
+    private void LoadParticipants()
+    {
+        if (Event == null) return;
+
+        _participants.Clear();
+
+        // Add event owner
+        if (Event.CreatedBy != null)
+        {
+            _participants.Add(Event.CreatedBy);
+        }
+
+        // Add accepted participants
+        if (Event.EventUsers != null)
+        {
+            foreach (var eu in Event.EventUsers.Where(eu => eu.Status == "Accepted" && eu.User != null))
+            {
+                if (eu.User != null && !_participants.Any(p => p.Id == eu.User.Id))
+                {
+                    _participants.Add(eu.User);
+                }
+            }
+        }
+
+        _participantCount = _participants.Count;
+    }
+
+    private async Task LoadPairingRules()
+    {
+        if (Event?.PublicId == null) return;
+
+        try
+        {
+            var rules = await EventService.GetPairingRulesByPublicIdAsync(Event.PublicId);
+            _pairingRules = rules.ToList();
+        }
+        catch (Exception)
+        {
+            // Ignore errors loading rules
+        }
+    }
+
+    private async Task DrawNames()
+    {
+        if (Event?.PublicId == null) return;
+
+        _drawing = true;
+        _errorMessage = null;
+
+        try
+        {
+            await EventService.DrawNamesByPublicIdAsync(Event.PublicId, CurrentUserId);
+            await OnNamesDrawn.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _drawing = false;
+        }
+    }
+
+    private async Task AddRule()
+    {
+        if (Event?.PublicId == null || string.IsNullOrEmpty(_newRuleSourceId) || string.IsNullOrEmpty(_newRuleTargetId))
+            return;
+
+        try
+        {
+            var rule = new CustomPairingRuleModel
+            {
+                SourceUserId = _newRuleSourceId,
+                TargetUserId = _newRuleTargetId,
+                RuleType = "Exclusion",
+                RuleDescription = "Cannot be matched together"
+            };
+
+            await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, rule, CurrentUserId);
+            await LoadPairingRules();
+
+            _newRuleSourceId = null;
+            _newRuleTargetId = null;
+            _showAddRule = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task RemoveRule(int ruleId)
+    {
+        try
+        {
+            await EventService.RemovePairingRuleAsync(ruleId, CurrentUserId);
+            await LoadPairingRules();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+}

@@ -37,4 +37,15 @@ public interface IEventService
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
     Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId);
     Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId);
+
+    // Gift Exchange methods
+    Task<EventModel> DrawNamesAsync(int eventId, string ownerId);
+    Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId);
+    Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId);
+    Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId);
+    Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId);
+    Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId);
+    Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId);
+    Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId);
+    Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId);
 }

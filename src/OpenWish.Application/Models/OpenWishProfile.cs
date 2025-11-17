@@ -29,12 +29,16 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.EventWishlists, opt => opt.Ignore())
+            .ForMember(dest => dest.GiftExchanges, opt => opt.Ignore())
+            .ForMember(dest => dest.PairingRules, opt => opt.Ignore())
             .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.Date.ToUniversalTime()))
             .ReverseMap()
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => (src.Tags ?? string.Empty).Split(",", StringSplitOptions.RemoveEmptyEntries)))
             .ForMember(dest => dest.EventUsers, opt => opt.MapFrom(src => src.EventUsers)) // map from EF entity to DtoModel
             .ForMember(dest => dest.CreatedBy, opt => opt.MapFrom(src => src.CreatedBy))
-            .ForMember(dest => dest.EventWishlists, opt => opt.MapFrom(src => src.EventWishlists));  // map from EF entity to DtoModel
+            .ForMember(dest => dest.EventWishlists, opt => opt.MapFrom(src => src.EventWishlists))  // map from EF entity to DtoModel
+            .ForMember(dest => dest.GiftExchanges, opt => opt.MapFrom(src => src.GiftExchanges))
+            .ForMember(dest => dest.PairingRules, opt => opt.MapFrom(src => src.PairingRules));
         CreateMap<EventUserModel, EventUser>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();
@@ -59,6 +63,12 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();
         CreateMap<NotificationModel, Notification>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<GiftExchangeModel, GiftExchange>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
+        CreateMap<CustomPairingRuleModel, CustomPairingRule>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();
     }

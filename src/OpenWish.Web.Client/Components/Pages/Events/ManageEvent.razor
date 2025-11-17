@@ -34,9 +34,14 @@ else
         <div class="container">
             <div class="d-flex justify-content-between align-items-center">
                 <h1>Manage Event</h1>
-                <button class="btn btn-danger" @onclick="HandleDeleteEvent">
-                    <i class="bi bi-trash"></i> Delete Event
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">
+                        <i class="bi bi-arrow-left"></i> Back to Event
+                    </button>
+                    <button class="btn btn-danger" type="button" @onclick="HandleDeleteEvent">
+                        <i class="bi bi-trash"></i> Delete Event
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -156,6 +161,11 @@ else
             await EventService.UpdateEventByPublicIdAsync(EventId, updatedEvent);
             NavigationManager.NavigateTo($"/events/{EventId}");
         }
+    }
+
+    private void HandleCancel()
+    {
+        NavigationManager.NavigateTo($"/events/{EventId}");
     }
 
     private async Task HandleDeleteEvent()

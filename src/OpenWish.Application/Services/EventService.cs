@@ -70,6 +70,39 @@ public class EventService(
             : new List<GiftExchangeModel>();
     }
 
+    private static void FilterWishlistVisibility(ICollection<WishlistModel>? wishlists, string? requestingUserId)
+    {
+        if (wishlists is null || wishlists.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var wishlist in wishlists)
+        {
+            if (wishlist.Items is null || wishlist.Items.Count == 0)
+            {
+                continue;
+            }
+
+            var isOwner = !string.IsNullOrEmpty(requestingUserId) &&
+                         !string.IsNullOrEmpty(wishlist.OwnerId) &&
+                         string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal);
+
+            var filteredItems = wishlist.Items
+                .Where(item => ShouldIncludeWishlistItem(item, isOwner))
+                .ToList();
+
+            if (filteredItems.Count != wishlist.Items.Count)
+            {
+                wishlist.Items = filteredItems;
+            }
+        }
+    }
+
+    private static bool ShouldIncludeWishlistItem(WishlistItemModel item, bool isOwner) =>
+        (!item.IsPrivate || isOwner) &&
+        (!item.IsHiddenFromOwner || !isOwner);
+
     public async Task<EventModel> CreateEventAsync(EventModel eventModel, string creatorId)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -139,12 +172,13 @@ public class EventService(
         foreach (var eventModel in eventModels)
         {
             FilterGiftExchangeVisibility(eventModel, userId);
+            FilterWishlistVisibility(eventModel.EventWishlists, userId);
         }
 
         return eventModels;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -156,7 +190,10 @@ public class EventService(
             .OrderBy(w => w.Name)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<WishlistModel>>(wishlistEntities);
+        var wishlistModels = _mapper.Map<List<WishlistModel>>(wishlistEntities);
+        FilterWishlistVisibility(wishlistModels, requestingUserId);
+
+        return wishlistModels;
     }
 
     public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
@@ -689,6 +726,7 @@ public class EventService(
 
         var eventModel = _mapper.Map<EventModel>(eventEntity);
         FilterGiftExchangeVisibility(eventModel, requestingUserId);
+        FilterWishlistVisibility(eventModel.EventWishlists, requestingUserId);
         return eventModel;
     }
 
@@ -736,7 +774,7 @@ public class EventService(
         return await RemoveUserFromEventAsync(eventEntity.Id, userId);
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -744,7 +782,7 @@ public class EventService(
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
-        return await GetEventWishlistsAsync(eventEntity.Id);
+        return await GetEventWishlistsAsync(eventEntity.Id, requestingUserId);
     }
 
     public async Task<WishlistModel> CreateEventWishlistByPublicIdAsync(string eventPublicId, WishlistModel wishlistModel, string ownerId)

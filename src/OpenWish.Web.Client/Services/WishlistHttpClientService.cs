@@ -242,13 +242,15 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-edit/{userId}");
     }
 
-    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId)
+    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}");
     }
 
-    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId)
+    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistPublicId}/items");
     }
 

@@ -32,9 +32,9 @@ public interface IWishlistService
 
     // WishlistItems
     Task<WishlistItemModel> GetWishlistItemAsync(int wishlistId, int itemId);
-    Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId);
     Task<IEnumerable<WishlistItemModel>> GetWishlistItemsAsync(int wishlistId);
-    Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId);
+    Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId, string? requestingUserId = null);
+    Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, string? requestingUserId = null);
     Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel item);
     Task<WishlistItemModel> AddItemToWishlistByPublicIdAsync(string wishlistPublicId, WishlistItemModel item);
     Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId);

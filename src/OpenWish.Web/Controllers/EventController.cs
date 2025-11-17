@@ -107,7 +107,13 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{eventPublicId}/wishlists")]
     public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEventWishlists(string eventPublicId)
     {
-        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId, userId);
         return Ok(wishlists);
     }
 

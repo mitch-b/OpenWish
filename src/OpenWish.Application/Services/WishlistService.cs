@@ -76,6 +76,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
+        FilterWishlistItemsForViewer(wishlistModel, userId);
         return wishlistModel;
     }
 
@@ -103,6 +104,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
+        FilterWishlistItemsForViewer(wishlistModel, userId);
         return wishlistModel;
     }
 
@@ -115,7 +117,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(w => w.Owner)
             .ToListAsync();
 
-        var wishlistModels = _mapper.Map<IEnumerable<WishlistModel>>(wishlistEntities);
+        var wishlistModels = _mapper.Map<List<WishlistModel>>(wishlistEntities);
+
+        foreach (var wishlist in wishlistModels)
+        {
+            FilterWishlistItemsForViewer(wishlist, userId);
+        }
+
         return wishlistModels;
     }
 
@@ -802,7 +810,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     }
 
     // PublicId-based methods for public routes
-    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId)
+    public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId, string? requestingUserId = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
@@ -813,10 +821,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(i => i.WishlistId == wishlist.Id && !i.Deleted)
             .OrderBy(i => i.OrderIndex);
 
-        return await MapWishlistItemsAsync(context, query);
+        var items = await MapWishlistItemsAsync(context, query);
+        return FilterWishlistItemsForViewer(items, wishlist.OwnerId, requestingUserId);
     }
 
-    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId)
+    public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, string? requestingUserId = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
@@ -826,6 +835,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var itemEntity = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlist.Id && i.Id == itemId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistPublicId}");
+
+        if (!CanViewerSeeItem(itemEntity, wishlist.OwnerId, requestingUserId))
+        {
+            throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistPublicId}");
+        }
 
         return _mapper.Map<WishlistItemModel>(itemEntity);
     }
@@ -1012,6 +1026,70 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         return itemModels;
+    }
+
+    private static void FilterWishlistItemsForViewer(WishlistModel wishlist, string? requestingUserId)
+    {
+        if (string.IsNullOrEmpty(requestingUserId) || wishlist.Items is null || wishlist.Items.Count == 0)
+        {
+            return;
+        }
+
+        var filteredItems = FilterWishlistItemsForViewer(wishlist.Items, wishlist.OwnerId, requestingUserId).ToList();
+
+        if (filteredItems.Count != wishlist.Items.Count)
+        {
+            wishlist.Items = filteredItems;
+        }
+    }
+
+    private static IEnumerable<WishlistItemModel> FilterWishlistItemsForViewer(IEnumerable<WishlistItemModel> items, string? ownerId, string? requestingUserId)
+    {
+        if (string.IsNullOrEmpty(requestingUserId))
+        {
+            return items;
+        }
+
+        var itemList = items as ICollection<WishlistItemModel> ?? items.ToList();
+        if (itemList.Count == 0)
+        {
+            return itemList;
+        }
+
+        var isOwner = !string.IsNullOrEmpty(ownerId) &&
+                      !string.IsNullOrEmpty(requestingUserId) &&
+                      string.Equals(ownerId, requestingUserId, StringComparison.Ordinal);
+
+        return itemList.Where(item => ShouldExposeItem(isOwner, item.IsPrivate, item.IsHiddenFromOwner)).ToList();
+    }
+
+    private static bool CanViewerSeeItem(WishlistItem item, string? ownerId, string? requestingUserId)
+    {
+        if (string.IsNullOrEmpty(requestingUserId))
+        {
+            return true;
+        }
+
+        var isOwner = !string.IsNullOrEmpty(ownerId) &&
+                      !string.IsNullOrEmpty(requestingUserId) &&
+                      string.Equals(ownerId, requestingUserId, StringComparison.Ordinal);
+
+        return ShouldExposeItem(isOwner, item.IsPrivate, item.IsHiddenFromOwner);
+    }
+
+    private static bool ShouldExposeItem(bool isOwner, bool isPrivate, bool isHiddenFromOwner)
+    {
+        if (isPrivate && !isOwner)
+        {
+            return false;
+        }
+
+        if (isHiddenFromOwner && isOwner)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static bool IsEventMember(Event eventEntity, string userId)

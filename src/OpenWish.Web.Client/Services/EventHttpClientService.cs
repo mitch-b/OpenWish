@@ -53,8 +53,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventId}/wishlists")
             ?? Enumerable.Empty<WishlistModel>();
     }
@@ -162,8 +163,9 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)
     {
+        _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventPublicId}/wishlists");
     }
 

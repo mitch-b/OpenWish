@@ -1,0 +1,90 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+
+@if (_loading)
+{
+    <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (_giftExchange != null && _giftExchange.Receiver != null)
+{
+    <div class="card border-success shadow-lg mb-4">
+        <div class="card-header bg-success text-white">
+            <h3 class="mb-0"><i class="bi bi-gift"></i> Your Gift Exchange Match</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-success" role="alert">
+                <h4 class="alert-heading">🎁 You're Shopping For:</h4>
+                <hr>
+                <h2 class="display-4 text-center my-4">@(_giftExchange.Receiver.UserName ?? _giftExchange.Receiver.Email)</h2>
+            </div>
+
+            @if (_recipientWishlist != null)
+            {
+                <div class="mt-4">
+                    <h5><i class="bi bi-list-check"></i> Their Wishlist:</h5>
+                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary btn-lg w-100 mt-2">
+                        <i class="bi bi-eye"></i> View @(_giftExchange.Receiver.UserName ?? "Their") Wishlist
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle"></i> @(_giftExchange.Receiver.UserName ?? "This person") hasn't attached a wishlist to this event yet.
+                </div>
+            }
+
+            @if (_giftExchange.Budget.HasValue)
+            {
+                <div class="mt-3 text-muted">
+                    <i class="bi bi-cash"></i> Suggested Budget: <strong>@_giftExchange.Budget.Value.ToString("C")</strong>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string EventId { get; set; } = string.Empty;
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public ICollection<WishlistModel>? EventWishlists { get; set; }
+
+    private GiftExchangeModel? _giftExchange;
+    private WishlistModel? _recipientWishlist;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadGiftExchange();
+    }
+
+    private async Task LoadGiftExchange()
+    {
+        _loading = true;
+        try
+        {
+            _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
+            
+            if (_giftExchange?.ReceiverId != null && EventWishlists != null)
+            {
+                _recipientWishlist = EventWishlists
+                    .FirstOrDefault(w => w.OwnerId == _giftExchange.ReceiverId);
+            }
+        }
+        catch (Exception)
+        {
+            // No gift exchange found, which is fine
+            _giftExchange = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

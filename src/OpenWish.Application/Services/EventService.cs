@@ -857,4 +857,310 @@ public class EventService(
             throw new UnauthorizedAccessException("Only the event creator can perform this action");
         }
     }
+
+    // Gift Exchange methods
+    public async Task<EventModel> DrawNamesAsync(int eventId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
+            .Include(e => e.GiftExchanges)
+            .Include(e => e.PairingRules)
+                .ThenInclude(pr => pr.SourceUser)
+            .Include(e => e.PairingRules)
+                .ThenInclude(pr => pr.TargetUser)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        ValidateEventCreatorPermission(eventEntity, ownerId);
+
+        if (!eventEntity.IsGiftExchange)
+        {
+            throw new InvalidOperationException("This event is not configured as a gift exchange.");
+        }
+
+        if (eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Names have already been drawn for this event.");
+        }
+
+        // Get all participants (owner + accepted users)
+        var participants = new List<string> { eventEntity.CreatedBy.Id };
+        participants.AddRange(eventEntity.EventUsers
+            .Where(eu => !eu.Deleted && eu.Status == "Accepted" && !string.IsNullOrEmpty(eu.UserId))
+            .Select(eu => eu.UserId!));
+
+        if (participants.Count < 2)
+        {
+            throw new InvalidOperationException("Need at least 2 participants to draw names.");
+        }
+
+        // Get exclusion rules
+        var exclusions = eventEntity.PairingRules
+            .Where(pr => pr.RuleType == "Exclusion" && !pr.Deleted)
+            .Select(pr => (pr.SourceUserId, pr.TargetUserId))
+            .ToList();
+
+        // Perform name drawing with exclusions
+        var assignments = DrawNamesWithExclusions(participants, exclusions);
+
+        if (assignments == null)
+        {
+            throw new InvalidOperationException("Unable to create valid gift exchange assignments with the current pairing rules. Please review the exclusion rules.");
+        }
+
+        // Clear existing gift exchanges (shouldn't happen, but just in case)
+        var existingExchanges = await context.GiftExchanges
+            .Where(ge => ge.EventId == eventId)
+            .ToListAsync();
+        context.GiftExchanges.RemoveRange(existingExchanges);
+
+        // Create gift exchange records
+        foreach (var (giverId, receiverId) in assignments)
+        {
+            var giftExchange = new GiftExchange
+            {
+                EventId = eventId,
+                GiverId = giverId,
+                ReceiverId = receiverId,
+                IsAnonymous = false,
+                ReceiverPreferences = string.Empty,
+                Budget = eventEntity.Budget,
+                CreatedOn = DateTimeOffset.UtcNow,
+                UpdatedOn = DateTimeOffset.UtcNow
+            };
+            context.GiftExchanges.Add(giftExchange);
+        }
+
+        eventEntity.NamesDrawnOn = DateTimeOffset.UtcNow;
+        eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        // Send notifications to all participants
+        var baseUri = _baseUri?.TrimEnd('/') ?? "";
+        foreach (var (giverId, receiverId) in assignments)
+        {
+            var giver = await context.Users.FindAsync(giverId);
+            var receiver = await context.Users.FindAsync(receiverId);
+
+            if (giver?.Email != null && receiver != null)
+            {
+                var receiverName = receiver.UserName ?? receiver.Email ?? "someone";
+                var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
+
+                await _notificationService.CreateNotificationAsync(
+                    ownerId,
+                    giverId,
+                    "Gift Exchange Names Drawn!",
+                    $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
+                    "GiftExchangeDrawn");
+
+                await _emailSender.SendGiftExchangeDrawnEmailAsync(
+                    giver.Email,
+                    eventEntity.Name,
+                    receiverName,
+                    eventLink);
+            }
+        }
+
+        return await GetEventAsync(eventId);
+    }
+
+    public async Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await DrawNamesAsync(eventEntity.Id, ownerId);
+    }
+
+    private static List<(string giverId, string receiverId)>? DrawNamesWithExclusions(
+        List<string> participants,
+        List<(string sourceId, string targetId)> exclusions)
+    {
+        const int maxAttempts = 1000;
+        var random = new Random();
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var receivers = new List<string>(participants);
+            var assignments = new List<(string giverId, string receiverId)>();
+            var isValid = true;
+
+            // Shuffle receivers
+            for (int i = receivers.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (receivers[j], receivers[i]) = (receivers[i], receivers[j]);
+            }
+
+            // Try to assign each giver to a receiver
+            for (int i = 0; i < participants.Count; i++)
+            {
+                var giver = participants[i];
+                var receiver = receivers[i];
+
+                // Check if giver is assigned to themselves
+                if (giver == receiver)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                // Check if assignment violates exclusion rules
+                if (exclusions.Any(e => e.sourceId == giver && e.targetId == receiver))
+                {
+                    isValid = false;
+                    break;
+                }
+
+                assignments.Add((giver, receiver));
+            }
+
+            if (isValid)
+            {
+                return assignments;
+            }
+        }
+
+        return null; // Failed to find valid assignment
+    }
+
+    public async Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        if (!IsEventMember(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event.");
+        }
+
+        var giftExchange = await context.GiftExchanges
+            .AsNoTracking()
+            .Include(ge => ge.Receiver)
+            .Include(ge => ge.Giver)
+            .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId && !ge.Deleted);
+
+        return giftExchange == null ? null : _mapper.Map<GiftExchangeModel>(giftExchange);
+    }
+
+    public async Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await GetMyGiftExchangeAsync(eventEntity.Id, userId);
+    }
+
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var rules = await context.CustomPairingRules
+            .AsNoTracking()
+            .Include(pr => pr.SourceUser)
+            .Include(pr => pr.TargetUser)
+            .Where(pr => pr.EventId == eventId && !pr.Deleted)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<CustomPairingRuleModel>>(rules);
+    }
+
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await GetPairingRulesAsync(eventEntity.Id);
+    }
+
+    public async Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        ValidateEventCreatorPermission(eventEntity, ownerId);
+
+        if (eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Cannot add pairing rules after names have been drawn.");
+        }
+
+        var ruleEntity = _mapper.Map<CustomPairingRule>(rule);
+        ruleEntity.EventId = eventId;
+        ruleEntity.CreatedOn = DateTimeOffset.UtcNow;
+        ruleEntity.UpdatedOn = DateTimeOffset.UtcNow;
+
+        context.CustomPairingRules.Add(ruleEntity);
+        await context.SaveChangesAsync();
+
+        return _mapper.Map<CustomPairingRuleModel>(ruleEntity);
+    }
+
+    public async Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        return await AddPairingRuleAsync(eventEntity.Id, rule, ownerId);
+    }
+
+    public async Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var rule = await context.CustomPairingRules
+            .Include(pr => pr.Event)
+                .ThenInclude(e => e.CreatedBy)
+            .FirstOrDefaultAsync(pr => pr.Id == ruleId && !pr.Deleted);
+
+        if (rule == null)
+        {
+            return false;
+        }
+
+        ValidateEventCreatorPermission(rule.Event, ownerId);
+
+        if (rule.Event.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Cannot remove pairing rules after names have been drawn.");
+        }
+
+        rule.Deleted = true;
+        rule.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+
+        return true;
+    }
 }

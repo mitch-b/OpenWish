@@ -212,4 +212,64 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventPublicId}/invitations");
     }
+
+    // Gift Exchange methods
+    public async Task<EventModel> DrawNamesAsync(int eventId, string ownerId)
+    {
+        throw new NotImplementedException("Use DrawNamesByPublicIdAsync instead");
+    }
+
+    public async Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/draw-names", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize event.");
+    }
+
+    public async Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId)
+    {
+        throw new NotImplementedException("Use GetMyGiftExchangeByPublicIdAsync instead");
+    }
+
+    public async Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId)
+    {
+        var response = await httpClient.GetAsync($"api/events/{eventPublicId}/my-gift-exchange");
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<GiftExchangeModel>();
+    }
+
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId)
+    {
+        throw new NotImplementedException("Use GetPairingRulesByPublicIdAsync instead");
+    }
+
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId)
+    {
+        return await httpClient.GetFromJsonAsync<IEnumerable<CustomPairingRuleModel>>($"api/events/{eventPublicId}/pairing-rules")
+            ?? Enumerable.Empty<CustomPairingRuleModel>();
+    }
+
+    public async Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId)
+    {
+        throw new NotImplementedException("Use AddPairingRuleByPublicIdAsync instead");
+    }
+
+    public async Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/pairing-rules", rule);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<CustomPairingRuleModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize pairing rule.");
+    }
+
+    public async Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId)
+    {
+        var response = await httpClient.DeleteAsync($"api/events/pairing-rules/{ruleId}");
+        return response.IsSuccessStatusCode;
+    }
 }

@@ -351,4 +351,128 @@ public class EventController(IEventService eventService, ApiUserContextService u
             return Forbid(ex.Message);
         }
     }
+
+    // Gift Exchange Endpoints
+
+    [HttpPost("{eventPublicId}/draw-names")]
+    public async Task<ActionResult<EventModel>> DrawNames(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var eventModel = await _eventService.DrawNamesByPublicIdAsync(eventPublicId, userId);
+            return Ok(eventModel);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("{eventPublicId}/my-gift-exchange")]
+    public async Task<ActionResult<GiftExchangeModel>> GetMyGiftExchange(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var giftExchange = await _eventService.GetMyGiftExchangeByPublicIdAsync(eventPublicId, userId);
+            if (giftExchange == null)
+            {
+                return NotFound("No gift exchange assignment found.");
+            }
+            return Ok(giftExchange);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+    }
+
+    [HttpGet("{eventPublicId}/pairing-rules")]
+    public async Task<ActionResult<IEnumerable<CustomPairingRuleModel>>> GetPairingRules(string eventPublicId)
+    {
+        try
+        {
+            var rules = await _eventService.GetPairingRulesByPublicIdAsync(eventPublicId);
+            return Ok(rules);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpPost("{eventPublicId}/pairing-rules")]
+    public async Task<ActionResult<CustomPairingRuleModel>> AddPairingRule(string eventPublicId, [FromBody] CustomPairingRuleModel rule)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var createdRule = await _eventService.AddPairingRuleByPublicIdAsync(eventPublicId, rule, userId);
+            return Ok(createdRule);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("pairing-rules/{ruleId}")]
+    public async Task<IActionResult> RemovePairingRule(int ruleId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.RemovePairingRuleAsync(ruleId, userId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }

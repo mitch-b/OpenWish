@@ -57,6 +57,31 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         return SendEmailAsync(toEmail, subject, body);
     }
 
+    /// <summary>
+    /// Sends a gift exchange name drawn email notification.
+    /// </summary>
+    /// <param name="toEmail">Recipient email address</param>
+    /// <param name="eventName">Name of the event</param>
+    /// <param name="recipientName">Name of the person they're buying for</param>
+    /// <param name="eventLink">Link to event details</param>
+    /// <returns></returns>
+    public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink)
+    {
+        _logger.LogInformation("Sending gift exchange drawn email to {Email} for event {EventName}", toEmail, eventName);
+        var subject = $"🎁 Gift Exchange Names Drawn - {eventName}";
+        var body = WrapInHtmlFormattedEmail($"<div style='font-family: Arial, sans-serif; padding: 20px;'>" +
+            $"<h2 style='color: #28a745;'>🎁 Gift Exchange Names Have Been Drawn!</h2>" +
+            $"<p>Great news! The names have been drawn for <strong>{eventName}</strong>.</p>" +
+            $"<div style='background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0;'>" +
+            $"<h3 style='margin-top: 0;'>Your Gift Recipient:</h3>" +
+            $"<p style='font-size: 18px; margin: 10px 0;'><strong>{recipientName}</strong></p>" +
+            $"</div>" +
+            $"<p><a href='{eventLink}' style='background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>View Event Details & Wishlist</a></p>" +
+            $"<p style='color: #6c757d; font-size: 14px;'>Visit the event page to see {recipientName}'s wishlist and start planning the perfect gift!</p>" +
+            $"</div>");
+        return SendEmailAsync(toEmail, subject, body);
+    }
+
     public async Task SendEmailAsync(string toEmail, string subject, string message)
     {
         var response = await _fluentEmail

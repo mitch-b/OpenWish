@@ -54,17 +54,10 @@ else
     <div class="container py-5">
         <div class="row g-4">
             <div class="col-md-8">
-                @if (_event.IsGiftExchange && _isOwner)
-                {
-                    <GiftExchangeManager Event="@_event"
-                                         CurrentUserId="@_currentUserId"
-                                         OnNamesDrawn="HandleNamesDrawn" />
-                }
-                
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
-                    <GiftExchangeDisplay EventId="@EventId" 
-                                         CurrentUserId="@_currentUserId" 
+                    <GiftExchangeDisplay EventId="@EventId"
+                                         CurrentUserId="@_currentUserId"
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
@@ -157,6 +150,15 @@ else
                                            CurrentUserId="@_currentUserId"
                                            OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
+
+                @if (_event.IsGiftExchange && _isOwner)
+                {
+                    <div class="mt-4">
+                        <GiftExchangeManager Event="@_event"
+                                             CurrentUserId="@_currentUserId"
+                                             OnNamesDrawn="HandleNamesDrawn" />
+                    </div>
+                }
 
                 @* @if (_event.EventWishlists.Any())
                 {

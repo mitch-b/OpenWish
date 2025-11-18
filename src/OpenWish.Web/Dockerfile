@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base
 WORKDIR /app
 
 ENV \
@@ -45,4 +45,4 @@ ARG BUILD_VERSION
 ARG GIT_SHA
 ENV APP_VERSION=${BUILD_VERSION}.${GIT_SHA}
 
-CMD dotnet OpenWish.Web.dll
+ENTRYPOINT ["dotnet", "OpenWish.Web.dll"]

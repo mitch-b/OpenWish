@@ -7,6 +7,9 @@ app.db
 app.db-shm
 app.db-wal
 
+.env.openwish
+docker-compose.*.yml
+
 .idea
 
 # User-specific files

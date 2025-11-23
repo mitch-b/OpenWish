@@ -1,8 +1,6 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base
 WORKDIR /app
 
-RUN mkdir -p /certs
-
 ENV \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     LC_ALL=en_US.UTF-8 \

@@ -74,14 +74,14 @@ Since OpenWish depends on an external datasource (PostgreSQL), if you don't alre
 ```yaml
 services:
   sql:
-    image: postgres:17
+    image: postgres:18
     container_name: openwish-postgres
     environment:
       POSTGRES_USER: "openwish"
       POSTGRES_PASSWORD: "YourStrong!Passw0rd"
       POSTGRES_DB: "OpenWish"
     volumes:
-      - openwish-data:/var/lib/postgresql@17/data
+      - openwish-data:/var/lib/postgresql
     ports:
       - 5432:5432
 

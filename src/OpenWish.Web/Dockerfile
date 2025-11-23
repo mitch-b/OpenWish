@@ -1,10 +1,15 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base
 WORKDIR /app
 
+RUN mkdir -p /certs
+
 ENV \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     LC_ALL=en_US.UTF-8 \
-    LANG=en_US.UTF-8
+    LANG=en_US.UTF-8 \
+    TLS__CertificatePath=/certs/tls.pfx
+
+EXPOSE 8080 8443
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 
@@ -44,5 +49,7 @@ COPY --from=build /app/publish .
 ARG BUILD_VERSION
 ARG GIT_SHA
 ENV APP_VERSION=${BUILD_VERSION}.${GIT_SHA}
+
+VOLUME ["/certs"]
 
 ENTRYPOINT ["dotnet", "OpenWish.Web.dll"]

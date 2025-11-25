@@ -1,3 +1,5 @@
+@using System
+@using System.Collections.Generic
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 
@@ -147,16 +149,49 @@
 
                 @if (_pairingRules.Any())
                 {
+                    var renderedRuleIds = new HashSet<int>();
                     <div class="list-group mb-3 pairing-rule-list">
                         @foreach (var rule in _pairingRules)
                         {
-                            <div class="list-group-item d-flex justify-content-between align-items-center pairing-rule-item">
-                                <span>
-                                    <strong>@(rule.SourceUser?.UserName ?? "User")</strong> cannot be matched with <strong>@(rule.TargetUser?.UserName ?? "User")</strong>
-                                </span>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRule(rule.Id)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            if (!renderedRuleIds.Add(rule.Id))
+                            {
+                                continue;
+                            }
+
+                            var reciprocalRule = FindReciprocalRule(rule);
+                            var isBidirectional = reciprocalRule is not null;
+
+                            if (reciprocalRule is not null)
+                            {
+                                renderedRuleIds.Add(reciprocalRule.Id);
+                            }
+
+                            <div class="list-group-item pairing-rule-item">
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <span>
+                                            <strong>@(rule.SourceUser?.UserName ?? rule.SourceUser?.Email ?? "Participant")</strong>
+                                            cannot be matched with
+                                            <strong>@(rule.TargetUser?.UserName ?? rule.TargetUser?.Email ?? "Participant")</strong>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                        <button type="button"
+                                                class="btn btn-sm text-nowrap @(isBidirectional ? "btn-success" : "btn-outline-success")"
+                                                title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
+                                                @onclick="() => ToggleBidirectionalRuleAsync(rule)">
+                                            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+                                            <span>@(isBidirectional ? "Limit to one way" : "Make both ways")</span>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
+                                                title="Remove this exclusion rule"
+                                                @onclick="() => RemoveRule(rule.Id)">
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                            <span>Remove</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         }
                     </div>
@@ -332,6 +367,82 @@
             _newRuleSourceId = null;
             _newRuleTargetId = null;
             _showAddRule = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private CustomPairingRuleModel? FindReciprocalRule(CustomPairingRuleModel rule)
+    {
+        if (string.IsNullOrEmpty(rule.SourceUserId) || string.IsNullOrEmpty(rule.TargetUserId))
+        {
+            return null;
+        }
+
+        return _pairingRules.FirstOrDefault(other =>
+            other.Id != rule.Id &&
+            string.Equals(other.SourceUserId, rule.TargetUserId, StringComparison.Ordinal) &&
+            string.Equals(other.TargetUserId, rule.SourceUserId, StringComparison.Ordinal) &&
+            string.Equals(other.RuleType, rule.RuleType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsBidirectional(CustomPairingRuleModel rule) => FindReciprocalRule(rule) != null;
+
+    private async Task EnsureBidirectionalRuleAsync(CustomPairingRuleModel rule)
+    {
+        if (Event?.PublicId == null ||
+            string.IsNullOrEmpty(CurrentUserId) ||
+            string.IsNullOrEmpty(rule.SourceUserId) ||
+            string.IsNullOrEmpty(rule.TargetUserId) ||
+            IsBidirectional(rule))
+        {
+            return;
+        }
+
+        try
+        {
+            var reciprocalRule = new CustomPairingRuleModel
+            {
+                SourceUserId = rule.TargetUserId,
+                TargetUserId = rule.SourceUserId,
+                RuleType = rule.RuleType,
+                RuleDescription = string.IsNullOrWhiteSpace(rule.RuleDescription)
+                    ? "Cannot be matched together"
+                    : rule.RuleDescription
+            };
+
+            await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, reciprocalRule, CurrentUserId);
+            await LoadPairingRules();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task ToggleBidirectionalRuleAsync(CustomPairingRuleModel rule)
+    {
+        if (Event?.PublicId == null ||
+            string.IsNullOrEmpty(CurrentUserId) ||
+            string.IsNullOrEmpty(rule.SourceUserId) ||
+            string.IsNullOrEmpty(rule.TargetUserId))
+        {
+            return;
+        }
+
+        var reciprocalRule = FindReciprocalRule(rule);
+        if (reciprocalRule is null)
+        {
+            await EnsureBidirectionalRuleAsync(rule);
+            return;
+        }
+
+        try
+        {
+            await EventService.RemovePairingRuleAsync(reciprocalRule.Id, CurrentUserId);
+            await LoadPairingRules();
         }
         catch (Exception ex)
         {

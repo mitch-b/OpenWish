@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -451,7 +452,8 @@ public class EventService(
             userId,
             "Event Invitation",
             $"You've been invited to the event: {eventEntity.Name}",
-            "EventInvite");
+            "EventInvite",
+            BuildEventInvitationAction(eventEntity.PublicId, eventUser.Id));
 
         // Send email notification
         var inviter = await context.Users.FindAsync(inviterId);
@@ -579,7 +581,12 @@ public class EventService(
                 creatorId,
                 "Invitation Accepted",
                 $"{userName} has accepted the invitation to {eventUser.Event.Name}",
-                "EventInviteAccept");
+                "EventInviteAccept",
+                new NotificationActionModel
+                {
+                    Type = "EventInvitationResponse",
+                    NavigateTo = $"/events/{eventUser.Event.PublicId}"
+                });
         }
         else
         {
@@ -682,7 +689,8 @@ public class EventService(
                 eventUser.UserId,
                 "Event Invitation Reminder",
                 $"Reminder: You've been invited to the event: {eventUser.Event.Name}",
-                "EventInvite");
+                "EventInvite",
+                BuildEventInvitationAction(eventUser.Event.PublicId, eventUser.Id));
         }
         else if (eventUser.InviteeEmail != null)
         {
@@ -928,6 +936,24 @@ public class EventService(
         {
             throw new UnauthorizedAccessException("Only the event creator can perform this action");
         }
+    }
+
+    private static NotificationActionModel BuildEventInvitationAction(string eventPublicId, int eventUserId)
+    {
+        var action = new NotificationActionModel
+        {
+            Type = "EventInvitation",
+            NavigateTo = $"/events/{eventPublicId}",
+            Options = new List<NotificationActionOptionModel>
+            {
+                new() { Key = "accept", Label = "Accept", IsPrimary = true },
+                new() { Key = "decline", Label = "Decline" }
+            }
+        };
+
+        action.Parameters["eventPublicId"] = eventPublicId;
+        action.Parameters["eventUserId"] = eventUserId.ToString(CultureInfo.InvariantCulture);
+        return action;
     }
 
     // Gift Exchange methods

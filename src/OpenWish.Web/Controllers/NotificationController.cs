@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
 
 namespace OpenWish.Web.Controllers;
@@ -45,7 +46,8 @@ public class NotificationController : ControllerBase
             targetUserId,
             request.Title,
             request.Message,
-            request.Type);
+            request.Type,
+            request.Action);
 
         return Ok(notification);
     }
@@ -78,4 +80,5 @@ public class DetailedNotificationRequest
     public string Title { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
+    public NotificationActionModel? Action { get; set; }
 }

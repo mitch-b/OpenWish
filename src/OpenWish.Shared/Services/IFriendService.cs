@@ -15,6 +15,8 @@ public interface IFriendService
     Task<IEnumerable<FriendRequestModel>> GetSentFriendRequestsAsync(string userId);
     Task<bool> AcceptFriendRequestAsync(int requestId, string userId);
     Task<bool> RejectFriendRequestAsync(int requestId, string userId);
+    Task<bool> CancelFriendRequestAsync(int requestId, string requesterId);
+    Task<FriendRequestModel> ResendFriendRequestAsync(int requestId, string requesterId);
 
     // Email invites
     Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress);

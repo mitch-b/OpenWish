@@ -75,6 +75,27 @@ public class FriendController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("request/{requestId}/cancel/{userId}")]
+    public async Task<IActionResult> CancelRequest(int requestId, string userId)
+    {
+        var result = await _friendService.CancelFriendRequestAsync(requestId, userId);
+        return result ? Ok(true) : NotFound();
+    }
+
+    [HttpPost("request/{requestId}/resend/{userId}")]
+    public async Task<IActionResult> ResendRequest(int requestId, string userId)
+    {
+        try
+        {
+            var updatedRequest = await _friendService.ResendFriendRequestAsync(requestId, userId);
+            return Ok(updatedRequest);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpPost("invite/{senderUserId}")]
     public async Task<IActionResult> SendFriendInviteByEmail(string senderUserId, [FromQuery] string email)
     {

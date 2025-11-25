@@ -9,5 +9,5 @@ public class FriendRequestModel : BaseEntityModel
     public ApplicationUserModel? Receiver { get; set; }
 
     public DateTimeOffset RequestDate { get; set; }
-    public string Status { get; set; } // "Pending", "Accepted", "Rejected"
+    public string Status { get; set; } // "Pending", "Accepted", "Rejected", "Cancelled"
 }

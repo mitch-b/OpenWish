@@ -16,11 +16,11 @@
                     <i class="bi bi-check-circle-fill"></i> Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt")
                 </div>
                 <p class="text-muted">All participants have been notified of their gift exchange matches via email.</p>
-                
+
                 <div class="mt-4">
                     <h5 class="text-danger">Reset Gift Exchange</h5>
                     <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
-                    
+
                     @if (!_showResetConfirm)
                     {
                         <button class="btn btn-outline-danger" @onclick="() => _showResetConfirm = true">
@@ -85,18 +85,48 @@
                     }
                     else
                     {
-                        <button class="btn btn-success btn-lg" @onclick="DrawNames" disabled="@_drawing">
-                            @if (_drawing)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <span>Drawing Names...</span>
-                            }
-                            else
-                            {
+                        @if (!_showDrawConfirm)
+                        {
+                            <button class="btn btn-success btn-lg" @onclick="() => _showDrawConfirm = true">
                                 <i class="bi bi-shuffle"></i>
-                                <span>Draw Names Now</span>
-                            }
-                        </button>
+                                <span>Start Draw Process</span>
+                            </button>
+                        }
+                        else if (!_showFinalDrawConfirm)
+                        {
+                            <div class="alert alert-warning">
+                                <p class="mb-2"><strong>⚠️ First Confirmation</strong></p>
+                                <p class="mb-3">Participants will be issued a name, so it is hard to turn back once you've started the name drawing. Continue?</p>
+                                <button class="btn btn-warning me-2" @onclick="() => _showFinalDrawConfirm = true">
+                                    <i class="bi bi-exclamation-triangle"></i> Yes, keep going
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelDrawConfirmation">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger">
+                                <p class="mb-2"><strong>🚨 Final Confirmation</strong></p>
+                                <p class="mb-3">Once names are drawn, every participant immediately receives their match. Participants will be issued a name, so it is hard to turn back once you've started the name drawing—rolling back means resetting the entire exchange.</p>
+                                <button class="btn btn-success btn-lg me-2" @onclick="DrawNames" disabled="@_drawing">
+                                    @if (_drawing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Drawing Names...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>🎉 Draw Names Now!</span>
+                                    }
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelDrawConfirmation" disabled="@_drawing">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
+
                         <p class="text-muted mt-2 small">
                             <i class="bi bi-people"></i> @_participantCount participants will be included in the draw.
                         </p>
@@ -195,6 +225,8 @@
     private bool _showAddRule = false;
     private bool _showResetConfirm = false;
     private bool _showFinalConfirm = false;
+    private bool _showDrawConfirm = false;
+    private bool _showFinalDrawConfirm = false;
     private string? _newRuleSourceId;
     private string? _newRuleTargetId;
     private string? _errorMessage;
@@ -267,6 +299,7 @@
         {
             await EventService.DrawNamesByPublicIdAsync(Event.PublicId, CurrentUserId);
             await OnNamesDrawn.InvokeAsync();
+            CancelDrawConfirmation();
         }
         catch (Exception ex)
         {
@@ -347,5 +380,11 @@
         _showResetConfirm = false;
         _showFinalConfirm = false;
         _resetErrorMessage = null;
+    }
+
+    private void CancelDrawConfirmation()
+    {
+        _showDrawConfirm = false;
+        _showFinalDrawConfirm = false;
     }
 }

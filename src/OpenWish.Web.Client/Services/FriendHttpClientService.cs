@@ -61,6 +61,26 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
+    public async Task<bool> CancelFriendRequestAsync(int requestId, string requesterId)
+    {
+        var response = await _httpClient.PostAsync($"{BaseUrl}/request/{requestId}/cancel/{requesterId}", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<FriendRequestModel> ResendFriendRequestAsync(int requestId, string requesterId)
+    {
+        var response = await _httpClient.PostAsync($"{BaseUrl}/request/{requestId}/resend/{requesterId}", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<FriendRequestModel>()
+            ?? throw new HttpRequestException("Failed to resend friend request");
+    }
+
     public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
     {
         var response = await _httpClient.PostAsync($"{BaseUrl}/invite/{senderUserId}?email={Uri.EscapeDataString(emailAddress)}", null);

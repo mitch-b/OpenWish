@@ -14,8 +14,8 @@ public interface IEventService
     Task DeleteEventByPublicIdAsync(string publicId);
     Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
     Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant");
-    Task<bool> RemoveUserFromEventAsync(int eventId, string userId);
-    Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId);
+    Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId);
+    Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId);
     Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null);
     Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null);
     Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId);

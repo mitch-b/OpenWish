@@ -266,6 +266,41 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         return true;
     }
 
+    public async Task<bool> CancelFriendRequestAsync(int requestId, string requesterId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var request = await context.FriendRequests
+            .FirstOrDefaultAsync(fr => fr.Id == requestId && fr.RequesterId == requesterId && fr.Status == "Pending" && !fr.Deleted);
+
+        if (request == null)
+        {
+            return false;
+        }
+
+        request.Status = "Cancelled";
+        request.Deleted = true;
+        request.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<FriendRequestModel> ResendFriendRequestAsync(int requestId, string requesterId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var request = await context.FriendRequests
+            .FirstOrDefaultAsync(fr => fr.Id == requestId && fr.RequesterId == requesterId && fr.Status == "Pending" && !fr.Deleted)
+            ?? throw new KeyNotFoundException($"Friend request {requestId} not found or cannot be resent");
+
+        request.RequestDate = DateTimeOffset.UtcNow;
+        request.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+        return _mapper.Map<FriendRequestModel>(request);
+    }
+
     public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
     {
         // Validate email format

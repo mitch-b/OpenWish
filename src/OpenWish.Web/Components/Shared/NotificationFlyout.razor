@@ -1,14 +1,17 @@
+@using System.Collections.Generic
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 @inject INotificationService NotificationService
 @inject IUserContextService UserContextService
+@inject IEventService EventService
+@inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <div class="notification-flyout-container position-relative">
     <!-- Notification Bell Button -->
-    <button class="btn btn-link text-decoration-none notification-bell" 
-            @onclick="ToggleFlyout" 
+    <button class="btn btn-link text-decoration-none notification-bell"
+            @onclick="ToggleFlyout"
             @onclick:stopPropagation="true"
             type="button">
         <span style="font-size: 1.2rem;">🔔</span>
@@ -38,7 +41,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="notification-content">
                 @if (_isLoading)
                 {
@@ -54,7 +57,7 @@
                     <div class="notification-list">
                         @foreach (var notification in _notifications.Take(20))
                         {
-                            <div class="notification-item @(notification.IsRead ? "read" : "unread")" 
+                            <div class="notification-item @(notification.IsRead ? "read" : "unread")"
                                  @onmouseenter="() => MarkAsReadOnHover(notification)"
                                  @ontouchstart="() => MarkAsReadOnTouch(notification)">
                                 <div class="d-flex justify-content-between align-items-start p-3">
@@ -65,14 +68,44 @@
                                         }
                                         <div class="notification-message small">@notification.Message</div>
                                         <div class="notification-date text-muted small">@notification.Date.ToString("MMM dd, yyyy HH:mm")</div>
+                                        @if (notification.Action is { } action && ((action.Options?.Count ?? 0) > 0 || !string.IsNullOrWhiteSpace(action.NavigateTo)))
+                                        {
+                                            <div class="notification-cta">
+                                                @if ((action.Options?.Count ?? 0) > 0)
+                                                {
+                                                    foreach (var option in action.Options ?? new List<NotificationActionOptionModel>())
+                                                    {
+                                                        var buttonClass = option.IsPrimary ? "btn btn-sm btn-success" : "btn btn-sm btn-outline-secondary";
+                                                        <button class="@buttonClass"
+                                                                disabled="@IsNotificationProcessing(notification.Id)"
+                                                                @onclick="() => HandleActionOption(notification, option.Key)"
+                                                                @onclick:stopPropagation="true">
+                                                            @if (option.IsPrimary && IsNotificationProcessing(notification.Id))
+                                                            {
+                                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                            }
+                                                            @option.Label
+                                                        </button>
+                                                    }
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(action.NavigateTo))
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary"
+                                                            @onclick="() => NavigateTo(action.NavigateTo!)"
+                                                            @onclick:stopPropagation="true">
+                                                        View
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
                                     </div>
                                     <div class="notification-actions">
                                         @if (!notification.IsRead)
                                         {
                                             <span class="unread-indicator bg-primary rounded-circle"></span>
                                         }
-                                        <button class="btn btn-sm btn-outline-danger ms-2" 
-                                                @onclick="() => ShowDeleteConfirmation(notification)" 
+                                        <button class="btn btn-sm btn-outline-danger ms-2"
+                                                @onclick="() => ShowDeleteConfirmation(notification)"
                                                 @onclick:stopPropagation="true">
                                             🗑️
                                         </button>
@@ -81,7 +114,7 @@
                             </div>
                         }
                     </div>
-                    
+
                     @if (_notifications.Count() > 20)
                     {
                         <div class="text-center p-3 border-top">
@@ -138,6 +171,7 @@
     private string? _userId;
     private IEnumerable<NotificationModel>? _notifications;
     private NotificationModel? _notificationToDelete;
+    private readonly HashSet<int> _notificationsInFlight = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -220,7 +254,7 @@
     private async Task MarkNotificationAsRead(NotificationModel notification)
     {
         if (_isMarkingRead) return;
-        
+
         _isMarkingRead = true;
         try
         {
@@ -315,5 +349,140 @@
                 StateHasChanged();
             }
         }
+    }
+
+    private bool IsNotificationProcessing(int notificationId) => _notificationsInFlight.Contains(notificationId);
+
+    private async Task HandleActionOption(NotificationModel notification, string optionKey)
+    {
+        if (notification.Action is null)
+        {
+            return;
+        }
+
+        var actionType = notification.Action.Type ?? string.Empty;
+        var handled = false;
+
+        if (string.Equals(actionType, "EventInvitation", StringComparison.OrdinalIgnoreCase))
+        {
+            handled = await HandleEventInvitationAction(notification, optionKey);
+        }
+
+        if (!handled && !string.IsNullOrWhiteSpace(notification.Action.NavigateTo))
+        {
+            NavigateTo(notification.Action.NavigateTo);
+        }
+    }
+
+    private async Task<bool> HandleEventInvitationAction(NotificationModel notification, string optionKey)
+    {
+        if (notification.Action?.Parameters is null)
+        {
+            return false;
+        }
+
+        if (!TryGetActionParameter(notification.Action, "eventUserId", out var eventUserIdRaw) ||
+            !int.TryParse(eventUserIdRaw, out var eventUserId))
+        {
+            return false;
+        }
+
+        var accept = string.Equals(optionKey, "accept", StringComparison.OrdinalIgnoreCase);
+        var decline = string.Equals(optionKey, "decline", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(optionKey, "reject", StringComparison.OrdinalIgnoreCase);
+
+        if (!accept && !decline)
+        {
+            return false;
+        }
+
+        var userId = _userId ?? await UserContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return false;
+        }
+
+        if (_notificationsInFlight.Contains(notification.Id))
+        {
+            return true;
+        }
+
+        _notificationsInFlight.Add(notification.Id);
+        try
+        {
+            var success = accept
+                ? await EventService.AcceptEventInvitationAsync(eventUserId, userId)
+                : await EventService.RejectEventInvitationAsync(eventUserId, userId);
+
+            if (!success)
+            {
+                return true;
+            }
+
+            notification.IsRead = true;
+            try
+            {
+                await NotificationService.MarkNotificationAsReadAsync(notification.Id);
+            }
+            catch
+            {
+                // ignore marking errors to avoid blocking user flow
+            }
+
+            await LoadNotificationCount();
+
+            if (accept && !string.IsNullOrWhiteSpace(notification.Action?.NavigateTo))
+            {
+                NavigateTo(notification.Action.NavigateTo);
+            }
+        }
+        catch
+        {
+            // swallow for now; future enhancement could surface toast
+        }
+        finally
+        {
+            _notificationsInFlight.Remove(notification.Id);
+            StateHasChanged();
+        }
+
+        return true;
+    }
+
+    private static bool TryGetActionParameter(NotificationActionModel action, string key, out string value)
+    {
+        value = string.Empty;
+        if (action.Parameters is null)
+        {
+            return false;
+        }
+
+        if (action.Parameters.TryGetValue(key, out var exact))
+        {
+            value = exact;
+            return true;
+        }
+
+        foreach (var pair in action.Parameters)
+        {
+            if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                value = pair.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void NavigateTo(string route)
+    {
+        if (string.IsNullOrWhiteSpace(route))
+        {
+            return;
+        }
+
+        CloseFlyout();
+        NavigationManager.NavigateTo(route, forceLoad: true);
     }
 }

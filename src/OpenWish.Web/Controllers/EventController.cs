@@ -96,12 +96,26 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpDelete("{eventPublicId}/users/{userId}")]
     public async Task<IActionResult> RemoveUserFromEvent(string eventPublicId, string userId)
     {
-        var result = await _eventService.RemoveUserFromEventByPublicIdAsync(eventPublicId, userId);
-        if (!result)
+        var requestorId = await _userContextService.GetUserIdAsync();
+        if (requestorId is null)
         {
-            return NotFound();
+            return Unauthorized();
         }
-        return NoContent();
+
+        try
+        {
+            var result = await _eventService.RemoveUserFromEventByPublicIdAsync(eventPublicId, userId, requestorId);
+            if (!result)
+            {
+                return NotFound();
+            }
+
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
     }
 
     [HttpGet("{eventPublicId}/wishlists")]

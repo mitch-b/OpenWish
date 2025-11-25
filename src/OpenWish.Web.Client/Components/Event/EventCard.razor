@@ -53,18 +53,33 @@ else
 <Dialog @ref="_deleteDialog" Title="@_deleteDialogTitle">
     <div class="modal-body">
         <p>@_deleteDialogMessage</p>
+        @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
+        {
+            <p class="mb-0">Select "Continue" to confirm again before deleting.</p>
+        }
+        else
+        {
+            <p class="text-danger mb-0">This is permanent. Are you absolutely sure?</p>
+        }
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">
-            @if (_isDeleting)
-            {
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-            }
-            Delete
-        </button>
         <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog" disabled="@_isDeleting">
             Cancel
         </button>
+        @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
+        {
+            <button type="button" class="btn btn-warning" @onclick="ConfirmFirstDeleteStep">Continue</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">
+                @if (_isDeleting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                }
+                <span>Delete Event</span>
+            </button>
+        }
     </div>
 </Dialog>
 
@@ -79,6 +94,7 @@ else
     private string _deleteDialogTitle = "Delete Event";
     private string _deleteDialogMessage = string.Empty;
     private bool _isDeleting;
+    private DeleteConfirmationStage _deleteConfirmationStage = DeleteConfirmationStage.First;
 
     private void ShowDeleteDialog()
     {
@@ -87,18 +103,36 @@ else
             return;
         }
 
-        _deleteDialogMessage = $"Are you sure you want to delete the event '{Event.Name}'? This action cannot be undone.";
+        _deleteConfirmationStage = DeleteConfirmationStage.First;
+        _deleteDialogMessage = $"Deleting '{Event.Name}' will remove all wishlists, participants, and activity.";
         _deleteDialog.Show();
     }
 
     private void CloseDeleteDialog()
     {
+        if (_isDeleting)
+        {
+            return;
+        }
+
+        _deleteConfirmationStage = DeleteConfirmationStage.First;
         _deleteDialog.Close();
+    }
+
+    private void ConfirmFirstDeleteStep()
+    {
+        if (Event is null)
+        {
+            return;
+        }
+
+        _deleteConfirmationStage = DeleteConfirmationStage.Second;
+        _deleteDialogMessage = $"This is your final confirmation. '{Event.Name}' cannot be recovered once deleted.";
     }
 
     private async Task ConfirmDeleteAsync()
     {
-        if (Event is null || _isDeleting)
+        if (Event is null || _isDeleting || _deleteConfirmationStage != DeleteConfirmationStage.Second)
         {
             return;
         }
@@ -129,4 +163,10 @@ else
     }
 
     private void NavigateToEvent() => NavigationManager.NavigateTo($"/events/{Event?.PublicId}");
+
+    private enum DeleteConfirmationStage
+    {
+        First,
+        Second
+    }
 }

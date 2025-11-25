@@ -1,3 +1,5 @@
+@using System
+@using System.Collections.Generic
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 
@@ -16,11 +18,11 @@
                     <i class="bi bi-check-circle-fill"></i> Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt")
                 </div>
                 <p class="text-muted">All participants have been notified of their gift exchange matches via email.</p>
-                
+
                 <div class="mt-4">
                     <h5 class="text-danger">Reset Gift Exchange</h5>
                     <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
-                    
+
                     @if (!_showResetConfirm)
                     {
                         <button class="btn btn-outline-danger" @onclick="() => _showResetConfirm = true">
@@ -85,18 +87,48 @@
                     }
                     else
                     {
-                        <button class="btn btn-success btn-lg" @onclick="DrawNames" disabled="@_drawing">
-                            @if (_drawing)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                                <span>Drawing Names...</span>
-                            }
-                            else
-                            {
+                        @if (!_showDrawConfirm)
+                        {
+                            <button class="btn btn-success btn-lg" @onclick="() => _showDrawConfirm = true">
                                 <i class="bi bi-shuffle"></i>
-                                <span>Draw Names Now</span>
-                            }
-                        </button>
+                                <span>Start Draw Process</span>
+                            </button>
+                        }
+                        else if (!_showFinalDrawConfirm)
+                        {
+                            <div class="alert alert-warning">
+                                <p class="mb-2"><strong>⚠️ First Confirmation</strong></p>
+                                <p class="mb-3">Participants will be issued a name, so it is hard to turn back once you've started the name drawing. Continue?</p>
+                                <button class="btn btn-warning me-2" @onclick="() => _showFinalDrawConfirm = true">
+                                    <i class="bi bi-exclamation-triangle"></i> Yes, keep going
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelDrawConfirmation">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger">
+                                <p class="mb-2"><strong>🚨 Final Confirmation</strong></p>
+                                <p class="mb-3">Once names are drawn, every participant immediately receives their match. Participants will be issued a name, so it is hard to turn back once you've started the name drawing—rolling back means resetting the entire exchange.</p>
+                                <button class="btn btn-success btn-lg me-2" @onclick="DrawNames" disabled="@_drawing">
+                                    @if (_drawing)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span>Drawing Names...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>🎉 Draw Names Now!</span>
+                                    }
+                                </button>
+                                <button class="btn btn-secondary" @onclick="CancelDrawConfirmation" disabled="@_drawing">
+                                    Cancel
+                                </button>
+                            </div>
+                        }
+
                         <p class="text-muted mt-2 small">
                             <i class="bi bi-people"></i> @_participantCount participants will be included in the draw.
                         </p>
@@ -117,16 +149,49 @@
 
                 @if (_pairingRules.Any())
                 {
+                    var renderedRuleIds = new HashSet<int>();
                     <div class="list-group mb-3 pairing-rule-list">
                         @foreach (var rule in _pairingRules)
                         {
-                            <div class="list-group-item d-flex justify-content-between align-items-center pairing-rule-item">
-                                <span>
-                                    <strong>@(rule.SourceUser?.UserName ?? "User")</strong> cannot be matched with <strong>@(rule.TargetUser?.UserName ?? "User")</strong>
-                                </span>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRule(rule.Id)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            if (!renderedRuleIds.Add(rule.Id))
+                            {
+                                continue;
+                            }
+
+                            var reciprocalRule = FindReciprocalRule(rule);
+                            var isBidirectional = reciprocalRule is not null;
+
+                            if (reciprocalRule is not null)
+                            {
+                                renderedRuleIds.Add(reciprocalRule.Id);
+                            }
+
+                            <div class="list-group-item pairing-rule-item">
+                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <span>
+                                            <strong>@(rule.SourceUser?.UserName ?? rule.SourceUser?.Email ?? "Participant")</strong>
+                                            cannot be matched with
+                                            <strong>@(rule.TargetUser?.UserName ?? rule.TargetUser?.Email ?? "Participant")</strong>
+                                        </span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                        <button type="button"
+                                                class="btn btn-sm text-nowrap @(isBidirectional ? "btn-success" : "btn-outline-success")"
+                                                title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
+                                                @onclick="() => ToggleBidirectionalRuleAsync(rule)">
+                                            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+                                            <span>@(isBidirectional ? "Limit to one way" : "Make both ways")</span>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
+                                                title="Remove this exclusion rule"
+                                                @onclick="() => RemoveRule(rule.Id)">
+                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                            <span>Remove</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         }
                     </div>
@@ -195,6 +260,8 @@
     private bool _showAddRule = false;
     private bool _showResetConfirm = false;
     private bool _showFinalConfirm = false;
+    private bool _showDrawConfirm = false;
+    private bool _showFinalDrawConfirm = false;
     private string? _newRuleSourceId;
     private string? _newRuleTargetId;
     private string? _errorMessage;
@@ -267,6 +334,7 @@
         {
             await EventService.DrawNamesByPublicIdAsync(Event.PublicId, CurrentUserId);
             await OnNamesDrawn.InvokeAsync();
+            CancelDrawConfirmation();
         }
         catch (Exception ex)
         {
@@ -299,6 +367,82 @@
             _newRuleSourceId = null;
             _newRuleTargetId = null;
             _showAddRule = false;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private CustomPairingRuleModel? FindReciprocalRule(CustomPairingRuleModel rule)
+    {
+        if (string.IsNullOrEmpty(rule.SourceUserId) || string.IsNullOrEmpty(rule.TargetUserId))
+        {
+            return null;
+        }
+
+        return _pairingRules.FirstOrDefault(other =>
+            other.Id != rule.Id &&
+            string.Equals(other.SourceUserId, rule.TargetUserId, StringComparison.Ordinal) &&
+            string.Equals(other.TargetUserId, rule.SourceUserId, StringComparison.Ordinal) &&
+            string.Equals(other.RuleType, rule.RuleType, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool IsBidirectional(CustomPairingRuleModel rule) => FindReciprocalRule(rule) != null;
+
+    private async Task EnsureBidirectionalRuleAsync(CustomPairingRuleModel rule)
+    {
+        if (Event?.PublicId == null ||
+            string.IsNullOrEmpty(CurrentUserId) ||
+            string.IsNullOrEmpty(rule.SourceUserId) ||
+            string.IsNullOrEmpty(rule.TargetUserId) ||
+            IsBidirectional(rule))
+        {
+            return;
+        }
+
+        try
+        {
+            var reciprocalRule = new CustomPairingRuleModel
+            {
+                SourceUserId = rule.TargetUserId,
+                TargetUserId = rule.SourceUserId,
+                RuleType = rule.RuleType,
+                RuleDescription = string.IsNullOrWhiteSpace(rule.RuleDescription)
+                    ? "Cannot be matched together"
+                    : rule.RuleDescription
+            };
+
+            await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, reciprocalRule, CurrentUserId);
+            await LoadPairingRules();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task ToggleBidirectionalRuleAsync(CustomPairingRuleModel rule)
+    {
+        if (Event?.PublicId == null ||
+            string.IsNullOrEmpty(CurrentUserId) ||
+            string.IsNullOrEmpty(rule.SourceUserId) ||
+            string.IsNullOrEmpty(rule.TargetUserId))
+        {
+            return;
+        }
+
+        var reciprocalRule = FindReciprocalRule(rule);
+        if (reciprocalRule is null)
+        {
+            await EnsureBidirectionalRuleAsync(rule);
+            return;
+        }
+
+        try
+        {
+            await EventService.RemovePairingRuleAsync(reciprocalRule.Id, CurrentUserId);
+            await LoadPairingRules();
         }
         catch (Exception ex)
         {
@@ -347,5 +491,11 @@
         _showResetConfirm = false;
         _showFinalConfirm = false;
         _resetErrorMessage = null;
+    }
+
+    private void CancelDrawConfirmation()
+    {
+        _showDrawConfirm = false;
+        _showFinalDrawConfirm = false;
     }
 }

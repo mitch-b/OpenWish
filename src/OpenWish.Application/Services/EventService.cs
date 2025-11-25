@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -370,17 +371,26 @@ public class EventService(
         return true;
     }
 
-    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
+    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventUser = await context.EventUsers
-                .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.UserId == userId);
+            .Include(eu => eu.Event)
+                .ThenInclude(e => e.CreatedBy)
+            .FirstOrDefaultAsync(eu =>
+                eu.EventId == eventId &&
+                eu.UserId == userId &&
+                !eu.Deleted);
 
-        if (eventUser == null)
+        if (eventUser?.Event == null)
         {
             return false;
         }
+
+        ValidateEventCreatorPermission(eventUser.Event, requestorId);
 
         var wishlists = await context.Wishlists
                 .Where(w => w.EventId == eventId && w.OwnerId == userId && !w.Deleted)
@@ -451,12 +461,13 @@ public class EventService(
             userId,
             "Event Invitation",
             $"You've been invited to the event: {eventEntity.Name}",
-            "EventInvite");
+            "EventInvite",
+            BuildEventInvitationAction(eventEntity.PublicId, eventUser.Id));
 
         // Send email notification
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var inviteLink = $"{baseUri}/events/{eventId}";
+        var inviteLink = $"{baseUri}/events/{eventEntity.PublicId}";
         await _emailSender.SendEventInviteEmailAsync(
             user.Email ?? string.Empty,
             inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -517,7 +528,7 @@ public class EventService(
         // Send email invitation
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var inviteLink = $"{baseUri}/events/{eventId}/accept-invite?email={Uri.EscapeDataString(email)}";
+        var inviteLink = $"{baseUri}/events/{eventEntity.PublicId}/accept-invite?email={Uri.EscapeDataString(email)}";
         await _emailSender.SendEventInviteEmailAsync(
             email,
             inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -579,7 +590,12 @@ public class EventService(
                 creatorId,
                 "Invitation Accepted",
                 $"{userName} has accepted the invitation to {eventUser.Event.Name}",
-                "EventInviteAccept");
+                "EventInviteAccept",
+                new NotificationActionModel
+                {
+                    Type = "EventInvitationResponse",
+                    NavigateTo = $"/events/{eventUser.Event.PublicId}"
+                });
         }
         else
         {
@@ -666,10 +682,10 @@ public class EventService(
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
 
-        if (eventUser.UserId != null && eventUser.User != null)
+            if (eventUser.UserId != null && eventUser.User != null)
         {
             // Registered user invitation
-            var inviteLink = $"{baseUri}/events/{eventUser.EventId}";
+                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.User.Email ?? string.Empty,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -682,12 +698,13 @@ public class EventService(
                 eventUser.UserId,
                 "Event Invitation Reminder",
                 $"Reminder: You've been invited to the event: {eventUser.Event.Name}",
-                "EventInvite");
+                "EventInvite",
+                BuildEventInvitationAction(eventUser.Event.PublicId, eventUser.Id));
         }
-        else if (eventUser.InviteeEmail != null)
+            else if (eventUser.InviteeEmail != null)
         {
             // Email invitation
-            var inviteLink = $"{baseUri}/events/{eventUser.EventId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
+                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.InviteeEmail,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -763,15 +780,17 @@ public class EventService(
         return await AddUserToEventAsync(eventEntity.Id, userId, role);
     }
 
-    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId)
+    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
-        return await RemoveUserFromEventAsync(eventEntity.Id, userId);
+        return await RemoveUserFromEventAsync(eventEntity.Id, userId, requestorId);
     }
 
     public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)
@@ -928,6 +947,24 @@ public class EventService(
         {
             throw new UnauthorizedAccessException("Only the event creator can perform this action");
         }
+    }
+
+    private static NotificationActionModel BuildEventInvitationAction(string eventPublicId, int eventUserId)
+    {
+        var action = new NotificationActionModel
+        {
+            Type = "EventInvitation",
+            NavigateTo = $"/events/{eventPublicId}",
+            Options = new List<NotificationActionOptionModel>
+            {
+                new() { Key = "accept", Label = "Accept", IsPrimary = true },
+                new() { Key = "decline", Label = "Decline" }
+            }
+        };
+
+        action.Parameters["eventPublicId"] = eventPublicId;
+        action.Parameters["eventUserId"] = eventUserId.ToString(CultureInfo.InvariantCulture);
+        return action;
     }
 
     // Gift Exchange methods

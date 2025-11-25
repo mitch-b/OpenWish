@@ -11,4 +11,5 @@ public class Notification : BaseEntity
     public string UserId { get; set; }
     public ApplicationUser User { get; set; }
     public ApplicationUser? SenderUser { get; set; }
+    public string? ActionData { get; set; }
 }

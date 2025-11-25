@@ -6,7 +6,7 @@
 
 <div class="friend-requests">
     <h4 class="mb-3">Friend Requests</h4>
-    
+
     @if (_loading)
     {
         <div class="spinner-border spinner-border-sm" role="status">
@@ -41,7 +41,7 @@
             }
         </div>
     }
-    
+
     @if (_sentRequests.Any())
     {
         <h5 class="mt-4 mb-3">Sent Requests</h5>
@@ -53,14 +53,24 @@
                         <i class="bi bi-person-circle me-2"></i>
                         @request.Receiver?.UserName
                     </div>
-                    <div>
+                    <div class="d-flex gap-2 align-items-center">
                         <span class="badge bg-secondary">Pending</span>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Sent request actions">
+                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1" @onclick="() => ResendSentRequest(request.Id)" title="Resend invitation">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                <span>Resend</span>
+                            </button>
+                            <button class="btn btn-outline-danger d-flex align-items-center gap-1" @onclick="() => CancelSentRequest(request.Id)" title="Cancel invitation">
+                                <i class="bi bi-trash"></i>
+                                <span>Cancel</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             }
         </div>
     }
-    
+
     @if (_error)
     {
         <div class="alert alert-danger mt-3">
@@ -75,12 +85,12 @@
     private bool _loading = true;
     private bool _error = false;
     private string? _currentUserId;
-    
+
     protected override async Task OnInitializedAsync()
     {
         await LoadRequests();
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _error && _currentUserId == null)
@@ -89,7 +99,7 @@
             await LoadRequests();
         }
     }
-    
+
     private async Task LoadRequests()
     {
         try
@@ -97,12 +107,12 @@
             _loading = true;
             _error = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
-            
+
             if (_currentUserId != null)
             {
                 var receivedRequests = await FriendService.GetReceivedFriendRequestsAsync(_currentUserId);
                 _receivedRequests = receivedRequests.ToList();
-                
+
                 var sentRequests = await FriendService.GetSentFriendRequestsAsync(_currentUserId);
                 _sentRequests = sentRequests.ToList();
             }
@@ -117,13 +127,13 @@
             StateHasChanged();
         }
     }
-    
+
     private async Task AcceptRequest(int requestId)
     {
         try
         {
             _currentUserId ??= await UserContextService.GetUserIdAsync();
-            
+
             if (_currentUserId != null)
             {
                 await FriendService.AcceptFriendRequestAsync(requestId, _currentUserId);
@@ -136,16 +146,54 @@
             StateHasChanged();
         }
     }
-    
+
     private async Task RejectRequest(int requestId)
     {
         try
         {
             _currentUserId ??= await UserContextService.GetUserIdAsync();
-            
+
             if (_currentUserId != null)
             {
                 await FriendService.RejectFriendRequestAsync(requestId, _currentUserId);
+                await LoadRequests();
+            }
+        }
+        catch
+        {
+            _error = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CancelSentRequest(int requestId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await FriendService.CancelFriendRequestAsync(requestId, _currentUserId);
+                await LoadRequests();
+            }
+        }
+        catch
+        {
+            _error = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResendSentRequest(int requestId)
+    {
+        try
+        {
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await FriendService.ResendFriendRequestAsync(requestId, _currentUserId);
                 await LoadRequests();
             }
         }

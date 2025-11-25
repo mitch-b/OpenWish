@@ -65,7 +65,9 @@ public class OpenWishProfile : Profile
             .ReverseMap();
         CreateMap<NotificationModel, Notification>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
-            .ReverseMap();
+            .ForMember(dest => dest.ActionData, opt => opt.MapFrom(src => NotificationActionMapper.Serialize(src.Action)))
+            .ReverseMap()
+            .ForMember(dest => dest.Action, opt => opt.MapFrom(src => NotificationActionMapper.Deserialize(src.ActionData)));
         CreateMap<GiftExchangeModel, GiftExchange>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();

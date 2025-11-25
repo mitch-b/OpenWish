@@ -98,6 +98,13 @@
     margin-top: 0.25rem;
 }
 
+.notification-cta {
+    margin-top: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
 .notification-actions {
     display: flex;
     align-items: center;

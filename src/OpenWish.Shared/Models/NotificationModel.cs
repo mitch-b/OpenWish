@@ -11,4 +11,5 @@ public class NotificationModel : BaseEntityModel
     public string UserId { get; set; }
     public ApplicationUserModel? User { get; set; }
     public ApplicationUserModel? SenderUser { get; set; }
+    public NotificationActionModel? Action { get; set; }
 }

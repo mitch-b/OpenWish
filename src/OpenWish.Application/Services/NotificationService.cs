@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using OpenWish.Application.Models;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
@@ -54,7 +55,13 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         return _mapper.Map<NotificationModel>(notification);
     }
 
-    public async Task<NotificationModel> CreateNotificationAsync(string senderUserId, string targetUserId, string title, string message, string type)
+    public async Task<NotificationModel> CreateNotificationAsync(
+        string senderUserId,
+        string targetUserId,
+        string title,
+        string message,
+        string type,
+        NotificationActionModel? action = null)
     {
         var notification = new Notification
         {
@@ -65,6 +72,7 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
             Type = type,
             Date = DateTimeOffset.UtcNow,
             IsRead = false,
+            ActionData = NotificationActionMapper.Serialize(action),
             CreatedOn = DateTimeOffset.UtcNow,
             UpdatedOn = DateTimeOffset.UtcNow
         };

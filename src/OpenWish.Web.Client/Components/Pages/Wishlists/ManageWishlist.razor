@@ -47,97 +47,111 @@ else
         </div>
     </div>
 
-    <div class="card mt-4">
+    <div class="card mt-4 friends-access-card">
         <div class="card-body">
-            <h4 class="h5"><i class="bi bi-people"></i> Friends with Access</h4>
+            <div class="section-header">
+                <div class="section-icon">👀</div>
+                <div>
+                    <h4 class="h5 mb-0">Who Can See This?</h4>
+                    <p class="text-muted small mb-0">Manage who has access to your wishlist</p>
+                </div>
+            </div>
 
             @if (_loadingFriendsWithAccess)
             {
-                <div class="d-flex align-items-center">
-                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <span>Loading friends...</span>
+                    <span>Finding your friends...</span>
                 </div>
             }
             else if (_friendsWithAccess.Count == 0)
             {
-                @if (_wishlist.IsPrivate)
-                {
-                    <div class="alert alert-info mb-3">
-                        <i class="bi bi-lock"></i> This wishlist is private. Only you can see it.
-                    </div>
-                }
-                else if (_wishlist.IsFriendsOnly)
-                {
-                    <div class="alert alert-info mb-3">
-                        <i class="bi bi-person-check"></i> This wishlist is set to "Specific Friends Only" but no friends have been granted access yet.
-                    </div>
-                }
-                else
-                {
-                    <div class="alert alert-info mb-3">
-                        <i class="bi bi-people"></i> All your friends can see this wishlist, but you don't have any friends yet.
-                        <a href="/friends" class="alert-link">Add friends</a>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="mb-3">
+                <div class="empty-state-card">
                     @if (_wishlist.IsPrivate)
                     {
-                        <span class="badge bg-secondary me-2"><i class="bi bi-lock"></i> Private</span>
+                        <div class="empty-icon">🔐</div>
+                        <h5>Secret Mode Activated!</h5>
+                        <p>This wishlist is private. Only you can see it – your wishes are safe with you!</p>
                     }
                     else if (_wishlist.IsFriendsOnly)
                     {
-                        <span class="badge bg-info me-2"><i class="bi bi-person-check"></i> Specific Friends Only</span>
+                        <div class="empty-icon">🎯</div>
+                        <h5>Ready to Share?</h5>
+                        <p>Your wishlist is set to "Specific Friends Only" but you haven't added anyone yet. Use the dropdown below to invite friends!</p>
                     }
                     else
                     {
-                        <span class="badge bg-success me-2"><i class="bi bi-people"></i> All Friends</span>
+                        <div class="empty-icon">💫</div>
+                        <h5>No Friends Yet</h5>
+                        <p>All your friends can see this wishlist, but it looks like you're new here!</p>
+                        <a href="/friends" class="btn btn-primary btn-fun">
+                            <span>🤝</span> Find Friends
+                        </a>
                     }
-                    <span class="text-muted">@_friendsWithAccess.Count friend(s) can see this wishlist</span>
+                </div>
+            }
+            else
+            {
+                <div class="visibility-status">
+                    @if (_wishlist.IsPrivate)
+                    {
+                        <span class="status-badge status-private">🔐 Private</span>
+                    }
+                    else if (_wishlist.IsFriendsOnly)
+                    {
+                        <span class="status-badge status-specific">🎯 Specific Friends</span>
+                    }
+                    else
+                    {
+                        <span class="status-badge status-all">👥 All Friends</span>
+                    }
+                    <span class="friend-count">@_friendsWithAccess.Count friend@(_friendsWithAccess.Count != 1 ? "s" : "") can see this</span>
                 </div>
 
-                <ul class="list-group">
+                <div class="friends-grid">
                     @foreach (var friend in _friendsWithAccess)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-person-circle me-2"></i>
-                                @(friend.UserName ?? friend.Email ?? "Unknown")
+                        <div class="friend-chip">
+                            <div class="friend-avatar">
+                                @((friend.UserName ?? friend.Email ?? "?")[0].ToString().ToUpper())
                             </div>
+                            <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
                             @if (_wishlist.IsFriendsOnly || _wishlist.IsPrivate)
                             {
-                                <button class="btn btn-outline-danger btn-sm"
+                                <button class="remove-btn"
                                         @onclick="() => RemoveFriendAccess(friend.Id!)"
-                                        disabled="@_sharingBusy">
-                                    <i class="bi bi-x"></i> Remove Access
+                                        disabled="@_sharingBusy"
+                                        title="Remove access">
+                                    ✕
                                 </button>
                             }
-                        </li>
+                        </div>
                     }
-                </ul>
+                </div>
             }
 
             @if (_wishlist.IsFriendsOnly && _availableFriendsToShare.Count > 0)
             {
-                <div class="mt-3">
-                    <h6>Add Friend Access</h6>
-                    <div class="input-group">
-                        <select class="form-select" @bind="_selectedFriendToShareId" disabled="@_sharingBusy">
-                            <option value="">Select a friend</option>
+                <div class="add-friend-section">
+                    <div class="add-friend-header">
+                        <span class="add-icon">➕</span>
+                        <span>Add a Friend</span>
+                    </div>
+                    <div class="add-friend-form">
+                        <select class="form-select friend-select" @bind="_selectedFriendToShareId" disabled="@_sharingBusy">
+                            <option value="">Choose a friend to invite...</option>
                             @foreach (var friend in _availableFriendsToShare)
                             {
                                 <option value="@friend.Id">@(friend.UserName ?? friend.Email ?? "Unknown")</option>
                             }
                         </select>
-                        <button class="btn btn-primary"
+                        <button class="btn btn-primary btn-add"
                                 type="button"
                                 disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy)"
                                 @onclick="AddFriendAccess">
-                            <i class="bi bi-plus"></i> Add
+                            <span>🎁</span> Share
                         </button>
                     </div>
                 </div>
@@ -145,12 +159,16 @@ else
 
             @if (!string.IsNullOrEmpty(_sharingStatusMessage))
             {
-                <div class="alert alert-success mt-3" role="alert">@_sharingStatusMessage</div>
+                <div class="alert alert-success success-toast mt-3" role="alert">
+                    <span>✨</span> @_sharingStatusMessage
+                </div>
             }
 
             @if (!string.IsNullOrEmpty(_sharingErrorMessage))
             {
-                <div class="alert alert-danger mt-3" role="alert">@_sharingErrorMessage</div>
+                <div class="alert alert-danger error-toast mt-3" role="alert">
+                    <span>😕</span> @_sharingErrorMessage
+                </div>
             }
         </div>
     </div>

@@ -28,34 +28,51 @@
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
-        <fieldset class="mb-3">
-            <legend class="form-label h6">Visibility</legend>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="visibility" id="visibilityAllFriends"
-                       checked="@(!Model.IsPrivate && !Model.IsFriendsOnly)"
-                       @onchange="@(() => SetVisibility(false, false))" />
-                <label class="form-check-label" for="visibilityAllFriends">
-                    <i class="bi bi-people"></i> All Friends
-                    <div class="form-text">All your friends can see this wishlist</div>
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="visibility" id="visibilitySpecificFriends"
-                       checked="@(!Model.IsPrivate && Model.IsFriendsOnly)"
-                       @onchange="@(() => SetVisibility(false, true))" />
-                <label class="form-check-label" for="visibilitySpecificFriends">
-                    <i class="bi bi-person-check"></i> Specific Friends Only
-                    <div class="form-text">Only friends you choose can see this wishlist (manage in sharing settings)</div>
-                </label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="visibility" id="visibilityPrivate"
-                       checked="@Model.IsPrivate"
-                       @onchange="@(() => SetVisibility(true, false))" />
-                <label class="form-check-label" for="visibilityPrivate">
-                    <i class="bi bi-lock"></i> Private
-                    <div class="form-text">Only you can see this wishlist</div>
-                </label>
+        <fieldset class="mb-4">
+            <legend class="form-label h6 mb-3">🔒 Who can see this wishlist?</legend>
+            <div class="visibility-options">
+                <div class="visibility-option @(!Model.IsPrivate && !Model.IsFriendsOnly ? "selected" : "")" 
+                     @onclick="@(() => SetVisibility(false, false))">
+                    <div class="visibility-icon">👥</div>
+                    <div class="visibility-content">
+                        <div class="visibility-title">All Friends</div>
+                        <div class="visibility-desc">Everyone in your friend list can see this wishlist</div>
+                    </div>
+                    <div class="visibility-check">
+                        @if (!Model.IsPrivate && !Model.IsFriendsOnly)
+                        {
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        }
+                    </div>
+                </div>
+                <div class="visibility-option @(!Model.IsPrivate && Model.IsFriendsOnly ? "selected" : "")" 
+                     @onclick="@(() => SetVisibility(false, true))">
+                    <div class="visibility-icon">🎯</div>
+                    <div class="visibility-content">
+                        <div class="visibility-title">Specific Friends Only</div>
+                        <div class="visibility-desc">Hand-pick who gets to see your wishlist</div>
+                    </div>
+                    <div class="visibility-check">
+                        @if (!Model.IsPrivate && Model.IsFriendsOnly)
+                        {
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        }
+                    </div>
+                </div>
+                <div class="visibility-option @(Model.IsPrivate ? "selected" : "")" 
+                     @onclick="@(() => SetVisibility(true, false))">
+                    <div class="visibility-icon">🔐</div>
+                    <div class="visibility-content">
+                        <div class="visibility-title">Private</div>
+                        <div class="visibility-desc">Keep it secret, keep it safe – only you can see it</div>
+                    </div>
+                    <div class="visibility-check">
+                        @if (Model.IsPrivate)
+                        {
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        }
+                    </div>
+                </div>
             </div>
         </fieldset>
 

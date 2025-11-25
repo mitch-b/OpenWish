@@ -64,7 +64,7 @@ else
                                     {
                                         <button class="btn btn-outline-secondary btn-sm"
                                                 disabled="@_isSubmitting"
-                                                @onclick="async () => await HandleDetachWishlistAsync(wishlist.Id)">
+                                                @onclick="() => PromptWishlistRemoval(wishlist.Id)">
                                             Remove
                                         </button>
                                     }
@@ -170,7 +170,7 @@ else
                                                         {
                                                             <button class="btn btn-outline-secondary btn-sm"
                                                                     disabled="@_isSubmitting"
-                                                                    @onclick="async () => await HandleDetachWishlistAsync(wishlist.Id)">
+                                                                    @onclick="() => PromptWishlistRemoval(wishlist.Id)">
                                                                 Remove
                                                             </button>
                                                         }
@@ -189,6 +189,41 @@ else
                     </div>
                 }
             </section>
+        </div>
+    </div>
+}
+
+@if (_showRemoveConfirmation && _wishlistPendingRemoval is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Remove Wishlist</h5>
+                    <button type="button" class="btn-close" @onclick="CancelWishlistRemoval" disabled="@_isSubmitting"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to remove <strong>@_wishlistPendingRemoval.Name</strong> from this event?</p>
+                    <p class="mb-0 text-muted">The wishlist remains available elsewhere, but participants will no longer see it in this event.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelWishlistRemoval" disabled="@_isSubmitting">Cancel</button>
+                    <button type="button"
+                            class="btn btn-danger"
+                            @onclick="ConfirmWishlistRemovalAsync"
+                            disabled="@_isSubmitting">
+                        @if (_isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Removing…</span>
+                        }
+                        else
+                        {
+                            <span>Remove</span>
+                        }
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 }
@@ -212,6 +247,8 @@ else
     private bool _isInitialized;
     private bool _hasLoaded;
     private bool _isEventOwner;
+    private bool _showRemoveConfirmation;
+    private WishlistModel? _wishlistPendingRemoval;
     private string _lastEventId = string.Empty;
 
     protected override async Task OnParametersSetAsync()
@@ -356,6 +393,46 @@ else
         });
 
         _selectedWishlistId = null;
+    }
+
+    private void PromptWishlistRemoval(int wishlistId)
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        var wishlist = _eventWishlists.FirstOrDefault(w => w.Id == wishlistId);
+        if (wishlist == null)
+        {
+            return;
+        }
+
+        _wishlistPendingRemoval = wishlist;
+        _showRemoveConfirmation = true;
+    }
+
+    private void CancelWishlistRemoval()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _wishlistPendingRemoval = null;
+        _showRemoveConfirmation = false;
+    }
+
+    private async Task ConfirmWishlistRemovalAsync()
+    {
+        if (_wishlistPendingRemoval is null)
+        {
+            return;
+        }
+
+        await HandleDetachWishlistAsync(_wishlistPendingRemoval.Id);
+        _wishlistPendingRemoval = null;
+        _showRemoveConfirmation = false;
     }
 
     private async Task HandleDetachWishlistAsync(int wishlistId)

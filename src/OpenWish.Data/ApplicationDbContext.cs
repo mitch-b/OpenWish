@@ -178,7 +178,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<WishlistPermission>()
             .HasOne(wp => wp.Wishlist)
-            .WithMany()
+            .WithMany(w => w.Permissions)
             .HasForeignKey(wp => wp.WishlistId)
             .OnDelete(DeleteBehavior.NoAction);
 

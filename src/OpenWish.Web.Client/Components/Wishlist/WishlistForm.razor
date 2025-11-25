@@ -28,13 +28,36 @@
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
-        <div class="mb-3 form-check">
-            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
-            <label class="form-check-label" for="isPrivate">
-                Private Wishlist (only you can see it - uncheck to make it visible to friends)
-            </label>
-            <ValidationMessage For="@(() => Model.IsPrivate)" />
-        </div>
+        <fieldset class="mb-3">
+            <legend class="form-label h6">Visibility</legend>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="visibility" id="visibilityAllFriends"
+                       checked="@(!Model.IsPrivate && !Model.IsFriendsOnly)"
+                       @onchange="@(() => SetVisibility(false, false))" />
+                <label class="form-check-label" for="visibilityAllFriends">
+                    <i class="bi bi-people"></i> All Friends
+                    <div class="form-text">All your friends can see this wishlist</div>
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="visibility" id="visibilitySpecificFriends"
+                       checked="@(!Model.IsPrivate && Model.IsFriendsOnly)"
+                       @onchange="@(() => SetVisibility(false, true))" />
+                <label class="form-check-label" for="visibilitySpecificFriends">
+                    <i class="bi bi-person-check"></i> Specific Friends Only
+                    <div class="form-text">Only friends you choose can see this wishlist (manage in sharing settings)</div>
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="visibility" id="visibilityPrivate"
+                       checked="@Model.IsPrivate"
+                       @onchange="@(() => SetVisibility(true, false))" />
+                <label class="form-check-label" for="visibilityPrivate">
+                    <i class="bi bi-lock"></i> Private
+                    <div class="form-text">Only you can see this wishlist</div>
+                </label>
+            </div>
+        </fieldset>
 
         <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
@@ -55,6 +78,15 @@ else
     [Parameter] public WishlistModel? Model { get; set; }
     [Parameter] public EventCallback<WishlistModel> OnSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+
+    private void SetVisibility(bool isPrivate, bool isFriendsOnly)
+    {
+        if (Model is not null)
+        {
+            Model.IsPrivate = isPrivate;
+            Model.IsFriendsOnly = isFriendsOnly;
+        }
+    }
 
     private async Task HandleSubmit()
     {

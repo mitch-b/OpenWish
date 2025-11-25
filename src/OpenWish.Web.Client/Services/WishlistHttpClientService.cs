@@ -311,4 +311,16 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
         return await response.Content.ReadFromJsonAsync<ItemReservationModel>();
     }
+
+    public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>($"{BaseUrl}/{wishlistId}/friends-with-access")
+            ?? [];
+    }
+
+    public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessByPublicIdAsync(string wishlistPublicId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>($"{BaseUrl}/{wishlistPublicId}/friends-with-access")
+            ?? [];
+    }
 }

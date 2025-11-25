@@ -526,9 +526,17 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                 .Select(f => f.UserId))
             .ToListAsync();
 
-        // Get public wishlists (non-private) from friends
+        // Get wishlists that the user has explicit permission to access (for friends-only wishlists)
+        var permittedWishlistIds = await context.WishlistPermissions
+            .Where(wp => wp.UserId == userId && !wp.Deleted)
+            .Select(wp => wp.WishlistId)
+            .ToListAsync();
+
+        // Get public wishlists (non-private, not friends-only) from friends OR wishlists with explicit permissions
         var wishlists = await context.Wishlists
-            .Where(w => friendIds.Contains(w.OwnerId) && !w.Deleted && !w.IsPrivate)
+            .Where(w => !w.Deleted && !w.IsPrivate &&
+                ((friendIds.Contains(w.OwnerId) && !w.IsFriendsOnly) ||
+                 permittedWishlistIds.Contains(w.Id)))
             .Include(w => w.Owner)
             .Include(w => w.Items.Where(i => !i.Deleted))
             .ToListAsync();
@@ -565,7 +573,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             return true;
         }
 
-        if (!wishlist.IsPrivate)
+        // If wishlist is not private and not friends-only, check if user is a friend
+        if (!wishlist.IsPrivate && !wishlist.IsFriendsOnly)
         {
             var isFriend = await context.Friends
                 .AnyAsync(f =>
@@ -982,6 +991,60 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
         return await GetItemReservationAsync(wishlist.Id, itemId);
+    }
+
+    public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
+
+        // Get all friends of the wishlist owner
+        var allFriends = await context.Friends
+            .AsNoTracking()
+            .Include(f => f.FriendUser)
+            .Where(f => f.UserId == wishlist.OwnerId && !f.Deleted)
+            .Select(f => f.FriendUser)
+            .ToListAsync();
+
+        // If the wishlist is private, no friends have access (only explicit permissions)
+        if (wishlist.IsPrivate)
+        {
+            // Return only friends who have explicit permissions
+            var permittedUserIds = await context.WishlistPermissions
+                .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)
+                .Select(wp => wp.UserId)
+                .ToListAsync();
+
+            var friendsWithPermission = allFriends.Where(f => permittedUserIds.Contains(f.Id)).ToList();
+            return _mapper.Map<IEnumerable<ApplicationUserModel>>(friendsWithPermission);
+        }
+
+        // If the wishlist is friends-only, only friends with explicit permissions have access
+        if (wishlist.IsFriendsOnly)
+        {
+            var permittedUserIds = await context.WishlistPermissions
+                .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)
+                .Select(wp => wp.UserId)
+                .ToListAsync();
+
+            var friendsWithPermission = allFriends.Where(f => permittedUserIds.Contains(f.Id)).ToList();
+            return _mapper.Map<IEnumerable<ApplicationUserModel>>(friendsWithPermission);
+        }
+
+        // If the wishlist is public to friends, all friends have access
+        return _mapper.Map<IEnumerable<ApplicationUserModel>>(allFriends);
+    }
+
+    public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessByPublicIdAsync(string wishlistPublicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        return await GetFriendsWithAccessAsync(wishlist.Id);
     }
 
     private async Task<List<WishlistItemModel>> MapWishlistItemsAsync(ApplicationDbContext context, IQueryable<WishlistItem> query)

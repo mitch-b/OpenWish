@@ -15,4 +15,5 @@ public class WishlistModel : BaseEntityModel
     public ICollection<WishlistItemModel> Items { get; set; } = [];
     public ICollection<WishlistPermissionModel> Permissions { get; set; } = [];
     public bool IsPrivate { get; set; }
+    public bool IsFriendsOnly { get; set; } // When true, only friends with explicit permissions can see (not all friends)
 }

@@ -1008,21 +1008,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Select(f => f.FriendUser)
             .ToListAsync();
 
-        // If the wishlist is private, no friends have access (only explicit permissions)
-        if (wishlist.IsPrivate)
-        {
-            // Return only friends who have explicit permissions
-            var permittedUserIds = await context.WishlistPermissions
-                .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)
-                .Select(wp => wp.UserId)
-                .ToListAsync();
-
-            var friendsWithPermission = allFriends.Where(f => permittedUserIds.Contains(f.Id)).ToList();
-            return _mapper.Map<IEnumerable<ApplicationUserModel>>(friendsWithPermission);
-        }
-
-        // If the wishlist is friends-only, only friends with explicit permissions have access
-        if (wishlist.IsFriendsOnly)
+        // If the wishlist is private or friends-only, only friends with explicit permissions have access
+        if (wishlist.IsPrivate || wishlist.IsFriendsOnly)
         {
             var permittedUserIds = await context.WishlistPermissions
                 .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)

@@ -371,17 +371,26 @@ public class EventService(
         return true;
     }
 
-    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
+    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventUser = await context.EventUsers
-                .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.UserId == userId);
+            .Include(eu => eu.Event)
+                .ThenInclude(e => e.CreatedBy)
+            .FirstOrDefaultAsync(eu =>
+                eu.EventId == eventId &&
+                eu.UserId == userId &&
+                !eu.Deleted);
 
-        if (eventUser == null)
+        if (eventUser?.Event == null)
         {
             return false;
         }
+
+        ValidateEventCreatorPermission(eventUser.Event, requestorId);
 
         var wishlists = await context.Wishlists
                 .Where(w => w.EventId == eventId && w.OwnerId == userId && !w.Deleted)
@@ -771,15 +780,17 @@ public class EventService(
         return await AddUserToEventAsync(eventEntity.Id, userId, role);
     }
 
-    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId)
+    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
-        return await RemoveUserFromEventAsync(eventEntity.Id, userId);
+        return await RemoveUserFromEventAsync(eventEntity.Id, userId, requestorId);
     }
 
     public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)

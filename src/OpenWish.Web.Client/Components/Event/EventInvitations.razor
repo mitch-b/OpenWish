@@ -19,6 +19,20 @@
             }
         </div>
 
+        @if (!string.IsNullOrEmpty(_inlineErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_inlineErrorMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(_inlineSuccessMessage))
+        {
+            <div class="alert alert-success" role="alert">
+                @_inlineSuccessMessage
+            </div>
+        }
+
         @if (_isLoading)
         {
             <div class="text-center py-3">
@@ -88,6 +102,16 @@
                                     </button>
                                 </div>
                             }
+                            else if (IsOwner && invitation.Status == "Accepted" && !string.IsNullOrEmpty(invitation.UserId))
+                            {
+                                <div class="btn-group flex-shrink-0">
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => PromptRemoveParticipant(invitation)"
+                                            title="Remove from event">
+                                        <i class="bi bi-person-dash"></i> @("Remove")
+                                    </button>
+                                </div>
+                            }
                             else if (!IsOwner && IsCurrentUserInvitee(invitation) && invitation.Status == "Pending")
                             {
                                 <div class="btn-group flex-shrink-0">
@@ -114,6 +138,46 @@
         }
     </div>
 </div>
+
+@if (_showRemoveConfirmation && _invitationPendingRemoval != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Remove Participant</h5>
+                    <button type="button" class="btn-close" @onclick="CancelRemoveParticipant" disabled="@_isRemovingParticipant"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        Are you sure you want to remove
+                        <strong>@GetInvitationDisplayName(_invitationPendingRemoval)</strong>
+                        from this event?
+                    </p>
+                    <p class="text-muted mb-0">
+                        They will lose access to event details and any attached wishlists.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelRemoveParticipant" disabled="@_isRemovingParticipant">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleRemoveParticipantAsync" disabled="@_isRemovingParticipant">
+                        @if (_isRemovingParticipant)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            @("Removing...")
+                        }
+                        else
+                        {
+                            <i class="bi bi-person-dash"></i> @(textContent: "Remove")
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (_showInviteModal)
 {
@@ -242,12 +306,17 @@
     private bool _isLoading = true;
     private bool _showInviteModal = false;
     private bool _isSending = false;
+    private bool _showRemoveConfirmation = false;
+    private bool _isRemovingParticipant;
     private string _filter = "All";
     private string _inviteMode = "email";
     private string _emailToInvite = string.Empty;
     private string _friendSearchTerm = string.Empty;
     private string? _errorMessage;
     private string? _successMessage;
+    private string? _inlineErrorMessage;
+    private string? _inlineSuccessMessage;
+    private EventUserModel? _invitationPendingRemoval;
 
     private IEnumerable<EventUserModel> FilteredInvitations =>
         _filter == "All" ? _invitations : _invitations.Where(i => i.Status == _filter);
@@ -549,6 +618,98 @@
         {
             _errorMessage = ex.Message;
         }
+    }
+
+    private void PromptRemoveParticipant(EventUserModel invitation)
+    {
+        _inlineErrorMessage = null;
+        _inlineSuccessMessage = null;
+
+        if (invitation == null || string.IsNullOrEmpty(invitation.UserId))
+        {
+            _inlineErrorMessage = "Unable to remove this participant.";
+            return;
+        }
+
+        _invitationPendingRemoval = invitation;
+        _showRemoveConfirmation = true;
+    }
+
+    private void CancelRemoveParticipant()
+    {
+        if (_isRemovingParticipant)
+        {
+            return;
+        }
+
+        _showRemoveConfirmation = false;
+        _invitationPendingRemoval = null;
+    }
+
+    private async Task HandleRemoveParticipantAsync()
+    {
+        if (_invitationPendingRemoval == null || string.IsNullOrEmpty(_invitationPendingRemoval.UserId))
+        {
+            _inlineErrorMessage = "Unable to remove this participant.";
+            _showRemoveConfirmation = false;
+            return;
+        }
+
+        _inlineErrorMessage = null;
+        _inlineSuccessMessage = null;
+        _isRemovingParticipant = true;
+
+        try
+        {
+            var requestorId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrEmpty(requestorId))
+            {
+                _inlineErrorMessage = "You must be logged in to remove participants.";
+                return;
+            }
+
+            var removed = await EventService.RemoveUserFromEventByPublicIdAsync(EventId, _invitationPendingRemoval.UserId, requestorId);
+            if (!removed)
+            {
+                _inlineErrorMessage = "Participant could not be removed.";
+                return;
+            }
+
+            var removedName = GetInvitationDisplayName(_invitationPendingRemoval);
+            _inlineSuccessMessage = $"Removed {removedName} from the event.";
+            _showRemoveConfirmation = false;
+            _invitationPendingRemoval = null;
+
+            await LoadInvitations();
+        }
+        catch (Exception ex)
+        {
+            _inlineErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isRemovingParticipant = false;
+        }
+    }
+
+    private static string GetInvitationDisplayName(EventUserModel invitation)
+    {
+        if (!string.IsNullOrWhiteSpace(invitation.User?.UserName))
+        {
+            return invitation.User.UserName!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(invitation.User?.Email))
+        {
+            return invitation.User.Email!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(invitation.InviteeEmail))
+        {
+            return invitation.InviteeEmail;
+        }
+
+        return "this participant";
     }
 
     private static string GetStatusBadgeClass(string status) => status switch

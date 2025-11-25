@@ -38,7 +38,7 @@ else
                     <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">
                         <i class="bi bi-arrow-left"></i> Back to Event
                     </button>
-                    <button class="btn btn-danger" type="button" @onclick="HandleDeleteEvent">
+                    <button class="btn btn-danger" type="button" @onclick="ShowDeleteConfirmation">
                         <i class="bi bi-trash"></i> Delete Event
                     </button>
                 </div>
@@ -129,6 +129,53 @@ else
     </div>
 }
 
+@if (_showDeleteConfirmation && _event is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Event</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDeleteEvent" disabled="@_isDeleting"></button>
+                </div>
+                <div class="modal-body">
+                    @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
+                    {
+                        <p>Deleting <strong>@_event.Name</strong> will remove all wishlists, participants, and activity. This action cannot be undone.</p>
+                        <p class="mb-0">Click "Continue" to confirm once more before permanently deleting the event.</p>
+                    }
+                    else
+                    {
+                        <p>This is your final confirmation. Once you delete <strong>@_event.Name</strong>, it cannot be restored.</p>
+                        <p class="text-danger mb-0">Are you absolutely sure you want to permanently delete this event?</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDeleteEvent" disabled="@_isDeleting">Cancel</button>
+                    @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
+                    {
+                        <button type="button" class="btn btn-warning" @onclick="ConfirmFirstDeleteStep">Continue</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteEventAsync" disabled="@_isDeleting">
+                            @if (_isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span>Delete Event</span>
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 <OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
@@ -136,6 +183,9 @@ else
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
+    private bool _showDeleteConfirmation;
+    private bool _isDeleting;
+    private DeleteConfirmationStep _deleteConfirmationStep = DeleteConfirmationStep.First;
 
     protected override async Task OnInitializedAsync()
     {
@@ -168,23 +218,67 @@ else
         NavigationManager.NavigateTo($"/events/{EventId}");
     }
 
-    private async Task HandleDeleteEvent()
+    private void ShowDeleteConfirmation()
     {
-        if (_event != null)
+        if (_event == null)
+        {
+            return;
+        }
+
+        _deleteConfirmationStep = DeleteConfirmationStep.First;
+        _showDeleteConfirmation = true;
+    }
+
+    private void CancelDeleteEvent()
+    {
+        if (_isDeleting)
+        {
+            return;
+        }
+
+        _showDeleteConfirmation = false;
+        _deleteConfirmationStep = DeleteConfirmationStep.First;
+    }
+
+    private void ConfirmFirstDeleteStep()
+    {
+        if (_event == null)
+        {
+            return;
+        }
+
+        _deleteConfirmationStep = DeleteConfirmationStep.Second;
+    }
+
+    private async Task ConfirmDeleteEventAsync()
+    {
+        if (_event == null || _isDeleting)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+
+        try
         {
             await EventService.DeleteEventByPublicIdAsync(EventId);
+            _showDeleteConfirmation = false;
             NavigationManager.NavigateTo("/events");
+        }
+        finally
+        {
+            _isDeleting = false;
         }
     }
 
     private async Task HandleRemoveParticipant(EventUserModel participant)
     {
-        if (participant.User?.Id is null)
+        if (participant.User?.Id is null || string.IsNullOrEmpty(_currentUserId))
         {
             return;
         }
 
-        await EventService.RemoveUserFromEventByPublicIdAsync(EventId, participant.User.Id);
+        await EventService.RemoveUserFromEventByPublicIdAsync(EventId, participant.User.Id, _currentUserId);
         await LoadEvent();
     }
 
@@ -276,5 +370,11 @@ else
         }
 
         return Task.CompletedTask;
+    }
+
+    private enum DeleteConfirmationStep
+    {
+        First,
+        Second
     }
 }

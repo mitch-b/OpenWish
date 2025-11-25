@@ -47,8 +47,10 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId)
+    public async Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         var response = await httpClient.DeleteAsync($"api/events/{eventId}/users/{userId}");
         return response.IsSuccessStatusCode;
     }
@@ -157,8 +159,10 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId)
+    public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId);
+
         var response = await httpClient.DeleteAsync($"api/events/{eventPublicId}/users/{userId}");
         return response.IsSuccessStatusCode;
     }

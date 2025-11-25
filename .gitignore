@@ -10,6 +10,11 @@ app.db-wal
 .env.openwish
 docker-compose.*.yml
 
+# certificates
+*.crt
+*.key
+*.pfx
+
 .idea
 
 # User-specific files

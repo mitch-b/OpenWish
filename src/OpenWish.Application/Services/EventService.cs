@@ -458,7 +458,7 @@ public class EventService(
         // Send email notification
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var inviteLink = $"{baseUri}/events/{eventId}";
+        var inviteLink = $"{baseUri}/events/{eventEntity.PublicId}";
         await _emailSender.SendEventInviteEmailAsync(
             user.Email ?? string.Empty,
             inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -519,7 +519,7 @@ public class EventService(
         // Send email invitation
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var inviteLink = $"{baseUri}/events/{eventId}/accept-invite?email={Uri.EscapeDataString(email)}";
+        var inviteLink = $"{baseUri}/events/{eventEntity.PublicId}/accept-invite?email={Uri.EscapeDataString(email)}";
         await _emailSender.SendEventInviteEmailAsync(
             email,
             inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -673,10 +673,10 @@ public class EventService(
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
 
-        if (eventUser.UserId != null && eventUser.User != null)
+            if (eventUser.UserId != null && eventUser.User != null)
         {
             // Registered user invitation
-            var inviteLink = $"{baseUri}/events/{eventUser.EventId}";
+                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.User.Email ?? string.Empty,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -692,10 +692,10 @@ public class EventService(
                 "EventInvite",
                 BuildEventInvitationAction(eventUser.Event.PublicId, eventUser.Id));
         }
-        else if (eventUser.InviteeEmail != null)
+            else if (eventUser.InviteeEmail != null)
         {
             // Email invitation
-            var inviteLink = $"{baseUri}/events/{eventUser.EventId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
+                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.InviteeEmail,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",

@@ -981,7 +981,8 @@ public class EventService(
             throw new ArgumentException("Invitation email is required to claim an event invite.", nameof(email));
         }
 
-        var normalizedEmail = email.Trim();
+        var normalizedEmail = NormalizeEmail(email)
+            ?? throw new ArgumentException("Invitation email is required to claim an event invite.", nameof(email));
 
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -990,7 +991,7 @@ public class EventService(
             ?? throw new KeyNotFoundException($"User with id {userId} not found");
 
         if (string.IsNullOrWhiteSpace(user.Email) ||
-            !string.Equals(user.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+            !string.Equals(NormalizeEmail(user.Email), normalizedEmail, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Sign in with the email address that received this invitation.");
         }
@@ -1013,12 +1014,15 @@ public class EventService(
             return null;
         }
 
+        var updatedParticipantLink = false;
+
         if (string.IsNullOrEmpty(eventUser.UserId))
         {
             eventUser.UserId = userId;
             eventUser.UpdatedOn = DateTimeOffset.UtcNow;
             await context.SaveChangesAsync();
             eventUser.User = user;
+            updatedParticipantLink = true;
         }
         else if (eventUser.User == null)
         {
@@ -1028,6 +1032,11 @@ public class EventService(
         if (eventUser.Event == null)
         {
             eventUser.Event = eventEntity;
+        }
+
+        if (updatedParticipantLink)
+        {
+            await UpdateEventParticipantReferencesAsync(context, eventEntity.Id, userId, normalizedEmail);
         }
 
         return _mapper.Map<EventUserModel>(eventUser);
@@ -1040,7 +1049,12 @@ public class EventService(
             return false;
         }
 
-        var normalizedEmail = user.Email.Trim();
+        var normalizedEmail = NormalizeEmail(user.Email);
+
+        if (string.IsNullOrEmpty(normalizedEmail))
+        {
+            return false;
+        }
 
         var pendingEmailInvites = await context.EventUsers
             .Where(eu =>
@@ -1056,13 +1070,22 @@ public class EventService(
             return false;
         }
 
+        var affectedEventIds = new HashSet<int>();
+
         foreach (var eventUser in pendingEmailInvites)
         {
             eventUser.UserId = user.Id;
             eventUser.UpdatedOn = DateTimeOffset.UtcNow;
+            affectedEventIds.Add(eventUser.EventId);
         }
 
         await context.SaveChangesAsync();
+
+        foreach (var eventId in affectedEventIds)
+        {
+            await UpdateEventParticipantReferencesAsync(context, eventId, user.Id, normalizedEmail);
+        }
+
         return true;
     }
 
@@ -1122,11 +1145,7 @@ public class EventService(
             throw new InvalidOperationException("Names have already been drawn for this event.");
         }
 
-        // Get all participants (owner + all invited users, regardless of acceptance status)
-        var participants = new List<string> { eventEntity.CreatedBy.Id };
-        participants.AddRange(eventEntity.EventUsers
-            .Where(eu => !eu.Deleted && !string.IsNullOrEmpty(eu.UserId))
-            .Select(eu => eu.UserId!));
+        var participants = BuildGiftExchangeParticipants(eventEntity);
 
         if (participants.Count < 2)
         {
@@ -1136,7 +1155,11 @@ public class EventService(
         // Get exclusion rules
         var exclusions = eventEntity.PairingRules
             .Where(pr => pr.RuleType == "Exclusion" && !pr.Deleted)
-            .Select(pr => (pr.SourceUserId, pr.TargetUserId))
+            .Select(pr => new PairingExclusion(
+                pr.SourceUserId,
+                NormalizeEmail(pr.SourceInviteeEmail),
+                pr.TargetUserId,
+                NormalizeEmail(pr.TargetInviteeEmail)))
             .ToList();
 
         // Perform name drawing with exclusions
@@ -1154,13 +1177,15 @@ public class EventService(
         context.GiftExchanges.RemoveRange(existingExchanges);
 
         // Create gift exchange records
-        foreach (var (giverId, receiverId) in assignments)
+        foreach (var (giver, receiver) in assignments)
         {
             var giftExchange = new GiftExchange
             {
                 EventId = eventId,
-                GiverId = giverId,
-                ReceiverId = receiverId,
+                GiverId = giver.UserId,
+                GiverEmail = giver.Email,
+                ReceiverId = receiver.UserId,
+                ReceiverEmail = receiver.Email,
                 IsAnonymous = false,
                 ReceiverPreferences = string.Empty,
                 Budget = eventEntity.Budget,
@@ -1177,23 +1202,23 @@ public class EventService(
 
         // Send notifications to all participants
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        foreach (var (giverId, receiverId) in assignments)
+        var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
+        foreach (var (giver, receiver) in assignments)
         {
-            var giver = await context.Users.FindAsync(giverId);
-            var receiver = await context.Users.FindAsync(receiverId);
+            var receiverName = receiver.DisplayName;
 
-            if (giver?.Email != null && receiver != null)
+            if (!string.IsNullOrWhiteSpace(giver.UserId))
             {
-                var receiverName = receiver.UserName ?? receiver.Email ?? "someone";
-                var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
-
                 await _notificationService.CreateNotificationAsync(
                     ownerId,
-                    giverId,
+                    giver.UserId!,
                     "Gift Exchange Names Drawn!",
                     $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
                     "GiftExchangeDrawn");
+            }
 
+            if (!string.IsNullOrWhiteSpace(giver.Email))
+            {
                 await _emailSender.SendGiftExchangeDrawnEmailAsync(
                     giver.Email,
                     eventEntity.Name,
@@ -1308,17 +1333,76 @@ public class EventService(
         return await ResetGiftExchangeAsync(eventEntity.Id, ownerId);
     }
 
-    private static List<(string giverId, string receiverId)>? DrawNamesWithExclusions(
-        List<string> participants,
-        List<(string sourceId, string targetId)> exclusions)
+    private sealed record GiftExchangeParticipant(string Key, string? UserId, string Email, string NormalizedEmail, string DisplayName);
+    private sealed record PairingExclusion(string? SourceUserId, string? SourceEmail, string? TargetUserId, string? TargetEmail);
+
+    private static List<GiftExchangeParticipant> BuildGiftExchangeParticipants(Event eventEntity)
+    {
+        ArgumentNullException.ThrowIfNull(eventEntity);
+
+        if (eventEntity.CreatedBy == null)
+        {
+            throw new InvalidOperationException("Event is missing the organizer details needed for drawing names.");
+        }
+
+        var participants = new List<GiftExchangeParticipant>();
+        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void AddParticipant(string key, string? userId, string? email, string? displayName)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                var name = displayName ?? userId ?? "Participant";
+                throw new InvalidOperationException($"Cannot include {name} in the gift exchange because no email address is on file.");
+            }
+
+            if (seenKeys.Add(key))
+            {
+                var trimmedEmail = email.Trim();
+                var normalizedEmail = NormalizeEmail(trimmedEmail)!;
+                var resolvedName = string.IsNullOrWhiteSpace(displayName) ? trimmedEmail : displayName;
+                participants.Add(new GiftExchangeParticipant(key, userId, trimmedEmail, normalizedEmail, resolvedName));
+            }
+        }
+
+        AddParticipant($"user:{eventEntity.CreatedBy.Id}",
+            eventEntity.CreatedBy.Id,
+            eventEntity.CreatedBy.Email,
+            eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
+
+        foreach (var eventUser in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        {
+            if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
+            {
+                AddParticipant($"user:{eventUser.UserId}",
+                    eventUser.UserId,
+                    eventUser.User.Email,
+                    eventUser.User.UserName ?? eventUser.User.Email ?? eventUser.UserId);
+            }
+            else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
+            {
+                var normalizedEmail = eventUser.InviteeEmail.Trim();
+                AddParticipant($"invite:{eventUser.Id}",
+                    null,
+                    normalizedEmail,
+                    normalizedEmail);
+            }
+        }
+
+        return participants;
+    }
+
+    private static List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>? DrawNamesWithExclusions(
+        IReadOnlyList<GiftExchangeParticipant> participants,
+        List<PairingExclusion> exclusions)
     {
         const int maxAttempts = 1000;
         var random = new Random();
 
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            var receivers = new List<string>(participants);
-            var assignments = new List<(string giverId, string receiverId)>();
+            var receivers = participants.ToList();
+            var assignments = new List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>();
             var isValid = true;
 
             // Shuffle receivers
@@ -1335,14 +1419,16 @@ public class EventService(
                 var receiver = receivers[i];
 
                 // Check if giver is assigned to themselves
-                if (giver == receiver)
+                if (ReferenceEquals(giver, receiver) || string.Equals(giver.Key, receiver.Key, StringComparison.Ordinal))
                 {
                     isValid = false;
                     break;
                 }
 
-                // Check if assignment violates exclusion rules
-                if (exclusions.Any(e => e.sourceId == giver && e.targetId == receiver))
+                // Check if assignment violates exclusion rules (only meaningful for registered users)
+                if (exclusions.Any(e =>
+                        MatchesParticipant(e.SourceUserId, e.SourceEmail, giver) &&
+                        MatchesParticipant(e.TargetUserId, e.TargetEmail, receiver)))
                 {
                     isValid = false;
                     break;
@@ -1358,6 +1444,118 @@ public class EventService(
         }
 
         return null; // Failed to find valid assignment
+    }
+
+    private static bool MatchesParticipant(string? userId, string? email, GiftExchangeParticipant participant)
+    {
+        if (!string.IsNullOrEmpty(userId) && string.Equals(participant.UserId, userId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            return string.Equals(participant.NormalizedEmail, NormalizeEmail(email), StringComparison.Ordinal);
+        }
+
+        return false;
+    }
+
+    private static bool ParticipantExists(IEnumerable<GiftExchangeParticipant> participants, string? userId, string? normalizedEmail) =>
+        participants.Any(p =>
+            (!string.IsNullOrEmpty(userId) && string.Equals(p.UserId, userId, StringComparison.Ordinal)) ||
+            (!string.IsNullOrEmpty(normalizedEmail) && string.Equals(p.NormalizedEmail, normalizedEmail, StringComparison.Ordinal)));
+
+    private static bool HasParticipantIdentifier(string? userId, string? normalizedEmail) =>
+        !string.IsNullOrEmpty(userId) || !string.IsNullOrEmpty(normalizedEmail);
+
+    private static bool AreSameParticipant(string? firstUserId, string? firstEmail, string? secondUserId, string? secondEmail)
+    {
+        if (!string.IsNullOrEmpty(firstUserId) && string.Equals(firstUserId, secondUserId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var normalizedFirstEmail = NormalizeEmail(firstEmail);
+        var normalizedSecondEmail = NormalizeEmail(secondEmail);
+
+        if (!string.IsNullOrEmpty(normalizedFirstEmail) &&
+            !string.IsNullOrEmpty(normalizedSecondEmail) &&
+            string.Equals(normalizedFirstEmail, normalizedSecondEmail, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string? NormalizeEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+    private static bool EmailEquals(string? email, string normalizedEmail) =>
+        string.Equals(NormalizeEmail(email), normalizedEmail, StringComparison.Ordinal);
+
+    private static async Task UpdateEventParticipantReferencesAsync(ApplicationDbContext context, int eventId, string userId, string? normalizedEmail)
+    {
+        if (string.IsNullOrEmpty(normalizedEmail))
+        {
+            return;
+        }
+
+        var giftExchanges = await context.GiftExchanges
+            .Where(ge => ge.EventId == eventId && !ge.Deleted)
+            .Where(ge =>
+                (ge.GiverId == null && ge.GiverEmail != null && EF.Functions.ILike(ge.GiverEmail, normalizedEmail)) ||
+                (ge.ReceiverId == null && ge.ReceiverEmail != null && EF.Functions.ILike(ge.ReceiverEmail, normalizedEmail)))
+            .ToListAsync();
+
+        var pairingRules = await context.CustomPairingRules
+            .Where(rule => rule.EventId == eventId && !rule.Deleted)
+            .Where(rule =>
+                (rule.SourceUserId == null && rule.SourceInviteeEmail != null && EF.Functions.ILike(rule.SourceInviteeEmail, normalizedEmail)) ||
+                (rule.TargetUserId == null && rule.TargetInviteeEmail != null && EF.Functions.ILike(rule.TargetInviteeEmail, normalizedEmail)))
+            .ToListAsync();
+
+        var updated = false;
+
+        foreach (var exchange in giftExchanges)
+        {
+            if (exchange.GiverId == null && EmailEquals(exchange.GiverEmail, normalizedEmail))
+            {
+                exchange.GiverId = userId;
+                exchange.UpdatedOn = DateTimeOffset.UtcNow;
+                updated = true;
+            }
+
+            if (exchange.ReceiverId == null && EmailEquals(exchange.ReceiverEmail, normalizedEmail))
+            {
+                exchange.ReceiverId = userId;
+                exchange.UpdatedOn = DateTimeOffset.UtcNow;
+                updated = true;
+            }
+        }
+
+        foreach (var rule in pairingRules)
+        {
+            if (rule.SourceUserId == null && EmailEquals(rule.SourceInviteeEmail, normalizedEmail))
+            {
+                rule.SourceUserId = userId;
+                rule.UpdatedOn = DateTimeOffset.UtcNow;
+                updated = true;
+            }
+
+            if (rule.TargetUserId == null && EmailEquals(rule.TargetInviteeEmail, normalizedEmail))
+            {
+                rule.TargetUserId = userId;
+                rule.UpdatedOn = DateTimeOffset.UtcNow;
+                updated = true;
+            }
+        }
+
+        if (updated)
+        {
+            await context.SaveChangesAsync();
+        }
     }
 
     public async Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId)
@@ -1429,6 +1627,8 @@ public class EventService(
 
         var eventEntity = await context.Events
             .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
             .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
 
@@ -1437,6 +1637,31 @@ public class EventService(
         if (eventEntity.NamesDrawnOn.HasValue)
         {
             throw new InvalidOperationException("Cannot add pairing rules after names have been drawn.");
+        }
+
+        var participants = BuildGiftExchangeParticipants(eventEntity);
+        rule.SourceInviteeEmail = NormalizeEmail(rule.SourceInviteeEmail);
+        rule.TargetInviteeEmail = NormalizeEmail(rule.TargetInviteeEmail);
+
+        if (!HasParticipantIdentifier(rule.SourceUserId, rule.SourceInviteeEmail))
+        {
+            throw new InvalidOperationException("Select the first participant for this rule.");
+        }
+
+        if (!HasParticipantIdentifier(rule.TargetUserId, rule.TargetInviteeEmail))
+        {
+            throw new InvalidOperationException("Select the second participant for this rule.");
+        }
+
+        if (AreSameParticipant(rule.SourceUserId, rule.SourceInviteeEmail, rule.TargetUserId, rule.TargetInviteeEmail))
+        {
+            throw new InvalidOperationException("Participants in an exclusion rule must be different.");
+        }
+
+        if (!ParticipantExists(participants, rule.SourceUserId, rule.SourceInviteeEmail) ||
+            !ParticipantExists(participants, rule.TargetUserId, rule.TargetInviteeEmail))
+        {
+            throw new InvalidOperationException("Participants must belong to this event.");
         }
 
         var ruleEntity = _mapper.Map<CustomPairingRule>(rule);

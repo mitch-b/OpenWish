@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using OpenWish.Data;
@@ -11,9 +12,11 @@ using OpenWish.Data;
 namespace OpenWish.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251126233037_GiftExchangeInviteeEmails")]
+    partial class GiftExchangeInviteeEmails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -369,16 +372,12 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("SourceInviteeEmail")
-                        .HasColumnType("text");
-
                     b.Property<string>("SourceUserId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TargetInviteeEmail")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("TargetUserId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("UpdatedOn")
@@ -1517,12 +1516,14 @@ namespace OpenWish.Data.Migrations
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "SourceUser")
                         .WithMany()
                         .HasForeignKey("SourceUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "TargetUser")
                         .WithMany()
                         .HasForeignKey("TargetUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Event");
 

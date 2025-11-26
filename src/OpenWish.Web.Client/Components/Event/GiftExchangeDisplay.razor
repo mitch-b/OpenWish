@@ -11,7 +11,7 @@
         </div>
     </div>
 }
-else if (_giftExchange != null && _giftExchange.Receiver != null)
+else if (_giftExchange != null)
 {
     <div class="card border-success shadow-lg mb-4">
         <div class="card-header bg-success text-white">
@@ -21,7 +21,7 @@ else if (_giftExchange != null && _giftExchange.Receiver != null)
             <div class="alert alert-success" role="alert">
                 <h4 class="alert-heading">🎁 You're Shopping For:</h4>
                 <hr>
-                <h2 class="display-4 text-center my-4">@(_giftExchange.Receiver.UserName ?? _giftExchange.Receiver.Email)</h2>
+                <h2 class="display-4 text-center my-4">@RecipientDisplayName</h2>
             </div>
 
             @if (_recipientWishlist != null)
@@ -29,14 +29,14 @@ else if (_giftExchange != null && _giftExchange.Receiver != null)
                 <div class="mt-4">
                     <h5><i class="bi bi-list-check"></i> Their Wishlist:</h5>
                     <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary btn-lg w-100 mt-2">
-                        <i class="bi bi-eye"></i> View @(_giftExchange.Receiver.UserName ?? "Their") Wishlist
+                        <i class="bi bi-eye"></i> View @(RecipientDisplayName)'s Wishlist
                     </a>
                 </div>
             }
             else
             {
                 <div class="alert alert-info mt-4">
-                    <i class="bi bi-info-circle"></i> @(_giftExchange.Receiver.UserName ?? "This person") hasn't attached a wishlist to this event yet.
+                    <i class="bi bi-info-circle"></i> @(RecipientDisplayName) hasn't attached a wishlist to this event yet.
                 </div>
             }
 
@@ -59,6 +59,11 @@ else if (_giftExchange != null && _giftExchange.Receiver != null)
     private WishlistModel? _recipientWishlist;
     private bool _loading = true;
 
+    private string RecipientDisplayName => _giftExchange?.Receiver?.UserName
+        ?? _giftExchange?.Receiver?.Email
+        ?? _giftExchange?.ReceiverEmail
+        ?? "your match";
+
     protected override async Task OnParametersSetAsync()
     {
         await LoadGiftExchange();
@@ -70,11 +75,15 @@ else if (_giftExchange != null && _giftExchange.Receiver != null)
         try
         {
             _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
-            
+
             if (_giftExchange?.ReceiverId != null && EventWishlists != null)
             {
                 _recipientWishlist = EventWishlists
                     .FirstOrDefault(w => w.OwnerId == _giftExchange.ReceiverId);
+            }
+            else
+            {
+                _recipientWishlist = null;
             }
         }
         catch (Exception)

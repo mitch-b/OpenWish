@@ -170,9 +170,9 @@
                                 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
                                     <div>
                                         <span>
-                                            <strong>@(rule.SourceUser?.UserName ?? rule.SourceUser?.Email ?? "Participant")</strong>
+                                            <strong>@FormatRuleParticipant(rule, true)</strong>
                                             cannot be matched with
-                                            <strong>@(rule.TargetUser?.UserName ?? rule.TargetUser?.Email ?? "Participant")</strong>
+                                            <strong>@FormatRuleParticipant(rule, false)</strong>
                                         </span>
                                     </div>
                                     <div class="d-flex flex-wrap gap-2 justify-content-end">
@@ -205,26 +205,26 @@
                             <div class="row g-2">
                                 <div class="col-md-5">
                                     <label class="form-label">Person 1</label>
-                                    <select class="form-select" @bind="_newRuleSourceId">
+                                    <select class="form-select" @bind="_newRuleSourceKey">
                                         <option value="">Select...</option>
                                         @foreach (var participant in _participants)
                                         {
-                                            <option value="@participant.Id">@participant.UserName</option>
+                                            <option value="@participant.Key">@participant.Label</option>
                                         }
                                     </select>
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label">Person 2</label>
-                                    <select class="form-select" @bind="_newRuleTargetId">
+                                    <select class="form-select" @bind="_newRuleTargetKey">
                                         <option value="">Select...</option>
                                         @foreach (var participant in _participants)
                                         {
-                                            <option value="@participant.Id">@participant.UserName</option>
+                                            <option value="@participant.Key">@participant.Label</option>
                                         }
                                     </select>
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
-                                    <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(string.IsNullOrEmpty(_newRuleSourceId) || string.IsNullOrEmpty(_newRuleTargetId))">
+                                    <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton)">
                                         <i class="bi bi-plus"></i> Add
                                     </button>
                                 </div>
@@ -254,7 +254,7 @@
     [Parameter] public EventCallback OnNamesDrawn { get; set; }
 
     private List<CustomPairingRuleModel> _pairingRules = new();
-    private List<ApplicationUserModel> _participants = new();
+    private List<ParticipantOption> _participants = new();
     private bool _drawing = false;
     private bool _resetting = false;
     private bool _showAddRule = false;
@@ -262,11 +262,15 @@
     private bool _showFinalConfirm = false;
     private bool _showDrawConfirm = false;
     private bool _showFinalDrawConfirm = false;
-    private string? _newRuleSourceId;
-    private string? _newRuleTargetId;
+    private string? _newRuleSourceKey;
+    private string? _newRuleTargetKey;
     private string? _errorMessage;
     private string? _resetErrorMessage;
     private int _participantCount = 0;
+    private bool DisableAddRuleButton =>
+        string.IsNullOrEmpty(_newRuleSourceKey) ||
+        string.IsNullOrEmpty(_newRuleTargetKey) ||
+        string.Equals(_newRuleSourceKey, _newRuleTargetKey, StringComparison.Ordinal);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -283,26 +287,46 @@
 
         _participants.Clear();
 
-        // Add event owner
+        bool HasUser(string userId) => _participants.Any(p => string.Equals(p.UserId, userId, StringComparison.Ordinal));
+        bool HasEmail(string email) => _participants.Any(p => !string.IsNullOrEmpty(p.Email) && string.Equals(p.Email, email, StringComparison.OrdinalIgnoreCase));
+
         if (Event.CreatedBy != null)
         {
-            _participants.Add(Event.CreatedBy);
+            _participants.Add(new ParticipantOption(
+                $"user:{Event.CreatedBy.Id}",
+                Event.CreatedBy.UserName ?? Event.CreatedBy.Email ?? "Event Owner",
+                Event.CreatedBy.Id,
+                Event.CreatedBy.Email));
         }
 
-        // Add all invited participants (regardless of acceptance status)
         if (Event.EventUsers != null)
         {
-            foreach (var eu in Event.EventUsers.Where(eu => !eu.Deleted && eu.User != null))
+            foreach (var eventUser in Event.EventUsers.Where(eu => !eu.Deleted))
             {
-                if (eu.User != null && !_participants.Any(p => p.Id == eu.User.Id))
+                if (eventUser.User != null)
                 {
-                    _participants.Add(eu.User);
+                    if (!HasUser(eventUser.User.Id))
+                    {
+                        _participants.Add(new ParticipantOption(
+                            $"user:{eventUser.User.Id}",
+                            eventUser.User.UserName ?? eventUser.User.Email ?? "Participant",
+                            eventUser.User.Id,
+                            eventUser.User.Email));
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
+                {
+                    var normalizedEmail = eventUser.InviteeEmail.Trim();
+                    if (!HasEmail(normalizedEmail))
+                    {
+                        _participants.Add(new ParticipantOption(
+                            $"invite:{eventUser.Id}",
+                            $"{normalizedEmail} (email invite)",
+                            null,
+                            normalizedEmail));
+                    }
                 }
             }
-
-            // Count email-only invitees (not yet registered) as potential participants
-            _participantCount = _participants.Count + Event.EventUsers.Count(eu => !eu.Deleted && eu.User == null && !string.IsNullOrEmpty(eu.InviteeEmail));
-            return;
         }
 
         _participantCount = _participants.Count;
@@ -348,15 +372,36 @@
 
     private async Task AddRule()
     {
-        if (Event?.PublicId == null || string.IsNullOrEmpty(_newRuleSourceId) || string.IsNullOrEmpty(_newRuleTargetId))
+        _errorMessage = null;
+
+        if (Event?.PublicId == null || string.IsNullOrEmpty(_newRuleSourceKey) || string.IsNullOrEmpty(_newRuleTargetKey))
+        {
             return;
+        }
+
+        if (string.Equals(_newRuleSourceKey, _newRuleTargetKey, StringComparison.Ordinal))
+        {
+            _errorMessage = "Select two different participants for an exclusion.";
+            return;
+        }
+
+        var source = FindParticipant(_newRuleSourceKey);
+        var target = FindParticipant(_newRuleTargetKey);
+
+        if (source is null || target is null)
+        {
+            _errorMessage = "Selected participants are no longer available.";
+            return;
+        }
 
         try
         {
             var rule = new CustomPairingRuleModel
             {
-                SourceUserId = _newRuleSourceId,
-                TargetUserId = _newRuleTargetId,
+                SourceUserId = source.UserId,
+                SourceInviteeEmail = source.IsEmailOnly ? source.Email : null,
+                TargetUserId = target.UserId,
+                TargetInviteeEmail = target.IsEmailOnly ? target.Email : null,
                 RuleType = "Exclusion",
                 RuleDescription = "Cannot be matched together"
             };
@@ -364,8 +409,8 @@
             await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, rule, CurrentUserId);
             await LoadPairingRules();
 
-            _newRuleSourceId = null;
-            _newRuleTargetId = null;
+            _newRuleSourceKey = null;
+            _newRuleTargetKey = null;
             _showAddRule = false;
         }
         catch (Exception ex)
@@ -374,19 +419,11 @@
         }
     }
 
-    private CustomPairingRuleModel? FindReciprocalRule(CustomPairingRuleModel rule)
-    {
-        if (string.IsNullOrEmpty(rule.SourceUserId) || string.IsNullOrEmpty(rule.TargetUserId))
-        {
-            return null;
-        }
-
-        return _pairingRules.FirstOrDefault(other =>
+    private CustomPairingRuleModel? FindReciprocalRule(CustomPairingRuleModel rule) =>
+        _pairingRules.FirstOrDefault(other =>
             other.Id != rule.Id &&
-            string.Equals(other.SourceUserId, rule.TargetUserId, StringComparison.Ordinal) &&
-            string.Equals(other.TargetUserId, rule.SourceUserId, StringComparison.Ordinal) &&
+            ParticipantsMatch(rule, other) &&
             string.Equals(other.RuleType, rule.RuleType, StringComparison.OrdinalIgnoreCase));
-    }
 
     private bool IsBidirectional(CustomPairingRuleModel rule) => FindReciprocalRule(rule) != null;
 
@@ -394,9 +431,9 @@
     {
         if (Event?.PublicId == null ||
             string.IsNullOrEmpty(CurrentUserId) ||
-            string.IsNullOrEmpty(rule.SourceUserId) ||
-            string.IsNullOrEmpty(rule.TargetUserId) ||
-            IsBidirectional(rule))
+            IsBidirectional(rule) ||
+            (!HasParticipantData(rule.SourceUserId, rule.SourceInviteeEmail)) ||
+            (!HasParticipantData(rule.TargetUserId, rule.TargetInviteeEmail)))
         {
             return;
         }
@@ -406,7 +443,9 @@
             var reciprocalRule = new CustomPairingRuleModel
             {
                 SourceUserId = rule.TargetUserId,
+                SourceInviteeEmail = rule.TargetInviteeEmail,
                 TargetUserId = rule.SourceUserId,
+                TargetInviteeEmail = rule.SourceInviteeEmail,
                 RuleType = rule.RuleType,
                 RuleDescription = string.IsNullOrWhiteSpace(rule.RuleDescription)
                     ? "Cannot be matched together"
@@ -426,8 +465,8 @@
     {
         if (Event?.PublicId == null ||
             string.IsNullOrEmpty(CurrentUserId) ||
-            string.IsNullOrEmpty(rule.SourceUserId) ||
-            string.IsNullOrEmpty(rule.TargetUserId))
+            !HasParticipantData(rule.SourceUserId, rule.SourceInviteeEmail) ||
+            !HasParticipantData(rule.TargetUserId, rule.TargetInviteeEmail))
         {
             return;
         }
@@ -497,5 +536,49 @@
     {
         _showDrawConfirm = false;
         _showFinalDrawConfirm = false;
+    }
+
+    private ParticipantOption? FindParticipant(string key) =>
+        _participants.FirstOrDefault(p => string.Equals(p.Key, key, StringComparison.Ordinal));
+
+    private static string FormatRuleParticipant(CustomPairingRuleModel rule, bool isSource)
+    {
+        var user = isSource ? rule.SourceUser : rule.TargetUser;
+        var inviteeEmail = isSource ? rule.SourceInviteeEmail : rule.TargetInviteeEmail;
+        var userId = isSource ? rule.SourceUserId : rule.TargetUserId;
+
+        return user?.UserName
+            ?? user?.Email
+            ?? inviteeEmail
+            ?? (!string.IsNullOrEmpty(userId) ? "Participant" : "Guest");
+    }
+
+    private static bool ParticipantsMatch(CustomPairingRuleModel first, CustomPairingRuleModel second)
+    {
+        return ParticipantEquals(first.SourceUserId, first.SourceInviteeEmail, second.TargetUserId, second.TargetInviteeEmail) &&
+               ParticipantEquals(first.TargetUserId, first.TargetInviteeEmail, second.SourceUserId, second.SourceInviteeEmail);
+    }
+
+    private static bool ParticipantEquals(string? firstUserId, string? firstEmail, string? secondUserId, string? secondEmail)
+    {
+        if (!string.IsNullOrEmpty(firstUserId) && string.Equals(firstUserId, secondUserId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(firstEmail) && !string.IsNullOrWhiteSpace(secondEmail))
+        {
+            return string.Equals(firstEmail, secondEmail, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static bool HasParticipantData(string? userId, string? email) =>
+        !string.IsNullOrEmpty(userId) || !string.IsNullOrWhiteSpace(email);
+
+    private sealed record ParticipantOption(string Key, string Label, string? UserId, string? Email)
+    {
+        public bool IsEmailOnly => string.IsNullOrEmpty(UserId) && !string.IsNullOrWhiteSpace(Email);
     }
 }

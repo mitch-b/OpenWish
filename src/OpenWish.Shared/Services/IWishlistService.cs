@@ -30,6 +30,10 @@ public interface IWishlistService
     Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId);
     Task<bool> CanUserEditWishlistByPublicIdAsync(string wishlistPublicId, string userId);
 
+    // Get friends with access to a wishlist
+    Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId);
+    Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessByPublicIdAsync(string wishlistPublicId);
+
     // WishlistItems
     Task<WishlistItemModel> GetWishlistItemAsync(int wishlistId, int itemId);
     Task<IEnumerable<WishlistItemModel>> GetWishlistItemsAsync(int wishlistId);

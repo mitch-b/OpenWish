@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Globalization;
+using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -682,10 +682,10 @@ public class EventService(
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
 
-            if (eventUser.UserId != null && eventUser.User != null)
+        if (eventUser.UserId != null && eventUser.User != null)
         {
             // Registered user invitation
-                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}";
+            var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.User.Email ?? string.Empty,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",
@@ -701,10 +701,10 @@ public class EventService(
                 "EventInvite",
                 BuildEventInvitationAction(eventUser.Event.PublicId, eventUser.Id));
         }
-            else if (eventUser.InviteeEmail != null)
+        else if (eventUser.InviteeEmail != null)
         {
             // Email invitation
-                var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
+            var inviteLink = $"{baseUri}/events/{eventUser.Event.PublicId}/accept-invite?email={Uri.EscapeDataString(eventUser.InviteeEmail)}";
             await _emailSender.SendEventInviteEmailAsync(
                 eventUser.InviteeEmail,
                 inviter?.UserName ?? inviter?.Email ?? "Someone",

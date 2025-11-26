@@ -351,6 +351,37 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(isReserved);
     }
 
+    [HttpGet("{wishlistPublicId}/friends-with-access")]
+    public async Task<ActionResult<IEnumerable<ApplicationUserModel>>> GetFriendsWithAccess(string wishlistPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            // Verify the requesting user is the owner of the wishlist
+            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+            if (wishlist.OwnerId != userId)
+            {
+                return Forbid();
+            }
+
+            var friends = await _wishlistService.GetFriendsWithAccessByPublicIdAsync(wishlistPublicId);
+            return Ok(friends);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     public class ShareRequest
     {
         public string UserId { get; set; }

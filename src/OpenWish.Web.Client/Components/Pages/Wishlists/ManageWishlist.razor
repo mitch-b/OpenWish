@@ -7,6 +7,7 @@
 @using System.Net.Http
 
 @inject IWishlistService WishlistService
+@inject IFriendService FriendService
 @inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
 @inject ILogger<ManageWishlist> Logger
@@ -43,6 +44,132 @@ else
     <div class="card">
         <div class="card-body">
             <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
+        </div>
+    </div>
+
+    <div class="card mt-4 friends-access-card">
+        <div class="card-body">
+            <div class="section-header">
+                <div class="section-icon">👀</div>
+                <div>
+                    <h4 class="h5 mb-0">Who Can See This?</h4>
+                    <p class="text-muted small mb-0">Manage who has access to your wishlist</p>
+                </div>
+            </div>
+
+            @if (_loadingFriendsWithAccess)
+            {
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Finding your friends...</span>
+                </div>
+            }
+            else if (_friendsWithAccess.Count == 0)
+            {
+                <div class="empty-state-card">
+                    @if (_wishlist.IsPrivate)
+                    {
+                        <div class="empty-icon">🔐</div>
+                        <h5>Secret Mode Activated!</h5>
+                        <p>This wishlist is private. Only you can see it – your wishes are safe with you!</p>
+                    }
+                    else if (_wishlist.IsFriendsOnly)
+                    {
+                        <div class="empty-icon">🎯</div>
+                        <h5>Ready to Share?</h5>
+                        <p>Your wishlist is set to "Specific Friends Only" but you haven't added anyone yet. Use the dropdown below to invite friends!</p>
+                    }
+                    else
+                    {
+                        <div class="empty-icon">💫</div>
+                        <h5>No Friends Yet</h5>
+                        <p>All your friends can see this wishlist, but it looks like you're new here!</p>
+                        <a href="/friends" class="btn btn-primary btn-fun">
+                            <span>🤝</span> Find Friends
+                        </a>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="visibility-status">
+                    @if (_wishlist.IsPrivate)
+                    {
+                        <span class="status-badge status-private">🔐 Private</span>
+                    }
+                    else if (_wishlist.IsFriendsOnly)
+                    {
+                        <span class="status-badge status-specific">🎯 Specific Friends</span>
+                    }
+                    else
+                    {
+                        <span class="status-badge status-all">👥 All Friends</span>
+                    }
+                    <span class="friend-count">@_friendsWithAccess.Count friend@(_friendsWithAccess.Count != 1 ? "s" : "") can see this</span>
+                </div>
+
+                <div class="friends-grid">
+                    @foreach (var friend in _friendsWithAccess)
+                    {
+                        <div class="friend-chip">
+                            <div class="friend-avatar">
+                                @((friend.UserName ?? friend.Email ?? "?")[0].ToString().ToUpper())
+                            </div>
+                            <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
+                            @if (_wishlist.IsFriendsOnly || _wishlist.IsPrivate)
+                            {
+                                <button class="remove-btn"
+                                        @onclick="() => RemoveFriendAccess(friend.Id!)"
+                                        disabled="@_sharingBusy"
+                                        title="Remove access">
+                                    ✕
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (_wishlist.IsFriendsOnly && _availableFriendsToShare.Count > 0)
+            {
+                <div class="add-friend-section">
+                    <div class="add-friend-header">
+                        <span class="add-icon">➕</span>
+                        <span>Add a Friend</span>
+                    </div>
+                    <div class="add-friend-form">
+                        <select class="form-select friend-select" @bind="_selectedFriendToShareId" disabled="@_sharingBusy">
+                            <option value="">Choose a friend to invite...</option>
+                            @foreach (var friend in _availableFriendsToShare)
+                            {
+                                <option value="@friend.Id">@(friend.UserName ?? friend.Email ?? "Unknown")</option>
+                            }
+                        </select>
+                        <button class="btn btn-primary btn-add"
+                                type="button"
+                                disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy)"
+                                @onclick="AddFriendAccess">
+                            <span>🎁</span> Share
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_sharingStatusMessage))
+            {
+                <div class="alert alert-success success-toast mt-3" role="alert">
+                    <span>✨</span> @_sharingStatusMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_sharingErrorMessage))
+            {
+                <div class="alert alert-danger error-toast mt-3" role="alert">
+                    <span>😕</span> @_sharingErrorMessage
+                </div>
+            }
         </div>
     </div>
 
@@ -122,7 +249,7 @@ else
     public string WishlistId { get; set; } = string.Empty;
 
     private WishlistModel? _wishlist;
-    private WishlistDeleteDialog deleteDialog;
+    private WishlistDeleteDialog deleteDialog = null!;
     private string? _currentUserId;
     private bool _isOwner;
     private List<EventModel> _availableEvents = [];
@@ -131,6 +258,16 @@ else
     private bool _eventBusy;
     private string? _eventStatusMessage;
     private string? _eventErrorMessage;
+
+    // Friends with access
+    private List<ApplicationUserModel> _friendsWithAccess = [];
+    private List<ApplicationUserModel> _allFriends = [];
+    private List<ApplicationUserModel> _availableFriendsToShare = [];
+    private bool _loadingFriendsWithAccess = true;
+    private string _selectedFriendToShareId = "";
+    private bool _sharingBusy;
+    private string? _sharingStatusMessage;
+    private string? _sharingErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,7 +279,7 @@ else
 
             if (_isOwner)
             {
-                await RefreshEventsAsync();
+                await Task.WhenAll(RefreshEventsAsync(), RefreshFriendsWithAccessAsync());
             }
         }
         catch (UnauthorizedAccessException)
@@ -166,10 +303,108 @@ else
         return Task.CompletedTask;
     }
 
+    private async Task RefreshFriendsWithAccessAsync()
+    {
+        if (string.IsNullOrEmpty(_currentUserId) || _wishlist == null)
+        {
+            _friendsWithAccess.Clear();
+            _loadingFriendsWithAccess = false;
+            return;
+        }
+
+        try
+        {
+            _loadingFriendsWithAccess = true;
+
+            // Get friends with access
+            _friendsWithAccess = (await WishlistService.GetFriendsWithAccessByPublicIdAsync(WishlistId)).ToList();
+
+            // Get all friends for the add dropdown
+            _allFriends = (await FriendService.GetFriendsAsync(_currentUserId)).ToList();
+
+            // Calculate available friends (those not already with access)
+            var friendsWithAccessIds = _friendsWithAccess.Select(f => f.Id).ToHashSet();
+            _availableFriendsToShare = _allFriends.Where(f => !friendsWithAccessIds.Contains(f.Id)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load friends with access for wishlist {WishlistId}", WishlistId);
+            _friendsWithAccess.Clear();
+        }
+        finally
+        {
+            _loadingFriendsWithAccess = false;
+        }
+    }
+
+    private async Task AddFriendAccess()
+    {
+        if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null)
+            return;
+
+        try
+        {
+            _sharingBusy = true;
+            _sharingErrorMessage = null;
+            _sharingStatusMessage = null;
+
+            await WishlistService.ShareWishlistByPublicIdAsync(WishlistId, _selectedFriendToShareId, "View");
+
+            var friendName = _allFriends.FirstOrDefault(f => f.Id == _selectedFriendToShareId)?.UserName ?? "Friend";
+            _sharingStatusMessage = $"Access granted to {friendName}.";
+            _selectedFriendToShareId = "";
+
+            await RefreshFriendsWithAccessAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add friend access for wishlist {WishlistId}", WishlistId);
+            _sharingErrorMessage = "Failed to grant access. Please try again.";
+        }
+        finally
+        {
+            _sharingBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveFriendAccess(string friendId)
+    {
+        if (string.IsNullOrEmpty(friendId) || _wishlist == null)
+            return;
+
+        try
+        {
+            _sharingBusy = true;
+            _sharingErrorMessage = null;
+            _sharingStatusMessage = null;
+
+            await WishlistService.RemoveWishlistPermissionByPublicIdAsync(WishlistId, friendId);
+
+            var friendName = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId)?.UserName ?? "Friend";
+            _sharingStatusMessage = $"Access removed for {friendName}.";
+
+            await RefreshFriendsWithAccessAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to remove friend access for wishlist {WishlistId}", WishlistId);
+            _sharingErrorMessage = "Failed to remove access. Please try again.";
+        }
+        finally
+        {
+            _sharingBusy = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
         await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist);
-        NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+        // Refresh to show updated visibility
+        _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
+        await RefreshFriendsWithAccessAsync();
+        StateHasChanged();
     }
 
     private void ShowDeleteDialog()

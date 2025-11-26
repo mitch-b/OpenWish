@@ -33,6 +33,7 @@ public interface IEventService
     Task<EventUserModel> InviteByEmailToEventByPublicIdAsync(string eventPublicId, string inviterId, string email);
     Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId);
     Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId);
+    Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email);
     Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId);
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
     Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId);

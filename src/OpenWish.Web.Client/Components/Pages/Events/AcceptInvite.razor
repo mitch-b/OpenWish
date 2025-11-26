@@ -1,0 +1,308 @@
+@page "/events/{EventId}/accept-invite"
+@attribute [AllowAnonymous]
+
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@rendermode InteractiveAuto
+
+<PageTitle>Accept Event Invitation</PageTitle>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="h3 mb-3">You're almost in!</h1>
+
+                    @if (_isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @_errorMessage
+                            </div>
+                        }
+
+                        if (!string.IsNullOrEmpty(_successMessage))
+                        {
+                            <div class="alert alert-success" role="alert">
+                                @_successMessage
+                            </div>
+                        }
+
+                        @if (string.IsNullOrWhiteSpace(InviteEmail))
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                This invitation link is missing the email identifier we need to match you to the event.
+                                Please click the link directly from your invitation email.
+                            </div>
+                        }
+                        else if (!_isAuthenticated)
+                        {
+                            <p class="lead">
+                                Sign in or create an account with <strong>@InviteEmail</strong> to accept your invitation.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")">
+                                    Sign in
+                                </a>
+                                <a class="btn btn-outline-primary" href="@BuildIdentityUrl("Account/Register")">
+                                    Create account
+                                </a>
+                            </div>
+                        }
+                        else if (_invitation == null)
+                        {
+                            <div class="alert alert-warning" role="alert">
+                                We couldn't find a pending invitation for <strong>@InviteEmail</strong>.
+                                Double-check that you're signed in with the same email address that received the invite or ask the host to resend it.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-4">
+                                @if (_event != null)
+                                {
+                                    <div class="mb-3">
+                                        <p class="text-muted mb-1">Event</p>
+                                        <h2 class="h4 mb-0">@_event.Name</h2>
+                                        @if (!string.IsNullOrWhiteSpace(_event.Description))
+                                        {
+                                            <p class="mb-0 text-muted">@_event.Description</p>
+                                        }
+                                        <div class="mt-2 small text-muted">
+                                            <i class="bi bi-calendar-event"></i>
+                                            @_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")
+                                        </div>
+                                        <div class="small text-muted">
+                                            <i class="bi bi-person-circle"></i>
+                                            Hosted by @_event.CreatedBy?.UserName ?? _event.CreatedBy?.Email ?? "a friend"
+                                        </div>
+                                    </div>
+                                }
+
+                                <div class="alert alert-info" role="alert">
+                                    Logged in as <strong>@InviteEmail</strong>
+                                </div>
+
+                                @switch (NormalizeStatus(_invitation.Status))
+                                {
+                                    case "accepted":
+                                        <div class="alert alert-success" role="alert">
+                                            You're already part of this event. Jump in and start planning!
+                                        </div>
+                                        <a class="btn btn-success" href="/events/@EventId">
+                                            Go to event
+                                        </a>
+                                        break;
+                                    case "rejected":
+                                        <div class="alert alert-warning" role="alert">
+                                            You previously declined this invitation. Ask the host to send a new one if you changed your mind.
+                                        </div>
+                                        break;
+                                    default:
+                                        <p class="mb-3">Would you like to accept the invitation?</p>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button class="btn btn-success" @onclick="AcceptInviteAsync" disabled="@_isProcessing">
+                                                @if (_isProcessing && _processingAction == "accept")
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                }
+                                                Accept invite
+                                            </button>
+                                            <button class="btn btn-outline-secondary" @onclick="RejectInviteAsync" disabled="@_isProcessing">
+                                                @if (_isProcessing && _processingAction == "reject")
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                }
+                                                No thanks
+                                            </button>
+                                        </div>
+                                        break;
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string EventId { get; set; } = string.Empty;
+
+    [SupplyParameterFromQuery(Name = "email")]
+    public string? InviteEmail { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private EventModel? _event;
+    private EventUserModel? _invitation;
+    private string? _currentUserId;
+    private bool _isAuthenticated;
+    private bool _isLoading = true;
+    private bool _isProcessing;
+    private string? _processingAction;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+        _invitation = null;
+
+        var authState = await AuthenticationStateTask;
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+
+        if (!_isAuthenticated)
+        {
+            _isLoading = false;
+            return;
+        }
+
+        _currentUserId = await UserContextService.GetUserIdAsync();
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            _errorMessage = "We couldn't determine your account. Please sign in again.";
+            _isLoading = false;
+            return;
+        }
+
+        try
+        {
+            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Unable to load event details: {ex.Message}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(InviteEmail))
+        {
+            try
+            {
+                _invitation = await EventService.ClaimEventInvitationByEmailAsync(EventId, _currentUserId, InviteEmail);
+                if (_invitation == null)
+                {
+                    _errorMessage ??= "We couldn't find a matching invitation.";
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                _errorMessage = ex.Message;
+            }
+            catch (ArgumentException ex)
+            {
+                _errorMessage = ex.Message;
+            }
+        }
+
+        _isLoading = false;
+    }
+
+    private async Task AcceptInviteAsync()
+    {
+        if (_invitation == null || string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        _isProcessing = true;
+        _processingAction = "accept";
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var accepted = await EventService.AcceptEventInvitationAsync(_invitation.Id, _currentUserId);
+            if (accepted)
+            {
+                _invitation.Status = "Accepted";
+                _invitation.IsAccepted = true;
+                _successMessage = "Welcome aboard! You're part of this event now.";
+            }
+            else
+            {
+                _errorMessage = "We couldn't accept the invitation. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+            _processingAction = null;
+        }
+    }
+
+    private async Task RejectInviteAsync()
+    {
+        if (_invitation == null || string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        _isProcessing = true;
+        _processingAction = "reject";
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var rejected = await EventService.RejectEventInvitationAsync(_invitation.Id, _currentUserId);
+            if (rejected)
+            {
+                _invitation.Status = "Rejected";
+                _invitation.IsAccepted = false;
+                _successMessage = "No worries, we've let the host know.";
+            }
+            else
+            {
+                _errorMessage = "We couldn't update your response. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isProcessing = false;
+            _processingAction = null;
+        }
+    }
+
+    private static string NormalizeStatus(string? status)
+    {
+        return string.IsNullOrWhiteSpace(status)
+            ? "pending"
+            : status.Trim().ToLowerInvariant();
+    }
+
+    private string BuildIdentityUrl(string basePath)
+    {
+        var emailQuery = string.IsNullOrWhiteSpace(InviteEmail)
+            ? string.Empty
+            : $"?email={Uri.EscapeDataString(InviteEmail)}";
+        var returnUrl = $"/events/{EventId}/accept-invite{emailQuery}";
+        var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+        return $"/{basePath}?returnUrl={encodedReturnUrl}";
+    }
+}

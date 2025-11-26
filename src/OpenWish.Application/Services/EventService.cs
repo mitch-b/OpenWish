@@ -724,6 +724,14 @@ public class EventService(
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        var user = await context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return Enumerable.Empty<EventUserModel>();
+        }
+
+        await AttachEmailInvitationsToUserAsync(context, user);
+
         var pendingInvitations = await context.EventUsers
             .AsNoTracking()
             .Include(eu => eu.Event)
@@ -1023,6 +1031,39 @@ public class EventService(
         }
 
         return _mapper.Map<EventUserModel>(eventUser);
+    }
+
+    private static async Task<bool> AttachEmailInvitationsToUserAsync(ApplicationDbContext context, ApplicationUser user)
+    {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            return false;
+        }
+
+        var normalizedEmail = user.Email.Trim();
+
+        var pendingEmailInvites = await context.EventUsers
+            .Where(eu =>
+                eu.UserId == null &&
+                !eu.Deleted &&
+                eu.Status == "Pending" &&
+                eu.InviteeEmail != null &&
+                EF.Functions.ILike(eu.InviteeEmail, normalizedEmail))
+            .ToListAsync();
+
+        if (pendingEmailInvites.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var eventUser in pendingEmailInvites)
+        {
+            eventUser.UserId = user.Id;
+            eventUser.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+
+        await context.SaveChangesAsync();
+        return true;
     }
 
     private static void ValidateEventCreatorPermission(Event eventEntity, string userId)

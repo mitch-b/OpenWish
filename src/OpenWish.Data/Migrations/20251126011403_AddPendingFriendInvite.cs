@@ -43,7 +43,7 @@ namespace OpenWish.Data.Migrations
                 table: "PendingFriendInvites",
                 columns: new[] { "SenderUserId", "Email" },
                 unique: true,
-                filter: "[Deleted] = 0");
+                filter: "\"Deleted\" = false");
         }
 
         /// <inheritdoc />

@@ -264,7 +264,7 @@
                                                        type="checkbox"
                                                        id="friend-@friend.Id"
                                                        checked="@isSelected"
-                                                       @onchange="args => ToggleFriendSelection(friend.Id, args.Value is bool selected && selected)" />
+                                                       @onchange="args => ToggleFriendSelection(friend.Id, IsChecked(args.Value))" />
                                                 <div class="friend-option__content">
                                                     <span>@(friend.UserName ?? friend.Email ?? "Unnamed Friend")</span>
                                                     @if (!string.IsNullOrWhiteSpace(friend.Email))
@@ -282,7 +282,7 @@
                                                        type="checkbox"
                                                        id="pending-@pendingInvite.Id"
                                                        checked="@isSelected"
-                                                       @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, args.Value is bool selected && selected)" />
+                                                       @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, IsChecked(args.Value))" />
                                                 <div class="friend-option__content">
                                                     <span>@pendingInvite.Email</span>
                                                     <small class="text-warning"><i class="bi bi-clock-history"></i> Pending registration</small>
@@ -609,6 +609,8 @@
             _selectedPendingInviteEmails.Remove(email);
         }
     }
+
+    private static bool IsChecked(object? value) => value is bool selected && selected;
 
     private static string BuildFriendInviteSuccessMessage(IReadOnlyList<string> friendNames)
     {

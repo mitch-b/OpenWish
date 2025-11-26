@@ -976,7 +976,7 @@ namespace OpenWish.Data.Migrations
 
                     b.HasIndex("SenderUserId", "Email")
                         .IsUnique()
-                        .HasFilter("[Deleted] = 0");
+                        .HasFilter("\"Deleted\" = false");
 
                     b.ToTable("PendingFriendInvites");
                 });

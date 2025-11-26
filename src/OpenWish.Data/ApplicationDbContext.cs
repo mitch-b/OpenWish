@@ -180,7 +180,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<PendingFriendInvite>()
             .HasIndex(pfi => new { pfi.SenderUserId, pfi.Email })
             .IsUnique()
-            .HasFilter("[Deleted] = 0");
+            .HasFilter("\"Deleted\" = false");
 
         // Wishlist permissions
         modelBuilder.Entity<WishlistPermission>()

@@ -143,7 +143,7 @@
             var success = await EventService.AcceptEventInvitationAsync(invitation.Id, _userId);
             if (success)
             {
-                _invitations?.Remove(invitation);
+                _invitations?.RemoveAll(i => i.Id == invitation.Id);
                 if (OnInvitationChanged.HasDelegate)
                 {
                     await OnInvitationChanged.InvokeAsync();
@@ -175,7 +175,7 @@
             var success = await EventService.RejectEventInvitationAsync(invitation.Id, _userId);
             if (success)
             {
-                _invitations?.Remove(invitation);
+                _invitations?.RemoveAll(i => i.Id == invitation.Id);
                 if (OnInvitationChanged.HasDelegate)
                 {
                     await OnInvitationChanged.InvokeAsync();

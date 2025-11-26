@@ -102,6 +102,36 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
+    public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<PendingFriendInviteModel>>($"{BaseUrl}/pending-invites/{userId}")
+            ?? Array.Empty<PendingFriendInviteModel>();
+    }
+
+    public async Task<bool> CancelPendingFriendInviteAsync(int inviteId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{BaseUrl}/pending-invite/{inviteId}/cancel/{userId}", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> ResendPendingFriendInviteAsync(int inviteId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{BaseUrl}/pending-invite/{inviteId}/resend/{userId}", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
     public Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
         // Username search removed for privacy/security reasons

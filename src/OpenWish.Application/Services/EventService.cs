@@ -719,6 +719,28 @@ public class EventService(
         return true;
     }
 
+    public async Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var pendingInvitations = await context.EventUsers
+            .AsNoTracking()
+            .Include(eu => eu.Event)
+                .ThenInclude(e => e.CreatedBy)
+            .Include(eu => eu.User)
+            .Where(eu =>
+                !eu.Deleted &&
+                eu.UserId == userId &&
+                eu.Status == "Pending" &&
+                eu.Event != null &&
+                !eu.Event.Deleted)
+            .OrderByDescending(eu => eu.InvitationDate)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<EventUserModel>>(pendingInvitations);
+    }
+
     // PublicId-based methods for public routes
     public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
     {
@@ -939,6 +961,68 @@ public class EventService(
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
         return await GetEventInvitationsAsync(eventEntity.Id);
+    }
+
+    public async Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventPublicId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException("Invitation email is required to claim an event invite.", nameof(email));
+        }
+
+        var normalizedEmail = email.Trim();
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var user = await context.Users.FindAsync(userId)
+            ?? throw new KeyNotFoundException($"User with id {userId} not found");
+
+        if (string.IsNullOrWhiteSpace(user.Email) ||
+            !string.Equals(user.Email, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Sign in with the email address that received this invitation.");
+        }
+
+        var eventEntity = await context.Events
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        var eventUser = await context.EventUsers
+            .Include(eu => eu.Event)
+            .Include(eu => eu.User)
+            .FirstOrDefaultAsync(eu =>
+                eu.EventId == eventEntity.Id &&
+                !eu.Deleted &&
+                (eu.UserId == userId ||
+                 (eu.InviteeEmail != null && EF.Functions.ILike(eu.InviteeEmail, normalizedEmail))));
+
+        if (eventUser == null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(eventUser.UserId))
+        {
+            eventUser.UserId = userId;
+            eventUser.UpdatedOn = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync();
+            eventUser.User = user;
+        }
+        else if (eventUser.User == null)
+        {
+            eventUser.User = user;
+        }
+
+        if (eventUser.Event == null)
+        {
+            eventUser.Event = eventEntity;
+        }
+
+        return _mapper.Map<EventUserModel>(eventUser);
     }
 
     private static void ValidateEventCreatorPermission(Event eventEntity, string userId)

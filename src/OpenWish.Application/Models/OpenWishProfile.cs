@@ -74,5 +74,8 @@ public class OpenWishProfile : Profile
         CreateMap<CustomPairingRuleModel, CustomPairingRule>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();
+        CreateMap<PendingFriendInviteModel, PendingFriendInvite>()
+            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ReverseMap();
     }
 }

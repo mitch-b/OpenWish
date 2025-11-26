@@ -138,5 +138,26 @@ public class FriendController : ControllerBase
         }
     }
 
+    [HttpGet("pending-invites/{userId}")]
+    public async Task<IActionResult> GetPendingFriendInvites(string userId)
+    {
+        var invites = await _friendService.GetPendingFriendInvitesAsync(userId);
+        return Ok(invites);
+    }
+
+    [HttpPost("pending-invite/{inviteId}/cancel/{userId}")]
+    public async Task<IActionResult> CancelPendingFriendInvite(int inviteId, string userId)
+    {
+        var result = await _friendService.CancelPendingFriendInviteAsync(inviteId, userId);
+        return result ? Ok(true) : NotFound();
+    }
+
+    [HttpPost("pending-invite/{inviteId}/resend/{userId}")]
+    public async Task<IActionResult> ResendPendingFriendInvite(int inviteId, string userId)
+    {
+        var result = await _friendService.ResendPendingFriendInviteAsync(inviteId, userId);
+        return result ? Ok(true) : NotFound();
+    }
+
     // Search by username functionality removed for security/privacy reasons
 }

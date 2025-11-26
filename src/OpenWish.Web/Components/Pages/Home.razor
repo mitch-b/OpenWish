@@ -126,6 +126,22 @@
                     <!-- Notifications and Requests -->
                     <div class="col-md-4">
                         <div class="row g-3">
+                            @if (_pendingEventInvitations?.Any() == true)
+                            {
+                                <div class="col-12">
+                                    <div class="card border-warning">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-warning">
+                                                <span style="font-size: 1.1rem;">📬</span> Event Invitations
+                                                <span class="badge bg-warning text-dark ms-2">@_pendingEventInvitations.Count()</span>
+                                            </h6>
+                                            <p class="card-text small mb-2">You have pending event invitations</p>
+                                            <a href="/events" class="btn btn-warning btn-sm">View Invitations</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
                             @if (_pendingFriendRequests?.Any() == true)
                             {
                                 <div class="col-12">
@@ -242,6 +258,7 @@
     private List<EventModel>? _events;
     private List<EventModel>? _upcomingEvents;
     private IEnumerable<FriendRequestModel>? _pendingFriendRequests;
+    private IEnumerable<EventUserModel>? _pendingEventInvitations;
 
     private string? _userId;
 
@@ -255,6 +272,7 @@
                 await LoadFeaturedWishlists();
                 await LoadEvents();
                 await LoadFriendRequests();
+                await LoadPendingEventInvitations();
             }
             catch
             {
@@ -318,6 +336,22 @@
             {
                 // Handle gracefully if friend service is not available
                 _pendingFriendRequests = new List<FriendRequestModel>();
+            }
+        }
+    }
+
+    private async Task LoadPendingEventInvitations()
+    {
+        if (_userId is not null)
+        {
+            try
+            {
+                _pendingEventInvitations = await EventService.GetPendingInvitationsForUserAsync(_userId);
+            }
+            catch
+            {
+                // Handle gracefully if event service is not available
+                _pendingEventInvitations = new List<EventUserModel>();
             }
         }
     }

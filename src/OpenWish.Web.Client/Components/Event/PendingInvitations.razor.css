@@ -1,0 +1,18 @@
+.pending-invitations-card {
+    border-left: 4px solid var(--bs-warning);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+}
+
+.pending-invitations-card .card-title {
+    color: var(--color-text);
+}
+
+.pending-invitations-card .list-group-item {
+    background-color: transparent;
+    border-color: var(--color-border);
+}
+
+.pending-invitations-card .list-group-item h6 {
+    color: var(--color-text);
+}

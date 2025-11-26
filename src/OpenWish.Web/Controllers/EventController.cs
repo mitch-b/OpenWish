@@ -295,6 +295,35 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return Ok(invitations);
     }
 
+    [HttpPost("{eventPublicId}/invitations/claim")]
+    public async Task<ActionResult<EventUserModel>> ClaimEventInvitation(string eventPublicId, [FromBody] ClaimEventInviteRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var invitation = await _eventService.ClaimEventInvitationByEmailAsync(eventPublicId, userId, request.Email);
+            if (invitation is null)
+            {
+                return NotFound("No invitation found for this event and email.");
+            }
+
+            return Ok(invitation);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost("invitations/{eventUserId}/accept")]
     public async Task<IActionResult> AcceptEventInvitation(int eventUserId)
     {
@@ -371,6 +400,18 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Forbid(ex.Message);
         }
+    }
+
+    [HttpGet("invitations/pending")]
+    public async Task<ActionResult<IEnumerable<EventUserModel>>> GetPendingInvitations()
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var invitations = await _eventService.GetPendingInvitationsForUserAsync(userId);
+        return Ok(invitations);
     }
 
     // Gift Exchange Endpoints

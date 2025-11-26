@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http.Json;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
@@ -108,6 +109,29 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
             ?? Enumerable.Empty<EventUserModel>();
     }
 
+    public async Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email)
+    {
+        _ = userId;
+        var request = new ClaimEventInviteRequest { Email = email };
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/invitations/claim", request);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message)
+                ? "Unable to claim this invitation."
+                : message);
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+    }
+
     public async Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId)
     {
         var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/accept", null);
@@ -130,6 +154,13 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/resend", null);
         return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId)
+    {
+        // Server uses authenticated user, so userId parameter is not needed in the API call
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>("api/events/invitations/pending")
+            ?? Enumerable.Empty<EventUserModel>();
     }
 
     // PublicId-based methods

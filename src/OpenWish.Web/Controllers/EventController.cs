@@ -402,6 +402,18 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpGet("invitations/pending")]
+    public async Task<ActionResult<IEnumerable<EventUserModel>>> GetPendingInvitations()
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var invitations = await _eventService.GetPendingInvitationsForUserAsync(userId);
+        return Ok(invitations);
+    }
+
     // Gift Exchange Endpoints
 
     [HttpPost("{eventPublicId}/draw-names")]

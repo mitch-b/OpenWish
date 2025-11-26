@@ -1,10 +1,13 @@
 ﻿@using OpenWish.Web.Services
 @using OpenWish.Web.Client.Components.Shared
+@using OpenWish.Shared.Services
 @implements IDisposable
 
 @inject NavigationManager NavigationManager
 @inject IBaseUriService BaseUriService
 @inject IAppVersionService AppVersionService
+@inject IEventService EventService
+@inject IUserContextService UserContextService
 
 <div class="top-row ps-3 navbar">
   <div class="container-fluid">
@@ -34,6 +37,10 @@
         <div class="nav-item px-3">
           <NavLink class="nav-link" href="events">
             <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Events
+            @if (_pendingInvitationCount > 0)
+            {
+              <span class="badge bg-warning text-dark ms-1">@_pendingInvitationCount</span>
+            }
           </NavLink>
         </div>
         <div class="nav-item px-3">
@@ -83,12 +90,30 @@
 
 @code {
   private string? currentUrl;
+  private int _pendingInvitationCount;
 
-  protected override void OnInitialized()
+  protected override async Task OnInitializedAsync()
   {
-    // TODO: fix the currentUrl assignment. Breaks logout.
     currentUrl = BaseUriService.ToBaseRelativePath(new Uri(NavigationManager.Uri).LocalPath);
     NavigationManager.LocationChanged += OnLocationChanged;
+    await LoadPendingInvitationCount();
+  }
+
+  private async Task LoadPendingInvitationCount()
+  {
+    try
+    {
+      var userId = await UserContextService.GetUserIdAsync();
+      if (userId != null)
+      {
+        var invitations = await EventService.GetPendingInvitationsForUserAsync(userId);
+        _pendingInvitationCount = invitations.Count();
+      }
+    }
+    catch
+    {
+      _pendingInvitationCount = 0;
+    }
   }
 
   private void OnLocationChanged(object? sender, LocationChangedEventArgs e)

@@ -1,0 +1,191 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+
+<div class="card shadow-sm mb-4 pending-invitations-card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">
+                <span style="font-size: 1.2rem;">📬</span> Pending Invitations
+                @if (_invitations?.Any() == true)
+                {
+                    <span class="badge bg-warning text-dark ms-2">@_invitations.Count()</span>
+                }
+            </h5>
+        </div>
+
+        @if (_isLoading)
+        {
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (_invitations?.Any() == true)
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var invitation in _invitations)
+                {
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1 me-3">
+                                <h6 class="mb-1">@(invitation.Event?.Name ?? "Event")</h6>
+                                <small class="text-muted d-block">
+                                    @if (invitation.Event?.Date != null)
+                                    {
+                                        <span class="me-2">📅 @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(invitation.Event?.CreatedBy?.UserName))
+                                    {
+                                        <span>Invited by @invitation.Event.CreatedBy.UserName</span>
+                                    }
+                                </small>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-success"
+                                        @onclick="() => AcceptInvitation(invitation)"
+                                        disabled="@IsProcessing(invitation.Id)">
+                                    @if (IsProcessing(invitation.Id) && _processingAction == "accept")
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <span>Accept</span>
+                                    }
+                                </button>
+                                <button class="btn btn-outline-secondary"
+                                        @onclick="() => DeclineInvitation(invitation)"
+                                        disabled="@IsProcessing(invitation.Id)">
+                                    @if (IsProcessing(invitation.Id) && _processingAction == "decline")
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <span>Decline</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-3 text-muted">
+                <p class="mb-0">You don't have any pending event invitations.</p>
+                <small>When someone invites you to an event, it will appear here.</small>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnInvitationChanged { get; set; }
+
+    private List<EventUserModel>? _invitations;
+    private bool _isLoading = true;
+    private string? _userId;
+    private int? _processingInvitationId;
+    private string? _processingAction;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await UserContextService.GetUserIdAsync();
+        if (_userId != null)
+        {
+            await LoadInvitations();
+        }
+        else
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadInvitations()
+    {
+        if (_userId == null) return;
+
+        _isLoading = true;
+        try
+        {
+            var invitations = await EventService.GetPendingInvitationsForUserAsync(_userId);
+            _invitations = invitations.ToList();
+        }
+        catch
+        {
+            _invitations = new List<EventUserModel>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private bool IsProcessing(int invitationId) => _processingInvitationId == invitationId;
+
+    private async Task AcceptInvitation(EventUserModel invitation)
+    {
+        if (_userId == null || IsProcessing(invitation.Id)) return;
+
+        _processingInvitationId = invitation.Id;
+        _processingAction = "accept";
+
+        try
+        {
+            var success = await EventService.AcceptEventInvitationAsync(invitation.Id, _userId);
+            if (success)
+            {
+                _invitations?.Remove(invitation);
+                if (OnInvitationChanged.HasDelegate)
+                {
+                    await OnInvitationChanged.InvokeAsync();
+                }
+
+                // Navigate to the event
+                if (!string.IsNullOrEmpty(invitation.Event?.PublicId))
+                {
+                    NavigationManager.NavigateTo($"/events/{invitation.Event.PublicId}");
+                }
+            }
+        }
+        finally
+        {
+            _processingInvitationId = null;
+            _processingAction = null;
+        }
+    }
+
+    private async Task DeclineInvitation(EventUserModel invitation)
+    {
+        if (_userId == null || IsProcessing(invitation.Id)) return;
+
+        _processingInvitationId = invitation.Id;
+        _processingAction = "decline";
+
+        try
+        {
+            var success = await EventService.RejectEventInvitationAsync(invitation.Id, _userId);
+            if (success)
+            {
+                _invitations?.Remove(invitation);
+                if (OnInvitationChanged.HasDelegate)
+                {
+                    await OnInvitationChanged.InvokeAsync();
+                }
+            }
+        }
+        finally
+        {
+            _processingInvitationId = null;
+            _processingAction = null;
+        }
+    }
+}

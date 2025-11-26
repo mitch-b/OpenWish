@@ -24,6 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     // Social features
     public DbSet<Friend> Friends { get; set; }
     public DbSet<FriendRequest> FriendRequests { get; set; }
+    public DbSet<PendingFriendInvite> PendingFriendInvites { get; set; }
     public DbSet<WishlistPermission> WishlistPermissions { get; set; }
     public DbSet<ItemComment> ItemComments { get; set; }
     public DbSet<ItemReservation> ItemReservations { get; set; }
@@ -168,6 +169,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithMany(u => u.ReceivedFriendRequests)
             .HasForeignKey(fr => fr.ReceiverId)
             .OnDelete(DeleteBehavior.NoAction);
+
+        // Pending friend invites (email-based invites to non-registered users)
+        modelBuilder.Entity<PendingFriendInvite>()
+            .HasOne(pfi => pfi.Sender)
+            .WithMany()
+            .HasForeignKey(pfi => pfi.SenderUserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<PendingFriendInvite>()
+            .HasIndex(pfi => new { pfi.SenderUserId, pfi.Email })
+            .IsUnique()
+            .HasFilter("[Deleted] = 0");
 
         // Wishlist permissions
         modelBuilder.Entity<WishlistPermission>()

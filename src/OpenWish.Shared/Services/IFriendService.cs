@@ -23,6 +23,11 @@ public interface IFriendService
     Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses);
     Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId);
 
+    // Pending friend invites (email-based invites to non-registered users)
+    Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId);
+    Task<bool> CancelPendingFriendInviteAsync(int inviteId, string userId);
+    Task<bool> ResendPendingFriendInviteAsync(int inviteId, string userId);
+
     // User search for adding friends
     Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10);
 }

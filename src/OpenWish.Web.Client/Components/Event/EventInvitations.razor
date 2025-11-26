@@ -228,7 +228,7 @@
                     }
                     else
                     {
-                        @if (_friends == null)
+                        @if (_friends == null || _pendingFriendInvites == null)
                         {
                             <div class="text-center py-3">
                                 <div class="spinner-border text-primary" role="status">
@@ -236,21 +236,24 @@
                                 </div>
                             </div>
                         }
-                        else if (_friends.Count == 0)
+                        else if (_friends.Count == 0 && _pendingFriendInvites.Count == 0)
                         {
-                            <p class="text-muted">You don't have any friends yet.</p>
+                            <p class="text-muted">You don't have any friends or pending invites yet.</p>
                         }
                         else
                         {
                             <div class="mb-3">
-                                <label class="form-label">Select Friends</label>
+                                <label class="form-label">Select Friends or Pending Invites</label>
                                 <input class="form-control form-control-sm mb-2"
                                        type="search"
                                        placeholder="Search friends..."
                                        @bind="_friendSearchTerm"
                                        @bind:event="oninput" />
-                                @{ var filteredFriends = FilteredFriends.ToList(); }
-                                @if (filteredFriends.Any())
+                                @{ 
+                                    var filteredFriends = FilteredFriends.ToList();
+                                    var filteredPendingInvites = FilteredPendingInvites.ToList();
+                                }
+                                @if (filteredFriends.Any() || filteredPendingInvites.Any())
                                 {
                                     <div class="friend-list border rounded overflow-auto">
                                         @foreach (var friend in filteredFriends)
@@ -271,6 +274,21 @@
                                                 </div>
                                             </label>
                                         }
+                                        @foreach (var pendingInvite in filteredPendingInvites)
+                                        {
+                                            var isSelected = _selectedPendingInviteEmails.Contains(pendingInvite.Email);
+                                            <label class="friend-option border-bottom" for="pending-@pendingInvite.Id">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       id="pending-@pendingInvite.Id"
+                                                       checked="@isSelected"
+                                                       @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, args.Value is bool selected && selected)" />
+                                                <div class="friend-option__content">
+                                                    <span>@pendingInvite.Email</span>
+                                                    <small class="text-warning"><i class="bi bi-clock-history"></i> Pending registration</small>
+                                                </div>
+                                            </label>
+                                        }
                                     </div>
                                 }
                                 else
@@ -283,7 +301,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@(_isSending || (_inviteMode == "friends" && !_selectedFriendIds.Any()))">
+                    <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@(_isSending || (_inviteMode == "friends" && !_selectedFriendIds.Any() && !_selectedPendingInviteEmails.Any()))">
                         @if (_isSending)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -302,7 +320,9 @@
 
     private List<EventUserModel> _invitations = new();
     private List<ApplicationUserModel>? _friends = null;
+    private List<PendingFriendInviteModel>? _pendingFriendInvites = null;
     private readonly HashSet<string> _selectedFriendIds = new();
+    private readonly HashSet<string> _selectedPendingInviteEmails = new();
     private bool _isLoading = true;
     private bool _showInviteModal = false;
     private bool _isSending = false;
@@ -328,6 +348,12 @@
                 .Where(friend =>
                     (!string.IsNullOrEmpty(friend.UserName) && friend.UserName.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(friend.Email) && friend.Email.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase)));
+
+    private IEnumerable<PendingFriendInviteModel> FilteredPendingInvites =>
+        string.IsNullOrWhiteSpace(_friendSearchTerm)
+            ? _pendingFriendInvites ?? Enumerable.Empty<PendingFriendInviteModel>()
+            : (_pendingFriendInvites ?? Enumerable.Empty<PendingFriendInviteModel>())
+                .Where(invite => invite.Email.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase));
 
     protected override async Task OnInitializedAsync()
     {
@@ -363,6 +389,7 @@
         _successMessage = null;
         _emailToInvite = string.Empty;
         _selectedFriendIds.Clear();
+        _selectedPendingInviteEmails.Clear();
         _friendSearchTerm = string.Empty;
 
         await EnsureFriendsLoadedAsync();
@@ -403,15 +430,17 @@
             }
             else
             {
-                if (!_selectedFriendIds.Any())
+                if (!_selectedFriendIds.Any() && !_selectedPendingInviteEmails.Any())
                 {
-                    _errorMessage = "Please select at least one friend to invite.";
+                    _errorMessage = "Please select at least one friend or pending invite to invite.";
                     return;
                 }
 
                 var invitedFriends = new List<(string Id, string Name)>();
+                var invitedEmails = new List<string>();
                 var failedFriends = new List<string>();
 
+                // Invite confirmed friends by user ID
                 foreach (var friendId in _selectedFriendIds.ToList())
                 {
                     var friend = _friends?.FirstOrDefault(f => f.Id == friendId);
@@ -432,15 +461,38 @@
                     }
                 }
 
+                // Invite pending friend invites by email
+                foreach (var email in _selectedPendingInviteEmails.ToList())
+                {
+                    try
+                    {
+                        await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, email);
+                        invitedEmails.Add(email);
+                    }
+                    catch (HttpRequestException)
+                    {
+                        failedFriends.Add(email);
+                    }
+                    catch (Exception ex)
+                    {
+                        failedFriends.Add($"{email} ({ex.Message})");
+                    }
+                }
+
                 foreach (var invited in invitedFriends)
                 {
                     _selectedFriendIds.Remove(invited.Id);
                 }
 
-                if (invitedFriends.Any())
+                foreach (var email in invitedEmails)
                 {
-                    var invitedNames = invitedFriends.Select(f => f.Name).ToList();
-                    _successMessage = BuildFriendInviteSuccessMessage(invitedNames);
+                    _selectedPendingInviteEmails.Remove(email);
+                }
+
+                var allInvitedNames = invitedFriends.Select(f => f.Name).Concat(invitedEmails).ToList();
+                if (allInvitedNames.Any())
+                {
+                    _successMessage = BuildFriendInviteSuccessMessage(allInvitedNames);
                 }
 
                 if (failedFriends.Any())
@@ -450,7 +502,7 @@
                         : $"Could not invite {failedFriends.Count} friends: {string.Join(", ", failedFriends)}.";
                 }
 
-                if (!invitedFriends.Any())
+                if (!allInvitedNames.Any())
                 {
                     return;
                 }
@@ -488,7 +540,7 @@
 
     private async Task EnsureFriendsLoadedAsync()
     {
-        if (_inviteMode != "friends" || _friends != null)
+        if (_inviteMode != "friends" || (_friends != null && _pendingFriendInvites != null))
         {
             return;
         }
@@ -500,18 +552,27 @@
             {
                 _errorMessage = "You must be logged in to view your friends.";
                 _friends = new List<ApplicationUserModel>();
+                _pendingFriendInvites = new List<PendingFriendInviteModel>();
                 return;
             }
 
+            // Load confirmed friends
             var friends = await FriendService.GetFriendsAsync(userId);
             _friends = friends
                 .OrderBy(f => f.UserName ?? f.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // Load pending friend invites (email-based invites to non-registered users)
+            var pendingInvites = await FriendService.GetPendingFriendInvitesAsync(userId);
+            _pendingFriendInvites = pendingInvites
+                .OrderBy(p => p.Email, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
         catch (Exception ex)
         {
             _errorMessage = ex.Message;
             _friends = new List<ApplicationUserModel>();
+            _pendingFriendInvites = new List<PendingFriendInviteModel>();
         }
     }
 
@@ -529,6 +590,23 @@
         else
         {
             _selectedFriendIds.Remove(friendId);
+        }
+    }
+
+    private void TogglePendingInviteSelection(string email, bool isSelected)
+    {
+        if (string.IsNullOrEmpty(email))
+        {
+            return;
+        }
+
+        if (isSelected)
+        {
+            _selectedPendingInviteEmails.Add(email);
+        }
+        else
+        {
+            _selectedPendingInviteEmails.Remove(email);
         }
     }
 

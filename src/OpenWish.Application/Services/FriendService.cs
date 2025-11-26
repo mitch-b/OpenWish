@@ -329,6 +329,48 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             return false;
         }
 
+        // Check for existing pending invite to this email
+        var existingInvite = await context.PendingFriendInvites
+            .FirstOrDefaultAsync(pfi => pfi.SenderUserId == senderUserId && pfi.Email == emailAddress && !pfi.Deleted);
+
+        if (existingInvite != null)
+        {
+            // Update existing invite instead of creating new one
+            existingInvite.InviteDate = DateTimeOffset.UtcNow;
+            existingInvite.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            // Check if there's a previously cancelled/deleted invite
+            var previousInvite = await context.PendingFriendInvites
+                .FirstOrDefaultAsync(pfi => pfi.SenderUserId == senderUserId && pfi.Email == emailAddress && pfi.Deleted);
+
+            if (previousInvite != null)
+            {
+                // Reactivate the previous invite
+                previousInvite.Deleted = false;
+                previousInvite.Status = "Pending";
+                previousInvite.InviteDate = DateTimeOffset.UtcNow;
+                previousInvite.UpdatedOn = DateTimeOffset.UtcNow;
+            }
+            else
+            {
+                // Create new pending friend invite record
+                var pendingInvite = new PendingFriendInvite
+                {
+                    SenderUserId = senderUserId,
+                    Email = emailAddress,
+                    InviteDate = DateTimeOffset.UtcNow,
+                    Status = "Pending",
+                    CreatedOn = DateTimeOffset.UtcNow,
+                    UpdatedOn = DateTimeOffset.UtcNow
+                };
+                context.PendingFriendInvites.Add(pendingInvite);
+            }
+        }
+
+        await context.SaveChangesAsync();
+
         // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{emailAddress}|{senderUserId}";
@@ -464,7 +506,88 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             $"{newUser.UserName ?? newUser.Email} has joined OpenWish and is now your friend.",
             "FriendAccept");
 
+        // Mark any pending invite as accepted
+        var pendingInvite = await context.PendingFriendInvites
+            .FirstOrDefaultAsync(pfi =>
+                pfi.SenderUserId == inviterUserId &&
+                pfi.Email == newUser.Email &&
+                !pfi.Deleted);
+
+        if (pendingInvite != null)
+        {
+            pendingInvite.Status = "Accepted";
+            pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+
         await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var pendingInvites = await context.PendingFriendInvites
+            .AsNoTracking()
+            .Include(pfi => pfi.Sender)
+            .Where(pfi => pfi.SenderUserId == userId && pfi.Status == "Pending" && !pfi.Deleted)
+            .OrderByDescending(pfi => pfi.InviteDate)
+            .ToListAsync();
+
+        return _mapper.Map<IEnumerable<PendingFriendInviteModel>>(pendingInvites);
+    }
+
+    public async Task<bool> CancelPendingFriendInviteAsync(int inviteId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var invite = await context.PendingFriendInvites
+            .FirstOrDefaultAsync(pfi => pfi.Id == inviteId && pfi.SenderUserId == userId && !pfi.Deleted);
+
+        if (invite == null)
+        {
+            return false;
+        }
+
+        invite.Status = "Cancelled";
+        invite.Deleted = true;
+        invite.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ResendPendingFriendInviteAsync(int inviteId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var invite = await context.PendingFriendInvites
+            .Include(pfi => pfi.Sender)
+            .FirstOrDefaultAsync(pfi => pfi.Id == inviteId && pfi.SenderUserId == userId && pfi.Status == "Pending" && !pfi.Deleted);
+
+        if (invite == null)
+        {
+            return false;
+        }
+
+        // Update invite date
+        invite.InviteDate = DateTimeOffset.UtcNow;
+        invite.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        // Resend the email
+        var baseUri = _baseUri?.TrimEnd('/') ?? "";
+        var inviteData = $"{invite.Email}|{userId}";
+        var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
+        var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
+
+        var senderName = invite.Sender?.UserName ?? invite.Sender?.Email ?? "A friend";
+        await _emailSender.SendFriendInviteEmailAsync(invite.Email, senderName, inviteLink);
+
         return true;
     }
 

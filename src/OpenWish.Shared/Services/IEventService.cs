@@ -38,6 +38,7 @@ public interface IEventService
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
     Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId);
     Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId);
+    Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId);
 
     // Gift Exchange methods
     Task<EventModel> DrawNamesAsync(int eventId, string ownerId);

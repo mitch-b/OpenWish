@@ -156,6 +156,13 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId)
+    {
+        // Server uses authenticated user, so userId parameter is not needed in the API call
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>("api/events/invitations/pending")
+            ?? Enumerable.Empty<EventUserModel>();
+    }
+
     // PublicId-based methods
     public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
     {

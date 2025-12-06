@@ -10,7 +10,11 @@ updates:
    directory: "/"
    schedule:
      interval: weekly
+     
  - package-ecosystem: "nuget"
    directory: "/src"
    schedule:
      interval: weekly
+   ignore:
+      - dependency-name: 'AutoMapper'
+        update-types: ['version-update:semver-major']

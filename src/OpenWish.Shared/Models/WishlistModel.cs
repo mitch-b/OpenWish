@@ -10,6 +10,7 @@ public class WishlistModel : BaseEntityModel
     public ApplicationUserModel? Owner { get; set; }
     [JsonIgnore]
     public int? EventId { get; set; }
+    public EventModel? Event { get; set; }
     public bool IsCollaborative { get; set; }
     public int ItemCount { get; set; }
     public ICollection<WishlistItemModel> Items { get; set; } = [];

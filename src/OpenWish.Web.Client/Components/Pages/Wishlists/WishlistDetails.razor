@@ -59,13 +59,13 @@ else
     @if (_wishlist.Event != null)
     {
         <div class="event-indicator">
-            <a href="/events/@_wishlist.Event.PublicId" class="event-link">
-                <span class="event-icon">📅</span>
+            <a href="/events/@_wishlist.Event.PublicId" class="event-link" aria-label="View event @_wishlist.Event.Name">
+                <span class="event-icon" aria-hidden="true">📅</span>
                 <div class="event-info">
                     <span class="event-label">Part of event</span>
                     <span class="event-name">@_wishlist.Event.Name</span>
                 </div>
-                <i class="bi bi-arrow-right"></i>
+                <i class="bi bi-arrow-right" aria-hidden="true"></i>
             </a>
         </div>
     }

@@ -94,12 +94,12 @@
     text-decoration: none;
     color: var(--color-text);
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(31, 111, 235, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .event-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(31, 111, 235, 0.2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     border-color: var(--color-link-hover);
     background: var(--color-surface-alt);
 }

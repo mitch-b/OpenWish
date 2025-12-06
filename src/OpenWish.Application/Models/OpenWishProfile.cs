@@ -18,7 +18,8 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.EventId, opt => opt.Ignore())
             .ReverseMap()
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))  // map from EF entity to DtoModel
-            .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner)); // map from EF entity to DtoModel
+            .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner))  // map from EF entity to DtoModel
+            .ForMember(dest => dest.Event, opt => opt.MapFrom(src => src.Event)); // map from EF entity to DtoModel
         CreateMap<WishlistItemModel, WishlistItem>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
                                                                                                                 // Prevent client-supplied WishlistId from overwriting the existing FK on update

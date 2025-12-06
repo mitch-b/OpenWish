@@ -86,6 +86,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var wishlistEntity = await context.Wishlists
             .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
+            .Include(w => w.Event)
             .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted);
 
         if (wishlistEntity == null)

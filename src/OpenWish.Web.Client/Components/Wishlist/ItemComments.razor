@@ -39,7 +39,7 @@
                         @if (comment.UserId == _currentUserId || _isWishlistOwner)
                         {
                             <div class="ms-2">
-                                <button class="btn btn-sm btn-link text-danger" @onclick="() => DeleteComment(comment.Id)">
+                                <button class="btn btn-sm btn-link text-danger" aria-label="Delete comment" @onclick="() => DeleteComment(comment.Id)">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>

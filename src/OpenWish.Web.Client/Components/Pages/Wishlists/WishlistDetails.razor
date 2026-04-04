@@ -130,10 +130,10 @@ else
         </button>
 
         <div class="btn-group view-toggle">
-            <button type="button" class="btn @(ViewMode == "grid" ? "active" : "")" @onclick="@(() => SetViewMode("grid"))" title="Grid View">
+            <button type="button" class="btn @(ViewMode == "grid" ? "active" : "")" @onclick="@(() => SetViewMode("grid"))" aria-label="Grid View">
                 <i class="bi bi-grid-3x3-gap"></i>
             </button>
-            <button type="button" class="btn @(ViewMode == "list" ? "active" : "")" @onclick="@(() => SetViewMode("list"))" title="List View">
+            <button type="button" class="btn @(ViewMode == "list" ? "active" : "")" @onclick="@(() => SetViewMode("list"))" aria-label="List View">
                 <i class="bi bi-list-ul"></i>
             </button>
         </div>

@@ -1,0 +1,14 @@
+[
+  {
+    "title": "Native alert() used for all user feedback across 9 locations",
+    "description": "WishlistItemForm.razor (lines 144, 148, 154), WishlistItemModal.razor (lines 194, 198, 204), and WishlistDetails.razor (lines 735, 746, 772, 776, 840) all use JSRuntime.InvokeVoidAsync(\"alert\", ...) as the sole feedback mechanism for success confirmations, error messages, and clipboard notifications. The native browser alert() blocks the browser thread, cannot be styled to match the app theme, disrupts screen reader focus, and produces a jarring experience. Notably, WishlistItemForm.razor already declares unused importMessage and showImportMessage state variables (lines 94–95), indicating inline feedback was intended but never completed. WishlistShare.razor demonstrates the correct pattern with styled _error/_success divs, but this was never applied elsewhere."
+  },
+  {
+    "title": "Visibility picker in WishlistForm.razor is completely keyboard-inaccessible",
+    "description": "The three wishlist visibility options ('All Friends', 'Specific Friends Only', 'Private') in WishlistForm.razor (lines 34–76) are implemented as plain <div> elements with @onclick handlers. They have no role attribute, no tabindex, no @onkeydown handler, and no semantic HTML (no <button> or <input type=\"radio\">). This makes the primary privacy control of the application entirely unreachable for keyboard-only users—divs are not in the tab order and do not respond to Enter or Space. Screen readers also announce nothing meaningful since there is no aria-checked, aria-selected, or role=\"radio\" group. The correct pattern already exists in WishlistShare.razor (lines 42–52) using proper radio inputs."
+  },
+  {
+    "title": "Multiple icon-only and emoji-only buttons lack accessible labels (aria-label)",
+    "description": "Several interactive buttons across the app contain only icons or emoji with no accessible text alternative, violating WCAG 2.1 SC 1.1.1 (Level A): ItemComments.razor (line 42) has a trash icon delete button with no aria-label, so screen readers only announce 'button' with no indication of which comment will be deleted. Dialog.razor (line 7) uses the × character for close with no aria-label='Close', causing screen readers to say 'times'. NotificationFlyout.razor (lines 107–110) uses the 🗑️ emoji as the sole content of a destructive delete button with no aria-label. WishlistDetails.razor (lines 133–136) uses title attributes on view-toggle buttons, which are mouse-hover-only and not announced by screen readers. Users relying on assistive technology for these high-traffic UI actions receive no meaningful label."
+  }
+]

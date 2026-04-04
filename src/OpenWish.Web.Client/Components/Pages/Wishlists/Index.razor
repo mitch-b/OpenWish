@@ -48,7 +48,7 @@
                                 <i class="bi bi-search"></i> Search
                             </button>
                         </div>
-                        <select class="form-select" style="width: auto" @bind="filterBy">
+                        <select class="form-select" style="width: auto" @bind="filterBy" @bind:after="HandleSearch">
                             <option value="all">All Wishlists</option>
                             <option value="collaborative">Collaborative Only</option>
                             <option value="private">Private Only</option>

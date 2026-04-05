@@ -83,11 +83,11 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         return _mapper.Map<NotificationModel>(notification);
     }
 
-    public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
+    public async Task<bool> MarkNotificationAsReadAsync(int notificationId, string userId)
     {
         var notification = await _context.Notifications.FindAsync(notificationId);
 
-        if (notification == null || notification.Deleted)
+        if (notification == null || notification.Deleted || notification.UserId != userId)
         {
             return false;
         }
@@ -120,11 +120,11 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         return true;
     }
 
-    public async Task<bool> DeleteNotificationAsync(int notificationId)
+    public async Task<bool> DeleteNotificationAsync(int notificationId, string userId)
     {
         var notification = await _context.Notifications.FindAsync(notificationId);
 
-        if (notification == null)
+        if (notification == null || notification.UserId != userId)
         {
             return false;
         }

@@ -30,9 +30,13 @@
 
         <fieldset class="mb-4">
             <legend class="form-label h6 mb-3">🔒 Who can see this wishlist?</legend>
-            <div class="visibility-options">
+            <div class="visibility-options" role="radiogroup" aria-label="Wishlist visibility">
                 <div class="visibility-option @(!Model.IsPrivate && !Model.IsFriendsOnly ? "selected" : "")" 
-                     @onclick="@(() => SetVisibility(false, false))">
+                     role="radio"
+                     aria-checked="@(!Model.IsPrivate && !Model.IsFriendsOnly ? "true" : "false")"
+                     tabindex="0"
+                     @onclick="@(() => SetVisibility(false, false))"
+                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, false, false))">
                     <div class="visibility-icon">👥</div>
                     <div class="visibility-content">
                         <div class="visibility-title">All Friends</div>
@@ -46,7 +50,11 @@
                     </div>
                 </div>
                 <div class="visibility-option @(!Model.IsPrivate && Model.IsFriendsOnly ? "selected" : "")" 
-                     @onclick="@(() => SetVisibility(false, true))">
+                     role="radio"
+                     aria-checked="@(!Model.IsPrivate && Model.IsFriendsOnly ? "true" : "false")"
+                     tabindex="0"
+                     @onclick="@(() => SetVisibility(false, true))"
+                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, false, true))">
                     <div class="visibility-icon">🎯</div>
                     <div class="visibility-content">
                         <div class="visibility-title">Specific Friends Only</div>
@@ -60,7 +68,11 @@
                     </div>
                 </div>
                 <div class="visibility-option @(Model.IsPrivate ? "selected" : "")" 
-                     @onclick="@(() => SetVisibility(true, false))">
+                     role="radio"
+                     aria-checked="@(Model.IsPrivate ? "true" : "false")"
+                     tabindex="0"
+                     @onclick="@(() => SetVisibility(true, false))"
+                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, true, false))">
                     <div class="visibility-icon">🔐</div>
                     <div class="visibility-content">
                         <div class="visibility-title">Private</div>
@@ -102,6 +114,14 @@ else
         {
             Model.IsPrivate = isPrivate;
             Model.IsFriendsOnly = isFriendsOnly;
+        }
+    }
+
+    private void HandleVisibilityKeyDown(KeyboardEventArgs e, bool isPrivate, bool isFriendsOnly)
+    {
+        if (e.Key is " " or "Enter")
+        {
+            SetVisibility(isPrivate, isFriendsOnly);
         }
     }
 

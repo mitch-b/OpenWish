@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
@@ -26,11 +28,65 @@ public partial class ProductService : IProductService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Validates that a URL is safe to fetch: must use http/https and must not target
+    /// loopback addresses, link-local ranges, or private (RFC-1918/RFC-4193) networks.
+    /// </summary>
+    private static async Task<bool> IsSafeUrlAsync(Uri uri)
+    {
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            return false;
+
+        IPAddress[] addresses;
+        try
+        {
+            addresses = await Dns.GetHostAddressesAsync(uri.DnsSafeHost);
+        }
+        catch
+        {
+            return false;
+        }
+
+        foreach (var address in addresses)
+        {
+            if (IPAddress.IsLoopback(address))
+                return false;
+
+            var bytes = address.GetAddressBytes();
+
+            if (address.AddressFamily == AddressFamily.InterNetwork)
+            {
+                // 10.0.0.0/8
+                if (bytes[0] == 10) return false;
+                // 172.16.0.0/12
+                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return false;
+                // 192.168.0.0/16
+                if (bytes[0] == 192 && bytes[1] == 168) return false;
+                // 169.254.0.0/16  (link-local / cloud metadata)
+                if (bytes[0] == 169 && bytes[1] == 254) return false;
+            }
+            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                // ::1 is covered by IsLoopback(); also block fc00::/7 (ULA) and fe80::/10 (link-local)
+                if (bytes[0] == 0xfc || bytes[0] == 0xfd) return false;
+                if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80) return false;
+            }
+        }
+
+        return true;
+    }
+
     public async Task<ProductModel?> TryScrapeProductFromUrl(string url)
     {
         try
         {
-            var response = await _client.GetAsync(url);
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !await IsSafeUrlAsync(uri))
+            {
+                _logger.LogWarning("Rejected unsafe or invalid URL for product scrape: {Url}", url);
+                return null;
+            }
+
+            var response = await _client.GetAsync(uri);
             response.EnsureSuccessStatusCode();
 
             var html = await response.Content.ReadAsStringAsync();

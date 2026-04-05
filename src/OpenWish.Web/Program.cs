@@ -62,10 +62,14 @@ var connectionString = builder.Configuration.GetConnectionString("OpenWish")
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 {
-    options.UseNpgsql(connectionString)
+    var dbOptions = options.UseNpgsql(connectionString)
         // HMM... https://github.com/dotnet/efcore/issues/34431
-        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
-        .EnableSensitiveDataLogging();
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+
+    if (builder.Environment.IsDevelopment())
+    {
+        dbOptions.EnableSensitiveDataLogging();
+    }
 });
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

@@ -25,6 +25,13 @@
                     </div>
                 }
                 
+                @if (_showImportMessage && !string.IsNullOrEmpty(_importMessage))
+                {
+                    <div class="alert @(_importSuccess ? "alert-success" : "alert-danger") mt-2" role="alert">
+                        @_importMessage
+                    </div>
+                }
+                
                 <div class="url-import-section mb-4">
                     <label class="form-label">Quick Import from URL</label>
                     <div class="input-group">
@@ -129,6 +136,9 @@
 
     private bool isLoading;
     private string ImportUrl { get; set; } = string.Empty;
+    private string _importMessage = string.Empty;
+    private bool _showImportMessage;
+    private bool _importSuccess;
 
     public void Show(WishlistItemModel? model = null)
     {
@@ -141,6 +151,8 @@
     {
         IsVisible = false;
         ImportUrl = string.Empty;
+        _showImportMessage = false;
+        _importMessage = string.Empty;
         StateHasChanged();
     }
 
@@ -191,17 +203,24 @@
                 if (!Model.Priority.HasValue)
                     Model.Priority = 2; // Medium priority by default
 
-                await JSRuntime.InvokeVoidAsync("alert", "Product details imported successfully!");
+                await JSRuntime.InvokeVoidAsync("console.log", "Product details imported successfully.");
+                _importMessage = "Product details imported successfully!";
+                _importSuccess = true;
+                _showImportMessage = true;
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Could not extract product details. Please fill in the form manually.");
+                _importMessage = "Could not extract product details. Please fill in the form manually.";
+                _importSuccess = false;
+                _showImportMessage = true;
             }
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Error processing URL. Please fill in the form manually.");
+            _importMessage = "Error processing URL. Please fill in the form manually.";
+            _importSuccess = false;
+            _showImportMessage = true;
         }
         finally
         {

@@ -70,6 +70,14 @@ else
         </div>
     }
 
+    @if (!string.IsNullOrEmpty(_feedbackMessage))
+    {
+        <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-success") alert-dismissible mt-2" role="alert">
+            @_feedbackMessage
+            <button type="button" class="btn-close" aria-label="Close" @onclick="() => _feedbackMessage = string.Empty"></button>
+        </div>
+    }
+
     <div class="stats-dashboard">
         <div class="stat-card">
             <div class="stat-icon">📦</div>
@@ -469,6 +477,8 @@ else
     private int? _expandedItemId = null;
     private WishlistItemList? _itemListRef;
     private int? _pendingCommentFocusItemId;
+    private string _feedbackMessage = string.Empty;
+    private bool _feedbackIsError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -730,25 +740,15 @@ else
         {
             await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.Id);
             await LoadItems();
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Item {name} deleted.");
-            }
-            catch
-            {
-                // Ignore alert failures
-            }
+            _feedbackMessage = $"Item {name} deleted.";
+            _feedbackIsError = false;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
-            try
-            {
-                await JSRuntime.InvokeVoidAsync("alert", $"Failed to delete {name}. Error: {ex.Message}");
-            }
-            catch
-            {
-                // Swallow secondary errors
-            }
+            _feedbackMessage = $"Failed to delete {name}. Error: {ex.Message}";
+            _feedbackIsError = true;
+            StateHasChanged();
         }
     }
 
@@ -769,12 +769,15 @@ else
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", wishlistUrl);
-            await JSRuntime.InvokeVoidAsync("alert", "Wishlist URL copied to clipboard!");
+            _feedbackMessage = "Wishlist URL copied to clipboard!";
+            _feedbackIsError = false;
         }
         catch
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Unable to copy. Please copy the URL manually.");
+            _feedbackMessage = "Unable to copy. Please copy the URL manually.";
+            _feedbackIsError = true;
         }
+        StateHasChanged();
     }
 
     private void SetViewMode(string mode)
@@ -835,14 +838,9 @@ else
 
     private async Task NotifyNoCommentsAsync()
     {
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("alert", "No comments to display yet.");
-        }
-        catch
-        {
-            // Swallow notification failures when JS interop is unavailable
-        }
+        _feedbackMessage = "No comments to display yet.";
+        _feedbackIsError = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleCommentsStatKeyDown(KeyboardEventArgs args)

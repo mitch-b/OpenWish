@@ -24,6 +24,12 @@
             <small class="text-muted">Paste a product URL to automatically fill in details from popular websites</small>
         </div>
     </div>
+    @if (showImportMessage && !string.IsNullOrEmpty(importMessage))
+    {
+        <div class="alert @(importSuccess ? "alert-success" : "alert-danger") mt-2" role="alert">
+            @importMessage
+        </div>
+    }
 </div>
 
 <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
@@ -93,6 +99,7 @@
     private string ImportUrl { get; set; } = string.Empty;
     private string importMessage = string.Empty;
     private bool showImportMessage;
+    private bool importSuccess;
 
     private async Task ImportFromUrl()
     {
@@ -141,17 +148,24 @@
                 if (!Model.Priority.HasValue)
                     Model.Priority = 2; // Medium priority by default
 
-                await JSRuntime.InvokeVoidAsync("alert", "Product details imported successfully!");
+                await JSRuntime.InvokeVoidAsync("console.log", "Product details imported successfully.");
+                importMessage = "Product details imported successfully!";
+                importSuccess = true;
+                showImportMessage = true;
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("alert", "Could not extract product details. Please fill in the form manually.");
+                importMessage = "Could not extract product details. Please fill in the form manually.";
+                importSuccess = false;
+                showImportMessage = true;
             }
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
-            await JSRuntime.InvokeVoidAsync("alert", "Error processing URL. Please fill in the form manually.");
+            importMessage = "Error processing URL. Please fill in the form manually.";
+            importSuccess = false;
+            showImportMessage = true;
         }
         finally
         {

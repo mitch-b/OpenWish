@@ -18,7 +18,6 @@ public class ActivityHttpClientService(HttpClient httpClient) : IActivityService
     {
         var activity = new
         {
-            UserId = userId,
             ActivityType = activityType,
             Description = description,
             WishlistId = wishlistId,

@@ -38,7 +38,6 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
     {
         var notificationData = new
         {
-            SenderUserId = senderUserId,
             Title = title,
             Message = message,
             Type = type,
@@ -51,7 +50,7 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
             ?? throw new HttpRequestException("Failed to create notification");
     }
 
-    public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
+    public async Task<bool> MarkNotificationAsReadAsync(int notificationId, string userId)
     {
         var response = await _httpClient.PutAsync($"{BaseUrl}/{notificationId}/read", null);
         response.EnsureSuccessStatusCode();
@@ -65,7 +64,7 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
-    public async Task<bool> DeleteNotificationAsync(int notificationId)
+    public async Task<bool> DeleteNotificationAsync(int notificationId, string userId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{notificationId}");
         response.EnsureSuccessStatusCode();

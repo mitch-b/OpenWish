@@ -36,6 +36,12 @@ public class FriendController : ControllerBase
     [HttpDelete("{userId}/{friendId}")]
     public async Task<IActionResult> RemoveFriend(string userId, string friendId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.RemoveFriendAsync(userId, friendId);
         return Ok(result);
     }
@@ -43,6 +49,12 @@ public class FriendController : ControllerBase
     [HttpPost("request/{requesterId}/{receiverId}")]
     public async Task<IActionResult> SendFriendRequest(string requesterId, string receiverId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != requesterId)
+        {
+            return Forbid();
+        }
+
         var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
         return Ok(request);
     }
@@ -50,6 +62,12 @@ public class FriendController : ControllerBase
     [HttpGet("requests/received/{userId}")]
     public async Task<IActionResult> GetReceivedRequests(string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var requests = await _friendService.GetReceivedFriendRequestsAsync(userId);
         return Ok(requests);
     }
@@ -57,6 +75,12 @@ public class FriendController : ControllerBase
     [HttpGet("requests/sent/{userId}")]
     public async Task<IActionResult> GetSentRequests(string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var requests = await _friendService.GetSentFriendRequestsAsync(userId);
         return Ok(requests);
     }
@@ -64,6 +88,12 @@ public class FriendController : ControllerBase
     [HttpPost("request/{requestId}/accept/{userId}")]
     public async Task<IActionResult> AcceptRequest(int requestId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.AcceptFriendRequestAsync(requestId, userId);
         return Ok(result);
     }
@@ -71,6 +101,12 @@ public class FriendController : ControllerBase
     [HttpPost("request/{requestId}/reject/{userId}")]
     public async Task<IActionResult> RejectRequest(int requestId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.RejectFriendRequestAsync(requestId, userId);
         return Ok(result);
     }
@@ -78,6 +114,12 @@ public class FriendController : ControllerBase
     [HttpPost("request/{requestId}/cancel/{userId}")]
     public async Task<IActionResult> CancelRequest(int requestId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.CancelFriendRequestAsync(requestId, userId);
         return result ? Ok(true) : NotFound();
     }
@@ -85,6 +127,12 @@ public class FriendController : ControllerBase
     [HttpPost("request/{requestId}/resend/{userId}")]
     public async Task<IActionResult> ResendRequest(int requestId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         try
         {
             var updatedRequest = await _friendService.ResendFriendRequestAsync(requestId, userId);
@@ -99,6 +147,12 @@ public class FriendController : ControllerBase
     [HttpPost("invite/{senderUserId}")]
     public async Task<IActionResult> SendFriendInviteByEmail(string senderUserId, [FromQuery] string email)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != senderUserId)
+        {
+            return Forbid();
+        }
+
         try
         {
             var result = await _friendService.SendFriendInviteByEmailAsync(senderUserId, email);
@@ -113,6 +167,12 @@ public class FriendController : ControllerBase
     [HttpPost("invite/{senderUserId}/batch")]
     public async Task<IActionResult> SendFriendInvitesByEmail(string senderUserId, [FromBody] List<string> emails)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != senderUserId)
+        {
+            return Forbid();
+        }
+
         try
         {
             var result = await _friendService.SendFriendInvitesByEmailAsync(senderUserId, emails);
@@ -127,6 +187,12 @@ public class FriendController : ControllerBase
     [HttpPost("invite/complete/{newUserId}/{inviterUserId}")]
     public async Task<IActionResult> CreateFriendshipFromInvite(string newUserId, string inviterUserId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != newUserId)
+        {
+            return Forbid();
+        }
+
         try
         {
             var result = await _friendService.CreateFriendshipFromInviteAsync(newUserId, inviterUserId);
@@ -141,6 +207,12 @@ public class FriendController : ControllerBase
     [HttpGet("pending-invites/{userId}")]
     public async Task<IActionResult> GetPendingFriendInvites(string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var invites = await _friendService.GetPendingFriendInvitesAsync(userId);
         return Ok(invites);
     }
@@ -148,6 +220,12 @@ public class FriendController : ControllerBase
     [HttpPost("pending-invite/{inviteId}/cancel/{userId}")]
     public async Task<IActionResult> CancelPendingFriendInvite(int inviteId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.CancelPendingFriendInviteAsync(inviteId, userId);
         return result ? Ok(true) : NotFound();
     }
@@ -155,6 +233,12 @@ public class FriendController : ControllerBase
     [HttpPost("pending-invite/{inviteId}/resend/{userId}")]
     public async Task<IActionResult> ResendPendingFriendInvite(int inviteId, string userId)
     {
+        var authenticatedUserId = await _userContextService.GetUserIdAsync();
+        if (authenticatedUserId != userId)
+        {
+            return Forbid();
+        }
+
         var result = await _friendService.ResendPendingFriendInviteAsync(inviteId, userId);
         return result ? Ok(true) : NotFound();
     }

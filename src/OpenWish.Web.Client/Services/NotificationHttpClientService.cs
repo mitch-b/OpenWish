@@ -11,18 +11,18 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
 
     public async Task<IEnumerable<NotificationModel>> GetUserNotificationsAsync(string userId, bool includeRead = false)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}/user/{userId}?includeRead={includeRead}")
+        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}/user?includeRead={includeRead}")
             ?? Array.Empty<NotificationModel>();
     }
 
     public async Task<int> GetUnreadNotificationCountAsync(string userId)
     {
-        return await _httpClient.GetFromJsonAsync<int>($"{BaseUrl}/user/{userId}/count");
+        return await _httpClient.GetFromJsonAsync<int>($"{BaseUrl}/count");
     }
 
     public async Task<NotificationModel> CreateNotificationAsync(string userId, string message)
     {
-        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/user/{userId}", message);
+        var response = await _httpClient.PostAsJsonAsync(BaseUrl, message);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<NotificationModel>()
             ?? throw new HttpRequestException("Failed to create notification");
@@ -38,7 +38,6 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
     {
         var notificationData = new
         {
-            SenderUserId = senderUserId,
             Title = title,
             Message = message,
             Type = type,
@@ -60,7 +59,7 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
 
     public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
     {
-        var response = await _httpClient.PutAsync($"{BaseUrl}/user/{userId}/read-all", null);
+        var response = await _httpClient.PutAsync($"{BaseUrl}/read-all", null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }

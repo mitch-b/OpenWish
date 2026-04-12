@@ -124,12 +124,12 @@ public partial class ProductService : IProductService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, $"Error fetching URL: {ex.Message}");
+            _logger.LogError(ex, "Error fetching URL: {Message}", ex.Message);
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error parsing HTML: {ex.Message}");
+            _logger.LogError(ex, "Error parsing HTML: {Message}", ex.Message);
             return null;
         }
     }

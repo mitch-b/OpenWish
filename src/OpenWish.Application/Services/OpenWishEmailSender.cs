@@ -114,9 +114,15 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             .Body(message, true)
             .SendAsync();
 
-        _logger.LogInformation(response.Successful
-                               ? $"Email to {toEmail} queued successfully!"
-                               : $"Failure sending email to {toEmail}");
+        if (response.Successful)
+        {
+            _logger.LogInformation("Email to {Email} queued successfully!", toEmail);
+        }
+        else
+        {
+            _logger.LogError("Failure sending email to {Email}: {Errors}", toEmail, string.Join(", ", response.ErrorMessages));
+            throw new InvalidOperationException($"Failed to send email to {toEmail}.");
+        }
     }
 
     private string WrapInHtmlFormattedEmail(string message)

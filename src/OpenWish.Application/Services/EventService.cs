@@ -799,13 +799,19 @@ public class EventService(
         await DeleteEventAsync(existingEvent.Id);
     }
 
-    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant")
+    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role, string callerId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        if (!IsEventOwner(eventEntity, callerId))
+        {
+            throw new UnauthorizedAccessException("Only the event creator can add users to an event.");
+        }
 
         return await AddUserToEventAsync(eventEntity.Id, userId, role);
     }

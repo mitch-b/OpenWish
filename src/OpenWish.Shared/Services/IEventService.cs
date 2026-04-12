@@ -13,7 +13,7 @@ public interface IEventService
     Task DeleteEventAsync(int id);
     Task DeleteEventByPublicIdAsync(string publicId);
     Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
-    Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant");
+    Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role, string callerId);
     Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId);
     Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId);
     Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null);

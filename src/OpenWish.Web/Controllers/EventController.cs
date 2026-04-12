@@ -85,12 +85,21 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpPost("{eventPublicId}/users")]
     public async Task<IActionResult> AddUserToEvent(string eventPublicId, [FromBody] AddUserToEventRequest request)
     {
-        var result = await _eventService.AddUserToEventByPublicIdAsync(eventPublicId, request.UserId, request.Role);
-        if (!result)
+        var callerId = await _userContextService.GetUserIdAsync();
+        if (callerId is null) return Unauthorized();
+        try
         {
-            return NotFound();
+            var result = await _eventService.AddUserToEventByPublicIdAsync(eventPublicId, request.UserId, request.Role, callerId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
         }
-        return NoContent();
+        catch (UnauthorizedAccessException ex)
+        {
+            return Forbid(ex.Message);
+        }
     }
 
     [HttpDelete("{eventPublicId}/users/{userId}")]

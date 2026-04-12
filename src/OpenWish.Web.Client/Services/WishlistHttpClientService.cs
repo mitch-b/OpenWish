@@ -132,10 +132,9 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-edit/{userId}");
     }
 
-    // Item comments
     public async Task<ItemCommentModel> AddCommentToItemAsync(int wishlistId, int itemId, string userId, string text)
     {
-        var commentRequest = new { userId, text };
+        var commentRequest = new { text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/comments", commentRequest);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
@@ -148,7 +147,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/{commentId}?userId={userId}");
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/{commentId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -156,7 +155,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     // Item reservations
     public async Task<bool> ReserveItemAsync(int wishlistId, int itemId, string userId, bool isAnonymous = false)
     {
-        var reservationRequest = new { userId, isAnonymous };
+        var reservationRequest = new { isAnonymous };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reserve", reservationRequest);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
@@ -164,7 +163,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation?userId={userId}");
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -276,7 +275,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
     {
-        var request = new { UserId = userId, Text = text };
+        var request = new { Text = text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
@@ -289,14 +288,14 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false)
     {
-        var request = new { UserId = userId, IsAnonymous = isAnonymous };
+        var request = new { IsAnonymous = isAnonymous };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve", request);
         return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation?userId={userId}");
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation");
         return response.IsSuccessStatusCode;
     }
 

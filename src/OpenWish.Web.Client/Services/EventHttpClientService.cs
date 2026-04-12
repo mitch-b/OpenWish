@@ -183,7 +183,7 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant")
+    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role, string callerId)
     {
         var request = new { UserId = userId, Role = role };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/users", request);

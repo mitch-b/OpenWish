@@ -8,14 +8,15 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class NotificationService(ApplicationDbContext context, IMapper mapper) : INotificationService
+public class NotificationService(IDbContextFactory<ApplicationDbContext> contextFactory, IMapper mapper) : INotificationService
 {
-    private readonly ApplicationDbContext _context = context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
     private readonly IMapper _mapper = mapper;
 
     public async Task<IEnumerable<NotificationModel>> GetUserNotificationsAsync(string userId, bool includeRead = false)
     {
-        var query = _context.Notifications
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var query = context.Notifications
             .Include(n => n.User)
             .Where(n => n.UserId == userId && !n.Deleted);
 
@@ -33,12 +34,14 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
 
     public async Task<int> GetUnreadNotificationCountAsync(string userId)
     {
-        return await _context.Notifications
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Notifications
             .CountAsync(n => n.UserId == userId && !n.IsRead && !n.Deleted);
     }
 
     public async Task<NotificationModel> CreateNotificationAsync(string userId, string message)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var notification = new Notification
         {
             UserId = userId,
@@ -49,8 +52,8 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.Notifications.Add(notification);
-        await _context.SaveChangesAsync();
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
 
         return _mapper.Map<NotificationModel>(notification);
     }
@@ -63,6 +66,7 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         string type,
         NotificationActionModel? action = null)
     {
+        await using var context = await _contextFactory.CreateDbContextAsync();
         var notification = new Notification
         {
             UserId = targetUserId,
@@ -77,15 +81,16 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
             UpdatedOn = DateTimeOffset.UtcNow
         };
 
-        _context.Notifications.Add(notification);
-        await _context.SaveChangesAsync();
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
 
         return _mapper.Map<NotificationModel>(notification);
     }
 
     public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
     {
-        var notification = await _context.Notifications.FindAsync(notificationId);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var notification = await context.Notifications.FindAsync(notificationId);
 
         if (notification == null || notification.Deleted)
         {
@@ -95,13 +100,14 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         notification.IsRead = true;
         notification.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
     {
-        var notifications = await _context.Notifications
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var notifications = await context.Notifications
             .Where(n => n.UserId == userId && !n.IsRead && !n.Deleted)
             .ToListAsync();
 
@@ -116,13 +122,14 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
             notification.UpdatedOn = DateTimeOffset.UtcNow;
         }
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteNotificationAsync(int notificationId)
     {
-        var notification = await _context.Notifications.FindAsync(notificationId);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var notification = await context.Notifications.FindAsync(notificationId);
 
         if (notification == null)
         {
@@ -132,7 +139,7 @@ public class NotificationService(ApplicationDbContext context, IMapper mapper) :
         notification.Deleted = true;
         notification.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 }

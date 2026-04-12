@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
@@ -10,11 +11,12 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFactory, IMapper mapper, IActivityService activityService) : IWishlistService
+public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFactory, IMapper mapper, IActivityService activityService, ILogger<WishlistService> logger) : IWishlistService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
     private readonly IMapper _mapper = mapper;
     private readonly IActivityService _activityService = activityService;
+    private readonly ILogger<WishlistService> _logger = logger;
 
     public async Task<WishlistModel> CreateWishlistAsync(WishlistModel wishlistModel, string ownerId)
     {
@@ -40,6 +42,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         var entry = context.Wishlists.Add(wishlistEntity);
         await context.SaveChangesAsync();
+
+        _logger.LogInformation("Wishlist '{Name}' created by user {UserId}", wishlistEntity.Name, ownerId);
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -101,6 +105,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             var canAccess = await CanUserAccessWishlistInternalAsync(context, wishlistEntity.Id, userId);
             if (!canAccess)
             {
+                _logger.LogWarning("Access denied: user {UserId} attempted to access wishlist {PublicId}", userId, publicId);
                 throw new UnauthorizedAccessException($"Access denied to wishlist {publicId}");
             }
         }

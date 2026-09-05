@@ -56,19 +56,19 @@ else
                         <span>Open event</span>
                     }
                 </small>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-outline-secondary btn-sm kebab-menu"
-                            type="button"
-                            id="dropdownMenu@(Event.Id)"
-                            data-bs-toggle="dropdown"
-                            aria-label="Actions for @Event.Name"
-                            aria-expanded="false"
-                            @onclick:stopPropagation="true">
-                        <OpenWishIcon Name="three-dots-vertical" />
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
-                        @if (_currentUserId == Event.CreatedBy?.Id)
-                        {
+                @if (_currentUserId == Event.CreatedBy?.Id)
+                {
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-outline-secondary btn-sm kebab-menu"
+                                type="button"
+                                id="dropdownMenu@(Event.Id)"
+                                data-bs-toggle="dropdown"
+                                aria-label="Actions for @Event.Name"
+                                aria-expanded="false"
+                                @onclick:stopPropagation="true">
+                            <OpenWishIcon Name="three-dots-vertical" />
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
                             <li>
                                 <button class="dropdown-item text-danger"
                                         @onclick:stopPropagation="true"
@@ -76,9 +76,9 @@ else
                                     Delete
                                 </button>
                             </li>
-                        }
-                    </ul>
-                </div>
+                        </ul>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -206,8 +206,8 @@ else
 
         try
         {
-            Logger.LogInformation("Deleting event {EventId}", Event.Id);
-            await EventService.DeleteEventAsync(Event.Id, _currentUserId!);
+            Logger.LogInformation("Deleting event {EventPublicId}", Event.PublicId);
+            await EventService.DeleteEventByPublicIdAsync(Event.PublicId, _currentUserId!);
 
             if (OnDelete.HasDelegate)
             {
@@ -218,7 +218,7 @@ else
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error deleting event {EventId}", Event.Id);
+            Logger.LogError(ex, "Error deleting event {EventPublicId}", Event.PublicId);
         }
         finally
         {

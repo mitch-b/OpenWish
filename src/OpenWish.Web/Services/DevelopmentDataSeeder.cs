@@ -485,6 +485,15 @@ public sealed class DevelopmentDataSeeder(
                 Description = "Reserved Noise-Cancelling Headphones",
                 Wishlist = wishlist,
                 WishlistItem = headphones
+            },
+            new ActivityLog
+            {
+                PublicId = "demo-private-wishlist-activity",
+                User = owner,
+                UserId = owner.Id,
+                ActivityType = "WishlistCreated",
+                Description = "Created Private Gift Ideas",
+                Wishlist = privateWishlist
             });
 
         context.AddRange(eventEntity, wishlist, privateWishlist, friendWishlist);

@@ -197,6 +197,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
+    .waitFor({ state: "visible" });
   await screenshot(page, "events.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
@@ -279,6 +281,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (username !== "AlexDemo") {
     throw new Error(`Profile displayed unexpected username '${username}'.`);
   }
+
+  await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
+  const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
+  await createdEventCard.getByRole("button", { name: "Actions for Neighborhood Secret Santa" }).click();
+  await createdEventCard.getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Delete Event" }).click();
+  await createdEventCard.waitFor({ state: "detached" });
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Owner browser errors: ${diagnostics.browserErrors.join(" | ")}`);
@@ -455,6 +465,23 @@ async function verifyFriendJourney(browser, manifest, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
   const loginStatus = await login(context, "friend", friendEmail);
+
+  const activityResponse = await context.request.get(`${baseUrl}/api/activities/friends`);
+  if (!activityResponse.ok()) {
+    throw new Error(`Friend activity request returned ${activityResponse.status()}.`);
+  }
+  const activities = await activityResponse.json();
+  if (!activities.some(activity => activity.publicId === "demo-wishlist-activity")) {
+    throw new Error("Visible friend wishlist activity was omitted.");
+  }
+  if (activities.some(activity => activity.publicId === "demo-private-wishlist-activity")) {
+    throw new Error("Private wishlist activity was disclosed to a friend.");
+  }
+
+  await visit(page, "/events", "Holiday Gift Exchange", visitedRoutes);
+  if (await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" }).count() !== 0) {
+    throw new Error("A non-owner received an event actions menu.");
+  }
 
   for (const route of [
     `/api/events/${manifest.eventPublicId}`,

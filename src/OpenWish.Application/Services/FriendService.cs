@@ -432,10 +432,11 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             return false;
         }
 
+        var normalizedEmail = NormalizeEmailForComparison(newUser.Email);
         var pendingInvite = await context.PendingFriendInvites
             .FirstOrDefaultAsync(pfi =>
                 pfi.SenderUserId == inviterUserId &&
-                EF.Functions.ILike(pfi.Email, newUser.Email) &&
+                pfi.Email.ToUpper() == normalizedEmail &&
                 pfi.Status == "Pending" &&
                 !pfi.Deleted);
 
@@ -523,6 +524,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         await context.SaveChangesAsync();
         return true;
     }
+
+    internal static string NormalizeEmailForComparison(string email) => email.ToUpperInvariant();
 
     public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)
     {

@@ -1,6 +1,7 @@
 ﻿@page "/Account/ExternalLogin"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics.CodeAnalysis
 @using System.Security.Claims
 @using System.Text
 @using System.Text.Encodings.Web
@@ -90,11 +91,25 @@ else
     private HttpContext HttpContext
         => CascadedHttpContext ?? HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Unable to resolve the current HttpContext.");
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+    private InputModel _input = new();
 
-    [SupplyParameterFromForm]
-    private LinkExistingModel LinkExisting { get; set; } = new();
+    [SupplyParameterFromForm(FormName = "confirmation")]
+    [AllowNull]
+    private InputModel Input
+    {
+        get => _input;
+        set => _input = value ?? new();
+    }
+
+    private LinkExistingModel _linkExisting = new();
+
+    [SupplyParameterFromForm(FormName = "linkExisting")]
+    [AllowNull]
+    private LinkExistingModel LinkExisting
+    {
+        get => _linkExisting;
+        set => _linkExisting = value ?? new();
+    }
 
     [SupplyParameterFromQuery]
     private string? RemoteError { get; set; }
@@ -135,7 +150,7 @@ else
 
         Input.Email = providerEmail!;
 
-        if (!string.IsNullOrEmpty(LinkExisting?.Email))
+        if (!string.IsNullOrEmpty(LinkExisting.Email))
         {
             currentStep = ExternalLoginStep.LinkExisting;
         }

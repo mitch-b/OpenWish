@@ -35,7 +35,8 @@
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/whats-new",
-        "/Account/Manage"
+        "/Account/Manage",
+        "/events"
       ],
       "assertions": [
         "dashboard data",
@@ -64,6 +65,7 @@
       "scenario": "friend-gift-exchange",
       "loginStatus": 200,
       "visitedRoutes": [
+        "/events",
         "/events/demo-holiday-gift-exchange"
       ]
     },

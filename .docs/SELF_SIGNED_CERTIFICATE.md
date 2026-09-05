@@ -1,7 +1,7 @@
 # Self-Signed Certificate Guide
 
 ## Overview
-When Cloudflare terminates TLS in front of OpenWish you can optionally mount a locally issued certificate inside the container. The application now looks for a PFX bundle at `TLS__CertificatePath` (default `/certs/tls.pfx`) and will expose HTTPS on port `8443` when the certificate loads successfully. Without a certificate the site continues to listen on HTTP only, allowing Cloudflare to provide end-to-end TLS when it re-encrypts traffic.
+When Cloudflare terminates TLS in front of OpenWish you can optionally mount a locally issued certificate inside the container. Set `TLS__CertificatePath` to the mounted PFX bundle (typically `/certs/tls.pfx`) to expose HTTPS on port `8443`. Without that setting, the site listens on HTTP only so a trusted reverse proxy can terminate TLS.
 
 ## Generate a Development Certificate with `dotnet dev-certs`
 1. Clean any previous developer certificates (optional):
@@ -37,6 +37,7 @@ openssl pkcs12 -export -out certs/tls.pfx \
 docker run --rm \
   -p 8080:8080 -p 8443:8443 \
   -v "$(pwd)/certs:/certs:ro" \
+  -e TLS__CertificatePath=/certs/tls.pfx \
   -e TLS__CertificatePassword=<strong-password> \
   ghcr.io/<your-org>/openwish:latest
 ```
@@ -47,14 +48,14 @@ docker run --rm \
 ## Application Configuration Reference
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `TLS__CertificatePath` | Absolute path to the mounted PFX bundle. | `/certs/tls.pfx` |
+| `TLS__CertificatePath` | Absolute path to the mounted PFX bundle. | _unset_ |
 | `TLS__CertificatePassword` | Password for the PFX file, if one was set. | _empty_ |
 | `Tls:HttpPort` | Override the HTTP listener port. | `8080` in container, else `5000` |
 | `Tls:HttpsPort` | Override the HTTPS listener port. | `8443` in container, else `5001` |
-| `ForwardedHeaders:KnownProxies` | Optional array of proxy IP addresses to trust. | Accept all |
-| `ForwardedHeaders:KnownNetworks` | Optional array of CIDR ranges to trust. | Accept all |
+| `ForwardedHeaders:KnownProxies` | Proxy IP addresses trusted to set forwarded headers. | _none_ |
+| `ForwardedHeaders:KnownNetworks` | Proxy CIDR ranges trusted to set forwarded headers. | _none_ |
 
-To limit which upstream addresses can supply forwarded headers, add the relevant lists to your `appsettings.Production.json` or environment variables:
+Forwarded headers are disabled until at least one valid trusted proxy or network is configured. Add the relevant lists to your `appsettings.Production.json` or environment variables:
 ```json
 {
   "ForwardedHeaders": {

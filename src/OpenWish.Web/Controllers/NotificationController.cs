@@ -20,110 +20,68 @@ public class NotificationController : ControllerBase
         _userContextService = userContextService;
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetUserNotifications(string userId, [FromQuery] bool includeRead = false)
+    [HttpGet]
+    public async Task<IActionResult> GetUserNotifications([FromQuery] bool includeRead = false)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var notifications = await _notificationService.GetUserNotificationsAsync(userId, includeRead);
         return Ok(notifications);
     }
 
-    [HttpGet("user/{userId}/count")]
-    public async Task<IActionResult> GetUnreadNotificationCount(string userId)
+    [HttpGet("count")]
+    public async Task<IActionResult> GetUnreadNotificationCount()
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var count = await _notificationService.GetUnreadNotificationCountAsync(userId);
         return Ok(count);
     }
 
-    [HttpPost("user/{userId}")]
-    public async Task<IActionResult> CreateNotification(string userId, [FromBody] string message)
+    [HttpPut("{notificationPublicId}/read")]
+    public async Task<IActionResult> MarkAsRead(string notificationPublicId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
-        {
-            return Forbid();
-        }
-
-        var notification = await _notificationService.CreateNotificationAsync(userId, message);
-        return Ok(notification);
-    }
-
-    [HttpPost("user/{targetUserId}/detailed")]
-    public async Task<IActionResult> CreateDetailedNotification(string targetUserId, [FromBody] DetailedNotificationRequest request)
-    {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId is null)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
             return Unauthorized();
         }
 
-        // Always use the authenticated user as the sender to prevent impersonation
-        var notification = await _notificationService.CreateNotificationAsync(
-            authenticatedUserId,
-            targetUserId,
-            request.Title,
-            request.Message,
-            request.Type,
-            request.Action);
-
-        return Ok(notification);
+        var result = await _notificationService.MarkNotificationAsReadAsync(notificationPublicId, userId);
+        return result ? Ok(true) : NotFound();
     }
 
-    [HttpPut("{notificationId}/read")]
-    public async Task<IActionResult> MarkAsRead(int notificationId)
+    [HttpPut("read-all")]
+    public async Task<IActionResult> MarkAllAsRead()
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId is null)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
             return Unauthorized();
-        }
-
-        var result = await _notificationService.MarkNotificationAsReadAsync(notificationId, authenticatedUserId);
-        return Ok(result);
-    }
-
-    [HttpPut("user/{userId}/read-all")]
-    public async Task<IActionResult> MarkAllAsRead(string userId)
-    {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
-        {
-            return Forbid();
         }
 
         var result = await _notificationService.MarkAllNotificationsAsReadAsync(userId);
         return Ok(result);
     }
 
-    [HttpDelete("{notificationId}")]
-    public async Task<IActionResult> DeleteNotification(int notificationId)
+    [HttpDelete("{notificationPublicId}")]
+    public async Task<IActionResult> DeleteNotification(string notificationPublicId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId is null)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
             return Unauthorized();
         }
 
-        var result = await _notificationService.DeleteNotificationAsync(notificationId, authenticatedUserId);
-        return Ok(result);
+        var result = await _notificationService.DeleteNotificationAsync(notificationPublicId, userId);
+        return result ? Ok(true) : NotFound();
     }
-}
-
-public class DetailedNotificationRequest
-{
-    public string Title { get; set; } = string.Empty;
-    public string Message { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public NotificationActionModel? Action { get; set; }
 }

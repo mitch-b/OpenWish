@@ -5,7 +5,7 @@ namespace OpenWish.Application.Models;
 
 internal static class NotificationActionMapper
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
     public static NotificationActionModel? Deserialize(string? actionData)
     {
@@ -16,7 +16,7 @@ internal static class NotificationActionMapper
 
         try
         {
-            return JsonSerializer.Deserialize<NotificationActionModel>(actionData, SerializerOptions);
+            return JsonSerializer.Deserialize<NotificationActionModel>(actionData, _serializerOptions);
         }
         catch
         {
@@ -31,6 +31,14 @@ internal static class NotificationActionMapper
             return null;
         }
 
-        return JsonSerializer.Serialize(action, SerializerOptions);
+        if (action.NavigateTo is not null &&
+            (!action.NavigateTo.StartsWith("/", StringComparison.Ordinal) ||
+             action.NavigateTo.StartsWith("//", StringComparison.Ordinal) ||
+             action.NavigateTo.Contains(':', StringComparison.Ordinal)))
+        {
+            throw new ArgumentException("Notification navigation targets must be relative application paths.", nameof(action));
+        }
+
+        return JsonSerializer.Serialize(action, _serializerOptions);
     }
 }

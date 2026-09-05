@@ -1,0 +1,38 @@
+.gift-match-card {
+    overflow: hidden;
+    border-color: var(--color-success-border);
+}
+
+.gift-match-header {
+    border: 0;
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.gift-match-header h3 {
+    color: inherit;
+    font-size: 1.1rem;
+}
+
+.recipient-reveal {
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    border: 1px solid var(--color-success-border);
+    border-radius: 0.9rem;
+    background:
+        radial-gradient(circle at 88% 16%, color-mix(in srgb, var(--color-success-text) 12%, transparent), transparent 10rem),
+        var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.recipient-reveal h4 {
+    margin: 0;
+    color: inherit;
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+.recipient-reveal h2 {
+    margin: 1.2rem 0 0;
+    color: inherit;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+}

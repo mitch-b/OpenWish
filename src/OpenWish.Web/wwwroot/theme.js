@@ -1,3 +1,11 @@
+// Apply the persisted preference before stylesheets finish loading.
+try {
+    var initialTheme = localStorage.getItem('theme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.dataset.theme = initialTheme;
+    document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+} catch (e) { /* no-op */ }
+
 // Theme management utilities
 window.theme = (function () {
     const _themeHandlers = new WeakMap();

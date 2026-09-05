@@ -1,0 +1,11 @@
+<svg class="ow-icon @Class" aria-hidden="true" focusable="false">
+    <use href="/icons/bootstrap-icons.svg#@Name"></use>
+</svg>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Class { get; set; }
+}

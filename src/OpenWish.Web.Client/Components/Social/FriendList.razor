@@ -5,7 +5,13 @@
 @inject IUserContextService UserContextService
 
 <div class="friend-list">
-    <h4 class="mb-3">Friends</h4>
+    <div class="social-heading">
+        <span class="social-heading-icon"><OpenWishIcon Name="people" /></span>
+        <div>
+            <h2>My friends</h2>
+            <p>People who can share wishlists with you.</p>
+        </div>
+    </div>
     
     @if (_loading)
     {
@@ -24,14 +30,14 @@
         <div class="list-group">
             @foreach (var friend in _friends)
             {
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-person-circle me-2"></i>
-                        @friend.UserName
+                <div class="list-group-item friend-row">
+                    <div class="friend-identity">
+                        <span class="friend-avatar"><OpenWishIcon Name="person-circle" /></span>
+                        <strong>@friend.UserName</strong>
                     </div>
                     <div>
-                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => ShowRemoveConfirmation(friend)">
-                            <i class="bi bi-person-dash"></i> Remove
+                        <button class="btn btn-outline-danger btn-sm" @onclick="() => ShowRemoveConfirmation(friend)">
+                            <OpenWishIcon Name="person-dash" /> Remove
                         </button>
                     </div>
                 </div>

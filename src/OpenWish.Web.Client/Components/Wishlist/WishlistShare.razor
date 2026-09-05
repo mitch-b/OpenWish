@@ -53,7 +53,7 @@ else
     </div>
 
     <button class="btn btn-primary" @onclick="ShareWithFriend" disabled="@(string.IsNullOrEmpty(selectedFriendId))">
-        <i class="bi bi-share"></i> Share
+        <OpenWishIcon Name="share" /> Share
     </button>
 }
 
@@ -85,7 +85,7 @@ else
 </div>
 
 <button class="btn btn-primary" @onclick="GenerateLink">
-    <i class="bi bi-link"></i> Generate Link
+    <OpenWishIcon Name="link" /> Generate Link
 </button>
 
 @if (!string.IsNullOrEmpty(sharingLink))
@@ -94,7 +94,7 @@ else
         <div class="input-group">
             <input type="text" class="form-control" readonly value="@sharingLink" />
             <button class="btn btn-outline-secondary" type="button" @onclick="CopyToClipboard">
-                <i class="bi bi-clipboard"></i> Copy
+                <OpenWishIcon Name="clipboard" /> Copy
             </button>
         </div>
     </div>

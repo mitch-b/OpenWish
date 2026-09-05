@@ -1,29 +1,42 @@
 /* Theme variable definitions */
 /* Light theme */
 :root[data-theme='light'] {
-    --color-bg: #ffffff;
-    --color-text: #1b1f23;
-    --color-link: #006bb7;
-    --color-link-hover: #004e85;
-    --color-primary-bg: #1b6ec2;
-    --color-primary-border: #1861ac;
-    --color-top-row-bg: #f7f7f7;
-    --color-top-row-border: #d6d5d5;
-    --color-sidebar-gradient-start: #052767;
-    --color-sidebar-gradient-end: #3a0647;
+    --color-bg: #f7f7fb;
+    --color-text: #1c2033;
+    --color-text-muted: #5c6475;
+    --color-text-subtle: #778094;
+    --color-link: #5749c5;
+    --color-link-hover: #4035a5;
+    --color-primary-bg: #5b4dcc;
+    --color-primary-border: #5144bd;
+    --color-primary-soft: #eeecff;
+    --color-accent: #df5269;
+    --color-accent-soft: #fff0f2;
+    --color-top-row-bg: rgba(247,247,251,0.88);
+    --color-top-row-border: #e4e5ed;
+    --color-sidebar-gradient-start: #191a33;
+    --color-sidebar-gradient-end: #241532;
     --color-error-bg: #b32121;
     --color-error-text: #ffffff;
-    --color-border-muted: #d0d7de;
-    --color-surface: #f6f8fa;
-    --color-surface-alt: #eef1f4;
+    --color-border: #d9dce7;
+    --color-border-muted: #e1e3eb;
+    --color-surface: #ffffff;
+    --color-surface-alt: #f1f2f7;
+    --color-surface-hover: #eaeaf4;
+    --color-surface-raised: #ffffff;
+    --shadow-sm: 0 1px 2px rgba(28,32,51,.05), 0 4px 14px rgba(28,32,51,.05);
+    --shadow-md: 0 12px 32px rgba(28,32,51,.10);
+    --shadow-lg: 0 24px 64px rgba(28,32,51,.16);
     /* Navigation */
     /* Navigation text on dark gradient sidebar needs light contrast */
     --color-nav-text: #f8f9fa;
     --color-nav-icon: #ffffff;
-    --color-nav-active-bg: rgba(0,0,0,0.08);
-    --color-nav-hover-bg: rgba(0,0,0,0.04);
-    --color-nav-toggle-border: rgba(0,0,0,0.15);
-    --color-nav-toggle-bg: rgba(0,0,0,0.05);
+    --color-nav-active-bg: rgba(255,255,255,0.16);
+    --color-nav-hover-bg: rgba(255,255,255,0.1);
+    --color-nav-divider: rgba(255,255,255,0.2);
+    --color-nav-toggle-border: rgba(27,31,35,0.35);
+    --color-nav-toggle-bg: rgba(27,31,35,0.08);
+    --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%231b1f23' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
     /* Bootstrap variable overrides */
     --bs-body-bg: var(--color-bg);
     --bs-body-color: var(--color-text);
@@ -33,7 +46,7 @@
     --bs-form-control-bg: var(--color-surface);
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
-    --bs-secondary-color: #6c757d;
+    --bs-secondary-color: var(--color-text-muted);
     --bs-card-bg: var(--color-surface);
     --bs-card-border-color: var(--color-border-muted);
     --bs-card-color: var(--color-text);
@@ -47,18 +60,18 @@
     --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
     --bs-dropdown-link-hover-color: var(--color-text);
     /* Status / semantic tokens */
-    --color-success-bg: #d1e7dd;
-    --color-success-border: #0f5132;
-    --color-success-text: #0f5132;
-    --color-warning-bg: #fff3cd;
-    --color-warning-border: #664d03;
-    --color-warning-text: #664d03;
-    --color-info-bg: #cff4fc;
-    --color-info-border: #055160;
-    --color-info-text: #055160;
-    --color-danger-bg: #f8d7da;
-    --color-danger-border: #842029;
-    --color-danger-text: #842029;
+    --color-success-bg: #e7f7f0;
+    --color-success-border: #a9ddc6;
+    --color-success-text: #126542;
+    --color-warning-bg: #fff6df;
+    --color-warning-border: #efd193;
+    --color-warning-text: #7d4b00;
+    --color-info-bg: #e8f5fb;
+    --color-info-border: #add9e8;
+    --color-info-text: #155d75;
+    --color-danger-bg: #fff0f2;
+    --color-danger-border: #edb9c1;
+    --color-danger-text: #9f2940;
     --color-dropdown-bg: var(--color-surface);
     --color-dropdown-border: var(--color-border-muted);
     --color-dropdown-hover-bg: rgba(27, 31, 35, 0.06);
@@ -87,28 +100,41 @@
 
 /* Dark theme */
 :root[data-theme='dark'] {
-    --color-bg: #0d1117;
-    --color-text: #e6edf3;
-    --color-link: #58a6ff;
-    --color-link-hover: #1f6feb;
-    --color-primary-bg: #2383e2;
-    --color-primary-border: #1b6ec2;
-    --color-top-row-bg: #1b1f24;
-    --color-top-row-border: #282e33;
-    --color-sidebar-gradient-start: #121e36;
-    --color-sidebar-gradient-end: #2a0f32;
+    --color-bg: #0d0f1a;
+    --color-text: #f1f2f8;
+    --color-text-muted: #b8bdcc;
+    --color-text-subtle: #9299ac;
+    --color-link: #a79cff;
+    --color-link-hover: #c3bcff;
+    --color-primary-bg: #6d5ee7;
+    --color-primary-border: #8073ef;
+    --color-primary-soft: #272342;
+    --color-accent: #ff7185;
+    --color-accent-soft: #351e2a;
+    --color-top-row-bg: rgba(13,15,26,0.86);
+    --color-top-row-border: #292d40;
+    --color-sidebar-gradient-start: #15172d;
+    --color-sidebar-gradient-end: #24152f;
     --color-error-bg: #b32121;
     --color-error-text: #ffffff;
-    --color-border-muted: #30363d;
-    --color-surface: #161b22;
-    --color-surface-alt: #212830;
+    --color-border: #34384d;
+    --color-border-muted: #2b2f42;
+    --color-surface: #151827;
+    --color-surface-alt: #1d2133;
+    --color-surface-hover: #272c42;
+    --color-surface-raised: #1a1e30;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.24), 0 6px 18px rgba(0,0,0,.16);
+    --shadow-md: 0 16px 36px rgba(0,0,0,.30);
+    --shadow-lg: 0 28px 72px rgba(0,0,0,.44);
     /* Navigation */
     --color-nav-text: #d7d7d7;
     --color-nav-icon: #ffffff;
     --color-nav-active-bg: rgba(255,255,255,0.25);
     --color-nav-hover-bg: rgba(255,255,255,0.12);
+    --color-nav-divider: rgba(255,255,255,0.2);
     --color-nav-toggle-border: rgba(255,255,255,0.2);
     --color-nav-toggle-bg: rgba(255,255,255,0.08);
+    --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
     /* Bootstrap variable overrides */
     --bs-body-bg: var(--color-bg);
     --bs-body-color: var(--color-text);
@@ -118,7 +144,7 @@
     --bs-form-control-bg: var(--color-surface);
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
-    --bs-secondary-color: #8b949e;
+    --bs-secondary-color: var(--color-text-muted);
     --bs-card-bg: var(--color-surface);
     --bs-card-border-color: var(--color-border-muted);
     --bs-card-color: var(--color-text);
@@ -132,18 +158,18 @@
     --bs-dropdown-link-hover-bg: var(--color-dropdown-hover-bg);
     --bs-dropdown-link-hover-color: var(--color-text);
     /* Status / semantic tokens */
-    --color-success-bg: #132d1f;
-    --color-success-border: #2ea043;
-    --color-success-text: #7ee787;
-    --color-warning-bg: #2e2817;
-    --color-warning-border: #9e6a03;
-    --color-warning-text: #e3b341;
-    --color-info-bg: #132b36;
-    --color-info-border: #0a6377;
-    --color-info-text: #58a6ff;
-    --color-danger-bg: #2c1517;
-    --color-danger-border: #a40e26;
-    --color-danger-text: #ff7b72;
+    --color-success-bg: #142c24;
+    --color-success-border: #286f52;
+    --color-success-text: #73d7aa;
+    --color-warning-bg: #302817;
+    --color-warning-border: #7e652b;
+    --color-warning-text: #f1c76d;
+    --color-info-bg: #152a35;
+    --color-info-border: #376d82;
+    --color-info-text: #7dcced;
+    --color-danger-bg: #321b24;
+    --color-danger-border: #864155;
+    --color-danger-text: #ff9baa;
     --color-dropdown-bg: var(--color-surface);
     --color-dropdown-border: var(--color-border-muted);
     --color-dropdown-hover-bg: rgba(255, 255, 255, 0.08);
@@ -152,10 +178,10 @@
     --color-danger-solid-hover: #b62324;
     --color-danger-solid-active: #982119;
     /* Bootstrap semantic overrides */
-    --bs-success: #2ea043;
-    --bs-warning: #e3b341;
-    --bs-info: #58a6ff;
-    --bs-danger: #ff7b72;
+    --bs-success: #2f9e72;
+    --bs-warning: #d19b38;
+    --bs-info: #3891b4;
+    --bs-danger: #d95c70;
     --bs-success-bg-subtle: var(--color-success-bg);
     --bs-success-text-emphasis: var(--color-success-text);
     --bs-warning-bg-subtle: var(--color-warning-bg);

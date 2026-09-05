@@ -32,7 +32,7 @@
                 <div class="form-floating mb-3 input-group">
                     <input type="text" value="@email" id="email" class="form-control" placeholder="Enter your email" disabled />
                     <div class="input-group-append">
-                        <span class="h-100 input-group-text text-success font-weight-bold">✓</span>
+                        <span class="h-100 input-group-text text-success font-weight-bold"><OpenWishIcon Name="check-lg" /></span>
                     </div>
                     <label for="email" class="form-label">Email</label>
                 </div>
@@ -91,7 +91,7 @@
             BaseUriService.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
 
-        await EmailSender.SendConfirmationLinkAsync(user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(user, Input.NewEmail, callbackUrl);
 
         message = "Confirmation link to change email sent. Please check your email.";
     }
@@ -110,7 +110,7 @@
             BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
 
-        await EmailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(user, email, callbackUrl);
 
         message = "Verification email sent. Please check your email.";
     }

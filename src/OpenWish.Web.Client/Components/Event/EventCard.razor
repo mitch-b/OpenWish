@@ -3,6 +3,7 @@
 @inject IEventService EventService
 @inject ILogger<EventCard> Logger
 @inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
 
 @if (Event == null)
 {
@@ -12,38 +13,72 @@ else
 {
     <div class="card h-100 event-card" @onclick="NavigateToEvent">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-                <h5 class="card-title mb-1">@Event.Name</h5>
-                <span style="font-size: 1.5rem;">📅</span>
+            <div class="card-title-row">
+                <span class="event-card-icon"><OpenWishIcon Name="calendar-event" /></span>
+                <div>
+                    <h5 class="card-title">@Event.Name</h5>
+                    <span class="card-owner">Hosted by @Event.CreatedBy?.UserName</span>
+                </div>
             </div>
-            <p class="card-text">
-                <span class="badge bg-primary">@Event.Date.ToString("MMMM dd, yyyy")</span>
+            <div class="event-meta">
+                <span><OpenWishIcon Name="calendar-event" /> @Event.Date.ToString("MMM d, yyyy")</span>
                 @if (Event.IsGiftExchange)
                 {
-                    <span class="badge bg-success">Gift Exchange</span>
+                    <span><OpenWishIcon Name="gift" /> Secret Santa</span>
                 }
-            </p>
-            <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">Created by @Event.CreatedBy?.UserName</small>
-                <div class="dropdown d-inline-block">
-                    <button class="btn btn-outline-secondary btn-sm kebab-menu"
-                            type="button"
-                            id="dropdownMenu@(Event.Id)"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                            @onclick:stopPropagation="true">
-                        ⋮
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
-                        <li>
-                            <button class="dropdown-item text-danger"
-                                    @onclick:stopPropagation="true"
-                                    @onclick="ShowDeleteDialog">
-                                Delete
-                            </button>
-                        </li>
-                    </ul>
+            </div>
+            @if (Event.IsGiftExchange)
+            {
+                <div class="event-status">
+                    <span><OpenWishIcon Name="people" /> @AcceptedParticipantCount participants</span>
+                    @if (Event.NamesDrawnOn.HasValue)
+                    {
+                        <span class="status-ready"><OpenWishIcon Name="check-circle" /> Names drawn</span>
+                    }
+                    else if (PendingInvitationCount > 0)
+                    {
+                        <span>@PendingInvitationCount waiting to respond</span>
+                    }
+                    else
+                    {
+                        <span>Ready for setup</span>
+                    }
                 </div>
+            }
+            <div class="card-footer-row">
+                <small>
+                    @if (_currentUserId == Event.CreatedBy?.Id && Event.IsGiftExchange && !Event.NamesDrawnOn.HasValue)
+                    {
+                        <span>Continue setup</span>
+                    }
+                    else
+                    {
+                        <span>Open event</span>
+                    }
+                </small>
+                @if (_currentUserId == Event.CreatedBy?.Id)
+                {
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-outline-secondary btn-sm kebab-menu"
+                                type="button"
+                                id="dropdownMenu@(Event.Id)"
+                                data-bs-toggle="dropdown"
+                                aria-label="Actions for @Event.Name"
+                                aria-expanded="false"
+                                @onclick:stopPropagation="true">
+                            <OpenWishIcon Name="three-dots-vertical" />
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
+                            <li>
+                                <button class="dropdown-item text-danger"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="ShowDeleteDialog">
+                                    Delete
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                }
             </div>
         </div>
     </div>
@@ -84,6 +119,11 @@ else
 </Dialog>
 
 @code {
+    private string? _currentUserId;
+
+    protected override async Task OnInitializedAsync() =>
+        _currentUserId = await UserContextService.GetUserIdAsync();
+
     [Parameter]
     public EventModel? Event { get; set; }
 
@@ -95,6 +135,31 @@ else
     private string _deleteDialogMessage = string.Empty;
     private bool _isDeleting;
     private DeleteConfirmationStage _deleteConfirmationStage = DeleteConfirmationStage.First;
+    private int AcceptedParticipantCount
+    {
+        get
+        {
+            var acceptedUserIds = Event?.EventUsers?
+                .Where(participant =>
+                    !participant.Deleted &&
+                    participant.IsAccepted &&
+                    string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase))
+                .Select(participant => participant.UserId)
+                .Where(userId => !string.IsNullOrWhiteSpace(userId))
+                .ToHashSet(StringComparer.Ordinal) ?? [];
+
+            if (!string.IsNullOrWhiteSpace(Event?.CreatedBy?.Id))
+            {
+                acceptedUserIds.Add(Event.CreatedBy.Id);
+            }
+
+            return acceptedUserIds.Count;
+        }
+    }
+    private int PendingInvitationCount =>
+        Event?.EventUsers?.Count(participant =>
+            !participant.Deleted &&
+            string.Equals(participant.Status, "Pending", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
     private void ShowDeleteDialog()
     {
@@ -141,8 +206,8 @@ else
 
         try
         {
-            Logger.LogInformation("Deleting event {EventId}", Event.Id);
-            await EventService.DeleteEventAsync(Event.Id);
+            Logger.LogInformation("Deleting event {EventPublicId}", Event.PublicId);
+            await EventService.DeleteEventByPublicIdAsync(Event.PublicId, _currentUserId!);
 
             if (OnDelete.HasDelegate)
             {
@@ -153,7 +218,7 @@ else
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error deleting event {EventId}", Event.Id);
+            Logger.LogError(ex, "Error deleting event {EventPublicId}", Event.PublicId);
         }
         finally
         {

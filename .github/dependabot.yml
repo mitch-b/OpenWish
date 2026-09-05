@@ -1,20 +1,52 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for more information:
-# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
-# https://containers.dev/guide/dependabot
-
 version: 2
 updates:
- - package-ecosystem: "devcontainers"
-   directory: "/"
-   schedule:
-     interval: weekly
-     
- - package-ecosystem: "nuget"
-   directory: "/src"
-   schedule:
-     interval: weekly
-   ignore:
-      - dependency-name: 'AutoMapper'
-        update-types: ['version-update:semver-major']
+  - package-ecosystem: "nuget"
+    directory: "/src"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      dotnet:
+        patterns:
+          - "Microsoft.*"
+          - "System.*"
+      observability:
+        patterns:
+          - "OpenTelemetry.*"
+    labels:
+      - "dependencies"
+      - ".NET"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "docker"
+    directory: "/src/OpenWish.Web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "docker"
+    directory: "/.agents/skills/screenshot"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "devcontainers_package_manager"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"

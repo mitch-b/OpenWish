@@ -13,39 +13,48 @@
 }
 else if (_giftExchange != null)
 {
-    <div class="card border-success shadow-lg mb-4">
-        <div class="card-header bg-success text-white">
-            <h3 class="mb-0"><i class="bi bi-gift"></i> Your Gift Exchange Match</h3>
+    <div class="card gift-match-card mb-4">
+        <div class="card-header gift-match-header">
+            <h3 class="mb-0"><OpenWishIcon Name="gift" Class="me-2" />Your Secret Santa match</h3>
         </div>
         <div class="card-body">
-            <div class="alert alert-success" role="alert">
-                <h4 class="alert-heading">🎁 You're Shopping For:</h4>
-                <hr>
-                <h2 class="display-4 text-center my-4">@RecipientDisplayName</h2>
+            <div class="recipient-reveal" role="status">
+                <h4 class="alert-heading">You're shopping for</h4>
+                <h2>@RecipientDisplayName</h2>
             </div>
 
             @if (_recipientWishlist != null)
             {
                 <div class="mt-4">
-                    <h5><i class="bi bi-list-check"></i> Their Wishlist:</h5>
-                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary btn-lg w-100 mt-2">
-                        <i class="bi bi-eye"></i> View @(RecipientDisplayName)'s Wishlist
+                    <p class="mb-2"><strong>Their gift ideas are ready.</strong></p>
+                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary btn-lg w-100">
+                        <OpenWishIcon Name="list-check" Class="me-2" />View @RecipientDisplayName's wishlist
                     </a>
+                    <p class="small text-muted mt-2 mb-0">
+                        Reserve an item on the wishlist so other shoppers avoid buying the same gift.
+                        @RecipientDisplayName won't see your reservation.
+                    </p>
                 </div>
             }
             else
             {
                 <div class="alert alert-info mt-4">
-                    <i class="bi bi-info-circle"></i> @(RecipientDisplayName) hasn't attached a wishlist to this event yet.
+                    <OpenWishIcon Name="info-circle" Class="me-1" />
+                    @RecipientDisplayName hasn't attached a wishlist yet. Check back after they add gift ideas.
                 </div>
             }
 
             @if (_giftExchange.Budget.HasValue)
             {
                 <div class="mt-3 text-muted">
-                    <i class="bi bi-cash"></i> Suggested Budget: <strong>@_giftExchange.Budget.Value.ToString("C")</strong>
+                    <OpenWishIcon Name="cash" Class="me-1" /> Suggested budget: <strong>@_giftExchange.Budget.Value.ToString("C")</strong>
                 </div>
             }
+
+            <div class="small text-muted mt-3">
+                <OpenWishIcon Name="eye-slash" Class="me-1" />
+                Your match is private. Only you can see who you're shopping for.
+            </div>
         </div>
     </div>
 }

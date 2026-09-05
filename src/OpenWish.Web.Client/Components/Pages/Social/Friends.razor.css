@@ -1,0 +1,20 @@
+.page-shell {
+    padding-top: 0.5rem;
+}
+
+.friends-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, .85fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.friends-panel {
+    box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 767.98px) {
+    .friends-layout {
+        grid-template-columns: 1fr;
+    }
+}

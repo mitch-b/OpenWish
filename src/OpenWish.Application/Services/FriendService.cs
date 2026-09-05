@@ -379,9 +379,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
         var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
 
-        // Log the generated link for debugging
-        _logger.LogInformation("Generated friend invite link: {Link}", inviteLink);
-
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
 
         await _notificationService.CreateNotificationAsync(
@@ -407,8 +404,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                     allSucceeded = false;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Unable to send one address from a friend invitation batch.");
                 allSucceeded = false;
             }
         }
@@ -429,7 +427,20 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var newUser = await context.Users.FindAsync(newUserId);
         var inviter = await context.Users.FindAsync(inviterUserId);
 
-        if (newUser == null || inviter == null)
+        if (newUser == null || inviter == null || string.IsNullOrWhiteSpace(newUser.Email))
+        {
+            return false;
+        }
+
+        var normalizedEmail = NormalizeEmailForComparison(newUser.Email);
+        var pendingInvite = await context.PendingFriendInvites
+            .FirstOrDefaultAsync(pfi =>
+                pfi.SenderUserId == inviterUserId &&
+                pfi.Email.ToUpper() == normalizedEmail &&
+                pfi.Status == "Pending" &&
+                !pfi.Deleted);
+
+        if (pendingInvite == null)
         {
             return false;
         }
@@ -507,21 +518,14 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             "FriendAccept");
 
         // Mark any pending invite as accepted
-        var pendingInvite = await context.PendingFriendInvites
-            .FirstOrDefaultAsync(pfi =>
-                pfi.SenderUserId == inviterUserId &&
-                pfi.Email == newUser.Email &&
-                !pfi.Deleted);
-
-        if (pendingInvite != null)
-        {
-            pendingInvite.Status = "Accepted";
-            pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
-        }
+        pendingInvite.Status = "Accepted";
+        pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
         return true;
     }
+
+    internal static string NormalizeEmailForComparison(string email) => email.ToUpperInvariant();
 
     public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)
     {

@@ -14,7 +14,7 @@ public interface INotificationService
         string message,
         string type,
         NotificationActionModel? action = null);
-    Task<bool> MarkNotificationAsReadAsync(int notificationId, string userId);
+    Task<bool> MarkNotificationAsReadAsync(string notificationPublicId, string userId);
     Task<bool> MarkAllNotificationsAsReadAsync(string userId);
-    Task<bool> DeleteNotificationAsync(int notificationId, string userId);
+    Task<bool> DeleteNotificationAsync(string notificationPublicId, string userId);
 }

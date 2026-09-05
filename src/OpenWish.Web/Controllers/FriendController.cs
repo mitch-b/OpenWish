@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.Services;
+using OpenWish.Web.Services;
 
 namespace OpenWish.Web.Controllers;
 
@@ -11,126 +13,138 @@ namespace OpenWish.Web.Controllers;
 public class FriendController : ControllerBase
 {
     private readonly IFriendService _friendService;
-    private readonly IUserContextService _userContextService;
+    private readonly ApiUserContextService _userContextService;
 
-    public FriendController(IFriendService friendService, IUserContextService userContextService)
+    public FriendController(IFriendService friendService, ApiUserContextService userContextService)
     {
         _friendService = friendService;
         _userContextService = userContextService;
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetFriends(string userId)
+    [HttpGet]
+    public async Task<IActionResult> GetFriends()
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var friends = await _friendService.GetFriendsAsync(userId);
         return Ok(friends);
     }
 
-    [HttpGet("check/{userId}/{otherUserId}")]
-    public async Task<IActionResult> CheckFriendship(string userId, string otherUserId)
+    [HttpGet("check/{otherUserId}")]
+    public async Task<IActionResult> CheckFriendship(string otherUserId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var areFriends = await _friendService.AreFriendsAsync(userId, otherUserId);
         return Ok(areFriends);
     }
 
-    [HttpDelete("{userId}/{friendId}")]
-    public async Task<IActionResult> RemoveFriend(string userId, string friendId)
+    [HttpDelete("{friendId}")]
+    public async Task<IActionResult> RemoveFriend(string friendId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.RemoveFriendAsync(userId, friendId);
         return Ok(result);
     }
 
-    [HttpPost("request/{requesterId}/{receiverId}")]
-    public async Task<IActionResult> SendFriendRequest(string requesterId, string receiverId)
+    [HttpPost("request/{receiverId}")]
+    public async Task<IActionResult> SendFriendRequest(string receiverId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != requesterId)
+        var requesterId = await _userContextService.GetUserIdAsync();
+        if (requesterId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
         return Ok(request);
     }
 
-    [HttpGet("requests/received/{userId}")]
-    public async Task<IActionResult> GetReceivedRequests(string userId)
+    [HttpGet("requests/received")]
+    public async Task<IActionResult> GetReceivedRequests()
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var requests = await _friendService.GetReceivedFriendRequestsAsync(userId);
         return Ok(requests);
     }
 
-    [HttpGet("requests/sent/{userId}")]
-    public async Task<IActionResult> GetSentRequests(string userId)
+    [HttpGet("requests/sent")]
+    public async Task<IActionResult> GetSentRequests()
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var requests = await _friendService.GetSentFriendRequestsAsync(userId);
         return Ok(requests);
     }
 
-    [HttpPost("request/{requestId}/accept/{userId}")]
-    public async Task<IActionResult> AcceptRequest(int requestId, string userId)
+    [HttpPost("request/{requestId}/accept")]
+    public async Task<IActionResult> AcceptRequest(int requestId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.AcceptFriendRequestAsync(requestId, userId);
         return Ok(result);
     }
 
-    [HttpPost("request/{requestId}/reject/{userId}")]
-    public async Task<IActionResult> RejectRequest(int requestId, string userId)
+    [HttpPost("request/{requestId}/reject")]
+    public async Task<IActionResult> RejectRequest(int requestId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.RejectFriendRequestAsync(requestId, userId);
         return Ok(result);
     }
 
-    [HttpPost("request/{requestId}/cancel/{userId}")]
-    public async Task<IActionResult> CancelRequest(int requestId, string userId)
+    [HttpPost("request/{requestId}/cancel")]
+    public async Task<IActionResult> CancelRequest(int requestId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.CancelFriendRequestAsync(requestId, userId);
         return result ? Ok(true) : NotFound();
     }
 
-    [HttpPost("request/{requestId}/resend/{userId}")]
-    public async Task<IActionResult> ResendRequest(int requestId, string userId)
+    [HttpPost("request/{requestId}/resend")]
+    public async Task<IActionResult> ResendRequest(int requestId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         try
@@ -144,13 +158,14 @@ public class FriendController : ControllerBase
         }
     }
 
-    [HttpPost("invite/{senderUserId}")]
-    public async Task<IActionResult> SendFriendInviteByEmail(string senderUserId, [FromQuery] string email)
+    [HttpPost("invite")]
+    [EnableRateLimiting("invitations")]
+    public async Task<IActionResult> SendFriendInviteByEmail([FromQuery] string email)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != senderUserId)
+        var senderUserId = await _userContextService.GetUserIdAsync();
+        if (senderUserId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         try
@@ -164,13 +179,19 @@ public class FriendController : ControllerBase
         }
     }
 
-    [HttpPost("invite/{senderUserId}/batch")]
-    public async Task<IActionResult> SendFriendInvitesByEmail(string senderUserId, [FromBody] List<string> emails)
+    [HttpPost("invite/batch")]
+    [EnableRateLimiting("invitations")]
+    public async Task<IActionResult> SendFriendInvitesByEmail([FromBody] List<string> emails)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != senderUserId)
+        var senderUserId = await _userContextService.GetUserIdAsync();
+        if (senderUserId is null)
         {
-            return Forbid();
+            return Unauthorized();
+        }
+
+        if (emails.Count > 20)
+        {
+            return BadRequest("A maximum of 20 invitations can be sent at once.");
         }
 
         try
@@ -184,59 +205,39 @@ public class FriendController : ControllerBase
         }
     }
 
-    [HttpPost("invite/complete/{newUserId}/{inviterUserId}")]
-    public async Task<IActionResult> CreateFriendshipFromInvite(string newUserId, string inviterUserId)
+    [HttpGet("pending-invites")]
+    public async Task<IActionResult> GetPendingFriendInvites()
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != newUserId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
-        }
-
-        try
-        {
-            var result = await _friendService.CreateFriendshipFromInviteAsync(newUserId, inviterUserId);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(ex.Message);
-        }
-    }
-
-    [HttpGet("pending-invites/{userId}")]
-    public async Task<IActionResult> GetPendingFriendInvites(string userId)
-    {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
-        {
-            return Forbid();
+            return Unauthorized();
         }
 
         var invites = await _friendService.GetPendingFriendInvitesAsync(userId);
         return Ok(invites);
     }
 
-    [HttpPost("pending-invite/{inviteId}/cancel/{userId}")]
-    public async Task<IActionResult> CancelPendingFriendInvite(int inviteId, string userId)
+    [HttpPost("pending-invite/{inviteId}/cancel")]
+    public async Task<IActionResult> CancelPendingFriendInvite(int inviteId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.CancelPendingFriendInviteAsync(inviteId, userId);
         return result ? Ok(true) : NotFound();
     }
 
-    [HttpPost("pending-invite/{inviteId}/resend/{userId}")]
-    public async Task<IActionResult> ResendPendingFriendInvite(int inviteId, string userId)
+    [HttpPost("pending-invite/{inviteId}/resend")]
+    public async Task<IActionResult> ResendPendingFriendInvite(int inviteId)
     {
-        var authenticatedUserId = await _userContextService.GetUserIdAsync();
-        if (authenticatedUserId != userId)
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
         {
-            return Forbid();
+            return Unauthorized();
         }
 
         var result = await _friendService.ResendPendingFriendInviteAsync(inviteId, userId);

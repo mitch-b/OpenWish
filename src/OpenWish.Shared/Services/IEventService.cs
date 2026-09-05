@@ -6,14 +6,14 @@ public interface IEventService
 {
     Task<EventModel> CreateEventAsync(EventModel evt, string creatorId);
     Task<EventModel> GetEventAsync(int id);
-    Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null);
+    Task<EventModel> GetEventByPublicIdAsync(string publicId, string requestingUserId);
     Task<IEnumerable<EventModel>> GetUserEventsAsync(string userId);
-    Task<EventModel> UpdateEventAsync(int id, EventModel evt);
-    Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt);
-    Task DeleteEventAsync(int id);
-    Task DeleteEventByPublicIdAsync(string publicId);
-    Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant");
-    Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role = "Participant");
+    Task<EventModel> UpdateEventAsync(int id, EventModel evt, string requestorId);
+    Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt, string requestorId);
+    Task DeleteEventAsync(int id, string requestorId);
+    Task DeleteEventByPublicIdAsync(string publicId, string requestorId);
+    Task<bool> AddUserToEventAsync(int eventId, string userId, string requestorId, string role = "Participant");
+    Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string requestorId, string role = "Participant");
     Task<bool> RemoveUserFromEventAsync(int eventId, string userId, string requestorId);
     Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId);
     Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null);
@@ -32,7 +32,7 @@ public interface IEventService
     Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email);
     Task<EventUserModel> InviteByEmailToEventByPublicIdAsync(string eventPublicId, string inviterId, string email);
     Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId);
-    Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId);
+    Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId, string requestorId);
     Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email);
     Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId);
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
@@ -48,7 +48,7 @@ public interface IEventService
     Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId);
     Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId);
     Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId);
-    Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId);
+    Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId);
     Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId);
     Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId);
     Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId);

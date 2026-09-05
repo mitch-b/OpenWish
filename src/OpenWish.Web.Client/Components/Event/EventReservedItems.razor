@@ -21,7 +21,7 @@
                         type="button"
                         disabled="@_isLoading"
                         @onclick="RefreshAsync">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                    <OpenWishIcon Name="arrow-clockwise" Class="me-1" /> Refresh
                 </button>
             </div>
         </div>
@@ -50,7 +50,7 @@
             {
                 <div class="reserved-owner-group mb-4">
                     <div class="reserved-owner-header d-flex align-items-center mb-2">
-                        <i class="bi bi-person-circle text-secondary me-2"></i>
+                        <OpenWishIcon Name="person-circle" Class="text-secondary me-2" />
                         <div>
                             <div class="fw-semibold">@ownerGroup.OwnerDisplayName</div>
                             @if (ownerGroup.OwnerDisplayName == "Shared Event Lists")
@@ -67,7 +67,7 @@
                                 <a href="/wishlists/@wishlist.WishlistPublicId"
                                    class="fw-semibold text-decoration-none"
                                    target="_blank" rel="noopener noreferrer">
-                                    <i class="bi bi-card-checklist me-1"></i>@wishlist.WishlistName
+                                    <OpenWishIcon Name="card-checklist" Class="me-1" />@wishlist.WishlistName
                                 </a>
                                 <span class="badge bg-light text-dark">@wishlist.Items.Count</span>
                             </div>

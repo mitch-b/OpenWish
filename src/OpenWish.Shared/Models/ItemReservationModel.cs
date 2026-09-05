@@ -6,6 +6,7 @@ public class ItemReservationModel : BaseEntityModel
 {
     [JsonIgnore]
     public int WishlistItemId { get; set; }
+    [JsonIgnore]
     public WishlistItemModel? WishlistItem { get; set; }
 
     public string UserId { get; set; }

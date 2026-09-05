@@ -30,11 +30,11 @@
                 @if (!IsOwner)
                 {
                     <button class="btn btn-sm btn-outline-success" @onclick="() => ShowReservation = !ShowReservation">
-                        🎁 Reserve
+                        <OpenWishIcon Name="gift" /> Reserve
                     </button>
                 }
                 <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowComments = !ShowComments">
-                    💬 Comments
+                    <OpenWishIcon Name="chat" /> Comments
                 </button>
             </div>
             

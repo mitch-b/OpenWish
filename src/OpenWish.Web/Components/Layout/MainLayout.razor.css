@@ -1,4 +1,5 @@
 .page {
+    min-height: 100vh;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -23,7 +24,7 @@ main {
     align-items: center;
     gap: .75rem;
     position: relative;
-    z-index: 2200;
+    z-index: 1020;
 }
 
     .top-row ::deep a, .top-row ::deep .btn-link {
@@ -57,16 +58,19 @@ main {
     }
 
     .sidebar {
-        width: 250px;
+        width: 220px;
+        flex: 0 0 220px;
         height: 100vh;
         position: sticky;
         top: 0;
+        box-shadow: 2px 0 16px rgba(0, 0, 0, 0.14);
+        z-index: 1020;
     }
 
     .top-row {
         position: sticky;
         top: 0;
-        z-index: 2200;
+        z-index: 1010;
     }
 
     .top-row.auth ::deep a:first-child {
@@ -76,7 +80,7 @@ main {
     }
 
     .top-row, article {
-        padding-left: 2rem !important;
+        padding-left: 1.5rem !important;
         padding-right: 1.5rem !important;
     }
 }

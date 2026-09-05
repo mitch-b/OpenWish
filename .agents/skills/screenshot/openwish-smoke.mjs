@@ -236,6 +236,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error(`Theme did not persist after reload; found '${persistedTheme}'.`);
   }
 
+  await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
+  await assertVisible(page, "Gift Exchange Management");
+  await screenshot(page, "event-details-dark.png");
+
   await visit(page, "/whats-new", "What's new", visitedRoutes);
   await assertVisible(page, "Version 0.1.0");
   await assertVisible(page, "Sustainable improvements");

@@ -37,7 +37,24 @@
 }
 
 .invitation-filters .btn {
-    flex: 1 1 auto;
+    flex: 1 1 calc(50% - 0.25rem);
+}
+
+.invitation-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.invitation-identity strong,
+.invitation-identity span {
+    overflow-wrap: anywhere;
+}
+
+.invitation-identity > span:not(.badge) {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
 }
 
 @media (max-width: 576px) {

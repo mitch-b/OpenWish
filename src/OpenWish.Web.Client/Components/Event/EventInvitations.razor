@@ -12,7 +12,7 @@
 
 <div class="card shadow-sm">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
             <div>
                 <h3 class="h4 mb-1">Invite participants</h3>
                 <p class="small text-muted mb-0">Invitees sign in and accept before they can be included in the draw.</p>
@@ -81,19 +81,17 @@
                 {
                     <div class="list-group-item">
                         <div class="d-flex flex-column gap-2">
-                            <div style="min-width: 0;">
-                                <div class="d-flex align-items-center" style="overflow: hidden;">
-                                    @if (invitation.User != null)
-                                    {
-                                        <strong class="text-truncate">@invitation.User.UserName</strong>
-                                        <small class="text-muted ms-2 text-truncate">(@invitation.User.Email)</small>
-                                    }
-                                    else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
-                                    {
-                                        <strong class="text-truncate">@invitation.InviteeEmail</strong>
-                                        <small class="text-muted ms-2">(Not registered)</small>
-                                    }
-                                </div>
+                            <div class="invitation-identity">
+                                @if (invitation.User != null)
+                                {
+                                    <strong>@invitation.User.UserName</strong>
+                                    <span>@invitation.User.Email</span>
+                                }
+                                else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
+                                {
+                                    <strong>@invitation.InviteeEmail</strong>
+                                    <span>Not registered</span>
+                                }
                                 <div class="mt-1">
                                     <span class="badge @GetStatusBadgeClass(invitation.Status)">@invitation.Status</span>
                                     <small class="text-muted ms-2">

@@ -3,14 +3,15 @@
 :root[data-theme='light'] {
     --color-bg: #ffffff;
     --color-text: #1b1f23;
+    --color-text-muted: #4b5563;
     --color-link: #006bb7;
     --color-link-hover: #004e85;
     --color-primary-bg: #1b6ec2;
     --color-primary-border: #1861ac;
     --color-top-row-bg: #f7f7f7;
     --color-top-row-border: #d6d5d5;
-    --color-sidebar-gradient-start: #052767;
-    --color-sidebar-gradient-end: #3a0647;
+    --color-sidebar-gradient-start: #102a5e;
+    --color-sidebar-gradient-end: #261238;
     --color-error-bg: #b32121;
     --color-error-text: #ffffff;
     --color-border-muted: #d0d7de;
@@ -20,10 +21,12 @@
     /* Navigation text on dark gradient sidebar needs light contrast */
     --color-nav-text: #f8f9fa;
     --color-nav-icon: #ffffff;
-    --color-nav-active-bg: rgba(0,0,0,0.08);
-    --color-nav-hover-bg: rgba(0,0,0,0.04);
-    --color-nav-toggle-border: rgba(0,0,0,0.15);
-    --color-nav-toggle-bg: rgba(0,0,0,0.05);
+    --color-nav-active-bg: rgba(255,255,255,0.16);
+    --color-nav-hover-bg: rgba(255,255,255,0.1);
+    --color-nav-divider: rgba(255,255,255,0.2);
+    --color-nav-toggle-border: rgba(27,31,35,0.35);
+    --color-nav-toggle-bg: rgba(27,31,35,0.08);
+    --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%231b1f23' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
     /* Bootstrap variable overrides */
     --bs-body-bg: var(--color-bg);
     --bs-body-color: var(--color-text);
@@ -33,7 +36,7 @@
     --bs-form-control-bg: var(--color-surface);
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
-    --bs-secondary-color: #6c757d;
+    --bs-secondary-color: var(--color-text-muted);
     --bs-card-bg: var(--color-surface);
     --bs-card-border-color: var(--color-border-muted);
     --bs-card-color: var(--color-text);
@@ -89,6 +92,7 @@
 :root[data-theme='dark'] {
     --color-bg: #0d1117;
     --color-text: #e6edf3;
+    --color-text-muted: #b7c0ca;
     --color-link: #58a6ff;
     --color-link-hover: #1f6feb;
     --color-primary-bg: #2383e2;
@@ -107,8 +111,10 @@
     --color-nav-icon: #ffffff;
     --color-nav-active-bg: rgba(255,255,255,0.25);
     --color-nav-hover-bg: rgba(255,255,255,0.12);
+    --color-nav-divider: rgba(255,255,255,0.2);
     --color-nav-toggle-border: rgba(255,255,255,0.2);
     --color-nav-toggle-bg: rgba(255,255,255,0.08);
+    --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
     /* Bootstrap variable overrides */
     --bs-body-bg: var(--color-bg);
     --bs-body-color: var(--color-text);
@@ -118,7 +124,7 @@
     --bs-form-control-bg: var(--color-surface);
     --bs-form-control-color: var(--color-text);
     --bs-secondary-bg: var(--color-surface-alt);
-    --bs-secondary-color: #8b949e;
+    --bs-secondary-color: var(--color-text-muted);
     --bs-card-bg: var(--color-surface);
     --bs-card-border-color: var(--color-border-muted);
     --bs-card-color: var(--color-text);

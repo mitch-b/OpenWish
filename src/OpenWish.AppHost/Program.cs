@@ -14,11 +14,37 @@ var sql = builder.AddPostgres(sqlHostName, sqlUser, sqlPassword)
 
 var db = sql.AddDatabase(sqlDatabaseName);
 
-builder.AddProject<Projects.OpenWish_Web>("openwish-web")
+var web = builder.AddProject<Projects.OpenWish_Web>("openwish-web")
     .WithEnvironment("OpenWishSettings__OwnDatabaseUpgrades", "true")
     .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
     .WithExternalHttpEndpoints()
     .WithReference(db)
     .WaitFor(db);
+
+foreach (var settingName in new[]
+{
+    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL",
+    "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL"
+})
+{
+    if (builder.Configuration[settingName] is { Length: > 0 } settingValue)
+    {
+        web.WithEnvironment(settingName, settingValue);
+    }
+}
+
+foreach (var (configurationKey, environmentName) in new[]
+{
+    ("Authentication:Google:ClientId", "Authentication__Google__ClientId"),
+    ("Authentication:Google:ClientSecret", "Authentication__Google__ClientSecret")
+})
+{
+    if (builder.Configuration[configurationKey] is { Length: > 0 } settingValue)
+    {
+        web.WithEnvironment(environmentName, settingValue);
+    }
+}
 
 builder.Build().Run();

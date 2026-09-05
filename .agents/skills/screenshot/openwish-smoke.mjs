@@ -94,11 +94,30 @@ async function visit(page, route, expectedText, visitedRoutes) {
 }
 
 async function screenshot(page, fileName) {
+  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.waitForTimeout(500);
   await page.screenshot({
     path: path.join(walkthroughDirectory, fileName),
     fullPage: true
   });
+}
+
+async function assertResponsiveWidths(page, viewports) {
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(100);
+
+    const dimensions = await page.evaluate(() => ({
+      viewportWidth: window.innerWidth,
+      pageWidth: document.documentElement.scrollWidth
+    }));
+    if (dimensions.pageWidth > dimensions.viewportWidth) {
+      throw new Error(
+        `Page overflowed horizontally at ${viewport.width}x${viewport.height}: ` +
+        `${dimensions.pageWidth}px content in a ${dimensions.viewportWidth}px viewport.`
+      );
+    }
+  }
 }
 
 async function verifyOwnerJourney(browser, manifest, results) {
@@ -200,6 +219,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Add your wishlist");
   await assertVisible(page, "Draw names");
   await screenshot(page, "secret-santa-setup.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 500 },
+    { width: 1024, height: 600 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 700 });
+  await screenshot(page, "secret-santa-setup-mobile.png");
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   await page.getByRole("button", { name: "Invite people" }).first().click();
   await assertVisible(page, "Paste as many addresses as you need");

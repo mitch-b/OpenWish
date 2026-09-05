@@ -27,8 +27,8 @@ else
 {
     <div class="event-header">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
+            <div class="event-header-content">
+                <div class="event-header-copy">
                     <h1 class="display-4">@_event.Name</h1>
                     <p class="lead mb-0">@_event.Description</p>
                     @if (_event.Tags != null)
@@ -43,7 +43,7 @@ else
                 </div>
                 @if (_isOwner)
                 {
-                    <a href="/events/@EventId/manage" class="btn btn-light d-inline-flex align-items-center">
+                    <a href="/events/@EventId/manage" class="btn btn-light event-manage-action">
                         <OpenWishIcon Name="gear" Class="me-2" /> Manage Event
                     </a>
                 }

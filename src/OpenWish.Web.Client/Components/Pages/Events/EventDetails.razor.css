@@ -20,6 +20,30 @@
     color: rgba(255,255,255,0.92);
 }
 
+.event-header-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.event-header-copy {
+    min-width: 0;
+}
+
+.event-manage-action {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+#secret-santa-setup,
+#event-invitations,
+#event-wishlists,
+#gift-exchange {
+    scroll-margin-top: 5.5rem;
+}
+
 .event-header .badge {
     background-color: rgba(255,255,255,0.18);
     color: #ffffff !important;
@@ -193,6 +217,15 @@
 
     .event-header h1 {
         font-size: 1.75rem;
+    }
+
+    .event-header-content {
+        flex-direction: column;
+    }
+
+    .event-manage-action {
+        width: 100%;
+        justify-content: center;
     }
 
     .event-facts,

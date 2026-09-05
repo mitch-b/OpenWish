@@ -1,5 +1,6 @@
 .setup-step {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.85rem;
     min-height: 4.25rem;
@@ -29,12 +30,12 @@
 
 @media (max-width: 575.98px) {
     .setup-step {
+        grid-template-columns: auto minmax(0, 1fr);
         align-items: flex-start;
-        flex-wrap: wrap;
     }
 
     .setup-step .btn {
-        width: 100%;
-        margin-left: 2.85rem;
+        grid-column: 2;
+        justify-self: start;
     }
 }

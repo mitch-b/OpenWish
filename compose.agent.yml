@@ -23,8 +23,14 @@ services:
       ConnectionStrings__OpenWish: Host=db;Port=5432;Database=${OPENWISH_AGENT_DB_NAME:-OpenWishAgent};Username=${OPENWISH_AGENT_DB_USER:-openwish};Password=${OPENWISH_AGENT_DB_PASSWORD:-openwish-agent-local}
       OpenWishSettings__OwnDatabaseUpgrades: "true"
       OpenWishSettings__EnableDevelopmentLogin: "true"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL: ${OTEL_EXPORTER_OTLP_TRACES_PROTOCOL:-http/protobuf}
+      OTEL_EXPORTER_OTLP_METRICS_PROTOCOL: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:-http/protobuf}
     ports:
       - "127.0.0.1:${OPENWISH_AGENT_PORT:-9090}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

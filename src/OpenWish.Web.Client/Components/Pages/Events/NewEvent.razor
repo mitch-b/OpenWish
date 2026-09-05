@@ -68,8 +68,7 @@
             if (userId is not null)
             {
                 var createdEvent = await EventService.CreateEventAsync(submittedEvent, userId);
-                var setupFragment = submittedEvent.IsGiftExchange ? "#secret-santa-setup" : string.Empty;
-                NavigationManager.NavigateTo($"/events/{createdEvent.PublicId}{setupFragment}");
+                NavigationManager.NavigateTo($"/events/{createdEvent.PublicId}");
             }
             else
             {

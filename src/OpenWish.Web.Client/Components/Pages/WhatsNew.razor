@@ -1,16 +1,19 @@
 @page "/whats-new"
 
+@using System.Globalization
 @using OpenWish.Web.Client.Components.Shared
 
-@inject HttpClient HttpClient
+@inject IReleaseNotesService ReleaseNotesService
+@inject IJSRuntime JSRuntime
 @inject ILogger<WhatsNew> Logger
-@inject NavigationManager NavigationManager
+
+@rendermode InteractiveAuto
 
 <PageTitle>What's new</PageTitle>
 
 <div class="container py-4">
     <PageHeader Title="What's new"
-                Description="Recent improvements available in OpenWish." />
+                Description="Follow OpenWish as it becomes a calmer, more capable place to plan thoughtful gifts." />
 
     @if (_loadError is not null)
     {
@@ -25,38 +28,178 @@
     }
     else
     {
-        @foreach (var release in _releases)
+        @if (_releases.Count == 0)
         {
-            <article class="release-card">
-                <div class="release-heading">
-                    <div>
-                        <p class="release-version">Version @release.Version</p>
-                        <h2>@release.Title</h2>
+            <div class="empty-state">
+                <h2>No release notes yet</h2>
+                <p>New OpenWish updates will appear here.</p>
+            </div>
+        }
+        else
+        {
+            @if (ShowBrowseControls)
+            {
+                <section class="release-browser" aria-label="Browse release notes">
+                    <div class="release-search">
+                        <label for="release-search">Search updates</label>
+                        <div class="release-search-field">
+                            <OpenWishIcon Name="search" />
+                            <input id="release-search"
+                                   class="form-control"
+                                   type="search"
+                                   value="@_searchText"
+                                   @oninput="HandleSearch"
+                                   placeholder="Search versions, features, or fixes" />
+                        </div>
                     </div>
-                    <time datetime="@release.Date">@release.Date</time>
-                </div>
-                <p class="release-summary">@release.Summary</p>
-                <ul>
-                    @foreach (var highlight in release.Highlights)
+
+                    @if (AvailableYears.Count > 1)
                     {
-                        <li>@highlight</li>
+                        <div class="release-year-filter">
+                            <label for="release-year">Release year</label>
+                            <select id="release-year"
+                                    class="form-select"
+                                    value="@_selectedYear"
+                                    @onchange="HandleYearChange">
+                                <option value="">All years</option>
+                                @foreach (var year in AvailableYears)
+                                {
+                                    <option value="@year">@year</option>
+                                }
+                            </select>
+                        </div>
                     }
-                </ul>
-            </article>
+
+                    <div class="release-results" role="status" aria-live="polite">
+                        <strong>@ResultCount</strong>
+                        @if (HasActiveFilters)
+                        {
+                            <button class="btn btn-link" type="button" @onclick="ClearFilters">Clear filters</button>
+                        }
+                    </div>
+                </section>
+            }
+
+            @if (FilteredReleases.Count == 0)
+            {
+                <div class="empty-state">
+                    <span class="empty-state-icon"><OpenWishIcon Name="search" /></span>
+                    <h2>No matching updates</h2>
+                    <p>Try a different search or browse every release.</p>
+                    <button class="btn btn-outline-primary" type="button" @onclick="ClearFilters">Show all releases</button>
+                </div>
+            }
+            else
+            {
+                <div class="release-timeline" id="release-timeline">
+                    @foreach (var release in PagedReleases)
+                    {
+                        <article class="release-entry" id="@GetReleaseId(release)">
+                            <time class="release-date" datetime="@release.Date">@FormatDate(release.Date)</time>
+                            <span class="timeline-marker" aria-hidden="true"></span>
+
+                            <div class="release-card @(IsLatest(release) ? "release-card-latest" : string.Empty)">
+                                <div class="release-heading">
+                                    <div>
+                                        <div class="release-version-row">
+                                            <a class="release-version" href="#@GetReleaseId(release)">Version @release.Version</a>
+                                            @if (IsLatest(release))
+                                            {
+                                                <span class="latest-badge">Latest</span>
+                                            }
+                                        </div>
+                                        <h2>@release.Title</h2>
+                                    </div>
+                                    <time datetime="@release.Date">@FormatDate(release.Date)</time>
+                                </div>
+                                <p class="release-summary">@release.Summary</p>
+                                <ul class="release-highlights">
+                                    @foreach (var highlight in release.Highlights)
+                                    {
+                                        <li>@highlight</li>
+                                    }
+                                </ul>
+                            </div>
+                        </article>
+                    }
+                </div>
+
+                @if (TotalPages > 1)
+                {
+                    <nav class="release-pagination" aria-label="Release pages">
+                        <a class="btn btn-outline-secondary @(_currentPage == 1 ? "disabled" : string.Empty)"
+                           href="/whats-new#release-timeline"
+                           aria-disabled="@(_currentPage == 1)"
+                           tabindex="@(_currentPage == 1 ? "-1" : null)"
+                           @onclick="PreviousPage">
+                            <OpenWishIcon Name="arrow-left" />
+                            Previous
+                        </a>
+                        <span>Page @_currentPage of @TotalPages</span>
+                        <a class="btn btn-outline-secondary @(_currentPage == TotalPages ? "disabled" : string.Empty)"
+                           href="/whats-new#release-timeline"
+                           aria-disabled="@(_currentPage == TotalPages)"
+                           tabindex="@(_currentPage == TotalPages ? "-1" : null)"
+                           @onclick="NextPage">
+                            Next
+                            <OpenWishIcon Name="arrow-right" />
+                        </a>
+                    </nav>
+                }
+            }
         }
     }
 </div>
 
 @code {
-    private IReadOnlyList<ReleaseEntry>? _releases;
+    private const int PageSize = 5;
+
+    private IReadOnlyList<ReleaseEntryModel>? _releases;
     private string? _loadError;
+    private string _searchText = string.Empty;
+    private string _selectedYear = string.Empty;
+    private int _currentPage = 1;
+    private bool _scrollToTimeline;
+
+    private bool ShowBrowseControls => _releases?.Count > 1;
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(_searchText) || !string.IsNullOrWhiteSpace(_selectedYear);
+
+    private IReadOnlyList<int> AvailableYears =>
+        _releases?
+            .Select(release => TryGetReleaseDate(release.Date)?.Year)
+            .Where(year => year.HasValue)
+            .Select(year => year!.Value)
+            .Distinct()
+            .OrderDescending()
+            .ToList() ?? [];
+
+    private IReadOnlyList<ReleaseEntryModel> FilteredReleases =>
+        _releases?
+            .Where(MatchesYear)
+            .Where(MatchesSearch)
+            .ToList() ?? [];
+
+    private IReadOnlyList<ReleaseEntryModel> PagedReleases =>
+        FilteredReleases
+            .Skip((_currentPage - 1) * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(FilteredReleases.Count / (double)PageSize));
+
+    private string ResultCount =>
+        FilteredReleases.Count == 1
+            ? "1 release"
+            : $"{FilteredReleases.Count} releases";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var releaseNotesUri = new Uri(new Uri(NavigationManager.BaseUri), "releases.json");
-            _releases = await HttpClient.GetFromJsonAsync<List<ReleaseEntry>>(releaseNotesUri) ?? [];
+            _releases = (await ReleaseNotesService.GetReleaseNotesAsync())
+                .OrderByDescending(release => TryGetReleaseDate(release.Date) ?? DateOnly.MinValue)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -65,10 +208,79 @@
         }
     }
 
-    private sealed record ReleaseEntry(
-        string Version,
-        string Date,
-        string Title,
-        string Summary,
-        IReadOnlyList<string> Highlights);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_scrollToTimeline)
+        {
+            return;
+        }
+
+        _scrollToTimeline = false;
+        await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "release-timeline");
+    }
+
+    private bool MatchesYear(ReleaseEntryModel release) =>
+        string.IsNullOrWhiteSpace(_selectedYear) ||
+        TryGetReleaseDate(release.Date)?.Year.ToString(CultureInfo.InvariantCulture) == _selectedYear;
+
+    private bool MatchesSearch(ReleaseEntryModel release)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        var searchText = _searchText.Trim();
+        return release.Version.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               release.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               release.Summary.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+               release.Highlights.Any(highlight =>
+                   highlight.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void HandleSearch(ChangeEventArgs eventArgs)
+    {
+        _searchText = eventArgs.Value?.ToString() ?? string.Empty;
+        _currentPage = 1;
+    }
+
+    private void HandleYearChange(ChangeEventArgs eventArgs)
+    {
+        _selectedYear = eventArgs.Value?.ToString() ?? string.Empty;
+        _currentPage = 1;
+    }
+
+    private void ClearFilters()
+    {
+        _searchText = string.Empty;
+        _selectedYear = string.Empty;
+        _currentPage = 1;
+    }
+
+    private void PreviousPage()
+    {
+        _currentPage = Math.Max(1, _currentPage - 1);
+        _scrollToTimeline = true;
+    }
+
+    private void NextPage()
+    {
+        _currentPage = Math.Min(TotalPages, _currentPage + 1);
+        _scrollToTimeline = true;
+    }
+
+    private bool IsLatest(ReleaseEntryModel release) =>
+        _releases?.FirstOrDefault() == release;
+
+    private static DateOnly? TryGetReleaseDate(string date) =>
+        DateOnly.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate)
+            ? parsedDate
+            : null;
+
+    private static string FormatDate(string date) =>
+        TryGetReleaseDate(date)?.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture) ?? date;
+
+    private static string GetReleaseId(ReleaseEntryModel release) =>
+        $"version-{string.Concat(release.Version.Select(character =>
+            char.IsLetterOrDigit(character) ? character : '-'))}";
 }

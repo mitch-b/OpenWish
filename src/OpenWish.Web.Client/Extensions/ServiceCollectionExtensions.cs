@@ -8,6 +8,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddOpenWishWasmClientServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUserContextService, UserContextService>();
+        services.AddScoped<IReleaseNotesService, ReleaseNotesHttpClientService>();
         services.AddScoped<IWishlistService, WishlistHttpClientService>();
         services.AddScoped<IEventService, EventHttpClientService>();
         services.AddScoped<IProductService, ProductHttpClientService>();

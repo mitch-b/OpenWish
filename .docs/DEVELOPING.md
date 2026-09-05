@@ -26,6 +26,52 @@ dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
 
 The secret will be passed into `OpenWish.Web` automatically (well, from Aspire).
 
+## Optional Google login
+
+Create an OAuth 2.0 Client ID for a Web application in Google Cloud, then add
+the OpenWish callback URL as an authorized redirect URI. Use the HTTPS
+`openwish-web` endpoint shown by the Aspire dashboard followed by
+`/signin-google`; with the committed local launch profile, this is:
+
+```text
+https://localhost:7054/signin-google
+```
+
+Store the client credentials in the AppHost user-secrets store:
+
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set "Authentication:Google:ClientId" "<google-client-id>"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-secret>"
+```
+
+The AppHost forwards both values to `OpenWish.Web`. Google login remains
+disabled when either value is missing. Restart the AppHost after changing
+these secrets.
+
+## Optional OpenTelemetry export
+
+OpenWish records ASP.NET Core and outbound HTTP traces plus runtime, ASP.NET
+Core, and HTTP client metrics. Export is disabled unless an OTLP endpoint is
+configured. To send traces and metrics to separate OTLP/HTTP receivers in a
+local observability stack, pass the standard OpenTelemetry settings to the
+AppHost:
+
+```bash
+cd src
+dotnet run --project OpenWish.AppHost -- \
+  --OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces \
+  --OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics \
+  --OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/protobuf \
+  --OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
+```
+
+Either signal can be configured independently. `OTEL_EXPORTER_OTLP_ENDPOINT`
+remains supported when one collector endpoint handles traces, metrics, and
+logs. Docker-based runs can provide the same variables through their
+environment. The agent Compose stack maps `host.docker.internal` to the Docker
+host so it can reach a collector running there.
+
 ## EntityFramework Core Changes
 
 The EFCore context is found in the [OpenWish.Data](./src/OpenWish.Data) project as a reference, but the [OpenWish.Web](./src/OpenWish.Web) project owns running the Migrations on Startup. 

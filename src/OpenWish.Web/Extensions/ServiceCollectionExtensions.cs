@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBaseUriService, BaseUriService>();
 
         services.AddScoped<IUserContextService, UserContextService>();
+        services.AddScoped<IReleaseNotesService, ReleaseNotesService>();
         // API controllers (outside Razor context) need to use HttpContextAccessor - Do not call GetAuthenticationStateAsync outside of the DI scope for a Razor component. Typically, this means you can call it only within a Razor component or inside another DI service that is resolved for a Razor component.
         services.AddScoped<ApiUserContextService>();
 

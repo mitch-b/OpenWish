@@ -1,0 +1,39 @@
+.setup-step {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 4.5rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+}
+
+.setup-step-marker {
+    display: grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.setup-step-complete .setup-step-marker {
+    background: var(--bs-success);
+    color: #fff;
+}
+
+@media (max-width: 575.98px) {
+    .setup-step {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .setup-step .btn {
+        width: 100%;
+        margin-left: 2.85rem;
+    }
+}

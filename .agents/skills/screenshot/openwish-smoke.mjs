@@ -180,13 +180,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "events.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
-  await assertVisible(page, "Your Gift Exchange Match");
+  await assertVisible(page, "Your Secret Santa match");
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "Suggested Budget");
   await assertVisible(page, "TaylorDemo");
   await screenshot(page, "event-details.png");
 
-  await visit(page, "/events/new", "Create New Event", visitedRoutes);
+  await visit(page, "/events/new", "Create a Secret Santa", visitedRoutes);
+  const secretSantaOption = page.getByRole("button", { name: /Secret Santa/ });
+  if (!(await secretSantaOption.getAttribute("class"))?.includes("event-type-option-selected")) {
+    throw new Error("Secret Santa was not the default event type.");
+  }
+  await page.locator("#name").fill("Neighborhood Secret Santa");
+  await page.getByRole("button", { name: "Create and invite people" }).click();
+  await page.waitForURL(/\/events\/[^/]+(?:#secret-santa-setup)?$/);
+  await assertVisible(page, "Finish your Secret Santa setup");
+  await assertVisible(page, "Invite your group");
+  await assertVisible(page, "Add your wishlist");
+  await assertVisible(page, "Draw names");
+  await screenshot(page, "secret-santa-setup.png");
+
+  await page.getByRole("button", { name: "Invite people" }).first().click();
+  await assertVisible(page, "Paste as many addresses as you need");
+  await page.locator("#emailInput").fill("one@example.com, two@example.com");
+  await assertVisible(page, "Send 2 invitations");
+  await page.getByRole("button", { name: "Cancel" }).click();
+
   await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
   await assertVisible(page, "Manage Participants");
 
@@ -340,13 +359,15 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
-  await visit(
-    page,
-    `/events/${manifest.eventPublicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`,
-    "You're almost in!",
-    visitedRoutes
-  );
+  await visit(page, `/events/${manifest.eventPublicId}`, "Accept your invitation to join", visitedRoutes);
+  if (await page.getByText("You're in the Secret Santa.").isVisible()) {
+    throw new Error("Pending invitee was incorrectly shown accepted-participant guidance.");
+  }
+  await page.getByRole("link", { name: "Review invitation" }).click();
+  await assertVisible(page, "You're almost in!");
   await assertVisible(page, "Accept invite");
+  await page.getByRole("button", { name: "Accept invite" }).click();
+  await assertVisible(page, "Continue and add my wishlist");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
@@ -392,7 +413,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   }
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
-  await assertVisible(page, "You're Shopping For:");
+  await assertVisible(page, "You're shopping for");
   await assertVisible(page, "AlexDemo");
   await assertVisible(page, "My Reserved Items");
   await assertVisible(page, "Noise-Cancelling Headphones");
@@ -425,6 +446,11 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");
   await screenshot(page, "wishlist-mobile.png");
+
+  await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
+  await assertVisible(page, "JordanDemo");
+  await assertVisible(page, "View JordanDemo's wishlist");
+  await screenshot(page, "secret-santa-mobile.png");
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Mobile browser errors: ${diagnostics.browserErrors.join(" | ")}`);

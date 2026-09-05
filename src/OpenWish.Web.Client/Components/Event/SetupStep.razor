@@ -1,0 +1,33 @@
+<div class="setup-step @(IsComplete ? "setup-step-complete" : string.Empty)">
+    <span class="visually-hidden">
+        Step @Number: @(IsComplete ? "complete" : "not complete").
+    </span>
+    <div class="setup-step-marker" aria-hidden="true">
+        @if (IsComplete)
+        {
+            <i class="bi bi-check-lg"></i>
+        }
+        else
+        {
+            @Number
+        }
+    </div>
+    <div class="flex-grow-1">
+        <div class="fw-semibold">@Title</div>
+        <div class="small text-muted">@Description</div>
+    </div>
+    @if (!IsComplete || !string.Equals(ActionLabel, "Go to draw", StringComparison.Ordinal))
+    {
+        <a class="btn btn-sm @(IsComplete ? "btn-outline-secondary" : "btn-outline-primary")"
+           href="@ActionHref">@ActionLabel</a>
+    }
+</div>
+
+@code {
+    [Parameter] public int Number { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
+    [Parameter] public bool IsComplete { get; set; }
+    [Parameter, EditorRequired] public string ActionHref { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string ActionLabel { get; set; } = string.Empty;
+}

@@ -46,7 +46,10 @@ else
                 @{ var myWishlists = GetCurrentUserWishlists().ToList(); }
                 @if (!myWishlists.Any())
                 {
-                    <p class="text-muted small mb-2">You have not attached a wishlist to this event yet.</p>
+                    <div class="alert alert-info">
+                        <strong>Your match needs a few clues.</strong>
+                        Attach a wishlist or make a quick one for this exchange.
+                    </div>
                 }
                 else
                 {
@@ -57,6 +60,11 @@ else
                                 <div>
                                     <span class="fw-semibold">@wishlist.Name</span>
                                     <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
+                                    @if (GetWishlistItemCount(wishlist) == 0)
+                                    {
+                                        <a href="/wishlists/@wishlist.PublicId/items/new"
+                                           class="btn btn-link btn-sm px-1">Add gift ideas</a>
+                                    }
                                 </div>
                                 <div class="btn-group">
                                     <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
@@ -76,34 +84,54 @@ else
 
                 @{ var attachableWishlists = GetAttachableWishlists().ToList(); }
                 <div class="mb-3">
-                    <label class="form-label">Attach an existing wishlist</label>
-                    <div class="input-group">
-                        <select class="form-select"
-                                @bind="_selectedWishlistId"
-                                disabled="@(!attachableWishlists.Any() || _isSubmitting)">
-                            <option value="">Select a wishlist</option>
-                            @foreach (var option in attachableWishlists)
-                            {
-                                <option value="@option.Id">@option.Name</option>
-                            }
-                        </select>
-                        <button class="btn btn-primary"
-                                type="button"
-                                disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
-                                @onclick="AttachSelectedWishlistAsync">
-                            Attach
-                        </button>
-                    </div>
-                    @if (!attachableWishlists.Any())
+                    @if (attachableWishlists.Count == 1)
                     {
-                        <div class="form-text">All of your wishlists are already part of events. Create a new one below.</div>
+                        var onlyWishlist = attachableWishlists[0];
+                        <button class="btn btn-primary w-100"
+                                type="button"
+                                disabled="@_isSubmitting"
+                                @onclick="() => AttachWishlistAsync(onlyWishlist)">
+                            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>
+                            Attach "@onlyWishlist.Name"
+                        </button>
+                    }
+                    else if (attachableWishlists.Count > 1)
+                    {
+                        <label class="form-label">Attach an existing wishlist</label>
+                        <div class="input-group">
+                            <select class="form-select"
+                                    @bind="_selectedWishlistId"
+                                    disabled="@_isSubmitting">
+                                <option value="">Select a wishlist</option>
+                                @foreach (var option in attachableWishlists)
+                                {
+                                    <option value="@option.Id">@option.Name</option>
+                                }
+                            </select>
+                            <button class="btn btn-primary"
+                                    type="button"
+                                    disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
+                                    @onclick="AttachSelectedWishlistAsync">
+                                Attach
+                            </button>
+                        </div>
+                    }
+                    else if (HasUnattachedPrivateWishlist)
+                    {
+                        <div class="form-text">
+                            Private wishlists stay private and cannot be shared with an event. Create a shared wishlist below.
+                        </div>
+                    }
+                    else if (myWishlists.Any())
+                    {
+                        <div class="form-text">All of your available wishlists are already attached.</div>
                     }
                 </div>
 
-                <button class="btn btn-link px-0"
+                <button class="btn @(myWishlists.Any() ? "btn-link px-0" : "btn-outline-primary w-100")"
                         type="button"
                         @onclick="ToggleCreateForm">
-                    @(_showCreateForm ? "Cancel new wishlist" : "Create a new wishlist for this event")
+                    @(_showCreateForm ? "Cancel new wishlist" : "Create a wishlist for this Secret Santa")
                 </button>
 
                 @if (_showCreateForm)
@@ -375,8 +403,20 @@ else
         var attachedIds = _eventWishlists.Select(w => w.Id).ToHashSet();
 
         return _userWishlists
-            .Where(w => !w.EventId.HasValue && !attachedIds.Contains(w.Id))
+            .Where(w => !w.IsPrivate && !w.EventId.HasValue && !attachedIds.Contains(w.Id))
             .OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private bool HasUnattachedPrivateWishlist
+    {
+        get
+        {
+            var attachedIds = _eventWishlists.Select(wishlist => wishlist.Id).ToHashSet();
+            return _userWishlists.Any(wishlist =>
+                wishlist.IsPrivate &&
+                !wishlist.EventId.HasValue &&
+                !attachedIds.Contains(wishlist.Id));
+        }
     }
 
     private async Task AttachSelectedWishlistAsync()
@@ -398,6 +438,12 @@ else
         });
 
         _selectedWishlistId = null;
+    }
+
+    private async Task AttachWishlistAsync(WishlistModel wishlist)
+    {
+        _selectedWishlistId = wishlist.Id;
+        await AttachSelectedWishlistAsync();
     }
 
     private void PromptWishlistRemoval(int wishlistId)
@@ -637,14 +683,13 @@ else
 
     private static string GetItemCountText(WishlistModel wishlist)
     {
-        var count = wishlist.ItemCount;
-        if (count == 0 && wishlist.Items is { Count: > 0 })
-        {
-            count = wishlist.Items.Count;
-        }
+        var count = GetWishlistItemCount(wishlist);
 
         return count == 1 ? "1 item" : $"{count} items";
     }
+
+    private static int GetWishlistItemCount(WishlistModel wishlist) =>
+        wishlist.ItemCount > 0 ? wishlist.ItemCount : wishlist.Items?.Count ?? 0;
 
     private static string NormalizeStatus(EventUserModel participant)
     {

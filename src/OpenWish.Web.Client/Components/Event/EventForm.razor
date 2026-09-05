@@ -7,55 +7,83 @@
         <ValidationSummary class="alert alert-danger" />
     }
 
+    <fieldset class="mb-4" disabled="@LockEventType">
+        <legend class="form-label fw-bold">What are you planning?</legend>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <button type="button"
+                        class="event-type-option @(Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
+                        aria-pressed="@Model.IsGiftExchange"
+                        @onclick="SelectGiftExchange">
+                    <span class="event-type-icon" aria-hidden="true">🎅</span>
+                    <strong>Secret Santa</strong>
+                    <small>Invite people, collect wishlists, and draw names privately.</small>
+                </button>
+            </div>
+            @if (LockEventType)
+            {
+                <div class="form-text">Reset the current assignments before changing the event type.</div>
+            }
+            <div class="col-sm-6">
+                <button type="button"
+                        class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
+                        aria-pressed="@(!Model.IsGiftExchange)"
+                        @onclick="SelectCelebration">
+                    <span class="event-type-icon" aria-hidden="true">🎉</span>
+                    <strong>Birthday or celebration</strong>
+                    <small>Coordinate wishlists without drawing names.</small>
+                </button>
+            </div>
+        </div>
+    </fieldset>
+
     <div class="mb-4">
         <label for="name" class="form-label fw-bold">Event Name</label>
-        <InputText id="name" class="form-control form-control-lg" placeholder="Enter event name" @bind-Value="@Model!.Name" />
-        <div class="form-text">Choose a descriptive name for your event</div>
+        <InputText id="name" class="form-control form-control-lg"
+                   placeholder="e.g. Family Secret Santa 2026" @bind-Value="@Model!.Name" />
         <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
     </div>
 
     <div class="mb-4">
-        <label for="description" class="form-label fw-bold">Description</label>
+        <label for="description" class="form-label fw-bold">Note for your group <span class="text-muted fw-normal">(optional)</span></label>
         <InputTextArea id="description" class="form-control" rows="3" 
-            placeholder="Describe your event" @bind-Value="@Model!.Description" />
-        <div class="form-text">Add details about the event to help your guests</div>
+            placeholder="Where you're celebrating, gift ideas, or anything people should know" @bind-Value="@Model!.Description" />
         <ValidationMessage For="@(() => Model.Description)" class="text-danger" />
     </div>
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <label for="date" class="form-label fw-bold">Event Date</label>
+            <label for="date" class="form-label fw-bold">Exchange date</label>
             <InputDate id="date" class="form-control" @bind-Value="@Model!.Date" />
+            <div class="form-text">Shown in each participant's local time.</div>
             <ValidationMessage For="@(() => Model.Date)" class="text-danger" />
         </div>
         <div class="col-md-6">
-            <label for="budget" class="form-label fw-bold">Budget</label>
+            <label for="budget" class="form-label fw-bold">Budget per gift <span class="text-muted fw-normal">(optional)</span></label>
             <InputNumber id="budget" class="form-control" placeholder="$0.00" @bind-Value="@Model!.Budget" />
-            <div class="form-text">Optional: Set a suggested gift budget</div>
             <ValidationMessage For="@(() => Model.Budget)" class="text-danger" />
         </div>
     </div>
 
-    <div class="mb-4">
-        <div class="form-check">
-            <InputCheckbox id="isGiftExchange" class="form-check-input" @bind-Value="@Model!.IsGiftExchange" />
-            <label class="form-check-label" for="isGiftExchange">
-                Enable Gift Exchange
-            </label>
-        </div>
-        <div class="form-text">Turn this on if you want to organize a Secret Santa or similar gift exchange</div>
-        <ValidationMessage For="@(() => Model.IsGiftExchange)" class="text-danger" />
-    </div>
-
     <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary btn-lg">
-            @if (_isEditMode)
+        <button type="submit" class="btn btn-success btn-lg" disabled="@IsSubmitting">
+            @if (IsSubmitting)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <span>Creating your event...</span>
+            }
+            else if (_isEditMode)
             {
                 <span>Save Changes</span>
             }
+            else if (Model!.IsGiftExchange)
+            {
+                <span>Create and invite people</span>
+                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+            }
             else
             {
-                <span class="me-2">✨</span> <span>Create Event</span>
+                <span>Create event</span>
             }
         </button>
     </div>
@@ -65,8 +93,14 @@
     [Parameter] public EventModel? Model { get; set; }
     [Parameter] public EventCallback<EventModel> OnSubmit { get; set; }
     [Parameter] public bool ShowValidationSummary { get; set; }
+    [Parameter] public bool IsSubmitting { get; set; }
+    [Parameter] public bool LockEventType { get; set; }
 
     private bool _isEditMode => Model?.Id > 0;
+
+    private void SelectGiftExchange() => Model!.IsGiftExchange = true;
+
+    private void SelectCelebration() => Model!.IsGiftExchange = false;
 
     private async Task HandleSubmit()
     {

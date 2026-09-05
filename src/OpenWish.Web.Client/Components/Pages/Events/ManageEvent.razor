@@ -54,7 +54,8 @@ else
                         @* <FormMappingScope Name="edit-event"> *@
                             <EventForm Model="@_event"
                                      OnSubmit="@HandleSubmit"
-                                     ShowValidationSummary="true" />
+                                     ShowValidationSummary="true"
+                                     LockEventType="@_event.NamesDrawnOn.HasValue" />
                         @* </FormMappingScope> *@
                     </div>
                 </div>
@@ -67,7 +68,10 @@ else
                 </div>
             </div>
             <div class="col-md-4">
-                <EventInvitations EventId="@EventId" IsOwner="true" CurrentUserId="@_currentUserId" />
+                <EventInvitations EventId="@EventId"
+                                  IsOwner="true"
+                                  CurrentUserId="@_currentUserId"
+                                  NamesDrawn="@_event.NamesDrawnOn.HasValue" />
 
                 <div class="card shadow-sm mt-4">
                     <div class="card-body">
@@ -107,7 +111,9 @@ else
                                             <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
                                         </div>
                                     </div>
-                                    @if (participant.User?.Id is string participantUserId && participantUserId != _currentUserId)
+                                    @if (!_event.NamesDrawnOn.HasValue &&
+                                         participant.User?.Id is string participantUserId &&
+                                         participantUserId != _currentUserId)
                                     {
                                         <button class="btn btn-outline-danger btn-sm"
                                                 @onclick="() => HandleRemoveParticipant(participant)">

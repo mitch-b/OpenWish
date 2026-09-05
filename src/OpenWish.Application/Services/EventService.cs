@@ -139,7 +139,7 @@ public class EventService(
                     .Include(e => e.EventUsers)
                         .ThenInclude(eu => eu.User)
                     .Include(e => e.EventWishlists
-                        .Where(w => !w.Deleted))
+                        .Where(w => !w.Deleted && !w.IsPrivate))
                         .ThenInclude(ew => ew.Owner)
                     .Include(e => e.GiftExchanges)
                         .ThenInclude(ge => ge.Receiver)
@@ -164,10 +164,10 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Items.Where(i => !i.Deleted))
             .Where(e => !e.Deleted &&
                 (e.CreatedBy.Id == userId ||
@@ -214,7 +214,7 @@ public class EventService(
 
         var wishlistEntities = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.EventId == eventId && !w.Deleted)
+            .Where(w => w.EventId == eventId && !w.Deleted && !w.IsPrivate)
             .Include(w => w.Owner)
             .Include(w => w.Items.Where(i => !i.Deleted))
             .OrderBy(w => w.Name)
@@ -229,6 +229,11 @@ public class EventService(
 
     public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
     {
+        if (wishlistModel.IsPrivate)
+        {
+            throw new InvalidOperationException("Private wishlists cannot be shared with an event.");
+        }
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -265,6 +270,11 @@ public class EventService(
             .Include(w => w.Items.Where(i => !i.Deleted))
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
+
+        if (wishlist.IsPrivate)
+        {
+            throw new InvalidOperationException("Private wishlists cannot be shared with an event.");
+        }
 
         if (wishlist.EventId.HasValue && wishlist.EventId != eventId)
         {
@@ -348,6 +358,12 @@ public class EventService(
                 ?? throw new KeyNotFoundException($"Event with id {id} not found");
 
         ValidateEventCreatorPermission(existingEvent, requestorId);
+        if (existingEvent.NamesDrawnOn.HasValue &&
+            existingEvent.IsGiftExchange != eventModel.IsGiftExchange)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before changing the event type.");
+        }
+
         _mapper.Map(eventModel, existingEvent);
         existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
 
@@ -450,6 +466,10 @@ public class EventService(
         }
 
         ValidateEventCreatorPermission(eventUser.Event, requestorId);
+        if (eventUser.Event.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before removing an accepted participant.");
+        }
 
         var wishlists = await context.Wishlists
                 .Where(w => w.EventId == eventId && w.OwnerId == userId && !w.Deleted)
@@ -838,7 +858,7 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.GiftExchanges)
                 .ThenInclude(ge => ge.Receiver)
@@ -1377,14 +1397,13 @@ public class EventService(
 
         await context.SaveChangesAsync();
 
-        // Send notifications to all participants
+        // Send notifications to participants whose assignments were reset.
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
 
-        // Get all participants (owner + all invited users, regardless of status)
         var participants = new List<(string userId, string? email)> { (eventEntity.CreatedBy.Id, eventEntity.CreatedBy.Email) };
 
-        foreach (var eu in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        foreach (var eu in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
         {
             if (!string.IsNullOrEmpty(eu.UserId) && eu.User?.Email != null)
             {
@@ -1469,7 +1488,7 @@ public class EventService(
             eventEntity.CreatedBy.Email,
             eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
 
-        foreach (var eventUser in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        foreach (var eventUser in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
         {
             if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
             {
@@ -1490,6 +1509,11 @@ public class EventService(
 
         return participants;
     }
+
+    internal static bool IsEligibleGiftExchangeParticipant(EventUser participant) =>
+        !participant.Deleted &&
+        participant.IsAccepted &&
+        string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase);
 
     private static List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>? DrawNamesWithExclusions(
         IReadOnlyList<GiftExchangeParticipant> participants,

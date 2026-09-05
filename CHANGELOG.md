@@ -16,6 +16,14 @@ All notable user-facing changes to OpenWish are documented here.
 
 ### Improved
 
+- Secret Santa is now the default event path, with seasonal defaults, direct
+  post-create setup, a five-step organizer checklist, bulk invitations,
+  shareable invite links, one-tap wishlist attachment, and a simpler draw.
+- Draw readiness now distinguishes accepted and pending participants, and only
+  accepted participants can receive assignments.
+- Secret Santa event cards and participant views now surface the next action,
+  wishlist readiness, budget, and private shopping guidance on desktop and
+  mobile.
 - Self-hosted deployments now default to trusted proxy configuration, secure
   production cookies, browser security headers, login lockout, and abuse
   limits for invitation and product-scraping endpoints.
@@ -35,6 +43,8 @@ All notable user-facing changes to OpenWish are documented here.
   membership before returning or changing data.
 - Anonymous gift reservations no longer expose the reserver to other viewers,
   and wishlist owners receive no reservation details.
+- Private wishlists cannot be attached to events or exposed through event
+  membership.
 - User-supplied links and email content are validated or encoded to prevent
   unsafe navigation and injected markup.
 - Wishlist mutations and collaboration actions now derive the acting user

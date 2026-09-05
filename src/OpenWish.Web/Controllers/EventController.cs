@@ -86,6 +86,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Forbid();
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpDelete("{publicId}")]
@@ -163,6 +167,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Forbid(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpGet("{eventPublicId}/wishlists")]
@@ -210,6 +218,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (UnauthorizedAccessException ex)
         {
             return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 

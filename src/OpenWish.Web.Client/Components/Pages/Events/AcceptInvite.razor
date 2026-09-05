@@ -100,10 +100,10 @@
                                 {
                                     case "accepted":
                                         <div class="alert alert-success" role="alert">
-                                            You're already part of this event. Jump in and start planning!
+                                            You're part of the Secret Santa. Add a few gift ideas and you're done.
                                         </div>
                                         <a class="btn btn-success" href="/events/@EventId">
-                                            Go to event
+                                            Continue and add my wishlist
                                         </a>
                                         break;
                                     case "rejected":
@@ -234,7 +234,7 @@
             {
                 _invitation.Status = "Accepted";
                 _invitation.IsAccepted = true;
-                _successMessage = "Welcome aboard! You're part of this event now.";
+                _successMessage = "You're in! Continue to the event and add a few gift ideas for your match.";
             }
             else
             {

@@ -9,7 +9,7 @@
     "privateWishlistPublicId": "demo-private-ideas",
     "friendWishlistPublicId": "demo-jordan-favorites",
     "eventPublicId": "demo-holiday-gift-exchange",
-    "reservedItemId": 3
+    "reservedItemId": 2
   },
   "scenarios": [
     {
@@ -49,7 +49,7 @@
       "deleteAuthorizationStatus": 403,
       "visitedRoutes": [
         "/events",
-        "/events/demo-holiday-gift-exchange/accept-invite?email=playwright-guest%40openwish.local",
+        "/events/demo-holiday-gift-exchange",
         "/wishlists/demo-family-gift-ideas"
       ]
     },
@@ -65,7 +65,8 @@
       "loginStatus": 200,
       "visitedRoutes": [
         "/",
-        "/wishlists/demo-family-gift-ideas"
+        "/wishlists/demo-family-gift-ideas",
+        "/events/demo-holiday-gift-exchange"
       ]
     }
   ]

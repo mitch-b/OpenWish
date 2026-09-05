@@ -30,18 +30,23 @@ surprise.
 
 ### Plan birthdays, holidays, and Secret Santa
 
-Create an event, invite participants, set a date and suggested budget, and
-attach participant wishlists. Event cards keep upcoming celebrations visible
-from both the dashboard and the dedicated event view.
+Start a Secret Santa with useful holiday defaults, then follow the five-step
+organizer checklist to invite your group, collect wishlists, review responses,
+and draw names. Bulk email entry and shareable invitation links keep setup
+quick even for larger groups.
 
 ![Upcoming events and gift exchanges](.docs/images/walkthrough/events.png)
 
-For gift exchanges, OpenWish draws names and reveals each participant's
-assignment privately. The event owner can manage participants and invitations,
-while each participant sees only the match and reservation details relevant to
-them.
+![Guided Secret Santa setup with readiness checks](.docs/images/walkthrough/secret-santa-setup.png)
+
+OpenWish draws only from people who accepted, clearly identifies pending
+responses, and reveals each assignment privately. Participants can attach a
+wishlist in one step, open their match's ideas, and reserve a gift without
+spoiling the surprise.
 
 ![Gift exchange assignment, event details, participants, and attached wishlists](.docs/images/walkthrough/event-details.png)
+
+![Mobile Secret Santa assignment and shopping actions](.docs/images/walkthrough/secret-santa-mobile.png)
 
 ### Coordinate with people you trust
 

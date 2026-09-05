@@ -21,11 +21,40 @@ else
                 <span class="badge bg-primary">@Event.Date.ToString("MMMM dd, yyyy")</span>
                 @if (Event.IsGiftExchange)
                 {
-                    <span class="badge bg-success">Gift Exchange</span>
+                    <span class="badge bg-success">Secret Santa</span>
                 }
             </p>
+            @if (Event.IsGiftExchange)
+            {
+                <p class="small mb-3">
+                    <i class="bi bi-people me-1" aria-hidden="true"></i>
+                    @AcceptedParticipantCount participants
+                    <span class="mx-1">·</span>
+                    @if (Event.NamesDrawnOn.HasValue)
+                    {
+                        <span class="text-success fw-semibold">Names drawn</span>
+                    }
+                    else if (PendingInvitationCount > 0)
+                    {
+                        <span>@PendingInvitationCount waiting to respond</span>
+                    }
+                    else
+                    {
+                        <span>Ready for setup</span>
+                    }
+                </p>
+            }
             <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">Created by @Event.CreatedBy?.UserName</small>
+                <small class="text-muted">
+                    @if (_currentUserId == Event.CreatedBy?.Id && Event.IsGiftExchange && !Event.NamesDrawnOn.HasValue)
+                    {
+                        <span>Continue setup</span>
+                    }
+                    else
+                    {
+                        <span>Hosted by @Event.CreatedBy?.UserName</span>
+                    }
+                </small>
                 <div class="dropdown d-inline-block">
                     <button class="btn btn-outline-secondary btn-sm kebab-menu"
                             type="button"
@@ -104,6 +133,31 @@ else
     private string _deleteDialogMessage = string.Empty;
     private bool _isDeleting;
     private DeleteConfirmationStage _deleteConfirmationStage = DeleteConfirmationStage.First;
+    private int AcceptedParticipantCount
+    {
+        get
+        {
+            var acceptedUserIds = Event?.EventUsers?
+                .Where(participant =>
+                    !participant.Deleted &&
+                    participant.IsAccepted &&
+                    string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase))
+                .Select(participant => participant.UserId)
+                .Where(userId => !string.IsNullOrWhiteSpace(userId))
+                .ToHashSet(StringComparer.Ordinal) ?? [];
+
+            if (!string.IsNullOrWhiteSpace(Event?.CreatedBy?.Id))
+            {
+                acceptedUserIds.Add(Event.CreatedBy.Id);
+            }
+
+            return acceptedUserIds.Count;
+        }
+    }
+    private int PendingInvitationCount =>
+        Event?.EventUsers?.Count(participant =>
+            !participant.Deleted &&
+            string.Equals(participant.Status, "Pending", StringComparison.OrdinalIgnoreCase)) ?? 0;
 
     private void ShowDeleteDialog()
     {

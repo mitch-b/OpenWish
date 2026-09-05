@@ -1,20 +1,26 @@
 @using System.Linq
 @using System.Net.Http
+@using System.Net.Mail
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 
 <div class="card shadow-sm">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>Event Invitations</h3>
+            <div>
+                <h3 class="h4 mb-1">Invite participants</h3>
+                <p class="small text-muted mb-0">Invitees sign in and accept before they can be included in the draw.</p>
+            </div>
             @if (IsOwner)
             {
-                <button class="btn btn-primary btn-sm" @onclick="ShowInviteModal">
-                    <i class="bi bi-person-plus"></i> Invite
+                <button class="btn btn-primary" @onclick="ShowInviteModal">
+                    <i class="bi bi-person-plus me-1"></i> Invite people
                 </button>
             }
         </div>
@@ -43,22 +49,30 @@
         }
         else if (_invitations.Any())
         {
-            <div class="btn-group mb-3" role="group">
+            <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Invitation status">
+                <span class="badge bg-success">@_invitations.Count(IsAccepted) accepted</span>
+                <span class="badge bg-warning text-dark">@_invitations.Count(i => HasStatus(i, "Pending")) waiting</span>
+                @if (_invitations.Any(i => HasStatus(i, "Rejected")))
+                {
+                    <span class="badge bg-secondary">@_invitations.Count(i => HasStatus(i, "Rejected")) declined</span>
+                }
+            </div>
+            <div class="d-flex flex-wrap invitation-filters mb-3" role="group">
                 <button type="button" class="btn btn-sm @(_filter == "All" ? "btn-primary" : "btn-outline-primary")"
                         @onclick="@(() => _filter = "All")">
                     All (@_invitations.Count())
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Pending" ? "btn-warning" : "btn-outline-warning")"
                         @onclick="@(() => _filter = "Pending")">
-                    Pending (@_invitations.Count(i => i.Status == "Pending"))
+                    Pending (@_invitations.Count(i => HasStatus(i, "Pending")))
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Accepted" ? "btn-success" : "btn-outline-success")"
                         @onclick="@(() => _filter = "Accepted")">
-                    Accepted (@_invitations.Count(i => i.Status == "Accepted"))
+                    Accepted (@_invitations.Count(IsAccepted))
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Rejected" ? "btn-danger" : "btn-outline-danger")"
                         @onclick="@(() => _filter = "Rejected")">
-                    Rejected (@_invitations.Count(i => i.Status == "Rejected"))
+                    Rejected (@_invitations.Count(i => HasStatus(i, "Rejected")))
                 </button>
             </div>
 
@@ -66,8 +80,8 @@
                 @foreach (var invitation in FilteredInvitations)
                 {
                     <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="flex-grow-1 me-2" style="min-width: 0;">
+                        <div class="d-flex flex-column gap-2">
+                            <div style="min-width: 0;">
                                 <div class="d-flex align-items-center" style="overflow: hidden;">
                                     @if (invitation.User != null)
                                     {
@@ -87,22 +101,30 @@
                                     </small>
                                 </div>
                             </div>
-                            @if (IsOwner && invitation.Status == "Pending")
+                            @if (IsOwner && HasStatus(invitation, "Pending"))
                             {
-                                <div class="btn-group flex-shrink-0">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            @onclick="() => CopyInvitationLinkAsync(invitation)"
+                                            title="Copy a link to share directly">
+                                        <i class="bi bi-copy me-1"></i> Copy link
+                                    </button>
                                     <button class="btn btn-outline-secondary btn-sm"
                                             @onclick="() => HandleResendInvitation(invitation.Id)"
                                             title="Resend invitation">
-                                        <i class="bi bi-arrow-repeat"></i>
+                                        <i class="bi bi-arrow-repeat me-1"></i> Resend
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm"
                                             @onclick="() => HandleCancelInvitation(invitation.Id)"
                                             title="Cancel invitation">
-                                        <i class="bi bi-x-lg"></i>
+                                        <i class="bi bi-x-lg me-1"></i> Cancel
                                     </button>
                                 </div>
                             }
-                            else if (IsOwner && invitation.Status == "Accepted" && !string.IsNullOrEmpty(invitation.UserId))
+                            else if (IsOwner &&
+                                     !NamesDrawn &&
+                                     IsAccepted(invitation) &&
+                                     !string.IsNullOrEmpty(invitation.UserId))
                             {
                                 <div class="btn-group flex-shrink-0">
                                     <button class="btn btn-outline-danger btn-sm"
@@ -112,7 +134,7 @@
                                     </button>
                                 </div>
                             }
-                            else if (!IsOwner && IsCurrentUserInvitee(invitation) && invitation.Status == "Pending")
+                            else if (!IsOwner && IsCurrentUserInvitee(invitation) && HasStatus(invitation, "Pending"))
                             {
                                 <div class="btn-group flex-shrink-0">
                                     <button class="btn btn-success btn-sm"
@@ -134,7 +156,15 @@
         }
         else
         {
-            <p class="text-muted text-center py-3">No invitations yet.</p>
+            <div class="text-center py-3">
+                <p class="text-muted mb-3">No one has been invited yet. Add your group to get started.</p>
+                @if (IsOwner)
+                {
+                    <button class="btn btn-primary" @onclick="ShowInviteModal">
+                        <i class="bi bi-person-plus me-1"></i> Invite your first participant
+                    </button>
+                }
+            </div>
         }
     </div>
 </div>
@@ -142,7 +172,7 @@
 @if (_showRemoveConfirmation && _invitationPendingRemoval != null)
 {
     <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Remove Participant</h5>
@@ -220,10 +250,14 @@
                     @if (_inviteMode == "email")
                     {
                         <div class="mb-3">
-                            <label for="emailInput" class="form-label">Email Address</label>
-                            <input type="email" class="form-control" id="emailInput"
-                                   @bind="_emailToInvite"
-                                   placeholder="friend@example.com" />
+                            <label for="emailInput" class="form-label">Email addresses</label>
+                            <textarea class="form-control" id="emailInput" rows="4"
+                                      @bind="_emailsToInvite"
+                                      @bind:event="oninput"
+                                      placeholder="alex@example.com, jordan@example.com"></textarea>
+                            <div class="form-text">
+                                Paste as many addresses as you need, separated by commas, semicolons, or new lines.
+                            </div>
                         </div>
                     }
                     else
@@ -300,13 +334,15 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@(_isSending || (_inviteMode == "friends" && !_selectedFriendIds.Any() && !_selectedPendingInviteEmails.Any()))">
+                    <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">
+                        @(_successMessage is null ? "Cancel" : "Done")
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@DisableSendButton">
                         @if (_isSending)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
                         }
-                        Send Invitation
+                        @SendButtonLabel
                     </button>
                 </div>
             </div>
@@ -317,6 +353,7 @@
     [Parameter] public string EventId { get; set; } = string.Empty;
     [Parameter] public bool IsOwner { get; set; }
     [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public bool NamesDrawn { get; set; }
 
     private List<EventUserModel> _invitations = new();
     private List<ApplicationUserModel>? _friends = null;
@@ -330,13 +367,22 @@
     private bool _isRemovingParticipant;
     private string _filter = "All";
     private string _inviteMode = "email";
-    private string _emailToInvite = string.Empty;
+    private string _emailsToInvite = string.Empty;
     private string _friendSearchTerm = string.Empty;
     private string? _errorMessage;
     private string? _successMessage;
     private string? _inlineErrorMessage;
     private string? _inlineSuccessMessage;
     private EventUserModel? _invitationPendingRemoval;
+    private IReadOnlyList<string> ParsedEmailAddresses => ParseEmailAddresses(_emailsToInvite);
+    private bool DisableSendButton =>
+        _isSending ||
+        (_inviteMode == "email"
+            ? ParsedEmailAddresses.Count == 0
+            : !_selectedFriendIds.Any() && !_selectedPendingInviteEmails.Any());
+    private string SendButtonLabel => _inviteMode == "email" && ParsedEmailAddresses.Count > 1
+        ? $"Send {ParsedEmailAddresses.Count} invitations"
+        : "Send invitation";
 
     private IEnumerable<EventUserModel> FilteredInvitations =>
         _filter == "All" ? _invitations : _invitations.Where(i => i.Status == _filter);
@@ -387,7 +433,7 @@
         _showInviteModal = true;
         _errorMessage = null;
         _successMessage = null;
-        _emailToInvite = string.Empty;
+        _emailsToInvite = string.Empty;
         _selectedFriendIds.Clear();
         _selectedPendingInviteEmails.Clear();
         _friendSearchTerm = string.Empty;
@@ -419,14 +465,48 @@
 
             if (_inviteMode == "email")
             {
-                if (string.IsNullOrWhiteSpace(_emailToInvite))
+                var addresses = ParsedEmailAddresses;
+                var invalidAddresses = EmailAddressTokens
+                    .Where(address => !MailAddress.TryCreate(address, out _))
+                    .ToList();
+                if (addresses.Count == 0)
                 {
-                    _errorMessage = "Please enter an email address.";
+                    _errorMessage = "Enter at least one valid email address.";
                     return;
                 }
 
-                await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, _emailToInvite);
-                _successMessage = $"Invitation sent to {_emailToInvite}";
+                var invitedAddresses = new List<string>();
+                var failedAddresses = new List<string>(invalidAddresses);
+                foreach (var address in addresses)
+                {
+                    try
+                    {
+                        await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, address);
+                        invitedAddresses.Add(address);
+                    }
+                    catch (Exception)
+                    {
+                        failedAddresses.Add(address);
+                    }
+                }
+
+                if (invitedAddresses.Count > 0)
+                {
+                    _successMessage = invitedAddresses.Count == 1
+                        ? $"Invitation sent to {invitedAddresses[0]}."
+                        : $"{invitedAddresses.Count} invitations sent.";
+                    _emailsToInvite = string.Join(Environment.NewLine, failedAddresses);
+                }
+
+                if (failedAddresses.Count > 0)
+                {
+                    _errorMessage = $"Check or retry: {string.Join(", ", failedAddresses)}.";
+                }
+
+                if (invitedAddresses.Count == 0)
+                {
+                    return;
+                }
             }
             else
             {
@@ -509,12 +589,6 @@
             }
 
             await LoadInvitations();
-
-            if (string.IsNullOrEmpty(_errorMessage))
-            {
-                await Task.Delay(1000);
-                HideInviteModal();
-            }
         }
         catch (Exception ex)
         {
@@ -632,6 +706,19 @@
         return $"Invitations sent to {string.Join(", ", previewNames)}{suffix}.";
     }
 
+    private IReadOnlyList<string> EmailAddressTokens =>
+        _emailsToInvite.Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static IReadOnlyList<string> ParseEmailAddresses(string value) =>
+        value.Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(address => MailAddress.TryCreate(address, out var parsed) ? parsed.Address : null)
+            .Where(address => address is not null)
+            .Select(address => address!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     private async Task HandleAcceptInvitation(int invitationId)
     {
         try
@@ -665,6 +752,36 @@
             _errorMessage = ex.Message;
         }
     }
+
+    private async Task CopyInvitationLinkAsync(EventUserModel invitation)
+    {
+        var email = invitation.InviteeEmail ?? invitation.User?.Email;
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            _inlineErrorMessage = "This invitation does not have an email address to match.";
+            return;
+        }
+
+        var route = $"/events/{EventId}/accept-invite?email={Uri.EscapeDataString(email)}";
+        var invitationLink = NavigationManager.ToAbsoluteUri(route).ToString();
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", invitationLink);
+            _inlineErrorMessage = null;
+            _inlineSuccessMessage = $"Invitation link copied for {email}.";
+        }
+        catch (JSException)
+        {
+            _inlineErrorMessage = null;
+            _inlineSuccessMessage = $"Copy is unavailable in this browser. Share this link: {invitationLink}";
+        }
+    }
+
+    private static bool HasStatus(EventUserModel invitation, string status) =>
+        string.Equals(invitation.Status, status, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAccepted(EventUserModel invitation) =>
+        !invitation.Deleted && invitation.IsAccepted && HasStatus(invitation, "Accepted");
 
     private async Task HandleResendInvitation(int invitationId)
     {

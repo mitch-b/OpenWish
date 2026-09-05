@@ -291,6 +291,7 @@ public sealed class DevelopmentDataSeeder(
             Icon = "⭐",
             Owner = friend,
             OwnerId = friend.Id,
+            Event = eventEntity,
             IsPrivate = false,
             Items = [],
             WillPurchases = [],

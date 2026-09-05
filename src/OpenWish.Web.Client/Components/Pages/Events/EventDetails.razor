@@ -52,7 +52,39 @@ else
     </div>
 
     <div class="container py-5">
-        <div class="row g-4">
+        @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
+        {
+            <div id="secret-santa-setup">
+                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" />
+            </div>
+        }
+        else if (_event.IsGiftExchange && _isAcceptedParticipant && !_event.NamesDrawnOn.HasValue)
+        {
+            <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" role="status">
+                <div>
+                    <strong>You're in the Secret Santa.</strong>
+                    Add a few gift ideas now, then you can leave the rest to the organizer.
+                </div>
+                <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
+            </div>
+        }
+
+        @if (_isPendingInvitee)
+        {
+            <div class="alert alert-info shadow-sm" role="status">
+                <h2 class="h4">Accept your invitation to join</h2>
+                <p>
+                    Accept before the organizer draws names so you can be included and add gift ideas for your match.
+                </p>
+                @if (!string.IsNullOrWhiteSpace(PendingInvitationEmail))
+                {
+                    <a class="btn btn-success" href="@PendingInvitationLink">Review invitation</a>
+                }
+            </div>
+        }
+        else
+        {
+          <div class="row g-4">
             <div class="col-md-8">
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
@@ -114,6 +146,7 @@ else
                                                     <span class="badge bg-secondary">Owner</span>
                                                 </div>
                                             </div>
+                                            }
                                         </div>
                                     }
 
@@ -131,6 +164,7 @@ else
                                                     <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
                                                 </div>
                                             </div>
+                                            }
                                         </div>
                                     }
 
@@ -144,7 +178,7 @@ else
                     </div>
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4" id="event-wishlists">
                     <EventWishlistManager EventId="@EventId"
                                            Event="@_event"
                                            CurrentUserId="@_currentUserId"
@@ -153,7 +187,7 @@ else
 
                 @if (_event.IsGiftExchange && _isOwner)
                 {
-                    <div class="mt-4">
+                    <div class="mt-4" id="gift-exchange">
                         <GiftExchangeManager Event="@_event"
                                              CurrentUserId="@_currentUserId"
                                              OnNamesDrawn="HandleNamesDrawn" />
@@ -177,7 +211,8 @@ else
                                                     View Wishlist
                                                 </a>
                                             </div>
-                                        </div>
+                                          </div>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -189,7 +224,12 @@ else
             <div class="col-md-4">
                 @if (_isOwner)
                 {
-                    <EventInvitations EventId="@EventId" IsOwner="true" CurrentUserId="@_currentUserId" />
+                    <div id="event-invitations">
+                        <EventInvitations EventId="@EventId"
+                                          IsOwner="true"
+                                          CurrentUserId="@_currentUserId"
+                                          NamesDrawn="@_event.NamesDrawnOn.HasValue" />
+                    </div>
                 }
 
                 <div class="mt-4">
@@ -217,6 +257,7 @@ else
                 } *@
             </div>
         </div>
+        }
     </div>
 }
 
@@ -225,6 +266,9 @@ else
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
+    private bool _isAcceptedParticipant;
+    private bool _isPendingInvitee;
+    private EventUserModel? _pendingInvitation;
 
     protected override async Task OnInitializedAsync()
     {
@@ -236,7 +280,27 @@ else
     {
         _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
+        _isAcceptedParticipant = _isOwner ||
+            (_event?.EventUsers?.Any(participant =>
+                !participant.Deleted &&
+                participant.IsAccepted &&
+                string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(participant.UserId, _currentUserId, StringComparison.Ordinal)) ?? false);
+        _isPendingInvitee = !_isOwner && !_isAcceptedParticipant;
+
+        if (_isPendingInvitee)
+        {
+            var invitations = await EventService.GetPendingInvitationsForUserAsync(_currentUserId!);
+            _pendingInvitation = invitations.FirstOrDefault(invitation =>
+                string.Equals(invitation.Event?.PublicId, EventId, StringComparison.Ordinal));
+        }
     }
+
+    private string PendingInvitationLink =>
+        $"/events/{EventId}/accept-invite?email={Uri.EscapeDataString(PendingInvitationEmail!)}";
+
+    private string? PendingInvitationEmail =>
+        _pendingInvitation?.InviteeEmail ?? _pendingInvitation?.User?.Email;
 
     private IEnumerable<EventUserModel> GetParticipantList() =>
         _event?.EventUsers?

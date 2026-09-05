@@ -35,7 +35,9 @@ public partial class ProductService : IProductService
     private static async Task<bool> IsSafeUrlAsync(Uri uri)
     {
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+        {
             return false;
+        }
 
         IPAddress[] addresses;
         try
@@ -50,26 +52,47 @@ public partial class ProductService : IProductService
         foreach (var address in addresses)
         {
             if (IPAddress.IsLoopback(address))
+            {
                 return false;
+            }
 
             var bytes = address.GetAddressBytes();
 
             if (address.AddressFamily == AddressFamily.InterNetwork)
             {
                 // 10.0.0.0/8
-                if (bytes[0] == 10) return false;
+                if (bytes[0] == 10)
+                {
+                    return false;
+                }
                 // 172.16.0.0/12
-                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return false;
+                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+                {
+                    return false;
+                }
                 // 192.168.0.0/16
-                if (bytes[0] == 192 && bytes[1] == 168) return false;
+                if (bytes[0] == 192 && bytes[1] == 168)
+                {
+                    return false;
+                }
                 // 169.254.0.0/16  (link-local / cloud metadata)
-                if (bytes[0] == 169 && bytes[1] == 254) return false;
+                if (bytes[0] == 169 && bytes[1] == 254)
+                {
+                    return false;
+                }
             }
             else if (address.AddressFamily == AddressFamily.InterNetworkV6)
             {
                 // ::1 is covered by IsLoopback(); also block fc00::/7 (ULA) and fe80::/10 (link-local)
-                if (bytes[0] == 0xfc || bytes[0] == 0xfd) return false;
-                if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80) return false;
+                if (bytes[0] == 0xfc || bytes[0] == 0xfd)
+                {
+                    return false;
+                }
+
+                if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80)
+                {
+                    return false;
+                }
             }
         }
 

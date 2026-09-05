@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: OpenWish
+      POSTGRES_USER: openwish
+      POSTGRES_PASSWORD: openwish-verification
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwish -d OpenWish"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build:
+      context: ./src
+      dockerfile: OpenWish.Web/Dockerfile
+      args:
+        BUILD_VERSION: 0.1.0
+        GIT_SHA: verification
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__OpenWish: Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification
+      OpenWishSettings__OwnDatabaseUpgrades: "true"
+      OpenWishSettings__EnableDevelopmentLogin: "true"
+    depends_on:
+      db:
+        condition: service_healthy

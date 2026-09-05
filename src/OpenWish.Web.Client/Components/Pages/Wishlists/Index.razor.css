@@ -1,4 +1,12 @@
 /* Mobile responsive improvements */
+.empty-state {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+}
+
 @media (max-width: 767.98px) {
     .mb-3.d-flex.justify-content-between {
         flex-direction: column !important;
@@ -18,11 +26,6 @@
 
     .form-select {
         width: 100% !important;
-    }
-
-    .btn-primary {
-        width: 100%;
-        margin-bottom: 0.5rem;
     }
 
     .nav-tabs {

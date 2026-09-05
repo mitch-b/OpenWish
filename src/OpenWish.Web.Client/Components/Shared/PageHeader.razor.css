@@ -1,0 +1,38 @@
+.page-header {
+    align-items: flex-start;
+    background: linear-gradient(135deg, var(--color-primary-bg), var(--color-link-hover));
+    border-radius: 1rem;
+    color: #fff;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding: 2rem;
+}
+
+.page-header h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin: 0;
+}
+
+.page-header p {
+    font-size: 1.125rem;
+    margin: .5rem 0 0;
+    max-width: 48rem;
+}
+
+.page-header-actions {
+    flex: 0 0 auto;
+}
+
+@media (max-width: 767.98px) {
+    .page-header {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+
+    .page-header-actions ::deep .btn {
+        width: 100%;
+    }
+}

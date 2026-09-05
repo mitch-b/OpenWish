@@ -7,10 +7,10 @@ namespace OpenWish.Web.Client.Services;
 
 public class PersistentAuthenticationStateProvider : AuthenticationStateProvider
 {
-    private static readonly Task<AuthenticationState> DefaultUnauthenticatedTask =
+    private static readonly Task<AuthenticationState> _defaultUnauthenticatedTask =
         Task.FromResult(new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity())));
 
-    private readonly Task<AuthenticationState> _authenticationStateTask = DefaultUnauthenticatedTask;
+    private readonly Task<AuthenticationState> _authenticationStateTask = _defaultUnauthenticatedTask;
 
     public PersistentAuthenticationStateProvider(PersistentComponentState state)
     {

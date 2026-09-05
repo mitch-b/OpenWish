@@ -2,6 +2,7 @@
 @page "/wishlists"
 
 @using Microsoft.Extensions.Logging
+@using OpenWish.Web.Client.Components.Shared
 @using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Shared.Services
 
@@ -12,12 +13,12 @@
 @rendermode InteractiveAuto
 
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-12 mb-4">
-            <h2>Wishlists</h2>
-            <p class="text-muted">Manage your wishlists and explore friends' wishlists.</p>
-        </div>
-    </div>
+    <PageHeader Title="Wishlists"
+                Description="Manage your wishlists and explore wishlists shared by friends.">
+        <Actions>
+            <a href="/wishlists/new" class="btn btn-light btn-lg">Create wishlist</a>
+        </Actions>
+    </PageHeader>
 
     <ul class="nav nav-tabs mb-3" id="wishlistTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -39,7 +40,6 @@
         {
             <div class="tab-pane fade show active">
                 <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <a href="/wishlists/new" class="btn btn-primary">Create New Wishlist</a>
                     <div class="d-flex gap-2">
                         <div class="input-group">
                             <input type="text" class="form-control" placeholder="Search..." 
@@ -65,11 +65,18 @@
 
                 @if (filteredWishlists == null)
                 {
-                    <p>Loading...</p>
+                    <div class="d-flex align-items-center gap-2" role="status">
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <span>Loading wishlists...</span>
+                    </div>
                 }
                 else if (!filteredWishlists.Any())
                 {
-                    <p>No wishlists found. Create one to get started!</p>
+                    <div class="empty-state">
+                        <h2>No wishlists found</h2>
+                        <p>Create a wishlist or change the current search and filters.</p>
+                        <a href="/wishlists/new" class="btn btn-primary">Create your first wishlist</a>
+                    </div>
                 }
                 else
                 {
@@ -203,7 +210,7 @@
 
     private async Task LoadFriendsWishlists()
     {
-        Logger.LogInformation($"LoadFriendsWishlists START {DateTime.Now:O} Task: {Task.CurrentId}");
+        Logger.LogInformation("Loading friends' wishlists.");
         try
         {
             loadingFriendsWishlists = true;
@@ -234,7 +241,7 @@
         finally
         {
             loadingFriendsWishlists = false;
-            Logger.LogInformation($"LoadFriendsWishlists END {DateTime.Now:O} Task: {Task.CurrentId}");
+            Logger.LogInformation("Finished loading friends' wishlists.");
             StateHasChanged();
         }
     }

@@ -94,8 +94,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> AcceptSharingLinkAsync(string token, string userId)
     {
-        var request = new { userId };
-        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/accept-link/{token}", request);
+        _ = userId;
+        var response = await _httpClient.PostAsync($"{BaseUrl}/accept-link/{token}", content: null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -124,18 +124,21 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-access/{userId}");
+        _ = userId;
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-access");
     }
 
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-edit/{userId}");
+        _ = userId;
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistId}/can-edit");
     }
 
     // Item comments
     public async Task<ItemCommentModel> AddCommentToItemAsync(int wishlistId, int itemId, string userId, string text)
     {
-        var commentRequest = new { userId, text };
+        _ = userId;
+        var commentRequest = new { text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/comments", commentRequest);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
@@ -148,7 +151,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/{commentId}?userId={userId}");
+        _ = userId;
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/{commentId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -156,7 +160,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     // Item reservations
     public async Task<bool> ReserveItemAsync(int wishlistId, int itemId, string userId, bool isAnonymous = false)
     {
-        var reservationRequest = new { userId, isAnonymous };
+        _ = userId;
+        var reservationRequest = new { isAnonymous };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reserve", reservationRequest);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
@@ -164,7 +169,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation?userId={userId}");
+        _ = userId;
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -234,12 +240,14 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-access/{userId}");
+        _ = userId;
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-access");
     }
 
     public async Task<bool> CanUserEditWishlistByPublicIdAsync(string wishlistPublicId, string userId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-edit/{userId}");
+        _ = userId;
+        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/{wishlistPublicId}/can-edit");
     }
 
     public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, string? requestingUserId = null)
@@ -276,7 +284,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
     {
-        var request = new { UserId = userId, Text = text };
+        _ = userId;
+        var request = new { Text = text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments", request);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
@@ -289,14 +298,16 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false)
     {
-        var request = new { UserId = userId, IsAnonymous = isAnonymous };
+        _ = userId;
+        var request = new { IsAnonymous = isAnonymous };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve", request);
         return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation?userId={userId}");
+        _ = userId;
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation");
         return response.IsSuccessStatusCode;
     }
 

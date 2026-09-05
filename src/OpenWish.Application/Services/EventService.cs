@@ -1348,7 +1348,7 @@ public class EventService(
         var participants = new List<GiftExchangeParticipant>();
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        void AddParticipant(string key, string? userId, string? email, string? displayName)
+        void addParticipant(string key, string? userId, string? email, string? displayName)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -1365,7 +1365,7 @@ public class EventService(
             }
         }
 
-        AddParticipant($"user:{eventEntity.CreatedBy.Id}",
+        addParticipant($"user:{eventEntity.CreatedBy.Id}",
             eventEntity.CreatedBy.Id,
             eventEntity.CreatedBy.Email,
             eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
@@ -1374,7 +1374,7 @@ public class EventService(
         {
             if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
             {
-                AddParticipant($"user:{eventUser.UserId}",
+                addParticipant($"user:{eventUser.UserId}",
                     eventUser.UserId,
                     eventUser.User.Email,
                     eventUser.User.UserName ?? eventUser.User.Email ?? eventUser.UserId);
@@ -1382,7 +1382,7 @@ public class EventService(
             else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
             {
                 var normalizedEmail = eventUser.InviteeEmail.Trim();
-                AddParticipant($"invite:{eventUser.Id}",
+                addParticipant($"invite:{eventUser.Id}",
                     null,
                     normalizedEmail,
                     normalizedEmail);

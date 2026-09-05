@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFriendService, FriendService>();
         services.AddScoped<INotificationService, NotificationService>();
 
-        services.AddAutoMapper(typeof(OpenWishProfile).Assembly);
+        services.AddAutoMapper(_ => { }, typeof(OpenWishProfile).Assembly);
 
         return services;
     }

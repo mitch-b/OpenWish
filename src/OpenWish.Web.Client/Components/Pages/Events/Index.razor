@@ -2,6 +2,7 @@
 @attribute [Authorize]
 
 @using OpenWish.Web.Client.Components.Event
+@using OpenWish.Web.Client.Components.Shared
 @using OpenWish.Shared.Services
 
 @inject IEventService EventService
@@ -12,23 +13,14 @@
 
 <PageTitle>Events</PageTitle>
 
-<div class="events-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1>Your Events</h1>
-                <p class="lead mb-0">Plan and organize special occasions with friends and family</p>
-            </div>
-            <div class="col-md-4 text-md-end">
-                <a href="/events/new" class="btn btn-light btn-lg">
-                    <span style="font-size: 1.2rem;">📅</span> Create Event
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="container py-4">
+    <PageHeader Title="Events"
+                Description="Plan gift exchanges and special occasions with friends and family.">
+        <Actions>
+            <a href="/events/new" class="btn btn-light btn-lg">Create event</a>
+        </Actions>
+    </PageHeader>
 
-<div class="container py-5">
     <PendingInvitations OnInvitationChanged="HandleInvitationChanged" />
 
     @if (_events == null)
@@ -42,11 +34,11 @@
     else if (!_events.Any())
     {
         <div class="empty-state text-center">
-            <div class="empty-state-icon">📅</div>
-            <h2>No Events Yet</h2>
-            <p class="lead">Start planning your first event!</p>
+            <i class="bi bi-calendar-event empty-state-icon" aria-hidden="true"></i>
+            <h2>No events yet</h2>
+            <p class="lead">Start planning your first event.</p>
             <a href="/events/new" class="btn btn-primary btn-lg mt-3">
-                Create Your First Event
+                Create your first event
             </a>
         </div>
     }

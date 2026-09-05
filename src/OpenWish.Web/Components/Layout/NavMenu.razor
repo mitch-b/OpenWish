@@ -8,6 +8,7 @@
 @inject IAppVersionService AppVersionService
 @inject IEventService EventService
 @inject IUserContextService UserContextService
+@inject ILogger<NavMenu> Logger
 
 <div class="top-row ps-3 navbar">
   <div class="container-fluid">
@@ -78,6 +79,9 @@
     </AuthorizeView>
 
     <div class="nav-footer px-3 mt-auto">
+      <NavLink class="nav-link" href="whats-new">
+        <span class="bi bi-stars" aria-hidden="true"></span> What's new
+      </NavLink>
       <div class="nav-link theme-toggle-host">
         <ThemeToggle />
       </div>
@@ -110,8 +114,9 @@
         _pendingInvitationCount = invitations.Count();
       }
     }
-    catch
+    catch (Exception ex)
     {
+      Logger.LogWarning(ex, "Unable to load the pending invitation count.");
       _pendingInvitationCount = 0;
     }
   }

@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "baseUrl": "http://web:8080",
+  "scenarios": [
+    {
+      "scenario": "desktop",
+      "loginStatus": 200,
+      "userStatus": 200,
+      "authorizationStatus": 403,
+      "homeHeading": "Welcome Back!",
+      "releaseVersion": "0.1.0",
+      "screenshot": "openwish-home-desktop.png"
+    },
+    {
+      "scenario": "mobile",
+      "loginStatus": 200,
+      "userStatus": 200,
+      "homeHeading": "Welcome Back!",
+      "releaseVersion": "0.1.0",
+      "screenshot": "openwish-home-mobile.png"
+    }
+  ]
+}

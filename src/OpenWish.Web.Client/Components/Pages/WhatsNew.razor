@@ -1,0 +1,74 @@
+@page "/whats-new"
+
+@using OpenWish.Web.Client.Components.Shared
+
+@inject HttpClient HttpClient
+@inject ILogger<WhatsNew> Logger
+@inject NavigationManager NavigationManager
+
+<PageTitle>What's new</PageTitle>
+
+<div class="container py-4">
+    <PageHeader Title="What's new"
+                Description="Recent improvements available in OpenWish." />
+
+    @if (_loadError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_loadError</div>
+    }
+    else if (_releases is null)
+    {
+        <div class="d-flex align-items-center gap-2" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Loading release notes...</span>
+        </div>
+    }
+    else
+    {
+        @foreach (var release in _releases)
+        {
+            <article class="release-card">
+                <div class="release-heading">
+                    <div>
+                        <p class="release-version">Version @release.Version</p>
+                        <h2>@release.Title</h2>
+                    </div>
+                    <time datetime="@release.Date">@release.Date</time>
+                </div>
+                <p class="release-summary">@release.Summary</p>
+                <ul>
+                    @foreach (var highlight in release.Highlights)
+                    {
+                        <li>@highlight</li>
+                    }
+                </ul>
+            </article>
+        }
+    }
+</div>
+
+@code {
+    private IReadOnlyList<ReleaseEntry>? _releases;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var releaseNotesUri = new Uri(new Uri(NavigationManager.BaseUri), "releases.json");
+            _releases = await HttpClient.GetFromJsonAsync<List<ReleaseEntry>>(releaseNotesUri) ?? [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load release notes.");
+            _loadError = "Release notes are temporarily unavailable.";
+        }
+    }
+
+    private sealed record ReleaseEntry(
+        string Version,
+        string Date,
+        string Title,
+        string Summary,
+        IReadOnlyList<string> Highlights);
+}

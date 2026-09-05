@@ -11,6 +11,7 @@ Run commands from `src/`, which contains `OpenWish.slnx`:
 ```bash
 dotnet build
 dotnet format
+dotnet test
 dotnet run --project OpenWish.AppHost
 ```
 
@@ -23,10 +24,17 @@ dotnet user-secrets set Parameters:sqlUser "openwish"
 dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
 ```
 
-There are currently no test projects in the solution, so there is no
-repository test or single-test command. When tests are added, run the
-containing test project with `dotnet test <project>.csproj` and one test with
-`dotnet test <project>.csproj --filter "FullyQualifiedName~Namespace.Type.Method"`.
+Run one test with:
+
+```bash
+dotnet test OpenWish.Shared.Tests/OpenWish.Shared.Tests.csproj \
+  --filter "FullyQualifiedName~Namespace.Type.Method"
+```
+
+Run the committed browser/API verification from the repository root with
+`scripts/verify-e2e.sh`. It uses an isolated Docker Compose stack, synthetic
+data, and a Development-only login endpoint; never enable that endpoint in
+production.
 
 For EF Core model changes, create migrations from the repository root:
 
@@ -91,6 +99,10 @@ service discovery, resilience, health, logging, and OpenTelemetry defaults.
 - Follow `src/.editorconfig`: file-scoped namespaces, primary constructors
   where suitable, `var` for obvious types, `I`-prefixed interfaces, and
   underscore-prefixed private fields. EF migrations are generated code.
+- Read `PRODUCT_DIRECTION.md` and `PLAN.md` before autonomous product work.
+  Routine automation selects open issues labeled `autowork`, delivers one
+  bounded increment, and includes tests, browser evidence, screenshots, and a
+  dated release note.
 
 ## Configuration and secrets
 

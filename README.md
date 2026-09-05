@@ -7,15 +7,15 @@ Shareable wishlists. A web application intended for selfhosting.
 * Entity Framework Core managed data on PostgreSQL
 * Docker images [published](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
 
+![OpenWish authenticated home page](.docs/images/verification/openwish-home-desktop.png)
+
 ## Developing?
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mitch-b/OpenWish)
 
-See [DEVELOPING.md](./DEVELOPING.md) for additional details.
-
-## Screenshots
-
-TODO
+See the [development guide](.docs/DEVELOPING.md) for local setup, and
+[`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) for the product principles used
+to evaluate contributions.
 
 ## Features
 
@@ -106,4 +106,3 @@ See [package versions](https://github.com/mitch-b/OpenWish/pkgs/container/openwi
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
-

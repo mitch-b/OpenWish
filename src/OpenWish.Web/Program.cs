@@ -81,7 +81,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
-builder.Services.AddOpenWishWebServices();
+builder.Services.AddOpenWishWebServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
 // Email configuration without building a secondary service provider
@@ -153,6 +153,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapOpenWishDevelopmentEndpoints();
 
 app.MapControllers();
 

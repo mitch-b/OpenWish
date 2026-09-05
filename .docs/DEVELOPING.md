@@ -94,3 +94,23 @@ docker run --rm \
   -p 8080:80 \
   openwishlocal:$TAG_NAME
 ```
+
+## Automated verification
+
+Run the complete local gate from the repository root:
+
+```bash
+cd src
+dotnet format --verify-no-changes
+dotnet build
+dotnet test
+cd ..
+scripts/verify-e2e.sh
+```
+
+The E2E script creates an isolated PostgreSQL and OpenWish stack, enables the
+synthetic login only in that Development environment, and runs the committed
+Playwright journey. Evidence is written to `.docs/images/verification/`.
+
+See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
+pull-request evidence, and release assets belong.

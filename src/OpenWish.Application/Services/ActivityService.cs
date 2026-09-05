@@ -91,10 +91,11 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == userId) &&
                   (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != userId))) &&
                 ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
-                 !context.ItemReservations.Any(reservation =>
-                    reservation.WishlistItemId == a.WishlistItemId &&
-                    reservation.UserId == a.UserId &&
-                    reservation.IsAnonymous)))
+                 (a.Wishlist!.OwnerId != userId &&
+                  !context.ItemReservations.Any(reservation =>
+                      reservation.WishlistItemId == a.WishlistItemId &&
+                      reservation.UserId == a.UserId &&
+                      reservation.IsAnonymous))))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)
@@ -123,12 +124,13 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&
                   (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != requestingUserId))) &&
-                (a.UserId == requestingUserId ||
-                 ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
-                  !context.ItemReservations.Any(reservation =>
-                      reservation.WishlistItemId == a.WishlistItemId &&
-                      reservation.UserId == a.UserId &&
-                      reservation.IsAnonymous))))
+                ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
+                 (a.Wishlist!.OwnerId != requestingUserId &&
+                  (a.UserId == requestingUserId ||
+                   !context.ItemReservations.Any(reservation =>
+                       reservation.WishlistItemId == a.WishlistItemId &&
+                       reservation.UserId == a.UserId &&
+                       reservation.IsAnonymous)))))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)

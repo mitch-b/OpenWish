@@ -26,7 +26,7 @@ public class ActivityServiceSecurityTests
         var actorActivities = await service.GetWishlistActivityAsync(wishlistId, actorId);
 
         Assert.Empty(ownerActivities);
-        Assert.Equal(2, actorActivities.Count());
+        Assert.Equal(3, actorActivities.Count());
     }
 
     [Fact]
@@ -36,12 +36,38 @@ public class ActivityServiceSecurityTests
         await SeedActivityDataAsync(factory);
         await using (var context = factory.CreateDbContext())
         {
+            var wishlist = await context.Wishlists.SingleAsync();
             context.Friends.Add(new Friend { UserId = "viewer", FriendUserId = "actor" });
+            context.WishlistPermissions.Add(new WishlistPermission
+            {
+                WishlistId = wishlist.Id,
+                UserId = "viewer",
+                PermissionType = "View"
+            });
             await context.SaveChangesAsync();
         }
         var service = new ActivityService(factory, _mapper);
 
         var activities = await service.GetFriendsActivityFeedAsync("viewer");
+
+        Assert.Equal(2, activities.Count());
+        Assert.Contains(activities, activity => activity.Description == "Reserved visible gift");
+        Assert.DoesNotContain(activities, activity => activity.Description == "Reserved gift");
+    }
+
+    [Fact]
+    public async Task GetFriendsActivityFeed_HidesAllReservationsFromWishlistOwner()
+    {
+        var factory = CreateFactory();
+        await SeedActivityDataAsync(factory);
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Friends.Add(new Friend { UserId = "owner", FriendUserId = "actor" });
+            await context.SaveChangesAsync();
+        }
+        var service = new ActivityService(factory, _mapper);
+
+        var activities = await service.GetFriendsActivityFeedAsync("owner");
 
         Assert.Empty(activities);
     }
@@ -69,7 +95,12 @@ public class ActivityServiceSecurityTests
             Name = "Reserved gift",
             Wishlist = wishlist
         };
-        context.AddRange(owner, actor, wishlist, hiddenItem, reservedItem);
+        var visibleReservedItem = new WishlistItem
+        {
+            Name = "Visible reserved gift",
+            Wishlist = wishlist
+        };
+        context.AddRange(owner, actor, wishlist, hiddenItem, reservedItem, visibleReservedItem);
         context.ActivityLogs.AddRange(
             new ActivityLog
             {
@@ -88,14 +119,31 @@ public class ActivityServiceSecurityTests
                 Description = "Reserved gift",
                 Wishlist = wishlist,
                 WishlistItem = reservedItem
+            },
+            new ActivityLog
+            {
+                User = actor,
+                UserId = actorId,
+                ActivityType = "ItemReserved",
+                Description = "Reserved visible gift",
+                Wishlist = wishlist,
+                WishlistItem = visibleReservedItem
             });
-        context.ItemReservations.Add(new ItemReservation
-        {
-            User = actor,
-            UserId = actorId,
-            WishlistItem = reservedItem,
-            IsAnonymous = true
-        });
+        context.ItemReservations.AddRange(
+            new ItemReservation
+            {
+                User = actor,
+                UserId = actorId,
+                WishlistItem = reservedItem,
+                IsAnonymous = true
+            },
+            new ItemReservation
+            {
+                User = actor,
+                UserId = actorId,
+                WishlistItem = visibleReservedItem,
+                IsAnonymous = false
+            });
         await context.SaveChangesAsync();
         return (wishlist.Id, actorId);
     }

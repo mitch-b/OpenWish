@@ -8,6 +8,7 @@ app.db-shm
 app.db-wal
 
 .env.openwish
+.env.agent
 docker-compose.*.yml
 
 # certificates

@@ -2,18 +2,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data.Entities;
+using OpenWish.Web.Services;
 
 namespace OpenWish.Web.Extensions;
 
 public static class DevelopmentEndpointExtensions
 {
-    private static readonly IReadOnlyDictionary<string, string> _developmentUsers =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["owner"] = "playwright-owner@openwish.local",
-            ["guest"] = "playwright-guest@openwish.local"
-        };
-
     public static void MapOpenWishDevelopmentEndpoints(this WebApplication app)
     {
         var settings = app.Services.GetRequiredService<IOptions<OpenWishSettings>>().Value;
@@ -24,38 +18,37 @@ public static class DevelopmentEndpointExtensions
 
         app.MapPost("/auth/dev-login", async (
             string? persona,
-            UserManager<ApplicationUser> userManager,
+            DevelopmentDataSeeder seeder,
             SignInManager<ApplicationUser> signInManager) =>
         {
-            var selectedPersona = string.IsNullOrWhiteSpace(persona) ? "owner" : persona;
-            if (!_developmentUsers.TryGetValue(selectedPersona, out var email))
+            var user = await seeder.EnsureUserAsync(persona);
+            if (user is null)
             {
                 return Results.BadRequest(new { error = "Unknown development persona." });
             }
 
-            var user = await userManager.FindByEmailAsync(email);
-            if (user is null)
-            {
-                user = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email,
-                    EmailConfirmed = true
-                };
-
-                var result = await userManager.CreateAsync(user);
-                if (!result.Succeeded)
-                {
-                    return Results.ValidationProblem(result.Errors.ToDictionary(
-                        error => error.Code,
-                        error => new[] { error.Description }));
-                }
-            }
-
             await signInManager.SignInAsync(user, isPersistent: false);
-            return Results.Ok(new { persona = selectedPersona, user.Email });
+            return Results.Ok(new { persona = persona ?? "owner", user.Email });
         })
         .AllowAnonymous()
+        .DisableAntiforgery();
+
+        app.MapPost("/auth/dev-seed", async (
+            HttpContext httpContext,
+            DevelopmentDataSeeder seeder,
+            UserManager<ApplicationUser> userManager,
+            CancellationToken cancellationToken) =>
+        {
+            var owner = await seeder.EnsureUserAsync("owner");
+            var currentUserId = userManager.GetUserId(httpContext.User);
+            if (owner is null || !string.Equals(currentUserId, owner.Id, StringComparison.Ordinal))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
+
+            return Results.Ok(await seeder.SeedAsync(cancellationToken));
+        })
+        .RequireAuthorization()
         .DisableAntiforgery();
     }
 }

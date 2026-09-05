@@ -36,6 +36,11 @@ Run the committed browser/API verification from the repository root with
 data, and a Development-only login endpoint; never enable that endpoint in
 production.
 
+Use `scripts/agent-environment.sh deploy` when a persistent local review
+instance is useful. It verifies changes before promoting them to a separate
+Compose project on port 9090 by default. Never point it at the Aspire
+database, ports, network, or volume.
+
 For EF Core model changes, create migrations from the repository root:
 
 ```bash

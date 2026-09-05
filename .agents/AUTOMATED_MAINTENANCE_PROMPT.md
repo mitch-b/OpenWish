@@ -25,8 +25,10 @@ Use the following prompt for a scheduled unattended OpenWish improvement:
 > authenticated API assertions, data-bearing UI assertions, no browser
 > errors, no failed responses, clean web logs, and desktop/mobile screenshots.
 > Use only the repository-provided Docker Playwright workflow and its
-> Development-only synthetic login. Review the full diff and remediate
-> actionable findings.
+> Development-only synthetic login and fixture data. Review the full diff and
+> remediate actionable findings. When a persistent local review environment is
+> needed, use `scripts/agent-environment.sh deploy`; never point automation at
+> the developer's Aspire resources or bypass its verification-first promotion.
 >
 > Only when every gate passes, commit and push the branch and open a pull
 > request to `main`. Apply the `autowork` label when the increment implements

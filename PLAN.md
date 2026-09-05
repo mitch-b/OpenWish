@@ -27,7 +27,8 @@ the durable sequence an automated maintainer follows; GitHub issues labeled
 - no secrets, real user data, or production credentials in evidence
 - no browser console errors, failed API responses, or server exceptions in
   the verified journey
-- desktop and mobile screenshots named for the scenario
+- desktop and mobile screenshots covering the dashboard, wishlists, events,
+  friends, notifications, and responsive layouts
 - a dated release note under `.docs/releases/`
 
 ## Release Evidence
@@ -46,6 +47,9 @@ easy to break, bypass normal review, and make retention unclear.
 - Development-only test authentication must require both the Development
   environment and explicit configuration.
 - Use isolated Docker Compose project names and synthetic data.
+- Keep the persistent agent environment isolated from Aspire. Promote to it
+  with `scripts/agent-environment.sh deploy` only after the ephemeral
+  verification gate passes.
 - Prefer additive database changes; do not perform destructive migrations
   without explicit human approval.
 - Do not merge when runtime verification or review remediation fails.

@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${OPENWISH_AGENT_DB_NAME:-OpenWishAgent}
+      POSTGRES_USER: ${OPENWISH_AGENT_DB_USER:-openwish}
+      POSTGRES_PASSWORD: ${OPENWISH_AGENT_DB_PASSWORD:-openwish-agent-local}
+    ports:
+      - "127.0.0.1:${OPENWISH_AGENT_DB_PORT:-55433}:5432"
+    volumes:
+      - agent-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OPENWISH_AGENT_DB_USER:-openwish} -d ${OPENWISH_AGENT_DB_NAME:-OpenWishAgent}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  web:
+    image: ${OPENWISH_AGENT_IMAGE:-openwish-agent:local}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__OpenWish: Host=db;Port=5432;Database=${OPENWISH_AGENT_DB_NAME:-OpenWishAgent};Username=${OPENWISH_AGENT_DB_USER:-openwish};Password=${OPENWISH_AGENT_DB_PASSWORD:-openwish-agent-local}
+      OpenWishSettings__OwnDatabaseUpgrades: "true"
+      OpenWishSettings__EnableDevelopmentLogin: "true"
+    ports:
+      - "127.0.0.1:${OPENWISH_AGENT_PORT:-9090}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  agent-db:

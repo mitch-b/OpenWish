@@ -8,7 +8,11 @@ All notable user-facing changes to OpenWish are documented here.
 
 - A public "What's new" page makes release highlights visible from the app.
 - Reproducible browser verification now captures desktop and mobile evidence
-  for the public product experience.
+  for the complete product experience across owner, guest, and friend roles.
+- A screenshot walkthrough shows prospective users the dashboard, wishlists,
+  events, gift exchange, friends, notifications, and mobile layout.
+- An isolated agent-managed local environment can be promoted on port 9090
+  without changing a developer's Aspire instance or data.
 
 ### Improved
 
@@ -16,6 +20,8 @@ All notable user-facing changes to OpenWish are documented here.
   wishlist, event, and friend workflows.
 - Dependency maintenance now covers NuGet, containers, dev containers, and
   GitHub Actions.
+- Deterministic Development-only fixtures make collaboration, invitation,
+  reservation, and authorization flows reproducible.
 
 ### Fixed
 

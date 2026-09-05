@@ -25,5 +25,6 @@ path, and can leave broken links after force-pushes or cleanup.
 ## Capture workflow
 
 Run `scripts/verify-e2e.sh`. The script starts an isolated verification stack,
-runs committed Playwright assertions, and writes desktop and mobile images to
-`.docs/images/verification/`.
+runs committed multi-user Playwright assertions, writes machine-readable
+results to `.docs/images/verification/`, and regenerates the durable product
+walkthrough in `.docs/images/walkthrough/`.

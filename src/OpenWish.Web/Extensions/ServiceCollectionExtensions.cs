@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddScoped<IOpenAIService, OpenAIService>();
+        services.AddScoped<DevelopmentDataSeeder>();
 
         return services;
     }

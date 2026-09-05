@@ -12,12 +12,7 @@ services:
       retries: 30
 
   web:
-    build:
-      context: ./src
-      dockerfile: OpenWish.Web/Dockerfile
-      args:
-        BUILD_VERSION: 0.1.0
-        GIT_SHA: verification
+    image: ${OPENWISH_VERIFICATION_IMAGE}
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__OpenWish: Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification

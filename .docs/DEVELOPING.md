@@ -108,9 +108,50 @@ cd ..
 scripts/verify-e2e.sh
 ```
 
-The E2E script creates an isolated PostgreSQL and OpenWish stack, enables the
-synthetic login only in that Development environment, and runs the committed
-Playwright journey. Evidence is written to `.docs/images/verification/`.
+The E2E script creates an isolated PostgreSQL and OpenWish stack with a unique
+Compose project name, enables synthetic login and fixtures only in that
+Development environment, and runs the committed Playwright journey. It
+verifies the owner, guest, and friend perspectives across every main route,
+including authorization boundaries, gift assignments, reservations,
+notifications, account settings, theme persistence, and mobile rendering.
+Machine-readable results are written to `.docs/images/verification/`, and the
+README walkthrough is regenerated under `.docs/images/walkthrough/`.
 
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.
+
+## Isolated agent environment
+
+The agent-managed environment is separate from the Aspire development
+resources. By default, it uses Compose project `openwish-agent`, web port
+`9090`, PostgreSQL port `55433`, database `OpenWishAgent`, and its own persistent
+volume. It does not connect to or update the PostgreSQL container, network,
+volume, or web port used by `OpenWish.AppHost`.
+
+Copy `.env.agent.example` to `.env.agent` to change those local-only defaults.
+The file is ignored so credentials and machine-specific ports are not
+committed.
+
+```bash
+# Verify the candidate, then promote it to http://localhost:9090.
+scripts/agent-environment.sh deploy
+
+# Inspect the isolated environment.
+scripts/agent-environment.sh status
+scripts/agent-environment.sh logs
+
+# Stop containers without removing agent data.
+scripts/agent-environment.sh stop
+
+# Explicitly remove the isolated database volume and containers.
+scripts/agent-environment.sh reset
+```
+
+Deployment is lock-protected. It first runs the ephemeral E2E gate, builds a
+candidate image, and updates only the agent Compose project after verification
+succeeds. After the health check, it idempotently loads the same synthetic
+owner, guest, friend, wishlist, event, and collaboration data used by the
+browser suite. A failed verification leaves the running agent environment
+unchanged; a failed post-promotion health or data check restores the previous
+image. This lets an agent work and validate changes while the normal Aspire
+instance continues independently.

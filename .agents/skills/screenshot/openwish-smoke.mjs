@@ -3,11 +3,17 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
-const outputDirectory = process.env.OPENWISH_EVIDENCE_DIR ?? "/evidence";
-const scenarios = [
-  { name: "desktop", viewport: { width: 1440, height: 1000 } },
-  { name: "mobile", viewport: { width: 390, height: 844 }, isMobile: true }
-];
+const evidenceDirectory = process.env.OPENWISH_EVIDENCE_DIR ?? "/evidence";
+const walkthroughDirectory = process.env.OPENWISH_WALKTHROUGH_DIR ?? evidenceDirectory;
+const ownerEmail = "playwright-owner@openwish.local";
+const guestEmail = "playwright-guest@openwish.local";
+const friendEmail = "playwright-friend@openwish.local";
+const expectedManifest = {
+  wishlistPublicId: "demo-family-gift-ideas",
+  privateWishlistPublicId: "demo-private-ideas",
+  friendWishlistPublicId: "demo-jordan-favorites",
+  eventPublicId: "demo-holiday-gift-exchange"
+};
 
 async function waitUntilReady(request) {
   let lastError;
@@ -29,7 +35,285 @@ async function waitUntilReady(request) {
   throw lastError ?? new Error("OpenWish did not become ready.");
 }
 
-await fs.mkdir(outputDirectory, { recursive: true });
+async function login(context, persona, expectedEmail) {
+  const response = await context.request.post(`${baseUrl}/auth/dev-login?persona=${persona}`);
+  if (!response.ok()) {
+    throw new Error(`${persona} development login failed with ${response.status()}.`);
+  }
+
+  const userResponse = await context.request.get(`${baseUrl}/api/account/user`);
+  if (!userResponse.ok()) {
+    throw new Error(`${persona} account check failed with ${userResponse.status()}.`);
+  }
+
+  const user = await userResponse.json();
+  if (user.email !== expectedEmail) {
+    throw new Error(`Unexpected ${persona} user: ${JSON.stringify(user)}`);
+  }
+
+  return response.status();
+}
+
+function monitorPage(page) {
+  const browserErrors = [];
+  const failedResponses = [];
+
+  page.on("console", message => {
+    if (message.type() === "error") {
+      browserErrors.push(message.text());
+    }
+  });
+  page.on("pageerror", error => browserErrors.push(error.message));
+  page.on("response", response => {
+    if (response.status() >= 400) {
+      failedResponses.push(`${response.status()} ${response.url()}`);
+    }
+  });
+
+  return { browserErrors, failedResponses };
+}
+
+async function assertVisible(page, text) {
+  await page.getByText(text, { exact: false }).first().waitFor({ state: "visible" });
+}
+
+async function visit(page, route, expectedText, visitedRoutes) {
+  const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+  if (!response?.ok()) {
+    throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+  }
+
+  await assertVisible(page, expectedText);
+  const blazorError = page.locator("#blazor-error-ui");
+  if (await blazorError.isVisible()) {
+    throw new Error(`Blazor error UI was visible on ${route}.`);
+  }
+
+  visitedRoutes.push(route);
+}
+
+async function screenshot(page, fileName) {
+  await page.screenshot({
+    path: path.join(walkthroughDirectory, fileName),
+    fullPage: true
+  });
+}
+
+async function verifyOwnerJourney(browser, manifest, results) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+  const loginStatus = await login(context, "owner", ownerEmail);
+
+  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  await assertVisible(page, "Family Gift Ideas");
+  await assertVisible(page, "Holiday Gift Exchange");
+  await assertVisible(page, "Friend Requests");
+  await screenshot(page, "home-dashboard.png");
+
+  await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
+  await assertVisible(page, "Family Gift Ideas");
+  await assertVisible(page, "Private Ideas");
+  await screenshot(page, "wishlists.png");
+
+  await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  await assertVisible(page, "Jordan's Favorites");
+
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
+  await assertVisible(page, "Noise-Cancelling Headphones");
+  await assertVisible(page, "Cast-Iron Dutch Oven");
+  await assertVisible(page, "National Park Pass");
+  await assertVisible(page, "$249.99");
+  await assertVisible(page, "3");
+  await screenshot(page, "wishlist-details.png");
+
+  await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage Wishlist", visitedRoutes);
+  await assertVisible(page, "Who Can See This?");
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
+
+  await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
+  await assertVisible(page, "Holiday Gift Exchange");
+  await screenshot(page, "events.png");
+
+  await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
+  await assertVisible(page, "Your Gift Exchange Match");
+  await assertVisible(page, "JordanDemo");
+  await assertVisible(page, "Suggested Budget");
+  await assertVisible(page, "TaylorDemo");
+  await screenshot(page, "event-details.png");
+
+  await visit(page, "/events/new", "Create New Event", visitedRoutes);
+  await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
+  await assertVisible(page, "Manage Participants");
+
+  await visit(page, "/friends", "Connect with friends", visitedRoutes);
+  await assertVisible(page, "JordanDemo");
+  await assertVisible(page, "TaylorDemo");
+  await screenshot(page, "friends.png");
+
+  await page.locator(".notification-bell").click();
+  await assertVisible(page, "Event invitation");
+  await assertVisible(page, "Wishlist activity");
+  await screenshot(page, "notifications.png");
+  await page.getByRole("button", { name: "Close notifications" }).click();
+
+  await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {
+    element.checked = true;
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForFunction(() => localStorage.getItem("theme") === "dark");
+  const selectedTheme = await page.evaluate(() => localStorage.getItem("theme"));
+  if (selectedTheme !== "dark") {
+    throw new Error(`Theme toggle stored '${selectedTheme}' instead of 'dark'.`);
+  }
+  await page.reload({ waitUntil: "domcontentloaded" });
+  const persistedTheme = await page.evaluate(() => document.documentElement.dataset.theme);
+  if (persistedTheme !== "dark") {
+    throw new Error(`Theme did not persist after reload; found '${persistedTheme}'.`);
+  }
+
+  await visit(page, "/whats-new", "What's new", visitedRoutes);
+  await assertVisible(page, "Version 0.1.0");
+  await assertVisible(page, "Sustainable improvements");
+
+  await visit(page, "/Account/Manage", "Profile", visitedRoutes);
+  const username = await page.locator("#username").inputValue();
+  if (username !== "AlexDemo") {
+    throw new Error(`Profile displayed unexpected username '${username}'.`);
+  }
+
+  if (diagnostics.browserErrors.length > 0) {
+    throw new Error(`Owner browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  }
+  if (diagnostics.failedResponses.length > 0) {
+    throw new Error(`Owner failed responses: ${diagnostics.failedResponses.join(" | ")}`);
+  }
+
+  results.push({
+    scenario: "owner-desktop",
+    loginStatus,
+    visitedRoutes,
+    assertions: [
+      "dashboard data",
+      "owned and friend wishlists",
+      "wishlist items and pricing",
+      "event details and gift assignment",
+      "friends and pending requests",
+      "notifications",
+      "theme persistence",
+      "release history",
+      "account profile"
+    ]
+  });
+  await context.close();
+}
+
+async function verifyGuestJourney(browser, manifest, results) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+  const loginStatus = await login(context, "guest", guestEmail);
+
+  const forbiddenSeed = await context.request.post(`${baseUrl}/auth/dev-seed`);
+  if (forbiddenSeed.status() !== 403) {
+    throw new Error(`Guest seed attempt returned ${forbiddenSeed.status()}, expected 403.`);
+  }
+
+  const forbiddenDelete = await context.request.delete(
+    `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}`
+  );
+  if (forbiddenDelete.status() !== 403) {
+    throw new Error(`Cross-user wishlist deletion returned ${forbiddenDelete.status()}, expected 403.`);
+  }
+
+  await visit(page, "/events", "Pending Invitations", visitedRoutes);
+  await assertVisible(page, "Holiday Gift Exchange");
+  await visit(
+    page,
+    `/events/${manifest.eventPublicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`,
+    "You're almost in!",
+    visitedRoutes
+  );
+  await assertVisible(page, "Accept invite");
+
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
+  await assertVisible(page, "Reserved");
+
+  if (diagnostics.browserErrors.length > 0) {
+    throw new Error(`Guest browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  }
+  if (diagnostics.failedResponses.length > 0) {
+    throw new Error(`Guest failed responses: ${diagnostics.failedResponses.join(" | ")}`);
+  }
+
+  results.push({
+    scenario: "guest-collaboration",
+    loginStatus,
+    seedAuthorizationStatus: forbiddenSeed.status(),
+    deleteAuthorizationStatus: forbiddenDelete.status(),
+    visitedRoutes
+  });
+  await context.close();
+}
+
+async function verifyFriendJourney(browser, manifest, results) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+  const loginStatus = await login(context, "friend", friendEmail);
+
+  await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
+  await assertVisible(page, "You're Shopping For:");
+  await assertVisible(page, "AlexDemo");
+  await assertVisible(page, "My Reserved Items");
+  await assertVisible(page, "Noise-Cancelling Headphones");
+
+  if (diagnostics.browserErrors.length > 0) {
+    throw new Error(`Friend browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  }
+  if (diagnostics.failedResponses.length > 0) {
+    throw new Error(`Friend failed responses: ${diagnostics.failedResponses.join(" | ")}`);
+  }
+
+  results.push({ scenario: "friend-gift-exchange", loginStatus, visitedRoutes });
+  await context.close();
+}
+
+async function verifyMobileJourney(browser, manifest, results) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true
+  });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+  const loginStatus = await login(context, "owner", ownerEmail);
+
+  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  await assertVisible(page, "Family Gift Ideas");
+  await screenshot(page, "home-mobile.png");
+
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
+  await assertVisible(page, "Noise-Cancelling Headphones");
+  await screenshot(page, "wishlist-mobile.png");
+
+  if (diagnostics.browserErrors.length > 0) {
+    throw new Error(`Mobile browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  }
+  if (diagnostics.failedResponses.length > 0) {
+    throw new Error(`Mobile failed responses: ${diagnostics.failedResponses.join(" | ")}`);
+  }
+
+  results.push({ scenario: "owner-mobile", loginStatus, visitedRoutes });
+  await context.close();
+}
+
+await fs.mkdir(evidenceDirectory, { recursive: true });
+await fs.mkdir(walkthroughDirectory, { recursive: true });
 
 const browser = await chromium.launch();
 const results = [];
@@ -39,109 +323,33 @@ try {
   await waitUntilReady(readinessContext.request);
   await readinessContext.close();
 
-  for (const scenario of scenarios) {
-    const browserErrors = [];
-    const failedResponses = [];
-    const context = await browser.newContext({
-      viewport: scenario.viewport,
-      isMobile: scenario.isMobile ?? false
-    });
-    const page = await context.newPage();
+  const seedContext = await browser.newContext();
+  await login(seedContext, "owner", ownerEmail);
+  const seedResponse = await seedContext.request.post(`${baseUrl}/auth/dev-seed`);
+  if (!seedResponse.ok()) {
+    throw new Error(`Development data seed failed with ${seedResponse.status()}: ${await seedResponse.text()}`);
+  }
+  const manifest = await seedResponse.json();
+  await seedContext.close();
 
-    page.on("console", message => {
-      if (message.type() === "error") {
-        browserErrors.push(message.text());
-      }
-    });
-    page.on("pageerror", error => browserErrors.push(error.message));
-    page.on("response", response => {
-      if (response.status() >= 400) {
-        failedResponses.push(`${response.status()} ${response.url()}`);
-      }
-    });
-
-    const loginResponse = await context.request.post(`${baseUrl}/auth/dev-login?persona=owner`);
-    if (!loginResponse.ok()) {
-      throw new Error(`Development login failed with ${loginResponse.status()}.`);
+  for (const [key, expectedValue] of Object.entries(expectedManifest)) {
+    if (manifest[key] !== expectedValue) {
+      throw new Error(`Seed manifest '${key}' was '${manifest[key]}', expected '${expectedValue}'.`);
     }
-
-    const userResponse = await context.request.get(`${baseUrl}/api/account/user`);
-    if (!userResponse.ok()) {
-      throw new Error(`Authenticated user check failed with ${userResponse.status()}.`);
-    }
-    const user = await userResponse.json();
-    if (user.email !== "playwright-owner@openwish.local") {
-      throw new Error(`Unexpected verification user: ${JSON.stringify(user)}`);
-    }
-
-    let authorizationStatus;
-    if (scenario.name === "desktop") {
-      const createResponse = await context.request.post(`${baseUrl}/api/wishlists`, {
-        data: {
-          name: "Private verification wishlist",
-          isPrivate: true
-        }
-      });
-      if (createResponse.status() !== 201) {
-        throw new Error(`Wishlist creation failed with ${createResponse.status()}.`);
-      }
-      const wishlist = await createResponse.json();
-
-      const guestContext = await browser.newContext();
-      const guestLoginResponse = await guestContext.request.post(`${baseUrl}/auth/dev-login?persona=guest`);
-      if (!guestLoginResponse.ok()) {
-        throw new Error(`Guest login failed with ${guestLoginResponse.status()}.`);
-      }
-
-      const forbiddenDelete = await guestContext.request.delete(`${baseUrl}/api/wishlists/${wishlist.publicId}`);
-      authorizationStatus = forbiddenDelete.status();
-      await guestContext.close();
-
-      if (authorizationStatus !== 403) {
-        throw new Error(`Unauthorized wishlist deletion returned ${authorizationStatus}, expected 403.`);
-      }
-    }
-
-    await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Welcome Back!" }).waitFor();
-    await page.getByRole("link", { name: "Create Wishlist" }).waitFor();
-    await page.screenshot({
-      path: path.join(outputDirectory, `openwish-home-${scenario.name}.png`),
-      fullPage: true
-    });
-
-    await page.goto(`${baseUrl}/whats-new`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "What's new" }).waitFor();
-    await page.getByText("Version 0.1.0").waitFor();
-    await page.getByText("Sustainable improvements").waitFor();
-
-    if (browserErrors.length > 0) {
-      throw new Error(`Browser errors: ${browserErrors.join(" | ")}`);
-    }
-    if (failedResponses.length > 0) {
-      throw new Error(`Failed responses: ${failedResponses.join(" | ")}`);
-    }
-
-    results.push({
-      scenario: scenario.name,
-      loginStatus: loginResponse.status(),
-      userStatus: userResponse.status(),
-      authorizationStatus,
-      homeHeading: "Welcome Back!",
-      releaseVersion: "0.1.0",
-      screenshot: `openwish-home-${scenario.name}.png`
-    });
-
-    await context.close();
   }
 
+  await verifyOwnerJourney(browser, manifest, results);
+  await verifyGuestJourney(browser, manifest, results);
+  await verifyFriendJourney(browser, manifest, results);
+  await verifyMobileJourney(browser, manifest, results);
+
   await fs.writeFile(
-    path.join(outputDirectory, "openwish-e2e-result.json"),
-    `${JSON.stringify({ passed: true, baseUrl, scenarios: results }, null, 2)}\n`
+    path.join(evidenceDirectory, "openwish-e2e-result.json"),
+    `${JSON.stringify({ passed: true, baseUrl, manifest, scenarios: results }, null, 2)}\n`
   );
 } catch (error) {
   await fs.writeFile(
-    path.join(outputDirectory, "openwish-e2e-result.json"),
+    path.join(evidenceDirectory, "openwish-e2e-result.json"),
     `${JSON.stringify({ passed: false, baseUrl, error: error.message, scenarios: results }, null, 2)}\n`
   );
   throw error;

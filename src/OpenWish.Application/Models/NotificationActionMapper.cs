@@ -31,6 +31,14 @@ internal static class NotificationActionMapper
             return null;
         }
 
+        if (action.NavigateTo is not null &&
+            (!action.NavigateTo.StartsWith("/", StringComparison.Ordinal) ||
+             action.NavigateTo.StartsWith("//", StringComparison.Ordinal) ||
+             action.NavigateTo.Contains(':', StringComparison.Ordinal)))
+        {
+            throw new ArgumentException("Notification navigation targets must be relative application paths.", nameof(action));
+        }
+
         return JsonSerializer.Serialize(action, _serializerOptions);
     }
 }

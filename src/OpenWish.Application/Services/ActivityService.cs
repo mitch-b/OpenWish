@@ -50,7 +50,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0)
@@ -73,7 +73,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0)
@@ -88,6 +88,25 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
+    }
+
+    private static IEnumerable<ActivityLogModel> RemoveUserEmails(IEnumerable<ActivityLogModel> activities)
+    {
+        var activityModels = activities.ToList();
+        foreach (var activity in activityModels)
+        {
+            if (activity.User is not null)
+            {
+                activity.User.Email = string.Empty;
+            }
+
+            if (activity.Wishlist?.Owner is not null)
+            {
+                activity.Wishlist.Owner.Email = string.Empty;
+            }
+        }
+
+        return activityModels;
     }
 }

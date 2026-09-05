@@ -3,6 +3,7 @@
 @inject IEventService EventService
 @inject ILogger<EventCard> Logger
 @inject NavigationManager NavigationManager
+@inject IUserContextService UserContextService
 
 @if (Event == null)
 {
@@ -35,13 +36,16 @@ else
                         ⋮
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
-                        <li>
-                            <button class="dropdown-item text-danger"
-                                    @onclick:stopPropagation="true"
-                                    @onclick="ShowDeleteDialog">
-                                Delete
-                            </button>
-                        </li>
+                        @if (_currentUserId == Event.CreatedBy?.Id)
+                        {
+                            <li>
+                                <button class="dropdown-item text-danger"
+                                        @onclick:stopPropagation="true"
+                                        @onclick="ShowDeleteDialog">
+                                    Delete
+                                </button>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -84,6 +88,11 @@ else
 </Dialog>
 
 @code {
+    private string? _currentUserId;
+
+    protected override async Task OnInitializedAsync() =>
+        _currentUserId = await UserContextService.GetUserIdAsync();
+
     [Parameter]
     public EventModel? Event { get; set; }
 
@@ -142,7 +151,7 @@ else
         try
         {
             Logger.LogInformation("Deleting event {EventId}", Event.Id);
-            await EventService.DeleteEventAsync(Event.Id);
+            await EventService.DeleteEventAsync(Event.Id, _currentUserId!);
 
             if (OnDelete.HasDelegate)
             {

@@ -195,7 +195,7 @@ else
 
     private async Task LoadEvent()
     {
-        _event = await EventService.GetEventByPublicIdAsync(EventId);
+        _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
 
         if (!_isOwner)
@@ -208,7 +208,7 @@ else
     {
         if (_event != null)
         {
-            await EventService.UpdateEventByPublicIdAsync(EventId, updatedEvent);
+            await EventService.UpdateEventByPublicIdAsync(EventId, updatedEvent, _currentUserId!);
             NavigationManager.NavigateTo($"/events/{EventId}");
         }
     }
@@ -261,7 +261,7 @@ else
 
         try
         {
-            await EventService.DeleteEventByPublicIdAsync(EventId);
+            await EventService.DeleteEventByPublicIdAsync(EventId, _currentUserId!);
             _showDeleteConfirmation = false;
             NavigationManager.NavigateTo("/events");
         }

@@ -175,7 +175,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
-    public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId)
+    public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId, string requestingUserId)
     {
         var response = await _httpClient.GetAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/reservation");
 
@@ -189,7 +189,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<bool> IsItemReservedAsync(int itemId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/items/{itemId}/is-reserved");
+        throw new NotSupportedException("Use the viewer-aware reservation endpoint.");
     }
 
     // PublicId-based methods
@@ -311,7 +311,10 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId)
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
+        string wishlistPublicId,
+        int itemId,
+        string requestingUserId)
     {
         var response = await _httpClient.GetAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation");
 

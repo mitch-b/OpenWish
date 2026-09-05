@@ -90,6 +90,7 @@ async function visit(page, route, expectedText, visitedRoutes) {
   }
 
   visitedRoutes.push(route);
+  return response;
 }
 
 async function screenshot(page, fileName) {
@@ -105,8 +106,49 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
   const loginStatus = await login(context, "owner", ownerEmail);
+  const homeResponse = await visit(page, "/", "Welcome Back!", visitedRoutes);
+  const contentSecurityPolicy = homeResponse.headers()["content-security-policy"];
+  if (!contentSecurityPolicy?.includes("frame-ancestors 'none'")) {
+    throw new Error("The home page did not include the expected Content-Security-Policy.");
+  }
+  if (homeResponse.headers()["x-content-type-options"] !== "nosniff") {
+    throw new Error("The home page did not include X-Content-Type-Options: nosniff.");
+  }
 
-  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  const notificationsResponse = await context.request.get(`${baseUrl}/api/notifications?includeRead=true`);
+  if (!notificationsResponse.ok()) {
+    throw new Error(`Owner notifications returned ${notificationsResponse.status()}.`);
+  }
+  const notifications = await notificationsResponse.json();
+  const notificationPublicId = notifications[0]?.publicId;
+  if (!notificationPublicId) {
+    throw new Error("Owner security checks require a seeded notification.");
+  }
+
+  const itemsResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  const ownerItems = await itemsResponse.json();
+  if (ownerItems.some(item => item.reservations?.length > 0)) {
+    throw new Error("Wishlist owner received reservation details.");
+  }
+
+  const unsafeItem = { ...ownerItems[0], url: "javascript:alert(1)" };
+  const unsafeItemResponse = await context.request.put(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/${unsafeItem.id}`,
+    { data: unsafeItem }
+  );
+  if (unsafeItemResponse.status() !== 400) {
+    throw new Error(`Unsafe wishlist URL returned ${unsafeItemResponse.status()}, expected 400.`);
+  }
+
+  const privateScrape = await context.request.post(`${baseUrl}/api/products/scrape`, {
+    data: { productUrl: "http://127.0.0.1:8080/" }
+  });
+  if (privateScrape.status() !== 204) {
+    throw new Error(`Private-network scrape returned ${privateScrape.status()}, expected 204.`);
+  }
+
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Holiday Gift Exchange");
   await assertVisible(page, "Friend Requests");
@@ -208,9 +250,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
     ]
   });
   await context.close();
+  return { notificationPublicId };
 }
 
-async function verifyGuestJourney(browser, manifest, results) {
+async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   const diagnostics = monitorPage(page);
@@ -227,6 +270,72 @@ async function verifyGuestJourney(browser, manifest, results) {
   );
   if (forbiddenDelete.status() !== 403) {
     throw new Error(`Cross-user wishlist deletion returned ${forbiddenDelete.status()}, expected 403.`);
+  }
+
+  const guestEventResponse = await context.request.get(
+    `${baseUrl}/api/events/${manifest.eventPublicId}`
+  );
+  if (!guestEventResponse.ok()) {
+    throw new Error(`Guest event lookup returned ${guestEventResponse.status()}.`);
+  }
+  const guestEvent = await guestEventResponse.json();
+
+  const sharedWishlistResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}`
+  );
+  if (!sharedWishlistResponse.ok()) {
+    throw new Error(`Shared wishlist lookup returned ${sharedWishlistResponse.status()}.`);
+  }
+  const sharedWishlist = await sharedWishlistResponse.json();
+  if (sharedWishlist.event !== null) {
+    throw new Error("Event metadata was disclosed through a wishlist to a non-member.");
+  }
+
+  const forbiddenEventUpdate = await context.request.put(
+    `${baseUrl}/api/events/${manifest.eventPublicId}`,
+    { data: { ...guestEvent, name: "Unauthorized update" } }
+  );
+  if (forbiddenEventUpdate.status() !== 403) {
+    throw new Error(`Cross-user event update returned ${forbiddenEventUpdate.status()}, expected 403.`);
+  }
+
+  const forbiddenEventDelete = await context.request.delete(
+    `${baseUrl}/api/events/${manifest.eventPublicId}`
+  );
+  if (forbiddenEventDelete.status() !== 403) {
+    throw new Error(`Cross-user event deletion returned ${forbiddenEventDelete.status()}, expected 403.`);
+  }
+
+  for (const route of [
+    `/api/events/${manifest.eventPublicId}/invitations`,
+    `/api/events/${manifest.eventPublicId}/pairing-rules`,
+    `/api/events/${manifest.eventPublicId}/wishlists`
+  ]) {
+    const response = await context.request.get(`${baseUrl}${route}`);
+    if (response.status() !== 403) {
+      throw new Error(`Unauthorized event metadata request to ${route} returned ${response.status()}.`);
+    }
+  }
+
+  const crossUserNotification = await context.request.put(
+    `${baseUrl}/api/notifications/${securityFixture.notificationPublicId}/read`
+  );
+  if (crossUserNotification.status() !== 404) {
+    throw new Error(
+      `Cross-user notification mutation returned ${crossUserNotification.status()}, expected 404.`
+    );
+  }
+
+  const guestItemsResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  const guestItems = await guestItemsResponse.json();
+  const anonymousReservation = guestItems.flatMap(item => item.reservations ?? [])
+    .find(reservation => reservation.isAnonymous);
+  if (!anonymousReservation ||
+      anonymousReservation.userId !== "" ||
+      anonymousReservation.user !== null) {
+    throw new Error("Anonymous reservation disclosed the reserving user's identity.");
   }
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
@@ -265,6 +374,22 @@ async function verifyFriendJourney(browser, manifest, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
   const loginStatus = await login(context, "friend", friendEmail);
+
+  for (const route of [
+    `/api/events/${manifest.eventPublicId}`,
+    `/api/events/${manifest.eventPublicId}/wishlists`
+  ]) {
+    const response = await context.request.get(`${baseUrl}${route}`);
+    if (!response.ok()) {
+      throw new Error(`Friend event data request to ${route} returned ${response.status()}.`);
+    }
+
+    const payload = await response.json();
+    const wishlists = Array.isArray(payload) ? payload : payload.eventWishlists;
+    if ((wishlists ?? []).some(wishlist => wishlist.owner?.email)) {
+      throw new Error(`Event wishlist owner email was disclosed by ${route}.`);
+    }
+  }
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
   await assertVisible(page, "You're Shopping For:");
@@ -338,8 +463,8 @@ try {
     }
   }
 
-  await verifyOwnerJourney(browser, manifest, results);
-  await verifyGuestJourney(browser, manifest, results);
+  const securityFixture = await verifyOwnerJourney(browser, manifest, results);
+  await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
 

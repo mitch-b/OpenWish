@@ -309,7 +309,12 @@ else
 
         try
         {
-            var wishlists = (await EventService.GetEventWishlistsByPublicIdAsync(EventId)).ToList();
+            if (string.IsNullOrEmpty(_currentUserId))
+            {
+                throw new UnauthorizedAccessException("Sign in to view event wishlists.");
+            }
+
+            var wishlists = (await EventService.GetEventWishlistsByPublicIdAsync(EventId, _currentUserId)).ToList();
             _eventWishlists.Clear();
             _eventWishlists.AddRange(wishlists);
 

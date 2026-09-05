@@ -16,6 +16,11 @@ All notable user-facing changes to OpenWish are documented here.
 
 ### Improved
 
+- Self-hosted deployments now default to trusted proxy configuration, secure
+  production cookies, browser security headers, login lockout, and abuse
+  limits for invitation and product-scraping endpoints.
+- Product metadata scraping validates every redirect and connection address,
+  blocks private networks, and limits response size.
 - Core page headings and actions use a shared layout for more consistent
   wishlist, event, and friend workflows.
 - Dependency maintenance now covers NuGet, containers, dev containers, and
@@ -25,6 +30,13 @@ All notable user-facing changes to OpenWish are documented here.
 
 ### Fixed
 
+- Friend, notification, activity, event, and wishlist APIs now derive the
+  acting user from the authenticated session and enforce ownership or
+  membership before returning or changing data.
+- Anonymous gift reservations no longer expose the reserver to other viewers,
+  and wishlist owners receive no reservation details.
+- User-supplied links and email content are validated or encoded to prevent
+  unsafe navigation and injected markup.
 - Wishlist mutations and collaboration actions now derive the acting user
   from the authenticated session instead of accepting a caller-supplied
   identity.

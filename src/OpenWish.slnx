@@ -12,6 +12,7 @@
     <File Path="../README.md" />
   </Folder>
   <Project Path="OpenWish.AppHost/OpenWish.AppHost.csproj" />
+  <Project Path="OpenWish.Application.Tests/OpenWish.Application.Tests.csproj" />
   <Project Path="OpenWish.Application/OpenWish.Application.csproj" />
   <Project Path="OpenWish.Data/OpenWish.Data.csproj" />
   <Project Path="OpenWish.ServiceDefaults/OpenWish.ServiceDefaults.csproj" />

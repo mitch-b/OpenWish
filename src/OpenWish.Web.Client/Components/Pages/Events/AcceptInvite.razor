@@ -183,15 +183,6 @@
             return;
         }
 
-        try
-        {
-            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Unable to load event details: {ex.Message}";
-        }
-
         if (!string.IsNullOrWhiteSpace(InviteEmail))
         {
             try
@@ -199,7 +190,7 @@
                 _invitation = await EventService.ClaimEventInvitationByEmailAsync(EventId, _currentUserId, InviteEmail);
                 if (_invitation == null)
                 {
-                    _errorMessage ??= "We couldn't find a matching invitation.";
+                    _errorMessage = "We couldn't find a matching invitation.";
                 }
             }
             catch (InvalidOperationException ex)
@@ -210,6 +201,15 @@
             {
                 _errorMessage = ex.Message;
             }
+        }
+
+        try
+        {
+            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage ??= $"Unable to load event details: {ex.Message}";
         }
 
         _isLoading = false;

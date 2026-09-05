@@ -187,7 +187,10 @@ else
             </div>
 
             <div class="col-md-4">
-                <EventInvitations EventId="@EventId" IsOwner="@_isOwner" CurrentUserId="@_currentUserId" />
+                @if (_isOwner)
+                {
+                    <EventInvitations EventId="@EventId" IsOwner="true" CurrentUserId="@_currentUserId" />
+                }
 
                 <div class="mt-4">
                     <EventReservedItems EventId="@EventId"
@@ -231,7 +234,7 @@ else
 
     private async Task LoadEvent()
     {
-        _event = await EventService.GetEventByPublicIdAsync(EventId);
+        _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
     }
 

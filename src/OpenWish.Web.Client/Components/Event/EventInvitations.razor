@@ -373,7 +373,7 @@
         _isLoading = true;
         try
         {
-            var invitations = await EventService.GetEventInvitationsByPublicIdAsync(EventId);
+            var invitations = await EventService.GetEventInvitationsByPublicIdAsync(EventId, CurrentUserId);
             _invitations = invitations.ToList();
         }
         finally

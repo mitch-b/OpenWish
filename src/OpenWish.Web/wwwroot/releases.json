@@ -10,6 +10,8 @@
       "Browser verification covers owner, guest, and friend journeys across desktop and mobile layouts.",
       "A verified walkthrough demonstrates wishlists, events, gift exchange, friends, notifications, and responsive use.",
       "An isolated agent-managed environment can be promoted without changing the developer's Aspire data or ports.",
+      "Private social, event, notification, activity, and reservation data is now protected by stricter authorization and privacy controls.",
+      "Self-hosted deployments now include safer login, proxy, browser, email, and product-link defaults.",
       "Wishlist collaboration actions now consistently use the signed-in user's identity.",
       "Local time formatting is safer and accurate across partial-hour time zones."
     ]

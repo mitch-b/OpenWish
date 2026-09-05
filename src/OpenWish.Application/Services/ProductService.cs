@@ -11,6 +11,8 @@ namespace OpenWish.Application.Services;
 
 public partial class ProductService : IProductService
 {
+    private const int MaxRedirects = 5;
+    private const int MaxResponseBytes = 2 * 1024 * 1024;
     [GeneratedRegex(@"[^0-9.,]+")]
     private static partial Regex PriceParseRegex();
 
@@ -30,9 +32,9 @@ public partial class ProductService : IProductService
 
     /// <summary>
     /// Validates that a URL is safe to fetch: must use http/https and must not target
-    /// loopback addresses, link-local ranges, or private (RFC-1918/RFC-4193) networks.
+    /// publicly routable unicast addresses rather than special-purpose or private networks.
     /// </summary>
-    private static async Task<bool> IsSafeUrlAsync(Uri uri)
+    internal static async Task<bool> IsSafeUrlAsync(Uri uri)
     {
         if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
         {
@@ -49,54 +51,64 @@ public partial class ProductService : IProductService
             return false;
         }
 
-        foreach (var address in addresses)
+        return addresses.Length > 0 && addresses.All(IsSafeAddress);
+    }
+
+    internal static bool IsSafeAddress(IPAddress address)
+    {
+        if (address.IsIPv4MappedToIPv6)
         {
-            if (IPAddress.IsLoopback(address))
-            {
-                return false;
-            }
-
-            var bytes = address.GetAddressBytes();
-
-            if (address.AddressFamily == AddressFamily.InterNetwork)
-            {
-                // 10.0.0.0/8
-                if (bytes[0] == 10)
-                {
-                    return false;
-                }
-                // 172.16.0.0/12
-                if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
-                {
-                    return false;
-                }
-                // 192.168.0.0/16
-                if (bytes[0] == 192 && bytes[1] == 168)
-                {
-                    return false;
-                }
-                // 169.254.0.0/16  (link-local / cloud metadata)
-                if (bytes[0] == 169 && bytes[1] == 254)
-                {
-                    return false;
-                }
-            }
-            else if (address.AddressFamily == AddressFamily.InterNetworkV6)
-            {
-                // ::1 is covered by IsLoopback(); also block fc00::/7 (ULA) and fe80::/10 (link-local)
-                if (bytes[0] == 0xfc || bytes[0] == 0xfd)
-                {
-                    return false;
-                }
-
-                if (bytes[0] == 0xfe && (bytes[1] & 0xc0) == 0x80)
-                {
-                    return false;
-                }
-            }
+            address = address.MapToIPv4();
         }
 
-        return true;
+        if (IPAddress.IsLoopback(address) ||
+            address.Equals(IPAddress.Any) ||
+            address.Equals(IPAddress.IPv6Any) ||
+            address.Equals(IPAddress.None) ||
+            address.Equals(IPAddress.IPv6None))
+        {
+            return false;
+        }
+
+        var bytes = address.GetAddressBytes();
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return bytes[0] switch
+            {
+                0 or 10 or 127 => false,
+                100 when bytes[1] is >= 64 and <= 127 => false,
+                169 when bytes[1] == 254 => false,
+                172 when bytes[1] is >= 16 and <= 31 => false,
+                192 when bytes[1] == 0 && bytes[2] == 0 => false,
+                192 when bytes[1] == 0 && bytes[2] == 2 => false,
+                192 when bytes[1] == 168 => false,
+                192 when bytes[1] == 88 && bytes[2] == 99 => false,
+                198 when bytes[1] is 18 or 19 => false,
+                198 when bytes[1] == 51 && bytes[2] == 100 => false,
+                203 when bytes[1] == 0 && bytes[2] == 113 => false,
+                >= 224 => false,
+                _ => true
+            };
+        }
+
+        if (address.AddressFamily != AddressFamily.InterNetworkV6)
+        {
+            return false;
+        }
+
+        var isGlobalUnicast = bytes[0] is >= 0x20 and <= 0x3f;
+        var isIetfSpecialPurpose = bytes[0] == 0x20 &&
+                                   bytes[1] == 0x01 &&
+                                   ((bytes[2] == 0x00 && bytes[3] == 0x00) ||
+                                    (bytes[2] == 0x00 && bytes[3] == 0x02 && bytes[4] == 0x00 && bytes[5] == 0x00) ||
+                                    (bytes[2] == 0x00 && (bytes[3] & 0xf0) is 0x10 or 0x20) ||
+                                    (bytes[2] == 0x0d && bytes[3] == 0xb8));
+        var isSixToFour = bytes[0] == 0x20 && bytes[1] == 0x02;
+        var isDocumentation = bytes[0] == 0x3f &&
+                              bytes[1] == 0xff &&
+                              (bytes[2] & 0xf0) == 0x00;
+
+        return isGlobalUnicast && !isIetfSpecialPurpose && !isSixToFour && !isDocumentation;
     }
 
     public async Task<ProductModel?> TryScrapeProductFromUrl(string url)
@@ -105,13 +117,13 @@ public partial class ProductService : IProductService
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !await IsSafeUrlAsync(uri))
             {
-                _logger.LogWarning("Rejected unsafe or invalid URL for product scrape: {Url}", url);
+                _logger.LogWarning("Rejected an unsafe or invalid product URL.");
                 return null;
             }
 
-            var response = await _client.GetAsync(uri);
-            response.EnsureSuccessStatusCode();
+            using var response = await GetFollowingSafeRedirectsAsync(uri);
 
+            await response.Content.LoadIntoBufferAsync(MaxResponseBytes);
             var html = await response.Content.ReadAsStringAsync();
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -123,7 +135,14 @@ public partial class ProductService : IProductService
 
             if (!string.IsNullOrEmpty(imageUrl) && !imageUrl.StartsWith("http"))
             {
-                imageUrl = new Uri(new Uri(url), imageUrl).AbsoluteUri;
+                imageUrl = new Uri(uri, imageUrl).AbsoluteUri;
+            }
+
+            if (!string.IsNullOrEmpty(imageUrl) &&
+                (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var imageUri) ||
+                 !await IsSafeUrlAsync(imageUri)))
+            {
+                imageUrl = null;
             }
 
             decimal? parsedPrice = null;
@@ -156,6 +175,49 @@ public partial class ProductService : IProductService
             return null;
         }
     }
+
+    private async Task<HttpResponseMessage> GetFollowingSafeRedirectsAsync(Uri initialUri)
+    {
+        var currentUri = initialUri;
+        for (var redirect = 0; redirect <= MaxRedirects; redirect++)
+        {
+            if (!await IsSafeUrlAsync(currentUri))
+            {
+                throw new HttpRequestException("The requested address is not publicly routable.");
+            }
+
+            var response = await _client.GetAsync(currentUri, HttpCompletionOption.ResponseHeadersRead);
+            if (!IsRedirect(response.StatusCode))
+            {
+                response.EnsureSuccessStatusCode();
+                return response;
+            }
+
+            if (redirect == MaxRedirects)
+            {
+                response.Dispose();
+                throw new HttpRequestException("The product URL exceeded the redirect limit.");
+            }
+
+            var location = response.Headers.Location;
+            response.Dispose();
+            if (location is null)
+            {
+                throw new HttpRequestException("The product URL returned a redirect without a location.");
+            }
+
+            currentUri = location.IsAbsoluteUri ? location : new Uri(currentUri, location);
+        }
+
+        throw new HttpRequestException("The product URL could not be retrieved.");
+    }
+
+    private static bool IsRedirect(HttpStatusCode statusCode) =>
+        statusCode is HttpStatusCode.Moved or
+            HttpStatusCode.Redirect or
+            HttpStatusCode.RedirectMethod or
+            HttpStatusCode.TemporaryRedirect or
+            HttpStatusCode.PermanentRedirect;
 
     private static string? TrySelectors(HtmlDocument doc, List<string> selectors)
     {

@@ -338,7 +338,7 @@
 
         try
         {
-            var rules = await EventService.GetPairingRulesByPublicIdAsync(Event.PublicId);
+            var rules = await EventService.GetPairingRulesByPublicIdAsync(Event.PublicId, CurrentUserId);
             _pairingRules = rules.ToList();
         }
         catch (Exception)

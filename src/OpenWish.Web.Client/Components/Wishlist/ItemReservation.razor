@@ -132,7 +132,7 @@
                 return; // Wishlist owners can't reserve their own items
             }
 
-            var reservation = await WishlistService.GetItemReservationByPublicIdAsync(WishlistId, ItemId);
+            var reservation = await WishlistService.GetItemReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
             
             if (reservation != null)
             {

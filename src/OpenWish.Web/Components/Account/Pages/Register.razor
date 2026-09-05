@@ -122,7 +122,7 @@
             BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, callbackUrl);
 
         // If registration is from an invite, create the friendship
         if (!string.IsNullOrEmpty(inviterUserId))

@@ -259,7 +259,7 @@
         _isMarkingRead = true;
         try
         {
-            var success = await NotificationService.MarkNotificationAsReadAsync(notification.Id);
+            var success = await NotificationService.MarkNotificationAsReadAsync(notification.PublicId, _userId!);
             if (success)
             {
                 notification.IsRead = true;
@@ -328,13 +328,13 @@
         if (_notificationToDelete != null)
         {
             _isDeleting = true;
-            var notificationIdToDelete = _notificationToDelete.Id;
+            var notificationIdToDelete = _notificationToDelete.PublicId;
             try
             {
-                var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete);
+                var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete, _userId!);
                 if (success)
                 {
-                    _notifications = _notifications?.Where(n => n.Id != notificationIdToDelete).ToList();
+                    _notifications = _notifications?.Where(n => n.PublicId != notificationIdToDelete).ToList();
                     await LoadNotificationCount();
                 }
             }
@@ -423,7 +423,7 @@
             notification.IsRead = true;
             try
             {
-                await NotificationService.MarkNotificationAsReadAsync(notification.Id);
+                await NotificationService.MarkNotificationAsReadAsync(notification.PublicId, _userId!);
             }
             catch
             {

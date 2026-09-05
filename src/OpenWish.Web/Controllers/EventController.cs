@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
@@ -31,6 +32,11 @@ public class EventController(IEventService eventService, ApiUserContextService u
     public async Task<ActionResult<EventModel>> GetEvent(string publicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         try
         {
             var evt = await _eventService.GetEventByPublicIdAsync(publicId, userId);
@@ -39,6 +45,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 
@@ -57,40 +67,77 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpPut("{publicId}")]
     public async Task<IActionResult> UpdateEvent(string publicId, EventModel eventModel)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         try
         {
-            await _eventService.UpdateEventByPublicIdAsync(publicId, eventModel);
+            await _eventService.UpdateEventByPublicIdAsync(publicId, eventModel, userId);
             return NoContent();
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 
     [HttpDelete("{publicId}")]
     public async Task<IActionResult> DeleteEvent(string publicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         try
         {
-            await _eventService.DeleteEventByPublicIdAsync(publicId);
+            await _eventService.DeleteEventByPublicIdAsync(publicId, userId);
             return NoContent();
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
         }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpPost("{eventPublicId}/users")]
     public async Task<IActionResult> AddUserToEvent(string eventPublicId, [FromBody] AddUserToEventRequest request)
     {
-        var result = await _eventService.AddUserToEventByPublicIdAsync(eventPublicId, request.UserId, request.Role);
-        if (!result)
+        var requestorId = await _userContextService.GetUserIdAsync();
+        if (requestorId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var result = await _eventService.AddUserToEventByPublicIdAsync(
+                eventPublicId,
+                request.UserId,
+                requestorId,
+                request.Role);
+            return result ? NoContent() : NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
         {
             return NotFound();
         }
-        return NoContent();
     }
 
     [HttpDelete("{eventPublicId}/users/{userId}")]
@@ -127,8 +174,19 @@ public class EventController(IEventService eventService, ApiUserContextService u
             return Unauthorized();
         }
 
-        var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId, userId);
-        return Ok(wishlists);
+        try
+        {
+            var wishlists = await _eventService.GetEventWishlistsByPublicIdAsync(eventPublicId, userId);
+            return Ok(wishlists);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpPost("{eventPublicId}/wishlists")]
@@ -235,6 +293,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
     // Event Invitation Endpoints
 
     [HttpPost("{eventPublicId}/invitations/user/{userId}")]
+    [EnableRateLimiting("invitations")]
     public async Task<ActionResult<EventUserModel>> InviteUserToEvent(string eventPublicId, string userId)
     {
         var inviterId = await _userContextService.GetUserIdAsync();
@@ -262,6 +321,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
     }
 
     [HttpPost("{eventPublicId}/invitations/email")]
+    [EnableRateLimiting("invitations")]
     public async Task<ActionResult<EventUserModel>> InviteByEmailToEvent(string eventPublicId, [FromBody] InviteByEmailRequest request)
     {
         var inviterId = await _userContextService.GetUserIdAsync();
@@ -291,8 +351,25 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{eventPublicId}/invitations")]
     public async Task<ActionResult<IEnumerable<EventUserModel>>> GetEventInvitations(string eventPublicId)
     {
-        var invitations = await _eventService.GetEventInvitationsByPublicIdAsync(eventPublicId);
-        return Ok(invitations);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var invitations = await _eventService.GetEventInvitationsByPublicIdAsync(eventPublicId, userId);
+            return Ok(invitations);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("{eventPublicId}/invitations/claim")]
@@ -500,14 +577,24 @@ public class EventController(IEventService eventService, ApiUserContextService u
     [HttpGet("{eventPublicId}/pairing-rules")]
     public async Task<ActionResult<IEnumerable<CustomPairingRuleModel>>> GetPairingRules(string eventPublicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         try
         {
-            var rules = await _eventService.GetPairingRulesByPublicIdAsync(eventPublicId);
+            var rules = await _eventService.GetPairingRulesByPublicIdAsync(eventPublicId, userId);
             return Ok(rules);
         }
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 

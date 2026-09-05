@@ -183,6 +183,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return NotFound();
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{wishlistPublicId}/items/{itemId}")]
@@ -214,6 +218,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 
@@ -506,15 +514,8 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
             return Forbid();
         }
 
-        var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId);
+        var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId, userId);
         return Ok(reservation);
-    }
-
-    [HttpGet("items/{itemId}/is-reserved")]
-    public async Task<ActionResult<bool>> IsItemReserved(int itemId)
-    {
-        var isReserved = await _wishlistService.IsItemReservedAsync(itemId);
-        return Ok(isReserved);
     }
 
     [HttpGet("{wishlistPublicId}/friends-with-access")]

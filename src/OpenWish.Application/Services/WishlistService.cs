@@ -168,7 +168,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(
         string publicId,
         WishlistModel wishlistModel,
-        string? requestorId = null)
+        string requestorId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists

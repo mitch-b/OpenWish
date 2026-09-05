@@ -201,7 +201,7 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(
         string publicId,
         WishlistModel wishlist,
-        string? requestorId = null)
+        string requestorId)
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{publicId}", wishlist);
         response.EnsureSuccessStatusCode();

@@ -112,9 +112,9 @@ public class WishlistAuthorizationTests
 
         public Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(
             int wishlistId,
+            string requestingUserId,
             int count = 20,
-            int skip = 0,
-            string? requestingUserId = null) =>
+            int skip = 0) =>
             Task.FromResult<IEnumerable<ActivityLogModel>>([]);
     }
 }

@@ -33,9 +33,9 @@ public class ActivityHttpClientService(HttpClient httpClient) : IActivityService
 
     public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(
         int wishlistId,
+        string requestingUserId,
         int count = 20,
-        int skip = 0,
-        string? requestingUserId = null)
+        int skip = 0)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<ActivityLogModel>>($"{BaseUrl}/wishlist/{wishlistId}?count={count}&skip={skip}")
             ?? Array.Empty<ActivityLogModel>();

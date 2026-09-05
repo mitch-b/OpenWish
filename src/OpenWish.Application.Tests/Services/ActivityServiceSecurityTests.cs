@@ -22,8 +22,8 @@ public class ActivityServiceSecurityTests
         var (wishlistId, actorId) = await SeedActivityDataAsync(factory);
         var service = new ActivityService(factory, _mapper);
 
-        var ownerActivities = await service.GetWishlistActivityAsync(wishlistId, requestingUserId: "owner");
-        var actorActivities = await service.GetWishlistActivityAsync(wishlistId, requestingUserId: actorId);
+        var ownerActivities = await service.GetWishlistActivityAsync(wishlistId, "owner");
+        var actorActivities = await service.GetWishlistActivityAsync(wishlistId, actorId);
 
         Assert.Empty(ownerActivities);
         Assert.Equal(2, actorActivities.Count());

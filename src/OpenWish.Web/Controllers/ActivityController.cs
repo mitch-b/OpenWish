@@ -66,9 +66,9 @@ public class ActivityController : ControllerBase
 
         var activities = await _activityService.GetWishlistActivityAsync(
             wishlistId,
+            userId,
             Math.Clamp(count, 1, 100),
-            Math.Max(skip, 0),
-            userId);
+            Math.Max(skip, 0));
         return Ok(activities);
     }
 }

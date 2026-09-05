@@ -9,7 +9,7 @@ public interface IWishlistService
     Task<WishlistModel> GetWishlistByPublicIdAsync(string publicId, string? userId = null);
     Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId);
     Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlist);
-    Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlist);
+    Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlist, string? requestorId = null);
     Task DeleteWishlistAsync(int id);
     Task DeleteWishlistByPublicIdAsync(string publicId);
 

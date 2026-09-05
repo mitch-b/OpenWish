@@ -13,5 +13,9 @@ public interface IActivityService
 
     Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0);
     Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0);
-    Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0);
+    Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(
+        int wishlistId,
+        int count = 20,
+        int skip = 0,
+        string? requestingUserId = null);
 }

@@ -89,7 +89,12 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == userId) &&
-                  (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != userId))))
+                  (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != userId))) &&
+                ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
+                 !context.ItemReservations.Any(reservation =>
+                    reservation.WishlistItemId == a.WishlistItemId &&
+                    reservation.UserId == a.UserId &&
+                    reservation.IsAnonymous)))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)
@@ -101,11 +106,29 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
         return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
     }
 
-    public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0)
+    public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(
+        int wishlistId,
+        int count = 20,
+        int skip = 0,
+        string? requestingUserId = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestingUserId);
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var activities = await context.ActivityLogs
-            .Where(a => a.WishlistId == wishlistId)
+            .Where(a =>
+                !a.Deleted &&
+                a.WishlistId == wishlistId &&
+                (!a.WishlistItemId.HasValue ||
+                 (a.WishlistItem != null &&
+                  (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&
+                  (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != requestingUserId))) &&
+                (a.UserId == requestingUserId ||
+                 ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
+                  !context.ItemReservations.Any(reservation =>
+                      reservation.WishlistItemId == a.WishlistItemId &&
+                      reservation.UserId == a.UserId &&
+                      reservation.IsAnonymous))))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)

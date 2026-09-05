@@ -7,4 +7,5 @@ public record OpenWishSettings
     public string? AppVersion { get; set; } = null!;
     public string? BaseUri { get; set; } = null!;
     public bool OwnDatabaseUpgrades { get; set; }
+    public bool EnableDevelopmentLogin { get; set; }
 }

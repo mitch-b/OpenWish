@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
@@ -17,6 +18,7 @@ public class ProductController(IProductService productService, ApiUserContextSer
 
     // TODO: Rate Limit aggressively by user
     [HttpPost("scrape")]
+    [EnableRateLimiting("product-scrape")]
     public async Task<ActionResult<WishlistModel>> TryScrape([FromBody] ProductScrapeRequest productScrapeRequest)
     {
         var userId = await _userContextService.GetUserIdAsync();
@@ -24,6 +26,11 @@ public class ProductController(IProductService productService, ApiUserContextSer
         {
             return Unauthorized();
         }
+        if (string.IsNullOrWhiteSpace(productScrapeRequest.ProductUrl))
+        {
+            return BadRequest("A product URL is required.");
+        }
+
         var product = await _productService.TryScrapeProductFromUrl(productScrapeRequest.ProductUrl);
         if (product is null)
         {

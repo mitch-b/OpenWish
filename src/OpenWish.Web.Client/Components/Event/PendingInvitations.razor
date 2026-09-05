@@ -11,7 +11,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="card-title mb-0">
-                    <span style="font-size: 1.2rem;">📬</span> Pending Invitations
+                    <OpenWishIcon Name="envelope" Class="me-2" /> Pending invitations
                     @if (_invitations?.Any() == true)
                     {
                         <span class="badge bg-warning text-dark ms-2">@_invitations.Count()</span>
@@ -39,7 +39,7 @@
                                     <small class="text-muted d-block">
                                         @if (invitation.Event?.Date != null)
                                         {
-                                            <span class="me-2">📅 @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
+                                            <span class="me-2"><OpenWishIcon Name="calendar-event" /> @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
                                         }
                                         @if (!string.IsNullOrEmpty(invitation.Event?.CreatedBy?.UserName))
                                         {
@@ -60,18 +60,34 @@
                                             <span>Accept</span>
                                         }
                                     </button>
-                                    <button class="btn btn-outline-secondary"
-                                            @onclick="() => DeclineInvitation(invitation)"
-                                            disabled="@IsProcessing(invitation.Id)">
-                                        @if (IsProcessing(invitation.Id) && _processingAction == "decline")
-                                        {
-                                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                                        }
-                                        else
-                                        {
-                                            <span>Decline</span>
-                                        }
-                                    </button>
+                                    @if (_pendingDeclineId == invitation.Id)
+                                    {
+                                        <button class="btn btn-outline-secondary"
+                                                @onclick="CancelDecline"
+                                                disabled="@IsProcessing(invitation.Id)">
+                                            Keep
+                                        </button>
+                                        <button class="btn btn-danger"
+                                                @onclick="() => DeclineInvitation(invitation)"
+                                                disabled="@IsProcessing(invitation.Id)">
+                                            @if (IsProcessing(invitation.Id) && _processingAction == "decline")
+                                            {
+                                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                                            }
+                                            else
+                                            {
+                                                <span>Confirm decline</span>
+                                            }
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-secondary"
+                                                @onclick="() => ConfirmDecline(invitation.Id)"
+                                                disabled="@IsProcessing(invitation.Id)">
+                                            Decline
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -90,6 +106,7 @@
     private bool _isLoading = true;
     private string? _userId;
     private int? _processingInvitationId;
+    private int? _pendingDeclineId;
     private string? _processingAction;
 
     private bool ShouldShowCard => _isLoading || _invitations?.Any() == true;
@@ -173,6 +190,7 @@
             var success = await EventService.RejectEventInvitationAsync(invitation.Id, _userId);
             if (success)
             {
+                _pendingDeclineId = null;
                 _invitations?.RemoveAll(i => i.Id == invitation.Id);
                 if (OnInvitationChanged.HasDelegate)
                 {
@@ -186,4 +204,8 @@
             _processingAction = null;
         }
     }
+
+    private void ConfirmDecline(int invitationId) => _pendingDeclineId = invitationId;
+
+    private void CancelDecline() => _pendingDeclineId = null;
 }

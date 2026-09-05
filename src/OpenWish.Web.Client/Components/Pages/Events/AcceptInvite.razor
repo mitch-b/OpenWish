@@ -82,11 +82,11 @@
                                             <p class="mb-0 text-muted">@_event.Description</p>
                                         }
                                         <div class="mt-2 small text-muted">
-                                            <i class="bi bi-calendar-event"></i>
+                                            <OpenWishIcon Name="calendar-event" />
                                             @_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")
                                         </div>
                                         <div class="small text-muted">
-                                            <i class="bi bi-person-circle"></i>
+                                            <OpenWishIcon Name="person-circle" />
                                             Hosted by @_event.CreatedBy?.UserName ?? _event.CreatedBy?.Email ?? "a friend"
                                         </div>
                                     </div>
@@ -100,10 +100,10 @@
                                 {
                                     case "accepted":
                                         <div class="alert alert-success" role="alert">
-                                            You're already part of this event. Jump in and start planning!
+                                            You're part of the Secret Santa. Add a few gift ideas and you're done.
                                         </div>
                                         <a class="btn btn-success" href="/events/@EventId">
-                                            Go to event
+                                            Continue and add my wishlist
                                         </a>
                                         break;
                                     case "rejected":
@@ -183,15 +183,6 @@
             return;
         }
 
-        try
-        {
-            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = $"Unable to load event details: {ex.Message}";
-        }
-
         if (!string.IsNullOrWhiteSpace(InviteEmail))
         {
             try
@@ -199,7 +190,7 @@
                 _invitation = await EventService.ClaimEventInvitationByEmailAsync(EventId, _currentUserId, InviteEmail);
                 if (_invitation == null)
                 {
-                    _errorMessage ??= "We couldn't find a matching invitation.";
+                    _errorMessage = "We couldn't find a matching invitation.";
                 }
             }
             catch (InvalidOperationException ex)
@@ -210,6 +201,15 @@
             {
                 _errorMessage = ex.Message;
             }
+        }
+
+        try
+        {
+            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage ??= $"Unable to load event details: {ex.Message}";
         }
 
         _isLoading = false;
@@ -234,7 +234,7 @@
             {
                 _invitation.Status = "Accepted";
                 _invitation.IsAccepted = true;
-                _successMessage = "Welcome aboard! You're part of this event now.";
+                _successMessage = "You're in! Continue to the event and add a few gift ideas for your match.";
             }
             else
             {

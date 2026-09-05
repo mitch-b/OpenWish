@@ -58,7 +58,7 @@ public interface IWishlistService
     Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false);
     Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId);
     Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId);
-    Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId);
-    Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId);
+    Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId, string requestingUserId);
+    Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId, string requestingUserId);
     Task<bool> IsItemReservedAsync(int itemId);
 }

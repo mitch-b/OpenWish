@@ -28,7 +28,7 @@
                         <div class="flex-grow-1">
                             <div class="d-flex justify-content-between">
                                 <div class="fw-bold">
-                                    <i class="bi bi-person-circle"></i> @(comment.User?.UserName ?? "Unknown User")
+                                    <OpenWishIcon Name="person-circle" /> @(comment.User?.UserName ?? "Unknown User")
                                 </div>
                                 <small class="text-muted">
                                     @comment.CreatedOn.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
@@ -40,7 +40,7 @@
                         {
                             <div class="ms-2">
                                 <button class="btn btn-sm btn-link text-danger" aria-label="Delete comment" @onclick="() => DeleteComment(comment.Id)">
-                                    <i class="bi bi-trash"></i>
+                                    <OpenWishIcon Name="trash" />
                                 </button>
                             </div>
                         }
@@ -56,7 +56,7 @@
                 <label for="commentText">Add a comment...</label>
             </div>
             <button class="btn btn-primary" @onclick="AddComment" disabled="@(string.IsNullOrWhiteSpace(commentText))">
-                <i class="bi bi-chat"></i> Comment
+                <OpenWishIcon Name="chat" /> Comment
             </button>
         </div>
     }

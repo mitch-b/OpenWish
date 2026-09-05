@@ -1,54 +1,63 @@
 .page {
-    position: relative;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--color-bg);
     color: var(--color-text);
 }
 
-main {
+.app-main {
+    min-width: 0;
     flex: 1;
 }
 
 .sidebar {
-    background-image: linear-gradient(180deg, var(--color-sidebar-gradient-start) 0%, var(--color-sidebar-gradient-end) 70%);
+    position: relative;
+    z-index: 1020;
+    background:
+        radial-gradient(circle at 20% 8%, rgba(113,96,220,.24), transparent 15rem),
+        linear-gradient(165deg, var(--color-sidebar-gradient-start), var(--color-sidebar-gradient-end));
 }
 
 .top-row {
-    background-color: var(--color-top-row-bg);
-    border-bottom: 1px solid var(--color-top-row-border);
-    justify-content: flex-end;
-    height: 3.5rem;
     display: flex;
+    height: 4.5rem;
     align-items: center;
-    gap: .75rem;
-    position: relative;
-    z-index: 2200;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1010;
+    border-bottom: 1px solid var(--color-top-row-border);
+    background: var(--color-top-row-bg);
+    backdrop-filter: blur(16px) saturate(150%);
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
+.utility-button {
+    display: grid;
+    width: 2.6rem;
+    height: 2.6rem;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 0.72rem;
+    color: var(--color-text-muted);
+    font-size: 1.15rem;
+}
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
+.utility-button:hover {
+    border-color: var(--color-border-muted);
+    background: var(--color-surface);
+    color: var(--color-text);
+}
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+.content {
+    padding: 1.5rem 2rem 3.5rem;
+}
 
-@media (max-width: 640.98px) {
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        margin-left: 0;
-    }
+.content-frame {
+    width: min(100%, 1240px);
+    margin: 0 auto;
 }
 
 @media (min-width: 641px) {
@@ -57,52 +66,50 @@ main {
     }
 
     .sidebar {
-        width: 250px;
+        width: 232px;
         height: 100vh;
+        flex: 0 0 232px;
         position: sticky;
         top: 0;
+        box-shadow: 6px 0 24px rgba(13,15,26,.08);
     }
+}
 
+@media (max-width: 640.98px) {
     .top-row {
-        position: sticky;
+        position: absolute;
         top: 0;
-        z-index: 2200;
+        right: 4.5rem;
+        height: 4.5rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        backdrop-filter: none;
     }
 
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
-
-    .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
+    .content {
+        padding: 1rem 1rem 2.5rem;
     }
 }
 
 #blazor-error-ui {
-    color-scheme: light dark;
-    background: lightyellow;
-    bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
-    box-sizing: border-box;
-    display: none;
-    left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
     position: fixed;
-    width: 100%;
-    z-index: 1000;
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    display: none;
+    padding: 0.9rem 3rem 0.9rem 1rem;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 0.85rem;
+    background: var(--color-danger-bg);
+    box-shadow: var(--shadow-lg);
+    color: var(--color-danger-text);
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
-
-.github {
-    height: 1.5rem;
-    width: 1.5rem;
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: 0.65rem;
+    right: 0.8rem;
+    cursor: pointer;
 }

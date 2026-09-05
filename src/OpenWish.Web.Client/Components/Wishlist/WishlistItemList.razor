@@ -21,8 +21,8 @@
                         <span class="item-name">@item.Name</span>
                         @if (!string.IsNullOrEmpty(item.Url))
                         {
-                            <a href="@item.Url" target="_blank" class="ms-2 text-decoration-none wishlist-external-link" title="View product">
-                                <i class="bi bi-box-arrow-up-right"></i>
+                            <a href="@item.Url" target="_blank" rel="noopener noreferrer" class="ms-2 text-decoration-none wishlist-external-link" title="View product">
+                                <OpenWishIcon Name="box-arrow-up-right" />
                             </a>
                         }
                     </td>
@@ -47,7 +47,7 @@
                                     class="btn btn-sm btn-outline-info"
                                     @onclick="() => ToggleInteractions(item.Id)"
                                     title="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") comments and interactions">
-                                    <i class="bi bi-chat-dots"></i>
+                                    <OpenWishIcon Name="chat-dots" />
                                     @(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show")
                                 </button>
                             }
@@ -58,7 +58,7 @@
                                         class="btn btn-sm btn-primary"
                                         @onclick="() => HandleEdit(item)"
                                         title="Edit item">
-                                        <i class="bi bi-pencil"></i>
+                                        <OpenWishIcon Name="pencil" />
                                     </button>
                                 }
                                 @if (OnDelete.HasDelegate)
@@ -67,7 +67,7 @@
                                         class="btn btn-sm btn-danger"
                                         @onclick="() => ShowDeleteConfirm(item)"
                                         title="Delete item">
-                                        <i class="bi bi-trash"></i>
+                                        <OpenWishIcon Name="trash" />
                                     </button>
                                 }
                             </div>
@@ -82,12 +82,12 @@
                                 @if (!IsOwner)
                                 {
                                     <div class="interaction-section">
-                                        <h6><i class="bi bi-gift"></i> Reserve Item</h6>
+                                        <h6><OpenWishIcon Name="gift" /> Reserve Item</h6>
                                         <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" />
                                     </div>
                                 }
                                 <div class="interaction-section">
-                                    <h6><i class="bi bi-chat-dots"></i> Comments</h6>
+                                    <h6><OpenWishIcon Name="chat-dots" /> Comments</h6>
                                     <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" />
                                 </div>
                             </div>

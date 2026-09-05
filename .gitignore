@@ -8,6 +8,7 @@ app.db-shm
 app.db-wal
 
 .env.openwish
+.env.agent
 docker-compose.*.yml
 
 # certificates
@@ -398,6 +399,7 @@ FodyWeavers.xsd
 !.vscode/extensions.json
 !.vscode/mcp.json
 *.code-workspace
+*.csproj.lscache
 
 # Local History for Visual Studio Code
 .history/

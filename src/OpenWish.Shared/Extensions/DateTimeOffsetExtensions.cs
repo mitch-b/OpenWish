@@ -6,11 +6,7 @@ public static class DateTimeOffsetExtensions
 {
     public static DateTimeOffset? ToLocalTime(this DateTimeOffset? dateTimeOffset)
     {
-        if (dateTimeOffset is null)
-        {
-            return null;
-        }
-        return dateTimeOffset.Value.ToOffset(TimeSpan.FromHours(TimeZoneInfo.Local.GetUtcOffset(dateTimeOffset.Value).Hours));
+        return dateTimeOffset?.ToLocalTime();
     }
 
     public static string? ToLocalTimeString(this DateTimeOffset? dateTimeOffset, string format = "g")
@@ -20,7 +16,7 @@ public static class DateTimeOffsetExtensions
 
     public static string? ToLocalHumanizedString(this DateTimeOffset? dateTimeOffset)
     {
-        return ToLocalHumanizedString(dateTimeOffset.Value);
+        return dateTimeOffset?.ToLocalHumanizedString();
     }
 
     public static string? ToLocalHumanizedString(this DateTimeOffset dateTimeOffset)

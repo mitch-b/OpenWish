@@ -50,7 +50,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0)
@@ -62,9 +62,34 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Select(f => f.FriendUserId)
             .ToListAsync();
 
-        // Get activities from friends
+        var accessibleWishlistIds = context.Wishlists
+            .Where(w => !w.Deleted &&
+                (w.OwnerId == userId ||
+                 context.WishlistPermissions.Any(permission =>
+                     permission.WishlistId == w.Id &&
+                     permission.UserId == userId &&
+                     !permission.Deleted) ||
+                 (!w.IsPrivate &&
+                  !w.IsFriendsOnly &&
+                  friendIds.Contains(w.OwnerId)) ||
+                 (w.EventId.HasValue &&
+                  !w.Event.Deleted &&
+                  (w.Event.CreatedBy.Id == userId ||
+                   w.Event.EventUsers.Any(eventUser =>
+                       eventUser.UserId == userId &&
+                       eventUser.Status == "Accepted" &&
+                       !eventUser.Deleted)))))
+            .Select(w => w.Id);
+
         var activities = await context.ActivityLogs
-            .Where(a => friendIds.Contains(a.UserId))
+            .Where(a =>
+                !a.Deleted &&
+                friendIds.Contains(a.UserId) &&
+                (!a.WishlistId.HasValue || accessibleWishlistIds.Contains(a.WishlistId.Value)) &&
+                (!a.WishlistItemId.HasValue ||
+                 (a.WishlistItem != null &&
+                  (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == userId) &&
+                  (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != userId))))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)
@@ -73,7 +98,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, int count = 20, int skip = 0)
@@ -88,6 +113,25 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(a => a.WishlistItem)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ActivityLogModel>>(activities);
+        return RemoveUserEmails(_mapper.Map<IEnumerable<ActivityLogModel>>(activities));
+    }
+
+    private static IEnumerable<ActivityLogModel> RemoveUserEmails(IEnumerable<ActivityLogModel> activities)
+    {
+        var activityModels = activities.ToList();
+        foreach (var activity in activityModels)
+        {
+            if (activity.User is not null)
+            {
+                activity.User.Email = string.Empty;
+            }
+
+            if (activity.Wishlist?.Owner is not null)
+            {
+                activity.Wishlist.Owner.Email = string.Empty;
+            }
+        }
+
+        return activityModels;
     }
 }

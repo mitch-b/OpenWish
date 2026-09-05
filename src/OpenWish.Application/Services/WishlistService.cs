@@ -59,6 +59,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
             .Include(w => w.Event)
+                .ThenInclude(e => e!.CreatedBy)
+            .Include(w => w.Event)
+                .ThenInclude(e => e!.EventUsers)
             .FirstOrDefaultAsync(w => w.Id == id && !w.Deleted);
 
         if (wishlistEntity == null)
@@ -77,6 +80,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
+        AttachEventSummary(wishlistModel, wishlistEntity.Event, userId);
         FilterWishlistItemsForViewer(wishlistModel, userId);
         return wishlistModel;
     }
@@ -88,6 +92,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
             .Include(w => w.Event)
+                .ThenInclude(e => e!.CreatedBy)
+            .Include(w => w.Event)
+                .ThenInclude(e => e!.EventUsers)
             .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted);
 
         if (wishlistEntity == null)
@@ -106,6 +113,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         var wishlistModel = _mapper.Map<WishlistModel>(wishlistEntity);
+        AttachEventSummary(wishlistModel, wishlistEntity.Event, userId);
         FilterWishlistItemsForViewer(wishlistModel, userId);
         return wishlistModel;
     }
@@ -118,13 +126,17 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
             .Include(w => w.Event)
+                .ThenInclude(e => e!.CreatedBy)
+            .Include(w => w.Event)
+                .ThenInclude(e => e!.EventUsers)
             .ToListAsync();
 
         var wishlistModels = _mapper.Map<List<WishlistModel>>(wishlistEntities);
 
-        foreach (var wishlist in wishlistModels)
+        for (var index = 0; index < wishlistModels.Count; index++)
         {
-            FilterWishlistItemsForViewer(wishlist, userId);
+            AttachEventSummary(wishlistModels[index], wishlistEntities[index].Event, userId);
+            FilterWishlistItemsForViewer(wishlistModels[index], userId);
         }
 
         return wishlistModels;
@@ -218,6 +230,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel itemModel)
     {
+        ValidateItemUrls(itemModel);
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists.FindAsync(wishlistId)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
@@ -334,6 +347,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
     {
+        ValidateItemUrls(itemModel);
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingItem = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted)
@@ -799,19 +813,32 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return true;
     }
 
-    public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId)
+    public async Task<ItemReservationModel?> GetItemReservationAsync(int wishlistId, int itemId, string requestingUserId)
     {
         // Verify item exists
         await using var context = await _contextFactory.CreateDbContextAsync();
         var item = await context.WishlistItems
+            .Include(i => i.Wishlist)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
             ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+
+        if (item.Wishlist.OwnerId == requestingUserId)
+        {
+            return null;
+        }
 
         var reservation = await context.ItemReservations
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.WishlistItemId == itemId && !r.Deleted);
 
-        return reservation != null ? _mapper.Map<ItemReservationModel>(reservation) : null;
+        if (reservation is null)
+        {
+            return null;
+        }
+
+        var model = _mapper.Map<ItemReservationModel>(reservation);
+        SanitizeReservation(model, requestingUserId);
+        return model;
     }
 
     public async Task<bool> IsItemReservedAsync(int itemId)
@@ -833,7 +860,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(i => i.WishlistId == wishlist.Id && !i.Deleted)
             .OrderBy(i => i.OrderIndex);
 
-        var items = await MapWishlistItemsAsync(context, query);
+        var items = await MapWishlistItemsAsync(context, query, wishlist.OwnerId, requestingUserId);
         return FilterWishlistItemsForViewer(items, wishlist.OwnerId, requestingUserId);
     }
 
@@ -986,14 +1013,17 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await CancelReservationAsync(wishlist.Id, itemId, userId);
     }
 
-    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, int itemId)
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
+        string wishlistPublicId,
+        int itemId,
+        string requestingUserId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
-        return await GetItemReservationAsync(wishlist.Id, itemId);
+        return await GetItemReservationAsync(wishlist.Id, itemId, requestingUserId);
     }
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)
@@ -1037,7 +1067,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await GetFriendsWithAccessAsync(wishlist.Id);
     }
 
-    private async Task<List<WishlistItemModel>> MapWishlistItemsAsync(ApplicationDbContext context, IQueryable<WishlistItem> query)
+    private async Task<List<WishlistItemModel>> MapWishlistItemsAsync(
+        ApplicationDbContext context,
+        IQueryable<WishlistItem> query,
+        string? ownerId = null,
+        string? requestingUserId = null)
     {
         var itemEntities = await query.ToListAsync();
         if (itemEntities.Count == 0)
@@ -1071,6 +1105,17 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             if (reservationsByItem.TryGetValue(item.Id, out var reservations))
             {
                 item.Reservations = reservations;
+                if (string.IsNullOrEmpty(requestingUserId) || requestingUserId == ownerId)
+                {
+                    item.Reservations = [];
+                }
+                else if (!string.IsNullOrEmpty(requestingUserId))
+                {
+                    foreach (var reservation in item.Reservations)
+                    {
+                        SanitizeReservation(reservation, requestingUserId);
+                    }
+                }
             }
             else if (item.Reservations.Count > 0)
             {
@@ -1079,6 +1124,59 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         return itemModels;
+    }
+
+    private static void SanitizeReservation(ItemReservationModel reservation, string requestingUserId)
+    {
+        if (reservation.User is not null)
+        {
+            reservation.User.Email = string.Empty;
+        }
+
+        if (reservation.IsAnonymous && reservation.UserId != requestingUserId)
+        {
+            reservation.UserId = string.Empty;
+            reservation.User = null;
+        }
+    }
+
+    private static void AttachEventSummary(WishlistModel wishlist, Event? eventEntity, string? requestingUserId)
+    {
+        if (eventEntity is null ||
+            string.IsNullOrWhiteSpace(requestingUserId) ||
+            !IsEventMember(eventEntity, requestingUserId))
+        {
+            return;
+        }
+
+        wishlist.Event = new EventModel
+        {
+            Name = eventEntity.Name,
+            Date = eventEntity.Date,
+            PublicId = eventEntity.PublicId,
+            CreatedBy = null,
+            EventUsers = []
+        };
+    }
+
+    private static void ValidateItemUrls(WishlistItemModel item)
+    {
+        ValidateExternalUrl(item.Url, nameof(item.Url));
+        ValidateExternalUrl(item.Image, nameof(item.Image));
+    }
+
+    private static void ValidateExternalUrl(string? value, string propertyName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new ArgumentException("Only absolute HTTP and HTTPS URLs are supported.", propertyName);
+        }
     }
 
     private static void FilterWishlistItemsForViewer(WishlistModel wishlist, string? requestingUserId)
@@ -1154,6 +1252,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         return eventEntity.EventUsers.Any(eu =>
             !eu.Deleted &&
+            eu.Status == "Accepted" &&
             string.Equals(eu.UserId, userId, StringComparison.Ordinal));
     }
 

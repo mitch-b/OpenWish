@@ -4,8 +4,7 @@ WORKDIR /app
 ENV \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
     LC_ALL=en_US.UTF-8 \
-    LANG=en_US.UTF-8 \
-    TLS__CertificatePath=/certs/tls.pfx
+    LANG=en_US.UTF-8
 
 EXPOSE 8080 8443
 

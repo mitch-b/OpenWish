@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -43,6 +45,13 @@ public static class Extensions
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        var hasSharedOtlpEndpoint =
+            !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        var hasTracesOtlpEndpoint =
+            !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]);
+        var hasMetricsOtlpEndpoint =
+            !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"]);
+
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -55,6 +64,12 @@ public static class Extensions
                 metrics.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();
+
+                if (!hasSharedOtlpEndpoint && hasMetricsOtlpEndpoint)
+                {
+                    metrics.AddOtlpExporter(options =>
+                        ConfigureSignalExporter(options, builder.Configuration, "METRICS"));
+                }
             })
             .WithTracing(tracing =>
             {
@@ -63,34 +78,43 @@ public static class Extensions
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
+
+                if (!hasSharedOtlpEndpoint && hasTracesOtlpEndpoint)
+                {
+                    tracing.AddOtlpExporter(options =>
+                        ConfigureSignalExporter(options, builder.Configuration, "TRACES"));
+                }
             });
 
-        builder.AddOpenTelemetryExporters();
-
-        return builder;
-    }
-
-    private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
-    {
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-
-        if (useOtlpExporter)
+        if (hasSharedOtlpEndpoint)
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
-        // Uncomment the following lines to enable the Prometheus exporter (requires the OpenTelemetry.Exporter.Prometheus.AspNetCore package)
-        // builder.Services.AddOpenTelemetry()
-        //    .WithMetrics(metrics => metrics.AddPrometheusExporter());
-
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
-        //if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
-        //{
-        //    builder.Services.AddOpenTelemetry()
-        //       .UseAzureMonitor();
-        //}
-
         return builder;
+    }
+
+    private static void ConfigureSignalExporter(
+        OtlpExporterOptions options,
+        IConfiguration configuration,
+        string signalName)
+    {
+        var endpointSetting = $"OTEL_EXPORTER_OTLP_{signalName}_ENDPOINT";
+        options.Endpoint = new Uri(configuration[endpointSetting]!, UriKind.Absolute);
+
+        var signalProtocol = configuration[$"OTEL_EXPORTER_OTLP_{signalName}_PROTOCOL"];
+        var sharedProtocol = configuration["OTEL_EXPORTER_OTLP_PROTOCOL"];
+        var protocol = !string.IsNullOrWhiteSpace(signalProtocol)
+            ? signalProtocol
+            : sharedProtocol;
+
+        options.Protocol = protocol?.ToLowerInvariant() switch
+        {
+            null or "" or "http/protobuf" => OtlpExportProtocol.HttpProtobuf,
+            "grpc" => OtlpExportProtocol.Grpc,
+            _ => throw new InvalidOperationException(
+                $"{signalName} OTLP protocol must be 'http/protobuf' or 'grpc'.")
+        };
     }
 
     public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder

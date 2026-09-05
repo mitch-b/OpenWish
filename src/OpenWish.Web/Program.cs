@@ -2,12 +2,14 @@ using System;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.RateLimiting;
 using FluentEmail.Core;
 using FluentEmail.Smtp;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using OpenWish.Application.Extensions;
@@ -24,7 +26,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 var certificateLoaded = configureTls(builder);
-configureForwardedHeaders(builder);
+var useForwardedHeaders = configureForwardedHeaders(builder);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -44,6 +46,17 @@ builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+});
 
 var googleClientId = builder.Configuration.GetValue<string>("Authentication:Google:ClientId");
 var googleClientSecret = builder.Configuration.GetValue<string>("Authentication:Google:ClientSecret");
@@ -66,7 +79,8 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
         // HMM... https://github.com/dotnet/efcore/issues/34431
         .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 
-    if (builder.Environment.IsDevelopment())
+    if (builder.Environment.IsDevelopment() &&
+        builder.Configuration.GetValue<bool>("Database:EnableSensitiveDataLogging"))
     {
         dbOptions.EnableSensitiveDataLogging();
     }
@@ -74,14 +88,20 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddIdentityCore<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = true;
+        options.Lockout.AllowedForNewUsers = true;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
 builder.Services.AddOpenWishApplicationServices(builder.Configuration);
 builder.Services.AddOpenWishSharedServices(builder.Configuration);
-builder.Services.AddOpenWishWebServices();
+builder.Services.AddOpenWishWebServices(builder.Configuration);
 builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
 // Email configuration without building a secondary service provider
@@ -105,14 +125,40 @@ else
     builder.Services.AddFluentEmail(openWishSettings.EmailConfig?.SmtpFrom ?? "no-reply@openwish.local");
 }
 
-#if DEBUG
-if (builder.Environment.IsDevelopment() && builder.Configuration is IConfigurationRoot root)
-{
-    Console.WriteLine(root.GetDebugView());
-}
-#endif
-
 builder.Services.AddControllers();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("authentication", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    options.AddPolicy("invitations", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0
+            }));
+    options.AddPolicy("product-scrape", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 // Migrations now handled by DatabaseMigrationHostedService.
@@ -132,7 +178,10 @@ else
     app.UseHsts();
 }
 
-app.UseForwardedHeaders();
+if (useForwardedHeaders)
+{
+    app.UseForwardedHeaders();
+}
 
 if (certificateLoaded || app.Environment.IsDevelopment())
 {
@@ -143,7 +192,23 @@ else
     Console.WriteLine("HTTPS redirection disabled. No TLS certificate configured.");
 }
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers.ContentSecurityPolicy =
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
+        "form-action 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseAntiforgery();
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
@@ -153,6 +218,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapOpenWishDevelopmentEndpoints();
 
 app.MapControllers();
 
@@ -179,12 +245,14 @@ static bool configureTls(WebApplicationBuilder builder)
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load TLS certificate from '{certificatePath}': {ex.Message}");
+                throw new InvalidOperationException(
+                    $"Failed to load the configured TLS certificate from '{certificatePath}'.",
+                    ex);
             }
         }
         else
         {
-            Console.WriteLine($"TLS certificate path '{certificatePath}' not found. Continuing without HTTPS termination.");
+            throw new FileNotFoundException("The configured TLS certificate was not found.", certificatePath);
         }
     }
 
@@ -213,18 +281,26 @@ static bool configureTls(WebApplicationBuilder builder)
     return certificate is not null;
 }
 
-static void configureForwardedHeaders(WebApplicationBuilder builder)
+static bool configureForwardedHeaders(WebApplicationBuilder builder)
 {
     var configuration = builder.Configuration;
+    var knownProxies = configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+    var knownNetworks = configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+    var validProxyCount = knownProxies.Count(proxy => IPAddress.TryParse(proxy, out _));
+    var validNetworkCount = knownNetworks.Count(network => System.Net.IPNetwork.TryParse(network, out _));
+    if (validProxyCount + validNetworkCount == 0)
+    {
+        Console.WriteLine("Forwarded headers disabled. Configure trusted proxies or networks to enable them.");
+        return false;
+    }
 
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
         options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
-        options.ForwardLimit = null;
+        options.ForwardLimit = 1;
 
-        var knownProxies = configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? Array.Empty<string>();
         foreach (var proxy in knownProxies)
         {
             if (IPAddress.TryParse(proxy, out var address))
@@ -237,7 +313,6 @@ static void configureForwardedHeaders(WebApplicationBuilder builder)
             }
         }
 
-        var knownNetworks = configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
         foreach (var network in knownNetworks)
         {
             if (System.Net.IPNetwork.TryParse(network, out var parsedNetwork))
@@ -249,10 +324,7 @@ static void configureForwardedHeaders(WebApplicationBuilder builder)
                 Console.WriteLine($"Unable to parse forwarded header network '{network}'. Expected CIDR notation (e.g. 103.21.244.0/22).");
             }
         }
-
-        if (knownProxies.Length == 0 && knownNetworks.Length == 0)
-        {
-            Console.WriteLine("Forwarded headers accepted from any source. Configure 'ForwardedHeaders:KnownProxies' or 'ForwardedHeaders:KnownNetworks' to restrict.");
-        }
     });
+
+    return true;
 }

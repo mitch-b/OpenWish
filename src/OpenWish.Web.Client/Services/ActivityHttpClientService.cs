@@ -16,30 +16,18 @@ public class ActivityHttpClientService(HttpClient httpClient) : IActivityService
         int? wishlistId = null,
         int? wishlistItemId = null)
     {
-        var activity = new
-        {
-            UserId = userId,
-            ActivityType = activityType,
-            Description = description,
-            WishlistId = wishlistId,
-            WishlistItemId = wishlistItemId
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(BaseUrl, activity);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ActivityLogModel>()
-            ?? throw new HttpRequestException("Failed to log activity");
+        throw new NotSupportedException("Activity entries can only be created by trusted server-side services.");
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ActivityLogModel>>($"{BaseUrl}/user/{userId}?count={count}&skip={skip}")
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ActivityLogModel>>($"{BaseUrl}/user?count={count}&skip={skip}")
             ?? Array.Empty<ActivityLogModel>();
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ActivityLogModel>>($"{BaseUrl}/friends/{userId}?count={count}&skip={skip}")
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ActivityLogModel>>($"{BaseUrl}/friends?count={count}&skip={skip}")
             ?? Array.Empty<ActivityLogModel>();
     }
 

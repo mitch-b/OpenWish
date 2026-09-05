@@ -58,11 +58,16 @@ deploy() {
     exit 1
   fi
 
-  local run_id candidate_image previous_container previous_image rollback_image
+  local run_id candidate_image previous_container previous_image rollback_image volume_name had_existing_data
   run_id="$(date -u +%Y%m%d%H%M%S)-$$"
   candidate_image="openwish-agent:candidate-${run_id}"
   rollback_image="openwish-agent:rollback-${run_id}"
   previous_image=""
+  volume_name="${project_name}_agent-db"
+  had_existing_data=false
+  if docker volume inspect "$volume_name" >/dev/null 2>&1; then
+    had_existing_data=true
+  fi
 
   echo "Building the candidate..."
   docker build \
@@ -101,11 +106,16 @@ deploy() {
     return 1
   fi
 
-  if ! seed_agent_data; then
-    echo "The candidate failed to load its synthetic review data; restoring the previous image." >&2
-    restore_previous "$previous_image" "$rollback_image"
-    remove_transient_images "$candidate_image" "$rollback_image"
-    return 1
+  if [[ "$had_existing_data" == false ]]; then
+    if ! seed_agent_data; then
+      echo "The candidate failed to load its synthetic review data; restoring the previous image." >&2
+      restore_previous "$previous_image" "$rollback_image"
+      remove_transient_images "$candidate_image" "$rollback_image"
+      return 1
+    fi
+    echo "Loaded synthetic review data into the new environment."
+  else
+    echo "Preserved the existing review data."
   fi
 
   docker tag "$candidate_image" openwish-agent:local
@@ -143,6 +153,14 @@ case "$action" in
   logs)
     "${compose[@]}" logs --follow web
     ;;
+  seed)
+    if ! wait_until_healthy; then
+      echo "The agent environment is not healthy at http://localhost:${agent_port}." >&2
+      exit 1
+    fi
+    seed_agent_data
+    echo "Synthetic review data was reset."
+    ;;
   stop)
     "${compose[@]}" down --remove-orphans
     ;;
@@ -150,7 +168,7 @@ case "$action" in
     "${compose[@]}" down --volumes --remove-orphans
     ;;
   *)
-    echo "Usage: $0 {deploy|start|status|logs|stop|reset}" >&2
+    echo "Usage: $0 {deploy|start|status|logs|seed|stop|reset}" >&2
     exit 2
     ;;
 esac

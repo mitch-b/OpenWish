@@ -33,6 +33,25 @@ public static class DevelopmentEndpointExtensions
         .AllowAnonymous()
         .DisableAntiforgery();
 
+        app.MapPost("/auth/dev-login/browser", async (
+            string? persona,
+            string? returnUrl,
+            DevelopmentDataSeeder seeder,
+            SignInManager<ApplicationUser> signInManager) =>
+        {
+            var user = await seeder.EnsureUserAsync(persona);
+            if (user is null)
+            {
+                return Results.BadRequest(new { error = "Unknown development persona." });
+            }
+
+            await signInManager.SignInAsync(user, isPersistent: true);
+            var destination = IsLocalReturnUrl(returnUrl) ? returnUrl! : "/";
+            return Results.LocalRedirect(destination);
+        })
+        .AllowAnonymous()
+        .DisableAntiforgery();
+
         app.MapPost("/auth/dev-seed", async (
             HttpContext httpContext,
             DevelopmentDataSeeder seeder,
@@ -51,4 +70,10 @@ public static class DevelopmentEndpointExtensions
         .RequireAuthorization()
         .DisableAntiforgery();
     }
+
+    private static bool IsLocalReturnUrl(string? returnUrl) =>
+        !string.IsNullOrWhiteSpace(returnUrl) &&
+        returnUrl.StartsWith("/", StringComparison.Ordinal) &&
+        !returnUrl.StartsWith("//", StringComparison.Ordinal) &&
+        !returnUrl.StartsWith("/\\", StringComparison.Ordinal);
 }

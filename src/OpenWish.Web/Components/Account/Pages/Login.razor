@@ -4,6 +4,8 @@
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.RateLimiting
+@using Microsoft.Extensions.Options
+@using OpenWish.Application.Models.Configuration
 @using OpenWish.Data.Entities
 @attribute [EnableRateLimiting("authentication")]
 
@@ -11,6 +13,8 @@
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IWebHostEnvironment Environment
+@inject IOptions<OpenWishSettings> OpenWishSettings
 
 <PageTitle>Log in</PageTitle>
 
@@ -66,6 +70,30 @@
     </div>
 </div>
 
+@if (Environment.IsDevelopment() && OpenWishSettings.Value.EnableDevelopmentLogin)
+{
+    <section class="mt-4">
+        <div class="alert alert-info">
+            <h2 class="h4">Local demo accounts</h2>
+            <p>Choose a seeded persona. No password is required in this isolated Development environment.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="post" action="@BuildDevelopmentLoginUrl("owner")">
+                    <button type="submit" class="btn btn-primary">Sign in as AlexDemo (organizer)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("friend")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as JordanDemo (friend)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("friend2")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as CaseyDemo (friend)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("guest")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as TaylorDemo (invitee)</button>
+                </form>
+            </div>
+        </div>
+    </section>
+}
+
 @code {
     private string? errorMessage;
 
@@ -85,6 +113,12 @@
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
+    }
+
+    private string BuildDevelopmentLoginUrl(string persona)
+    {
+        var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl;
+        return $"/auth/dev-login/browser?persona={persona}&returnUrl={Uri.EscapeDataString(returnUrl)}";
     }
 
     public async Task LoginUser()

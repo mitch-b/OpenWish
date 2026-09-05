@@ -140,6 +140,9 @@ scripts/agent-environment.sh deploy
 scripts/agent-environment.sh status
 scripts/agent-environment.sh logs
 
+# Explicitly restore the deterministic demo personas and fixtures.
+scripts/agent-environment.sh seed
+
 # Stop containers without removing agent data.
 scripts/agent-environment.sh stop
 
@@ -149,9 +152,25 @@ scripts/agent-environment.sh reset
 
 Deployment is lock-protected. It first runs the ephemeral E2E gate, builds a
 candidate image, and updates only the agent Compose project after verification
-succeeds. After the health check, it idempotently loads the same synthetic
-owner, guest, friend, wishlist, event, and collaboration data used by the
-browser suite. A failed verification leaves the running agent environment
-unchanged; a failed post-promotion health or data check restores the previous
-image. This lets an agent work and validate changes while the normal Aspire
-instance continues independently.
+succeeds. A new environment receives the same synthetic owner, guest, friend,
+wishlist, event, and collaboration data used by the browser suite. Later
+deployments preserve local testing changes; `seed` is the explicit destructive
+fixture reset. A failed verification leaves the running environment unchanged,
+and a failed post-promotion health or data check restores the previous image.
+This lets an agent work and validate changes while the normal Aspire instance
+continues independently.
+
+For manual testing, open `http://localhost:9090/Account/Login`. In this
+Development-only stack the login page offers passwordless synthetic personas:
+
+| Persona | Role | Email |
+|---|---|---|
+| AlexDemo | Organizer | `playwright-owner@openwish.local` |
+| JordanDemo | Confirmed friend | `playwright-friend@openwish.local` |
+| CaseyDemo | Confirmed friend | `playwright-friend2@openwish.local` |
+| TaylorDemo | Pending invitee | `playwright-guest@openwish.local` |
+
+The fixtures include wishlists with gift ideas, two confirmed friends, a
+pending friend request, a completed Secret Santa, a pending event invitation,
+reservations, notifications, and activity. The persistent review database
+keeps manual changes across verified deployments.

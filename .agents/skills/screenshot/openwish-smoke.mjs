@@ -211,6 +211,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
   await assertVisible(page, "JordanDemo");
+  await assertVisible(page, "CaseyDemo");
   await assertVisible(page, "TaylorDemo");
   await screenshot(page, "friends.png");
 
@@ -270,6 +271,30 @@ async function verifyOwnerJourney(browser, manifest, results) {
   });
   await context.close();
   return { notificationPublicId };
+}
+
+async function verifyDevelopmentLoginJourney(browser, results) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+
+  await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
+  await page.getByRole("button", { name: "Sign in as AlexDemo (organizer)" }).click();
+  await assertVisible(page, "AlexDemo");
+
+  if (diagnostics.browserErrors.length > 0) {
+    throw new Error(`Development login browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  }
+  if (diagnostics.failedResponses.length > 0) {
+    throw new Error(`Development login failed responses: ${diagnostics.failedResponses.join(" | ")}`);
+  }
+
+  results.push({
+    scenario: "development-login",
+    visitedRoutes
+  });
+  await context.close();
 }
 
 async function verifyGuestJourney(browser, manifest, securityFixture, results) {
@@ -489,6 +514,7 @@ try {
     }
   }
 
+  await verifyDevelopmentLoginJourney(browser, results);
   const securityFixture = await verifyOwnerJourney(browser, manifest, results);
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);

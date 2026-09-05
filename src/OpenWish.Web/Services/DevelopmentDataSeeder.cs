@@ -14,6 +14,7 @@ public sealed class DevelopmentDataSeeder(
     private const string OwnerPersona = "owner";
     private const string GuestPersona = "guest";
     private const string FriendPersona = "friend";
+    private const string SecondFriendPersona = "friend2";
     private const string WishlistPublicId = "demo-family-gift-ideas";
     private const string PrivateWishlistPublicId = "demo-private-ideas";
     private const string FriendWishlistPublicId = "demo-jordan-favorites";
@@ -24,7 +25,8 @@ public sealed class DevelopmentDataSeeder(
         {
             [OwnerPersona] = new(OwnerEmail, "AlexDemo"),
             [GuestPersona] = new("playwright-guest@openwish.local", "TaylorDemo"),
-            [FriendPersona] = new("playwright-friend@openwish.local", "JordanDemo")
+            [FriendPersona] = new("playwright-friend@openwish.local", "JordanDemo"),
+            [SecondFriendPersona] = new("playwright-friend2@openwish.local", "CaseyDemo")
         };
 
     public async Task<ApplicationUser?> EnsureUserAsync(string? persona)
@@ -67,6 +69,8 @@ public sealed class DevelopmentDataSeeder(
             ?? throw new InvalidOperationException("The guest development persona is unavailable.");
         var friendIdentity = await EnsureUserAsync(FriendPersona)
             ?? throw new InvalidOperationException("The friend development persona is unavailable.");
+        var secondFriendIdentity = await EnsureUserAsync(SecondFriendPersona)
+            ?? throw new InvalidOperationException("The second friend development persona is unavailable.");
 
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
@@ -85,7 +89,8 @@ public sealed class DevelopmentDataSeeder(
         {
             ownerIdentity.Id,
             guestIdentity.Id,
-            friendIdentity.Id
+            friendIdentity.Id,
+            secondFriendIdentity.Id
         };
 
         var seededWishlistDatabaseIds = await context.Wishlists
@@ -178,6 +183,7 @@ public sealed class DevelopmentDataSeeder(
         var owner = await context.Users.SingleAsync(user => user.Id == ownerIdentity.Id, cancellationToken);
         var guest = await context.Users.SingleAsync(user => user.Id == guestIdentity.Id, cancellationToken);
         var friend = await context.Users.SingleAsync(user => user.Id == friendIdentity.Id, cancellationToken);
+        var secondFriend = await context.Users.SingleAsync(user => user.Id == secondFriendIdentity.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
         var eventEntity = new Event
@@ -376,6 +382,24 @@ public sealed class DevelopmentDataSeeder(
                 FriendUser = owner,
                 FriendUserId = owner.Id,
                 FriendshipDate = now.AddMonths(-3)
+            },
+            new Friend
+            {
+                PublicId = "demo-owner-second-friend",
+                User = owner,
+                UserId = owner.Id,
+                FriendUser = secondFriend,
+                FriendUserId = secondFriend.Id,
+                FriendshipDate = now.AddMonths(-1)
+            },
+            new Friend
+            {
+                PublicId = "demo-second-friend-owner",
+                User = secondFriend,
+                UserId = secondFriend.Id,
+                FriendUser = owner,
+                FriendUserId = owner.Id,
+                FriendshipDate = now.AddMonths(-1)
             });
 
         context.FriendRequests.Add(new FriendRequest

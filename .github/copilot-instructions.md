@@ -1,35 +1,102 @@
-This application is a C# .NET application that uses the ASP.NET Core framework to allow users to host or collaborate on group wishlist events: 'secret santa'/gift exchange or birthday events for example.
+# Copilot Instructions
 
-## Code Standards
+OpenWish is a .NET 10, self-hosted wishlist and gift-exchange application. It
+uses ASP.NET Core Blazor with server rendering plus interactive WebAssembly,
+EF Core with PostgreSQL, and .NET Aspire for local orchestration.
 
-When using GitHub Copilot as a coding agent (for automated PRs or code suggestions), always run dotnet format and ensure dotnet build succeeds before committing changes.
-When using Copilot in VS Code interactive/agent mode (for on-demand code generation or suggestions), running dotnet format and dotnet build is optional and not required after every change.
+## Commands
 
-To format and ensure build:
-- Change working directory to `{root}/src`
-- Run `dotnet format` before committing any changes to ensure proper code formatting
-- This will run format on all files to maintain consistent style based on `.editorconfig` settings
-- Ensure `dotnet build` succeeds
+Run commands from `src/`, which contains `OpenWish.slnx`:
 
-### Development Flow
-- Build: `dotnet build`
+```bash
+dotnet build
+dotnet format
+dotnet run --project OpenWish.AppHost
+```
 
-## Repository Structure 
-- `src/OpenWish.AppHost/`: Aspire dashboard runtime, main run target for local development
-- `src/OpenWish.Application/`: All application logic with services that are consumed by the Web app
-- `src/OpenWish.Data/`: EF Core assets
-- `src/OpenWish.ServiceDefaults/`: Part of Aspire bootstrap for logging and telemetry needs
-- `src/OpenWish.Shared/`: Shared assets between ASP.NET Core Blazor Server UI and Client Web Assembly UI
-- `src/OpenWish.Web/`: ASP.NET Core Blazor Server web application - all authentication or server rendering assets should be here
-- `src/OpenWish.Web.Client/`: Contains code that can run under WebAssembly for clients to have a more seamless native-like feel using the application
-- `.docs`: Contains any useful documentation for running, developing, or end-user documentation.
+The AppHost starts PostgreSQL, pgAdmin, and `OpenWish.Web`; set its local
+PostgreSQL credentials first:
 
-## Key Guidelines
-1. Follow C# and ASP.NET Core best practices and idiomatic patterns
-1. If single statement methods, use expression-bodied members where appropriate
-1. Use `var` when the type is obvious from the right-hand side of the assignment
-1. Use `nameof` for property names in exceptions and logging
-1. Use `async`/`await` for asynchronous methods and ensure proper exception handling
-1. Maintain existing code structure and organization
-1. Use dependency injection patterns where appropriate
-1. Document public APIs and complex logic. Suggest changes to the `.docs/` folder when appropriate
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set Parameters:sqlUser "openwish"
+dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
+```
+
+There are currently no test projects in the solution, so there is no
+repository test or single-test command. When tests are added, run the
+containing test project with `dotnet test <project>.csproj` and one test with
+`dotnet test <project>.csproj --filter "FullyQualifiedName~Namespace.Type.Method"`.
+
+For EF Core model changes, create migrations from the repository root:
+
+```bash
+dotnet ef migrations add <MigrationName> -p src/OpenWish.Data -s src/OpenWish.Web
+```
+
+`OpenWish.Web` applies pending migrations at startup only when
+`OpenWishSettings:OwnDatabaseUpgrades` is `true`; the Aspire host enables it
+for local development.
+
+## Architecture
+
+`OpenWish.AppHost` is the local development entry point. It provisions the
+PostgreSQL resource and passes its `OpenWish` connection string to
+`OpenWish.Web`.
+
+`OpenWish.Web` is the production host. It owns ASP.NET Core Identity,
+authentication, Razor component rendering, API controllers, TLS/proxy setup,
+and startup migration execution. It registers application services for
+server-rendered components and maps the client assembly for interactive
+WebAssembly.
+
+`OpenWish.Web.Client` contains the `InteractiveAuto` UI and HTTP
+implementations of shared service interfaces. The client uses the named
+`OpenWish.API` `HttpClient`, whose base address is the hosting application.
+
+`OpenWish.Shared` is the server/client boundary: DTOs, request models, and
+service interfaces live here. `OpenWish.Application` contains the server-side
+implementations, business rules, AutoMapper profile, external product lookup,
+email, and activity logic. `OpenWish.Data` owns `ApplicationDbContext`, EF
+entities, attributes, and migrations. `OpenWish.ServiceDefaults` adds Aspire
+service discovery, resilience, health, logging, and OpenTelemetry defaults.
+
+## Cross-project conventions
+
+- Add a feature that must work after WebAssembly hydration as a vertical
+  slice: add shared models and an interface in `OpenWish.Shared`, the
+  application implementation and registration in `OpenWish.Application`, a
+  controller in `OpenWish.Web`, and an HTTP implementation plus registration
+  in `OpenWish.Web.Client`. Keep their method signatures and routes aligned.
+- Server application services use `IDbContextFactory<ApplicationDbContext>`;
+  create and asynchronously dispose a context within each operation with
+  `await using var context = await _contextFactory.CreateDbContextAsync()`.
+  Do not inject a long-lived `ApplicationDbContext` into these services.
+- Public routes use entity `PublicId` values rather than internal integer
+  keys. Preserve authorization and viewer-specific filtering in application
+  services. Controllers obtain the authenticated caller through
+  `ApiUserContextService`; do not trust a caller-supplied user ID for access
+  decisions.
+- Most domain records use soft deletion (`Deleted`) and timestamps inherited
+  from `BaseEntity`. Queries for active records consistently filter
+  `!entity.Deleted`; deletion operations set the flag rather than removing
+  rows.
+- Register services through each project's `AddOpenWish*Services` extension
+  method, rather than adding unrelated registrations directly to `Program.cs`.
+  Server-side authentication state and user context have different Razor and
+  controller implementations; retain that separation.
+- Central package versions are in `src/Directory.Packages.props`. All
+  projects target `net10.0` with nullable reference types and preview C#
+  enabled by `src/Directory.Build.props`.
+- Follow `src/.editorconfig`: file-scoped namespaces, primary constructors
+  where suitable, `var` for obvious types, `I`-prefixed interfaces, and
+  underscore-prefixed private fields. EF migrations are generated code.
+
+## Configuration and secrets
+
+Keep credentials out of source control. Local secrets belong in .NET user
+secrets; production configuration uses environment variables (for example,
+`ConnectionStrings__OpenWish` and
+`OpenWishSettings__EmailConfig__SmtpPass`). Optional Google authentication,
+SMTP email, OpenAI integration, TLS, and forwarded-proxy settings are
+configured through `OpenWish.Web` configuration.

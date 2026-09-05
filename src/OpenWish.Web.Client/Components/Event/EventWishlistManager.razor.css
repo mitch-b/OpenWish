@@ -1,6 +1,6 @@
 .event-wishlist-manager {
     border: 1px solid var(--color-border-muted);
-    border-radius: 12px;
+    border-radius: 1rem;
 }
 
 .event-wishlist-manager .card-body {
@@ -10,6 +10,7 @@
 .event-wishlist-manager .list-group-item {
     border: 1px solid var(--color-border-muted);
     background: var(--color-surface-alt);
+    border-radius: 0.8rem;
 }
 
 .event-wishlist-manager .list-group-item + .list-group-item {

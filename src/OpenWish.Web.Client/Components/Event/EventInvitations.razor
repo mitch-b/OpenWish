@@ -20,7 +20,7 @@
             @if (IsOwner)
             {
                 <button class="btn btn-primary" @onclick="ShowInviteModal">
-                    <i class="bi bi-person-plus me-1"></i> Invite people
+                    <OpenWishIcon Name="person-plus" Class="me-1" /> Invite people
                 </button>
             }
         </div>
@@ -105,17 +105,17 @@
                                     <button class="btn btn-outline-secondary btn-sm"
                                             @onclick="() => CopyInvitationLinkAsync(invitation)"
                                             title="Copy a link to share directly">
-                                        <i class="bi bi-copy me-1"></i> Copy link
+                                        <OpenWishIcon Name="copy" Class="me-1" /> Copy link
                                     </button>
                                     <button class="btn btn-outline-secondary btn-sm"
                                             @onclick="() => HandleResendInvitation(invitation.Id)"
                                             title="Resend invitation">
-                                        <i class="bi bi-arrow-repeat me-1"></i> Resend
+                                        <OpenWishIcon Name="arrow-repeat" Class="me-1" /> Resend
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm"
                                             @onclick="() => HandleCancelInvitation(invitation.Id)"
                                             title="Cancel invitation">
-                                        <i class="bi bi-x-lg me-1"></i> Cancel
+                                        <OpenWishIcon Name="x-lg" Class="me-1" /> Cancel
                                     </button>
                                 </div>
                             }
@@ -128,7 +128,7 @@
                                     <button class="btn btn-outline-danger btn-sm"
                                             @onclick="() => PromptRemoveParticipant(invitation)"
                                             title="Remove from event">
-                                        <i class="bi bi-person-dash"></i> @("Remove")
+                                        <OpenWishIcon Name="person-dash" /> @("Remove")
                                     </button>
                                 </div>
                             }
@@ -138,12 +138,12 @@
                                     <button class="btn btn-success btn-sm"
                                             @onclick="() => HandleAcceptInvitation(invitation.Id)"
                                             title="Accept invitation">
-                                        <i class="bi bi-check-lg"></i> Accept
+                                        <OpenWishIcon Name="check-lg" /> Accept
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm"
                                             @onclick="() => HandleRejectInvitation(invitation.Id)"
                                             title="Reject invitation">
-                                        <i class="bi bi-x-lg"></i> Reject
+                                        <OpenWishIcon Name="x-lg" /> Reject
                                     </button>
                                 </div>
                             }
@@ -159,7 +159,7 @@
                 @if (IsOwner)
                 {
                     <button class="btn btn-primary" @onclick="ShowInviteModal">
-                        <i class="bi bi-person-plus me-1"></i> Invite your first participant
+                        <OpenWishIcon Name="person-plus" Class="me-1" /> Invite your first participant
                     </button>
                 }
             </div>
@@ -169,7 +169,7 @@
 
 @if (_showRemoveConfirmation && _invitationPendingRemoval != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -198,7 +198,7 @@
                         }
                         else
                         {
-                            <i class="bi bi-person-dash"></i> @(textContent: "Remove")
+                            <OpenWishIcon Name="person-dash" /> @(textContent: "Remove")
                         }
                     </button>
                 </div>
@@ -209,7 +209,7 @@
 
 @if (_showInviteModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -317,7 +317,7 @@
                                                        @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, IsChecked(args.Value))" />
                                                 <div class="friend-option__content">
                                                     <span>@pendingInvite.Email</span>
-                                                    <small class="text-warning"><i class="bi bi-clock-history"></i> Pending registration</small>
+                                                    <small class="text-warning"><OpenWishIcon Name="clock-history" /> Pending registration</small>
                                                 </div>
                                             </label>
                                         }

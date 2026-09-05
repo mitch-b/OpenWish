@@ -4,10 +4,10 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(13, 15, 26, 0.62);
     z-index: 1040;
-    backdrop-filter: blur(3px);
-    animation: fadeIn 0.2s ease;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.16s ease;
 }
 
 .modal-dialog-container {
@@ -25,8 +25,9 @@
 
 .modal-content {
     background: var(--color-surface);
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1.1rem;
+    box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
     max-height: 90vh;
@@ -39,15 +40,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--color-surface-alt);
-    border-radius: 12px 12px 0 0;
+    background: var(--color-surface);
+    border-radius: 1.1rem 1.1rem 0 0;
 }
 
 .modal-title {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--color-link-hover);
+    color: var(--color-text);
 }
 
 .btn-close {
@@ -88,8 +89,8 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    background: var(--color-surface-alt);
-    border-radius: 0 0 12px 12px;
+    background: var(--color-surface);
+    border-radius: 0 0 1.1rem 1.1rem;
 }
 
 .url-import-section {
@@ -108,8 +109,8 @@
 
 .form-control,
 .form-select {
-    border: 2px solid var(--color-border-muted);
-    border-radius: 6px;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.7rem;
     padding: 0.625rem;
     transition: border-color 0.2s, background-color 0.25s ease, color 0.25s ease;
     background: var(--color-surface);
@@ -170,7 +171,7 @@
 
 .btn-primary {
     background: var(--color-primary-bg);
-    color: var(--color-text);
+    color: #fff;
 }
 
 .btn-primary:hover {

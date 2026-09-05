@@ -13,253 +13,216 @@
 
 <PageTitle>Home</PageTitle>
 
-<div class="hero-section text-center py-5">
-    <AuthorizeView>
-        <Authorized>
-            @if (_loadError is not null)
-            {
-                <div class="container mt-4">
-                    <div class="alert alert-warning" role="alert">
-                        @_loadError
-                    </div>
-                </div>
-            }
-
-            <h1 class="display-4">Welcome Back!</h1>
-            <p class="lead">Ready to make gift-giving effortless?</p>
-            <div class="d-flex gap-3 justify-content-center mt-4">
-                <a href="/wishlists/new" class="btn btn-primary btn-lg">
-                    <span style="font-size: 1.2rem;">🎁</span> Create Wishlist
-                </a>
-                <a href="/events/new" class="btn btn-success btn-lg">
-                    <span style="font-size: 1.2rem;">🎅</span> Start Secret Santa
-                </a>
-            </div>
-        </Authorized>
-        <NotAuthorized>
-            <h1 class="display-4">Make Gift-Giving Effortless</h1>
-            <p class="lead">Share wishlists and coordinate gifts with family and friends on software you can host yourself.</p>
-            <div class="d-flex gap-3 justify-content-center mt-4">
-                <a href="/Account/Register" class="btn btn-primary btn-lg px-5">
-                    <span style="font-size: 1.2rem;">🚀</span> Start Free Today
-                </a>
-                <a href="/Account/Login" class="btn btn-outline-light btn-lg">Sign In</a>
-            </div>
-        </NotAuthorized>
-    </AuthorizeView>
-</div>
-
 <AuthorizeView>
-    <NotAuthorized>
-        <div class="features-section py-5">
-            <div class="container">
-                <div class="text-center mb-5">
-                    <h2 class="h1">Why Choose OpenWish?</h2>
-                    <p class="lead text-muted">Focused tools for wishlists, events, and surprise-preserving coordination.</p>
-                </div>
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
-                            <span style="font-size: 2.5rem;">🎁</span>
-                            <h3 class="mt-3">Smart Wishlists</h3>
-                            <p>Create detailed wishlists with links and prices, then share them with people you trust.</p>
-                            <small class="text-muted">Add product links · Control visibility · Organize gift ideas</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
-                            <span style="font-size: 2.5rem;">🎉</span>
-                            <h3 class="mt-3">Event Planning Made Easy</h3>
-                            <p>Organize Secret Santa exchanges, birthdays, and holiday celebrations with built-in coordination.</p>
-                            <small class="text-muted">Draw names · Set budgets · Manage participants</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="feature-card text-center p-4 h-100 rounded shadow-sm">
-                            <span style="font-size: 2.5rem;">💝</span>
-                            <h3 class="mt-3">Social & Secure</h3>
-                            <p>Connect with family and friends while reservations and private lists help preserve surprises.</p>
-                            <small class="text-muted">Friend connections · Private sharing · Gift reservations</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mt-5">
-                    <h4 class="mb-3">Join the Community</h4>
-                    <p class="text-muted mb-4">Start organizing your first wishlist in under 2 minutes</p>
-                    <a href="/Account/Register" class="btn btn-success btn-lg px-5">
-                        <span style="font-size: 1.2rem;">🎯</span> Create Your Free Account
+    <Authorized>
+        <section class="dashboard-hero">
+            <div class="dashboard-hero-copy">
+                <p class="welcome-note"><OpenWishIcon Name="stars" /> Welcome Back!</p>
+                <h1>Make the next gift feel effortless.</h1>
+                <p>Keep every idea, invitation, and surprise beautifully organized in one place.</p>
+                <div class="hero-actions">
+                    <a href="/events/new" class="btn btn-primary btn-lg">
+                        <OpenWishIcon Name="gift" /> Start a Secret Santa
+                    </a>
+                    <a href="/wishlists/new" class="btn btn-quiet btn-lg">
+                        <OpenWishIcon Name="plus-lg" /> Create a wishlist
                     </a>
                 </div>
             </div>
-        </div>
-    </NotAuthorized>
-    <Authorized>
+            <div class="hero-mark" aria-hidden="true">
+                <OpenWishIcon Name="gift" />
+                <span class="hero-spark hero-spark-one"></span>
+                <span class="hero-spark hero-spark-two"></span>
+            </div>
+        </section>
+
+        @if (_loadError is not null)
+        {
+            <div class="alert alert-warning" role="alert">@_loadError</div>
+        }
+
         @if (_userId != null)
         {
-            <!-- Quick Actions and Notifications Section -->
-            <div class="quick-actions-section container py-4">
-                <div class="row g-4">
-                    <!-- Quick Actions -->
-                    <div class="col-md-8">
-                        <h3 class="mb-3">
-                            <span style="font-size: 1.2rem;">⚡</span> Quick Actions
-                        </h3>
-                        <div class="row g-3">
-                            <div class="col-6 col-sm-4 col-lg-3">
-                                <a href="/wishlists/new" class="btn btn-outline-primary w-100 py-3">
-                                    <div><span style="font-size: 1.5rem;">🎁</span></div>
-                                    <small>New Wishlist</small>
-                                </a>
-                            </div>
-                            <div class="col-6 col-sm-4 col-lg-3">
-                                <a href="/events/new" class="btn btn-outline-success w-100 py-3">
-                                    <div><span style="font-size: 1.5rem;">🎅</span></div>
-                                    <small>Secret Santa</small>
-                                </a>
-                            </div>
-                            <div class="col-6 col-sm-4 col-lg-3">
-                                <a href="/friends" class="btn btn-outline-info w-100 py-3">
-                                    <div><span style="font-size: 1.5rem;">👥</span></div>
-                                    <small>Friends</small>
-                                </a>
-                            </div>
-                            <div class="col-6 col-sm-4 col-lg-3">
-                                <a href="/wishlists" class="btn btn-outline-secondary w-100 py-3">
-                                    <div><span style="font-size: 1.5rem;">📋</span></div>
-                                    <small>My Wishlists</small>
-                                </a>
-                            </div>
+            <div class="dashboard-grid">
+                <section class="action-panel">
+                    <div class="section-intro">
+                        <div>
+                            <h2>Where do you want to start?</h2>
+                            <p>Jump straight into the things you do most.</p>
                         </div>
                     </div>
+                    <div class="action-grid">
+                        <a href="/events/new" class="action-tile action-tile-primary">
+                            <span class="action-icon"><OpenWishIcon Name="gift" /></span>
+                            <span><strong>Secret Santa</strong><small>Set up a draw</small></span>
+                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                        </a>
+                        <a href="/wishlists/new" class="action-tile">
+                            <span class="action-icon"><OpenWishIcon Name="plus-lg" /></span>
+                            <span><strong>New wishlist</strong><small>Capture gift ideas</small></span>
+                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                        </a>
+                        <a href="/friends" class="action-tile">
+                            <span class="action-icon"><OpenWishIcon Name="people" /></span>
+                            <span><strong>Friends</strong><small>Manage your circle</small></span>
+                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                        </a>
+                        <a href="/wishlists" class="action-tile">
+                            <span class="action-icon"><OpenWishIcon Name="list-ul" /></span>
+                            <span><strong>All wishlists</strong><small>Browse and organize</small></span>
+                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                        </a>
+                    </div>
+                </section>
 
-                    <!-- Notifications and Requests -->
-                    <div class="col-md-4">
-                        <div class="row g-3">
-                            @if (_pendingEventInvitations?.Any() == true)
-                            {
-                                <div class="col-12">
-                                    <div class="card border-warning">
-                                        <div class="card-body">
-                                            <h6 class="card-title text-warning">
-                                                <span style="font-size: 1.1rem;">📬</span> Event Invitations
-                                                <span class="badge bg-warning text-dark ms-2">@_pendingEventInvitations.Count()</span>
-                                            </h6>
-                                            <p class="card-text small mb-2">You have pending event invitations</p>
-                                            <a href="/events" class="btn btn-warning btn-sm">View Invitations</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-
-                            @if (_pendingFriendRequests?.Any() == true)
-                            {
-                                <div class="col-12">
-                                    <div class="card border-warning">
-                                        <div class="card-body">
-                                            <h6 class="card-title text-warning">
-                                                <span style="font-size: 1.1rem;">👋</span> Friend Requests
-                                                <span class="badge bg-warning text-dark ms-2">@_pendingFriendRequests.Count()</span>
-                                            </h6>
-                                            <p class="card-text small mb-2">You have pending friend requests</p>
-                                            <a href="/friends" class="btn btn-warning btn-sm">View Requests</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-
-
-
-                            @if (_upcomingEvents?.Any() == true)
-                            {
-                                <div class="col-12">
-                                    <div class="card border-info">
-                                        <div class="card-body">
-                                            <h6 class="card-title text-info">
-                                                <span style="font-size: 1.1rem;">⏰</span> Upcoming Events
-                                            </h6>
-                                            <p class="card-text small mb-2">@_upcomingEvents.Count() event(s) this month</p>
-                                            <a href="/events" class="btn btn-info btn-sm">View Events</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
+                <aside class="attention-panel">
+                    <div class="section-intro">
+                        <div>
+                            <h2>For your attention</h2>
+                            <p>Nothing important gets lost.</p>
                         </div>
                     </div>
-                </div>
+                    <div class="attention-list">
+                        @if (_pendingEventInvitations?.Any() == true)
+                        {
+                            <a href="/events" class="attention-item">
+                                <span class="attention-icon attention-warm"><OpenWishIcon Name="envelope" /></span>
+                                <span class="attention-copy">
+                                    <strong>Event invitations</strong>
+                                    <small>@_pendingEventInvitations.Count() waiting for you</small>
+                                </span>
+                                <span class="count-pill">@_pendingEventInvitations.Count()</span>
+                            </a>
+                        }
+                        @if (_pendingFriendRequests?.Any() == true)
+                        {
+                            <a href="/friends" class="attention-item">
+                                <span class="attention-icon attention-warm"><OpenWishIcon Name="person-plus" /></span>
+                                <span class="attention-copy">
+                                    <strong>Friend Requests</strong>
+                                    <small>@_pendingFriendRequests.Count() waiting for you</small>
+                                </span>
+                                <span class="count-pill">@_pendingFriendRequests.Count()</span>
+                            </a>
+                        }
+                        @if (_upcomingEvents?.Any() == true)
+                        {
+                            <a href="/events" class="attention-item">
+                                <span class="attention-icon attention-cool"><OpenWishIcon Name="calendar-event" /></span>
+                                <span class="attention-copy">
+                                    <strong>Upcoming Events</strong>
+                                    <small>@_upcomingEvents.Count() in the next 30 days</small>
+                                </span>
+                                <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
+                            </a>
+                        }
+                        @if (_pendingEventInvitations?.Any() != true &&
+                             _pendingFriendRequests?.Any() != true &&
+                             _upcomingEvents?.Any() != true)
+                        {
+                            <div class="attention-empty">
+                                <span class="attention-icon attention-cool"><OpenWishIcon Name="check-circle" /></span>
+                                <span><strong>You're all caught up</strong><small>No invitations or events need attention.</small></span>
+                            </div>
+                        }
+                    </div>
+                </aside>
             </div>
         }
 
         @if (_featuredWishlists != null || _events != null)
         {
-            <div class="featured-section container py-5">
-                <div class="row g-4">
-                    <div class="col-12 col-md-6">
-                        <h2 class="mb-4">
-                            <span style="font-size: 1.5rem;">🎁</span> Featured Wishlists
-                        </h2>
-                        @if (_featuredWishlists?.Any() == true)
-                        {
-                            <div class="row g-3">
-                                @foreach (var wishlist in _featuredWishlists.Take(3))
-                                {
-                                    <div class="col-12">
-                                        <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
-                                    </div>
-                                }
-                            </div>
-                            @if (_featuredWishlists.Count() > 3)
-                            {
-                                <div class="text-center mt-3">
-                                    <a href="/wishlists" class="btn btn-outline-primary">View All Wishlists</a>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="text-center py-4">
-                                <p class="text-muted mb-3">You haven't created any wishlists yet</p>
-                                <a href="/wishlists/new" class="btn btn-primary">
-                                    <span style="font-size: 1.1rem;">🎁</span> Create Your First Wishlist
-                                </a>
-                            </div>
-                        }
+            <div class="collection-grid">
+                <section class="collection-section">
+                    <div class="section-intro section-intro-row">
+                        <div>
+                            <h2>Recent wishlists</h2>
+                            <p>Ideas you have been shaping lately.</p>
+                        </div>
+                        <a href="/wishlists">View all <OpenWishIcon Name="arrow-right" /></a>
                     </div>
+                    @if (_featuredWishlists?.Any() == true)
+                    {
+                        <div class="collection-list">
+                            @foreach (var wishlist in _featuredWishlists.Take(3))
+                            {
+                                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            <OpenWishIcon Name="gift" />
+                            <h3>Your first wishlist starts here</h3>
+                            <p>Save a few ideas now and make gifting easier later.</p>
+                            <a href="/wishlists/new" class="btn btn-primary">Create a wishlist</a>
+                        </div>
+                    }
+                </section>
 
-                    <div class="col-12 col-md-6">
-                        <h2 class="mb-4">
-                            <span style="font-size: 1.5rem;">📅</span> Upcoming Events
-                        </h2>
-                        @if (_events?.Any() == true)
-                        {
-                            <div class="row g-3">
-                                @foreach (var evt in _events.Take(3))
-                                {
-                                    <div class="col-12">
-                                        <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
-                                    </div>
-                                }
-                            </div>
-                            @if (_events.Count() > 3)
-                            {
-                                <div class="text-center mt-3">
-                                    <a href="/events" class="btn btn-outline-success">View All Events</a>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="text-center py-4">
-                                <p class="text-muted mb-3">No upcoming events</p>
-                                <a href="/events/new" class="btn btn-success">
-                                    <span style="font-size: 1.1rem;">📅</span> Create Your First Event
-                                </a>
-                            </div>
-                        }
+                <section class="collection-section">
+                    <div class="section-intro section-intro-row">
+                        <div>
+                            <h2>Events</h2>
+                            <p>Celebrations and exchanges on your radar.</p>
+                        </div>
+                        <a href="/events">View all <OpenWishIcon Name="arrow-right" /></a>
                     </div>
-                </div>
+                    @if (_events?.Any() == true)
+                    {
+                        <div class="collection-list">
+                            @foreach (var evt in _events.Take(3))
+                            {
+                                <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            <OpenWishIcon Name="calendar-event" />
+                            <h3>Bring everyone together</h3>
+                            <p>Create an event, invite your people, and let OpenWish handle the details.</p>
+                            <a href="/events/new" class="btn btn-primary">Create an event</a>
+                        </div>
+                    }
+                </section>
             </div>
         }
     </Authorized>
+    <NotAuthorized>
+        <section class="dashboard-hero marketing-hero">
+            <div class="dashboard-hero-copy">
+                <p class="welcome-note"><OpenWishIcon Name="stars" /> Thoughtful gifting, minus the guesswork</p>
+                <h1>Make every gift feel personal.</h1>
+                <p>Build wishlists, bring people together, and run effortless gift exchanges on software you control.</p>
+                <div class="hero-actions">
+                    <a href="/Account/Register" class="btn btn-primary btn-lg">Create your account</a>
+                    <a href="/Account/Login" class="btn btn-quiet btn-lg">Sign in</a>
+                </div>
+            </div>
+            <div class="hero-mark" aria-hidden="true"><OpenWishIcon Name="gift" /></div>
+        </section>
+
+        <section class="marketing-features">
+            <article>
+                <span class="feature-icon"><OpenWishIcon Name="heart" /></span>
+                <h2>Wishlists people actually use</h2>
+                <p>Save links, details, and priorities. Share with everyone or only the people you choose.</p>
+            </article>
+            <article>
+                <span class="feature-icon"><OpenWishIcon Name="gift" /></span>
+                <h2>Secret Santa without the admin</h2>
+                <p>Invite your group, confirm readiness, and draw private matches from one guided flow.</p>
+            </article>
+            <article>
+                <span class="feature-icon"><OpenWishIcon Name="shield-check" /></span>
+                <h2>Private by design</h2>
+                <p>Reservations stay hidden, assignments remain secret, and self-hosters keep control of their data.</p>
+            </article>
+        </section>
+    </NotAuthorized>
 </AuthorizeView>
 
 @code {

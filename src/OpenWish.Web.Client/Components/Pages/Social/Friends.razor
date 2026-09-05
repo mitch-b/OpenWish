@@ -7,36 +7,27 @@
 
 <PageTitle>Friends</PageTitle>
 
-<div class="container mt-4">
+<div class="container page-shell">
     <PageHeader Title="Friends"
                 Description="Connect with friends and manage trusted sharing relationships." />
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Find friends</h2>
-                </div>
+    <div class="friends-layout">
+        <div>
+            <div class="card friends-panel mb-4">
                 <div class="card-body">
                     <FriendSearch />
                 </div>
             </div>
             
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">Friend requests</h2>
-                </div>
+            <div class="card friends-panel mb-4">
                 <div class="card-body">
                     <FriendRequestList />
                 </div>
             </div>
         </div>
         
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="h5 mb-0">My friends</h2>
-                </div>
+        <div>
+            <div class="card friends-panel">
                 <div class="card-body">
                     <FriendList />
                 </div>
@@ -44,5 +35,3 @@
         </div>
     </div>
 </div>
-
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />

@@ -18,15 +18,21 @@
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
+<div class="auth-page">
+<header class="auth-heading">
+    <span class="auth-mark"><OpenWishIcon Name="gift" /></span>
+    <div>
+        <h1>Welcome back</h1>
+        <p>Sign in to your wishlists, events, and gift exchanges.</p>
+    </div>
+</header>
+<div class="row g-4 auth-grid">
     <div class="col-lg-6">
-        <section>
+        <section class="auth-card">
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
+                <h2>Sign in with email</h2>
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
                     <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
@@ -62,9 +68,8 @@
         </section>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
+        <section class="auth-card auth-card-secondary">
+            <h2>Single sign-on</h2>
             <ExternalLoginPicker />
         </section>
     </div>
@@ -72,7 +77,7 @@
 
 @if (Environment.IsDevelopment() && OpenWishSettings.Value.EnableDevelopmentLogin)
 {
-    <section class="mt-4">
+    <section class="mt-4 demo-account-panel">
         <div class="alert alert-info">
             <h2 class="h4">Local demo accounts</h2>
             <p>Choose a seeded persona. No password is required in this isolated Development environment.</p>
@@ -93,6 +98,7 @@
         </div>
     </section>
 }
+</div>
 
 @code {
     private string? errorMessage;

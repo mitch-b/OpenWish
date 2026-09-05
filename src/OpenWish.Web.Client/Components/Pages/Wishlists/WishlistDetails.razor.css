@@ -208,10 +208,11 @@
     position: relative;
 }
 
-.search-icon {
+::deep .search-icon {
     position: absolute;
     left: 1rem;
     top: 50%;
+    z-index: 1;
     transform: translateY(-50%);
     color: var(--bs-secondary-color);
     font-size: 1.25rem;
@@ -1006,4 +1007,127 @@
 
 .bi-arrow-right {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8'/%3E%3C/svg%3E");
+}
+
+/* Product-system refinement */
+.wishlist-hero {
+    padding: clamp(1.4rem, 3vw, 2rem);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 1.2rem;
+    background:
+        radial-gradient(circle at 86% 12%, rgba(255,255,255,.1), transparent 12rem),
+        linear-gradient(135deg, #232447, #3b2752);
+    box-shadow: var(--shadow-md);
+}
+
+.wishlist-hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    text-shadow: none;
+}
+
+.hero-icon {
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 0.9rem;
+    background: rgba(255,255,255,.1);
+    font-size: 1.75rem;
+}
+
+.event-link,
+.stat-card,
+.search-filter-bar,
+.filter-panel,
+.wishlist-item-card {
+    border-width: 1px;
+    box-shadow: var(--shadow-sm);
+}
+
+.event-link,
+.search-filter-bar,
+.filter-panel {
+    border-color: var(--color-border-muted);
+}
+
+.event-icon,
+.stat-icon {
+    display: grid;
+    width: 2.8rem;
+    height: 2.8rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.2rem;
+}
+
+.event-label,
+.detail-label,
+.filter-label,
+.table th {
+    color: var(--color-text-muted);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.event-name,
+.stat-value,
+.details-section h4 {
+    color: var(--color-text);
+}
+
+.stat-card:hover,
+.event-link:hover,
+.wishlist-item-card:hover {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 35%, var(--color-border));
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.search-input,
+.btn-filter,
+.view-toggle,
+.filter-chip,
+.sort-option {
+    border-width: 1px;
+    border-color: var(--color-border);
+    border-radius: 0.75rem;
+}
+
+.search-input:focus {
+    border-color: var(--color-primary-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-bg) 18%, transparent);
+}
+
+.btn-filter:hover,
+.btn-filter.active,
+.view-toggle .btn.active,
+.filter-chip.active,
+.sort-option.active {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-bg);
+}
+
+.wishlist-item-card {
+    border-color: var(--color-border-muted);
+}
+
+.item-actions {
+    background: transparent;
+}
+
+.fab {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 1rem;
+    background: var(--color-primary-bg);
+    box-shadow: var(--shadow-md);
+}
+
+.fab:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
 }

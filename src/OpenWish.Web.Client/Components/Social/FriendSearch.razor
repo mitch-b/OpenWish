@@ -5,19 +5,22 @@
 @inject IUserContextService UserContextService
 
 <div class="friend-search">
-    <h4>Invite a Friend</h4>
-    <p class="text-muted mb-4">
-        Connect with friends by sending them an invitation via email.
-    </p>
+    <div class="social-heading">
+        <span class="social-heading-icon"><OpenWishIcon Name="person-plus" /></span>
+        <div>
+            <h2>Invite friends</h2>
+            <p>Send one invitation or paste a whole list.</p>
+        </div>
+    </div>
     
     <div class="invite-form">
         <div class="form-group mb-3">
-            <label for="emailInvites" class="form-label">Email Addresses</label>
+            <label for="emailInvites" class="form-label">Email addresses</label>
             <textarea id="emailInvites" class="form-control" rows="3" 
-                      placeholder="Enter email addresses (separate multiple emails with commas)"
+                      placeholder="friend@example.com, another@example.com"
                       @bind="inviteEmails"></textarea>
             <div class="form-text">
-                An invitation will be sent to these email addresses to join OpenWish and connect with you.
+                Separate multiple addresses with commas, spaces, or semicolons.
             </div>
         </div>
         
@@ -29,7 +32,7 @@
             }
             else
             {
-                <span><i class="bi bi-envelope"></i> Send Invitations</span>
+                <span><OpenWishIcon Name="send" /> Send invitations</span>
             }
         </button>
     </div>

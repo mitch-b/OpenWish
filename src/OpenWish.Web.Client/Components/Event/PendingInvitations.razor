@@ -11,7 +11,7 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="card-title mb-0">
-                    <span style="font-size: 1.2rem;">📬</span> Pending Invitations
+                    <OpenWishIcon Name="envelope" Class="me-2" /> Pending invitations
                     @if (_invitations?.Any() == true)
                     {
                         <span class="badge bg-warning text-dark ms-2">@_invitations.Count()</span>
@@ -39,7 +39,7 @@
                                     <small class="text-muted d-block">
                                         @if (invitation.Event?.Date != null)
                                         {
-                                            <span class="me-2">📅 @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
+                                            <span class="me-2"><OpenWishIcon Name="calendar-event" /> @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
                                         }
                                         @if (!string.IsNullOrEmpty(invitation.Event?.CreatedBy?.UserName))
                                         {

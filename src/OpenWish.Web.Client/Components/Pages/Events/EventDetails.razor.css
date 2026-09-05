@@ -1,11 +1,14 @@
 .event-header {
-    background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-link-hover) 100%);
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 88% 8%, rgba(255,255,255,.12), transparent 13rem),
+        linear-gradient(135deg, #232447 0%, #3b2752 100%);
     color: #ffffff;
-    padding: clamp(1.5rem, 3vw, 2.25rem);
-    border-radius: 14px;
+    padding: clamp(1.75rem, 4vw, 3rem);
+    border-radius: 1.25rem;
     margin-bottom: 1.5rem;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.18);
-    transition: background .25s ease, color .25s ease;
+    box-shadow: var(--shadow-md);
 }
 
 .event-page {
@@ -25,13 +28,14 @@
 
 .event-header h1 {
     margin-bottom: 0.5rem;
-    font-size: clamp(2rem, 4vw, 3.25rem);
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    text-shadow: none;
 }
 
 .card {
     border: 1px solid var(--color-border-muted);
-    border-radius: 12px;
+    border-radius: 1rem;
     overflow: hidden;
 }
 
@@ -72,7 +76,7 @@
     min-width: 0;
     padding: 0.9rem 1rem;
     border: 1px solid var(--color-border-muted);
-    border-radius: 0.7rem;
+    border-radius: 0.8rem;
     background: var(--color-surface-alt);
 }
 
@@ -111,7 +115,7 @@
     min-width: 0;
     padding: 0.85rem;
     border: 1px solid var(--color-border-muted);
-    border-radius: 0.7rem;
+    border-radius: 0.8rem;
     background: var(--color-surface-alt);
 }
 

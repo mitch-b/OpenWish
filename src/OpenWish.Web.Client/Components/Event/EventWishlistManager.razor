@@ -24,7 +24,7 @@ else
     <div class="card shadow-sm event-wishlist-manager">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="h4 mb-0">Event Wishlists</h3>
+                <h3 class="h4 mb-0">Event wishlists</h3>
                 @if (_isLoading)
                 {
                     <span class="text-muted small">Refreshing…</span>
@@ -42,7 +42,7 @@ else
             }
 
             <section class="mb-4">
-                <h4 class="h5">Your Wishlists</h4>
+                <h4 class="h5">Your wishlists</h4>
                 @{ var myWishlists = GetCurrentUserWishlists().ToList(); }
                 @if (!myWishlists.Any())
                 {
@@ -91,7 +91,7 @@ else
                                 type="button"
                                 disabled="@_isSubmitting"
                                 @onclick="() => AttachWishlistAsync(onlyWishlist)">
-                            <i class="bi bi-link-45deg me-1" aria-hidden="true"></i>
+                            <OpenWishIcon Name="link-45deg" Class="me-1" />
                             Attach "@onlyWishlist.Name"
                         </button>
                     }
@@ -148,7 +148,7 @@ else
 
             @{ var participantGroups = BuildParticipantGroups().ToList(); }
             <section>
-                <h4 class="h5 mb-3">Participant Wishlists</h4>
+                <h4 class="h5 mb-3">Participant wishlists</h4>
 
                 @if (!participantGroups.Any())
                 {
@@ -223,7 +223,7 @@ else
 
 @if (_showRemoveConfirmation && _wishlistPendingRemoval is not null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">

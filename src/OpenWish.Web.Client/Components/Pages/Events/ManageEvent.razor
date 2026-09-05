@@ -30,24 +30,21 @@ else if (!_isOwner)
 }
 else
 {
-    <div class="event-header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1>Manage Event</h1>
-                <div class="btn-group">
+    <div class="container page-shell">
+        <PageHeader Title="Manage event" Description="@_event.Name">
+            <Actions>
+                <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">
-                        <i class="bi bi-arrow-left"></i> Back to Event
+                        <OpenWishIcon Name="arrow-left" /> Back to event
                     </button>
                     <button class="btn btn-danger" type="button" @onclick="ShowDeleteConfirmation">
-                        <i class="bi bi-trash"></i> Delete Event
+                        <OpenWishIcon Name="trash" /> Delete event
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
+            </Actions>
+        </PageHeader>
 
-    <div class="container py-5">
-        <div class="row">
+        <div class="row g-4">
             <div class="col-md-8">
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -75,7 +72,7 @@ else
 
                 <div class="card shadow-sm mt-4">
                     <div class="card-body">
-                        <h3>Manage Participants</h3>
+                        <h3 class="h5">Participants</h3>
                         @{
                             var participants = GetParticipantList().ToList();
                             var hasOwner = _event?.CreatedBy != null;
@@ -137,7 +134,7 @@ else
 
 @if (_showDeleteConfirmation && _event is not null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -182,7 +179,6 @@ else
     </div>
 }
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;

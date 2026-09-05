@@ -13,12 +13,12 @@
 
 <PageTitle>Events</PageTitle>
 
-<div class="container py-4">
+<div class="container page-shell">
     <PageHeader Title="Events"
                 Description="Plan gift exchanges and special occasions with friends and family.">
         <Actions>
             <a href="/events/new" class="btn btn-light btn-lg">
-                <i class="bi bi-gift me-2" aria-hidden="true"></i>Start a Secret Santa
+                <OpenWishIcon Name="gift" Class="me-2" /> Start a Secret Santa
             </a>
         </Actions>
     </PageHeader>
@@ -36,7 +36,7 @@
     else if (!_events.Any())
     {
         <div class="empty-state text-center">
-            <i class="bi bi-calendar-event empty-state-icon" aria-hidden="true"></i>
+            <OpenWishIcon Name="calendar-event" Class="empty-state-icon" />
             <h2>No events yet</h2>
             <p class="lead">Invite your group and draw Secret Santa names in minutes.</p>
             <a href="/events/new" class="btn btn-primary btn-lg mt-3">
@@ -46,7 +46,7 @@
     }
     else
     {
-        <div class="row g-4">
+        <div class="row g-3 event-grid">
             @foreach (var evt in _events)
             {
                 <div class="col-md-6 col-lg-4">
@@ -57,7 +57,6 @@
     }
 </div>
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     private List<EventModel>? _events;

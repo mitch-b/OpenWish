@@ -15,7 +15,7 @@
                         class="event-type-option @(Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
                         aria-pressed="@Model.IsGiftExchange"
                         @onclick="SelectGiftExchange">
-                    <span class="event-type-icon" aria-hidden="true">🎅</span>
+                    <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
                     <strong>Secret Santa</strong>
                     <small>Invite people, collect wishlists, and draw names privately.</small>
                 </button>
@@ -29,7 +29,7 @@
                         class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
                         aria-pressed="@(!Model.IsGiftExchange)"
                         @onclick="SelectCelebration">
-                    <span class="event-type-icon" aria-hidden="true">🎉</span>
+                    <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="stars" /></span>
                     <strong>Birthday or celebration</strong>
                     <small>Coordinate wishlists without drawing names.</small>
                 </button>
@@ -66,7 +66,7 @@
     </div>
 
     <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-success btn-lg" disabled="@IsSubmitting">
+        <button type="submit" class="btn btn-primary btn-lg" disabled="@IsSubmitting">
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -79,7 +79,7 @@
             else if (Model!.IsGiftExchange)
             {
                 <span>Create and invite people</span>
-                <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i>
+                <OpenWishIcon Name="arrow-right" Class="ms-2" />
             }
             else
             {

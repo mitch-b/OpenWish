@@ -37,19 +37,19 @@ else
             @if (_wishlist.IsCollaborative)
             {
                 <span class="badge badge-collaborative">
-                    <i class="bi bi-people-fill"></i> Collaborative
+                    <OpenWishIcon Name="people-fill" /> Collaborative
                 </span>
             }
         </div>
         <div class="hero-actions">
             <button class="btn btn-secondary" @onclick="ShareWishlist">
-                <i class="bi bi-share"></i>
+                <OpenWishIcon Name="share" />
                 <span class="btn-text">Share</span>
             </button>
             @if (_isOwner)
             {
                 <a href="/wishlists/@WishlistId/manage" class="btn btn-secondary">
-                    <i class="bi bi-gear"></i>
+                    <OpenWishIcon Name="gear" />
                     <span class="btn-text">Manage</span>
                 </a>
             }
@@ -60,12 +60,12 @@ else
     {
         <div class="event-indicator">
             <a href="/events/@_wishlist.Event.PublicId" class="event-link" aria-label="View event @_wishlist.Event.Name">
-                <span class="event-icon" aria-hidden="true">📅</span>
+                <span class="event-icon" aria-hidden="true"><OpenWishIcon Name="calendar-event" /></span>
                 <div class="event-info">
                     <span class="event-label">Part of event</span>
                     <span class="event-name">@_wishlist.Event.Name</span>
                 </div>
-                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                <OpenWishIcon Name="arrow-right" />
             </a>
         </div>
     }
@@ -80,16 +80,16 @@ else
 
     <div class="stats-dashboard">
         <div class="stat-card">
-            <div class="stat-icon">📦</div>
+            <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
             <div class="stat-content">
                 <div class="stat-value">@_items.Count</div>
-                <div class="stat-label">Total Items</div>
+                <div class="stat-label">Total items</div>
             </div>
         </div>
         @if (!_isOwner)
         {
             <div class="stat-card">
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon"><OpenWishIcon Name="check-circle" /></div>
                 <div class="stat-content">
                     <div class="stat-value">@GetReservedCount()</div>
                     <div class="stat-label">Reserved</div>
@@ -99,11 +99,10 @@ else
            <div class="stat-card"
              role="button"
              tabindex="0"
-             style="cursor: pointer;"
                title="Show items with comments"
              @onclick="FocusCommentsAsync"
              @onkeydown="HandleCommentsStatKeyDown">
-            <div class="stat-icon">💬</div>
+            <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
             <div class="stat-content">
                 <div class="stat-value">@GetCommentCount()</div>
                 <div class="stat-label">Comments</div>
@@ -113,7 +112,7 @@ else
 
     <div class="search-filter-bar">
         <div class="search-container">
-            <i class="bi bi-search search-icon"></i>
+            <OpenWishIcon Name="search" Class="search-icon" />
             <input type="text"
                    class="search-input"
                    placeholder="Search items by name, description, or store..."
@@ -123,13 +122,13 @@ else
             @if (!string.IsNullOrEmpty(SearchQuery))
             {
                 <button class="search-clear" @onclick="ClearSearch">
-                    <i class="bi bi-x-lg"></i>
+                    <OpenWishIcon Name="x-lg" />
                 </button>
             }
         </div>
 
         <button class="btn btn-filter @(_showFilters ? "active" : "")" @onclick="ToggleFilters">
-            <i class="bi bi-funnel"></i>
+            <OpenWishIcon Name="funnel" />
             <span class="btn-text">Filters</span>
             @if (GetActiveFilterCount() > 0)
             {
@@ -139,10 +138,10 @@ else
 
         <div class="btn-group view-toggle">
             <button type="button" class="btn @(ViewMode == "grid" ? "active" : "")" @onclick="@(() => SetViewMode("grid"))" aria-label="Grid View">
-                <i class="bi bi-grid-3x3-gap"></i>
+                <OpenWishIcon Name="grid-3x3-gap" />
             </button>
             <button type="button" class="btn @(ViewMode == "list" ? "active" : "")" @onclick="@(() => SetViewMode("list"))" aria-label="List View">
-                <i class="bi bi-list-ul"></i>
+                <OpenWishIcon Name="list-ul" />
             </button>
         </div>
     </div>
@@ -171,14 +170,14 @@ else
                     @if (!_isOwner)
                     {
                         <button class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
-                            <i class="bi bi-check-circle"></i> Reserved
+                            <OpenWishIcon Name="check-circle" /> Reserved
                         </button>
                         <button class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
-                            <i class="bi bi-circle"></i> Available
+                            <OpenWishIcon Name="circle" /> Available
                         </button>
                     }
                     <button class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "commented")'>
-                        <i class="bi bi-chat"></i> Has Comments
+                        <OpenWishIcon Name="chat" /> Has Comments
                     </button>
                 </div>
             </div>
@@ -209,28 +208,28 @@ else
                 <label class="filter-label">Sort By</label>
                 <div class="sort-options">
                     <button class="sort-option @(SortBy == "priority" ? "active" : "")" @onclick="@(() => SortItems("priority"))">
-                        <i class="bi bi-star"></i> Priority
+                        <OpenWishIcon Name="star" /> Priority
                         @if (SortBy == "priority")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
                     <button class="sort-option @(SortBy == "price" ? "active" : "")" @onclick="@(() => SortItems("price"))">
-                        <i class="bi bi-currency-dollar"></i> Price
+                        <OpenWishIcon Name="currency-dollar" /> Price
                         @if (SortBy == "price")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
                     <button class="sort-option @(SortBy == "name" ? "active" : "")" @onclick="@(() => SortItems("name"))">
-                        <i class="bi bi-sort-alpha-down"></i> Name
+                        <OpenWishIcon Name="sort-alpha-down" /> Name
                         @if (SortBy == "name")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
                     <button class="sort-option @(SortBy == "date" ? "active" : "")" @onclick="@(() => SortItems("date"))">
-                        <i class="bi bi-calendar"></i> Date Added
+                        <OpenWishIcon Name="calendar" /> Date Added
                         @if (SortBy == "date")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
@@ -254,23 +253,23 @@ else
                 <div class="empty-state">
                     @if (_items.Count == 0)
                     {
-                        <div class="empty-icon">🎁</div>
+                        <div class="empty-icon"><OpenWishIcon Name="gift" /></div>
                         <h3>Your wishlist is empty</h3>
                         <p>Start adding items you'd love to receive!</p>
                         @if (_canEdit)
                         {
                             <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
-                                <i class="bi bi-plus-lg"></i> Add Your First Item
+                                <OpenWishIcon Name="plus-lg" /> Add Your First Item
                             </button>
                         }
                     }
                     else
                     {
-                        <div class="empty-icon">🔍</div>
+                        <div class="empty-icon"><OpenWishIcon Name="search" /></div>
                         <h3>No items match your filters</h3>
                         <p>Try adjusting your search or filter criteria</p>
                         <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
-                            <i class="bi bi-x-circle"></i> Clear Filters
+                            <OpenWishIcon Name="x-circle" /> Clear Filters
                         </button>
                     }
                 </div>
@@ -288,7 +287,7 @@ else
                                     @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
-                                            <i class="bi bi-check-circle-fill"></i> Reserved
+                                            <OpenWishIcon Name="check-circle-fill" /> Reserved
                                         </div>
                                     }
                                 </div>
@@ -296,11 +295,11 @@ else
                             else
                             {
                                 <div class="item-image item-image-placeholder">
-                                    <i class="bi bi-gift"></i>
+                                    <OpenWishIcon Name="gift" />
                                     @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
-                                            <i class="bi bi-check-circle-fill"></i> Reserved
+                                            <OpenWishIcon Name="check-circle-fill" /> Reserved
                                         </div>
                                     }
                                 </div>
@@ -330,7 +329,7 @@ else
                                     @if (!string.IsNullOrEmpty(item.WhereToBuy))
                                     {
                                         <span class="item-store">
-                                            <i class="bi bi-shop"></i> @item.WhereToBuy
+                                            <OpenWishIcon Name="shop" /> @item.WhereToBuy
                                         </span>
                                     }
                                 </div>
@@ -339,13 +338,13 @@ else
                                     @if (item.Comments.Any())
                                     {
                                         <span class="interaction-badge">
-                                            <i class="bi bi-chat-fill"></i> @item.Comments.Count
+                                            <OpenWishIcon Name="chat-fill" /> @item.Comments.Count
                                         </span>
                                     }
                                     @if (!string.IsNullOrEmpty(item.Url))
                                     {
                                         <a href="@item.Url" target="_blank" rel="noopener noreferrer" class="interaction-badge" title="View Product">
-                                            <i class="bi bi-link-45deg"></i>
+                                            <OpenWishIcon Name="link-45deg" />
                                         </a>
                                     }
                                 </div>
@@ -355,14 +354,14 @@ else
                                 @if (_canEdit)
                                 {
                                     <button class="btn-icon" @onclick="() => HandleItemEditClick(item)" title="Edit">
-                                        <i class="bi bi-pencil"></i>
+                                        <OpenWishIcon Name="pencil" />
                                     </button>
                                     <button class="btn-icon btn-danger" @onclick="() => HandleItemDelete(item)" title="Delete">
-                                        <i class="bi bi-trash"></i>
+                                        <OpenWishIcon Name="trash" />
                                     </button>
                                 }
                                 <button class="btn-icon" @onclick="() => ToggleItemDetails(item.Id)" title="More Details">
-                                    <i class="bi bi-three-dots"></i>
+                                    <OpenWishIcon Name="three-dots" />
                                 </button>
                             </div>
 
@@ -370,7 +369,7 @@ else
                             {
                                 <div class="item-details-expanded">
                                     <div class="details-section">
-                                        <h4><i class="bi bi-info-circle"></i> Details</h4>
+                                        <h4><OpenWishIcon Name="info-circle" /> Details</h4>
                                         <div class="details-grid">
                                             <div class="detail-item">
                                                 <span class="detail-label">Added</span>
@@ -388,14 +387,14 @@ else
                                     @if (item.Reservations.Any() || item.Comments.Any())
                                     {
                                         <div class="details-section">
-                                            <h4><i class="bi bi-people"></i> Social</h4>
+                                            <h4><OpenWishIcon Name="people" /> Social</h4>
                                             @if (!_isOwner && item.Reservations.Any())
                                             {
-                                                <p class="detail-info">✓ This item has been reserved</p>
+                                                <p class="detail-info"><OpenWishIcon Name="check-circle" /> This item has been reserved</p>
                                             }
                                             @if (item.Comments.Any())
                                             {
-                                                <p class="detail-info">💬 @item.Comments.Count comment(s)</p>
+                                                <p class="detail-info"><OpenWishIcon Name="chat" /> @item.Comments.Count comment(s)</p>
                                             }
                                         </div>
                                     }
@@ -443,14 +442,13 @@ else
     @if (_canEdit)
     {
         <button class="fab" @onclick="ShowAddItemModal" title="Add New Item">
-            <i class="bi bi-plus-lg"></i>
+            <OpenWishIcon Name="plus-lg" />
         </button>
     }
 }
 
 <WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
 

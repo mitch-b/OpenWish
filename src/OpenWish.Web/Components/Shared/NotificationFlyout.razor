@@ -9,12 +9,12 @@
 @rendermode InteractiveServer
 
 <div class="notification-flyout-container position-relative">
-    <!-- Notification Bell Button -->
     <button class="btn btn-link text-decoration-none notification-bell"
             @onclick="ToggleFlyout"
             @onclick:stopPropagation="true"
+            aria-label="@(_unreadCount > 0 ? $"Notifications, {_unreadCount} unread" : "Notifications")"
             type="button">
-        <span style="font-size: 1.2rem;">🔔</span>
+        <OpenWishIcon Name="bell" />
         @if (_unreadCount > 0)
         {
             <span class="badge bg-danger position-absolute translate-middle rounded-pill notification-badge">
@@ -23,12 +23,14 @@
         }
     </button>
 
-    <!-- Flyout Panel -->
     @if (_isVisible)
     {
         <div class="notification-flyout shadow-lg" @onclick:stopPropagation="true">
             <div class="notification-header d-flex justify-content-between align-items-center p-3 border-bottom">
-                <h6 class="mb-0">Notifications</h6>
+                <div>
+                    <h2 class="notification-heading">Notifications</h2>
+                    <p class="notification-subheading">Recent updates and invitations</p>
+                </div>
                 <div class="d-flex gap-2">
                     @if (_notifications?.Any(n => !n.IsRead) == true)
                     {
@@ -37,7 +39,7 @@
                         </button>
                     }
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Close notifications" @onclick="CloseFlyout">
-                        ✕
+                        <OpenWishIcon Name="x-lg" />
                     </button>
                 </div>
             </div>
@@ -108,7 +110,7 @@
                                                 aria-label="Delete notification"
                                                 @onclick="() => ShowDeleteConfirmation(notification)"
                                                 @onclick:stopPropagation="true">
-                                            🗑️
+                                            <OpenWishIcon Name="trash3" />
                                         </button>
                                     </div>
                                 </div>
@@ -126,8 +128,8 @@
                 else
                 {
                     <div class="text-center p-4 text-muted">
-                        <div style="font-size: 2rem;">📭</div>
-                        <div class="mt-2">No notifications</div>
+                        <OpenWishIcon Name="bell" Class="notification-empty-icon" />
+                        <div class="mt-2 fw-semibold">You're all caught up</div>
                     </div>
                 }
             </div>
@@ -135,10 +137,9 @@
     }
 </div>
 
-<!-- Delete Confirmation Modal -->
 @if (_showDeleteConfirmation && _notificationToDelete != null)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal show d-block" tabindex="-1">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header">

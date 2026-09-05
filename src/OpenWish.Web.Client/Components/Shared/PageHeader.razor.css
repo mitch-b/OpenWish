@@ -1,23 +1,36 @@
 .page-header {
     align-items: flex-start;
-    background: linear-gradient(135deg, var(--color-primary-bg), var(--color-link-hover));
-    border-radius: 1rem;
-    color: #fff;
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1.1rem;
+    color: var(--color-text);
     display: flex;
     gap: 1.5rem;
     justify-content: space-between;
-    margin-bottom: 2rem;
-    padding: 2rem;
+    margin-bottom: 1.5rem;
+    padding: 1.6rem 1.75rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-header::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--color-primary-bg), var(--color-accent));
+    content: "";
 }
 
 .page-header h1 {
-    font-size: clamp(2rem, 4vw, 3rem);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
     margin: 0;
 }
 
 .page-header p {
-    font-size: 1.125rem;
-    margin: .5rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 1rem;
+    margin: .4rem 0 0;
     max-width: 48rem;
 }
 
@@ -29,7 +42,8 @@
     .page-header {
         align-items: stretch;
         flex-direction: column;
-        padding: 1.5rem;
+        gap: 1rem;
+        padding: 1.25rem;
     }
 
     .page-header-actions ::deep .btn {

@@ -13,15 +13,13 @@
 
 <PageTitle>Create a Secret Santa</PageTitle>
 
-<div class="event-header">
-    <div class="container">
-        <span class="badge bg-light text-dark mb-2">Step 1 of 3</span>
-        <h1 class="mb-1">Create a Secret Santa</h1>
-        <p class="lead mb-0">Set the basics now. You'll invite everyone on the next screen.</p>
-    </div>
-</div>
-
-<div class="container py-4">
+<div class="container page-shell">
+  <PageHeader Title="Create a Secret Santa"
+              Description="Set the basics now. You'll invite everyone on the next screen.">
+      <Actions>
+          <span class="step-indicator">Step 1 of 3</span>
+      </Actions>
+  </PageHeader>
   <div class="row g-4">
     <div class="col-md-8">
         <div class="event-content view-transition">
@@ -40,15 +38,14 @@
                 <li class="mb-2">Let people add a few gift ideas.</li>
                 <li>Draw names when your group is ready.</li>
             </ol>
-            <button class="btn btn-link" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
-                <i class="bi bi-arrow-left"></i> Back to events
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
+                <OpenWishIcon Name="arrow-left" /> Back to events
             </button>
         </div>
     </div>
   </div>
 </div>
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     private readonly EventModel _event = new()

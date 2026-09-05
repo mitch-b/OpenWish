@@ -7,7 +7,7 @@
 
 <div class="card shadow-sm mb-4">
     <div class="card-header">
-        <h3><i class="bi bi-gift"></i> Gift Exchange Management</h3>
+        <h3 class="h5 mb-0"><OpenWishIcon Name="gift" /> Gift exchange</h3>
     </div>
     <div class="card-body">
         @if (Event?.IsGiftExchange == true)
@@ -15,29 +15,29 @@
             @if (Event.NamesDrawnOn.HasValue)
             {
                 <div class="alert alert-success">
-                    <i class="bi bi-check-circle-fill"></i>
+                    <OpenWishIcon Name="check-circle-fill" />
                     <strong>Assignments are ready.</strong>
                     Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt").
                 </div>
                 <p class="text-muted">Each participant can open this event to see only the person they're shopping for.</p>
 
                 <div class="mt-4">
-                    <h5 class="text-danger">Reset Gift Exchange</h5>
+                    <h5 class="text-danger">Reset gift exchange</h5>
                     <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
 
                     @if (!_showResetConfirm)
                     {
                         <button class="btn btn-outline-danger" @onclick="() => _showResetConfirm = true">
-                            <i class="bi bi-arrow-clockwise"></i> Reset Gift Exchange
+                            <OpenWishIcon Name="arrow-clockwise" /> Reset Gift Exchange
                         </button>
                     }
                     else if (!_showFinalConfirm)
                     {
                         <div class="alert alert-warning">
-                            <p class="mb-2"><strong>⚠️ First Confirmation</strong></p>
+                            <p class="mb-2"><strong><OpenWishIcon Name="exclamation-triangle" /> First confirmation</strong></p>
                             <p class="mb-3">Are you sure you want to reset the gift exchange? This will cancel all current assignments.</p>
                             <button class="btn btn-warning me-2" @onclick="() => _showFinalConfirm = true">
-                                <i class="bi bi-exclamation-triangle"></i> Yes, Continue
+                                <OpenWishIcon Name="exclamation-triangle" /> Yes, Continue
                             </button>
                             <button class="btn btn-secondary" @onclick="CancelReset">
                                 Cancel
@@ -47,7 +47,7 @@
                     else
                     {
                         <div class="alert alert-danger">
-                            <p class="mb-2"><strong>🚨 Final Confirmation</strong></p>
+                            <p class="mb-2"><strong><OpenWishIcon Name="exclamation-triangle" /> Final confirmation</strong></p>
                             <p class="mb-3">This action cannot be undone. All participants will receive an email notification about the cancellation.</p>
                             <button class="btn btn-danger me-2" @onclick="ResetGiftExchange" disabled="@_resetting">
                                 @if (_resetting)
@@ -57,8 +57,8 @@
                                 }
                                 else
                                 {
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                    <span>Confirm Reset</span>
+                                    <OpenWishIcon Name="arrow-clockwise" />
+                                    <span>Confirm reset</span>
                                 }
                             </button>
                             <button class="btn btn-secondary" @onclick="CancelReset" disabled="@_resetting">
@@ -70,7 +70,7 @@
                     @if (_resetErrorMessage != null)
                     {
                         <div class="alert alert-danger mt-3">
-                            <i class="bi bi-exclamation-circle"></i> @_resetErrorMessage
+                            <OpenWishIcon Name="exclamation-circle" /> @_resetErrorMessage
                         </div>
                     }
                 </div>
@@ -105,7 +105,7 @@
                     @if (_participantCount < 2)
                     {
                         <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <OpenWishIcon Name="exclamation-triangle" Class="me-1" />
                             Invite at least one person and wait for them to accept before drawing.
                         </div>
                     }
@@ -121,7 +121,7 @@
                         @if (!_showDrawConfirm)
                         {
                             <button class="btn btn-success btn-lg" @onclick="() => _showDrawConfirm = true">
-                                <i class="bi bi-shuffle"></i>
+                                <OpenWishIcon Name="shuffle" />
                                 <span>Draw names</span>
                             </button>
                         }
@@ -155,13 +155,13 @@
                 @if (_errorMessage != null)
                 {
                     <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-circle"></i> @_errorMessage
+                        <OpenWishIcon Name="exclamation-circle" /> @_errorMessage
                     </div>
                 }
 
                 <hr />
 
-                <h5>Pairing Rules (Optional)</h5>
+                <h5>Pairing rules <span class="text-muted fw-normal">(optional)</span></h5>
                 <p class="text-muted small">Add exclusion rules to prevent certain people from being matched together (e.g., spouses, significant others).</p>
 
                 @if (_pairingRules.Any())
@@ -197,14 +197,14 @@
                                                 class="btn btn-sm text-nowrap @(isBidirectional ? "btn-success" : "btn-outline-success")"
                                                 title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
                                                 @onclick="() => ToggleBidirectionalRuleAsync(rule)">
-                                            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+                                            <OpenWishIcon Name="arrow-left-right" Class="me-1" />
                                             <span>@(isBidirectional ? "Limit to one way" : "Make both ways")</span>
                                         </button>
                                         <button type="button"
                                                 class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
                                                 title="Remove this exclusion rule"
                                                 @onclick="() => RemoveRule(rule.Id)">
-                                            <i class="bi bi-trash3" aria-hidden="true"></i>
+                                            <OpenWishIcon Name="trash3" />
                                             <span>Remove</span>
                                         </button>
                                     </div>
@@ -218,7 +218,7 @@
                 {
                     <div class="card surface-alt pairing-rule-card mb-3">
                         <div class="card-body">
-                            <h6>Add Exclusion Rule</h6>
+                            <h6>Add exclusion rule</h6>
                             <div class="row g-2">
                                 <div class="col-md-5">
                                     <label class="form-label">Person 1</label>
@@ -242,7 +242,7 @@
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton)">
-                                        <i class="bi bi-plus"></i> Add
+                                        <OpenWishIcon Name="plus" /> Add
                                     </button>
                                 </div>
                             </div>
@@ -253,7 +253,7 @@
                 else
                 {
                     <button class="btn btn-outline-primary" @onclick="() => _showAddRule = true">
-                        <i class="bi bi-plus-circle"></i> Add Exclusion Rule
+                        <OpenWishIcon Name="plus-circle" /> Add exclusion rule
                     </button>
                 }
             }

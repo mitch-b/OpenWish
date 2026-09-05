@@ -5,7 +5,13 @@
 @inject IUserContextService UserContextService
 
 <div class="friend-requests">
-    <h4 class="mb-3">Friend Requests</h4>
+    <div class="social-heading">
+        <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
+        <div>
+            <h2>Friend requests</h2>
+            <p>Choose who joins your trusted circle.</p>
+        </div>
+    </div>
 
     @if (_loading)
     {
@@ -24,17 +30,17 @@
         <div class="list-group">
             @foreach (var request in _receivedRequests)
             {
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-person-circle me-2"></i>
-                        @request.Requester?.UserName
+                <div class="list-group-item request-row">
+                    <div class="request-identity">
+                        <span class="request-avatar"><OpenWishIcon Name="person-circle" /></span>
+                        <strong>@request.Requester?.UserName</strong>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary btn-sm" @onclick="() => AcceptRequest(request.Id)">
-                            <i class="bi bi-check"></i> Accept
+                            <OpenWishIcon Name="check" /> Accept
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" @onclick="() => RejectRequest(request.Id)">
-                            <i class="bi bi-x"></i> Reject
+                            <OpenWishIcon Name="x" /> Reject
                         </button>
                     </div>
                 </div>
@@ -50,18 +56,18 @@
             {
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <i class="bi bi-person-circle me-2"></i>
+                        <OpenWishIcon Name="person-circle" Class="me-2" />
                         @request.Receiver?.UserName
                     </div>
                     <div class="d-flex gap-2 align-items-center">
                         <span class="badge bg-secondary">Pending</span>
                         <div class="btn-group btn-group-sm" role="group" aria-label="Sent request actions">
                             <button class="btn btn-outline-secondary d-flex align-items-center gap-1" @onclick="() => ResendSentRequest(request.Id)" title="Resend invitation">
-                                <i class="bi bi-arrow-clockwise"></i>
+                                <OpenWishIcon Name="arrow-clockwise" />
                                 <span>Resend</span>
                             </button>
                             <button class="btn btn-outline-danger d-flex align-items-center gap-1" @onclick="() => CancelSentRequest(request.Id)" title="Cancel invitation">
-                                <i class="bi bi-trash"></i>
+                                <OpenWishIcon Name="trash" />
                                 <span>Cancel</span>
                             </button>
                         </div>

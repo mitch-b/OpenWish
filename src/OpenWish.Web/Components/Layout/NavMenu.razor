@@ -12,9 +12,10 @@
 
 <div class="top-row ps-3 navbar">
   <div class="container-fluid">
-    <a class="navbar-brand" href="">
-      <img src="images/openwish-color.svg" alt="OpenWish" class="openwishsvg" />
-      OpenWish</a>
+  <a class="navbar-brand" href="" aria-label="OpenWish home">
+    <span class="brand-mark"><img src="images/openwish-color.svg" alt="" class="openwishsvg" /></span>
+    <span>OpenWish</span>
+  </a>
   </div>
 </div>
 
@@ -24,7 +25,7 @@
   <nav class="nav flex-column">
     <div class="nav-item">
       <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-        <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+        <OpenWishIcon Name="house-door" /> <span>Home</span>
       </NavLink>
     </div>
 
@@ -32,12 +33,12 @@
       <Authorized>
         <div class="nav-item">
           <NavLink class="nav-link" href="wishlists">
-            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Wishlists
+            <OpenWishIcon Name="gift" /> <span>Wishlists</span>
           </NavLink>
         </div>
         <div class="nav-item">
           <NavLink class="nav-link" href="events">
-            <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Events
+            <OpenWishIcon Name="calendar-event" /> <span>Events</span>
             @if (_pendingInvitationCount > 0)
             {
               <span class="badge bg-warning text-dark ms-1">@_pendingInvitationCount</span>
@@ -46,12 +47,12 @@
         </div>
         <div class="nav-item">
           <NavLink class="nav-link" href="friends">
-            <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Friends
+            <OpenWishIcon Name="people" /> <span>Friends</span>
           </NavLink>
         </div>
         <div class="nav-item account-nav-item">
           <NavLink class="nav-link" href="Account/Manage">
-            <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+            <OpenWishIcon Name="person-circle" /> <span>@context.User.Identity?.Name</span>
           </NavLink>
         </div>
         <div class="nav-item">
@@ -59,7 +60,7 @@
             <AntiforgeryToken />
             <input type="hidden" name="ReturnUrl" value="@currentUrl" />
             <button type="submit" class="nav-link">
-              <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+              <OpenWishIcon Name="box-arrow-left" /> <span>Log out</span>
             </button>
           </form>
         </div>
@@ -67,12 +68,12 @@
       <NotAuthorized>
         <div class="nav-item">
           <NavLink class="nav-link" href="Account/Register">
-            <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+            <OpenWishIcon Name="person-plus" /> <span>Register</span>
           </NavLink>
         </div>
         <div class="nav-item">
           <NavLink class="nav-link" href="Account/Login">
-            <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+            <OpenWishIcon Name="person-circle" /> <span>Sign in</span>
           </NavLink>
         </div>
       </NotAuthorized>
@@ -80,7 +81,7 @@
 
     <div class="nav-footer mt-auto">
       <NavLink class="nav-link" href="whats-new">
-        <span class="bi bi-stars" aria-hidden="true"></span> What's new
+        <OpenWishIcon Name="stars" /> <span>What's new</span>
       </NavLink>
       <div class="nav-link theme-toggle-host">
         <ThemeToggle />

@@ -24,7 +24,7 @@
                             <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
                         </div>
                         <button class="btn btn-sm btn-outline-danger" @onclick="CancelReservation">
-                            <i class="bi bi-x-circle"></i> Cancel
+                            <OpenWishIcon Name="x-circle" /> Cancel
                         </button>
                     </div>
                 }
@@ -54,7 +54,7 @@
             </div>
             
             <button class="btn btn-success w-100" @onclick="ReserveItem">
-                <i class="bi bi-gift"></i> I'll Get This
+                <OpenWishIcon Name="gift" /> I'll Get This
             </button>
         }
     }

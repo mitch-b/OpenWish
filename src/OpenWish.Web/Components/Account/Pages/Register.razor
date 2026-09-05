@@ -21,15 +21,21 @@
 
 <PageTitle>Register</PageTitle>
 
-<h1>Register</h1>
-
-<div class="row">
+<div class="auth-page">
+<header class="auth-heading">
+    <span class="auth-mark"><OpenWishIcon Name="stars" /></span>
+    <div>
+        <h1>Create your account</h1>
+        <p>Start sharing better gift ideas and easier celebrations.</p>
+    </div>
+</header>
+<div class="row g-4 auth-grid">
     <div class="col-lg-6">
-        <StatusMessage Message="@Message" />
-        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+        <section class="auth-card">
+          <StatusMessage Message="@Message" />
+          <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
+            <h2>Your details</h2>
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
                 <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
@@ -47,15 +53,16 @@
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
+          </EditForm>
+        </section>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
+        <section class="auth-card auth-card-secondary">
+            <h2>Other sign-up options</h2>
             <ExternalLoginPicker />
         </section>
     </div>
+</div>
 </div>
 
 @code {

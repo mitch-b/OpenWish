@@ -39,12 +39,23 @@ quick even for larger groups.
 
 ![Guided Secret Santa setup with readiness checks](.docs/images/walkthrough/secret-santa-setup.png)
 
+Invite an entire group at once by pasting email addresses, or choose from
+existing friends. OpenWish keeps accepted and pending participants distinct so
+organizers always know who will be included in the draw.
+
+![Bulk invitation dialog for a Secret Santa event](.docs/images/walkthrough/invitation-dialog.png)
+
 OpenWish draws only from people who accepted, clearly identifies pending
 responses, and reveals each assignment privately. Participants can attach a
 wishlist in one step, open their match's ideas, and reserve a gift without
 spoiling the surprise.
 
 ![Gift exchange assignment, event details, participants, and attached wishlists](.docs/images/walkthrough/event-details.png)
+
+Organizers can update event details, manage invitations, review participant
+status, and connect wishlists from one workspace.
+
+![Event management workspace with participants and wishlists](.docs/images/walkthrough/event-management.png)
 
 ![Mobile Secret Santa assignment and shopping actions](.docs/images/walkthrough/secret-santa-mobile.png)
 
@@ -67,6 +78,11 @@ light/dark theme with automatic system preference detection and a persistent
 manual toggle.
 
 <img src=".docs/images/walkthrough/home-mobile.png" alt="OpenWish dashboard on a mobile screen" width="390">
+
+Dark mode keeps the same clear hierarchy and status visibility in lower-light
+environments.
+
+![OpenWish Secret Santa event in dark mode](.docs/images/walkthrough/event-details-dark.png)
 
 Account settings, release highlights on the **What's new** page, and
 authenticated access controls round out the hosted experience.

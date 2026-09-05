@@ -1,51 +1,36 @@
-/* Mobile responsive improvements */
-.empty-state {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border-muted);
-    border-radius: 1rem;
-    padding: 2rem;
-    text-align: center;
+.page-shell {
+    padding-top: 0.5rem;
 }
 
-@media (max-width: 767.98px) {
-    .mb-3.d-flex.justify-content-between {
-        flex-direction: column !important;
-        gap: 1rem;
-        align-items: stretch !important;
+.wishlist-toolbar {
+    margin: 1rem 0 1.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.9rem;
+    background: var(--color-surface);
+}
+
+.filter-cluster {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(11rem, auto) minmax(11rem, auto);
+    gap: 0.65rem;
+}
+
+.search-control {
+    min-width: 0;
+}
+
+.empty-state {
+    margin-top: 1rem;
+}
+
+@media (max-width: 959.98px) {
+    .filter-cluster {
+        grid-template-columns: 1fr;
     }
 
-    .mb-3.d-flex.justify-content-between > .d-flex {
-        flex-direction: column !important;
-        width: 100%;
-        gap: 0.75rem;
-    }
-
+    .form-select,
     .input-group {
         width: 100%;
-    }
-
-    .form-select {
-        width: 100% !important;
-    }
-
-    .nav-tabs {
-        flex-wrap: wrap;
-    }
-
-    .nav-tabs .nav-link {
-        font-size: 0.9rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    .nav-tabs .nav-link i {
-        display: none;
-    }
-
-    h2 {
-        font-size: 1.75rem;
-    }
-
-    .text-muted {
-        font-size: 0.9rem;
     }
 }

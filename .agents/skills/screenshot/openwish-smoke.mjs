@@ -94,6 +94,7 @@ async function visit(page, route, expectedText, visitedRoutes) {
 }
 
 async function screenshot(page, fileName) {
+  await page.waitForTimeout(500);
   await page.screenshot({
     path: path.join(walkthroughDirectory, fileName),
     fullPage: true
@@ -172,7 +173,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage Wishlist", visitedRoutes);
-  await assertVisible(page, "Who Can See This?");
+  await assertVisible(page, "Who can see this?");
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
@@ -204,10 +205,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Paste as many addresses as you need");
   await page.locator("#emailInput").fill("one@example.com, two@example.com");
   await assertVisible(page, "Send 2 invitations");
+  await screenshot(page, "invitation-dialog.png");
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
-  await assertVisible(page, "Manage Participants");
+  await assertVisible(page, "Participants");
+  await screenshot(page, "event-management.png");
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
   await assertVisible(page, "JordanDemo");
@@ -237,7 +240,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
-  await assertVisible(page, "Gift Exchange Management");
+  await assertVisible(page, "Assignments are ready");
   await screenshot(page, "event-details-dark.png");
 
   await visit(page, "/whats-new", "What's new", visitedRoutes);
@@ -284,6 +287,7 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   const visitedRoutes = [];
 
   await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
+  await screenshot(page, "login.png");
   await page.getByRole("button", { name: "Sign in as AlexDemo (organizer)" }).click();
   await assertVisible(page, "AlexDemo");
 
@@ -471,6 +475,10 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, "/", "Welcome Back!", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await screenshot(page, "home-mobile.png");
+  await page.locator(".navbar-toggler").check({ force: true });
+  await page.getByRole("link", { name: "Wishlists", exact: true }).waitFor({ state: "visible" });
+  await screenshot(page, "navigation-mobile.png");
+  await page.locator(".navbar-toggler").uncheck({ force: true });
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");

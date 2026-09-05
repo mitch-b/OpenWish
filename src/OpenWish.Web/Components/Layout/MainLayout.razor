@@ -6,10 +6,10 @@
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4 d-flex justify-content-end align-items-center">
-            <a href="https://github.com/mitch-b/OpenWish" target="_blank" rel="noopener noreferrer">
-                <img src="images/github.svg" alt="GitHub" class="github" />
+    <main class="app-main">
+        <div class="top-row">
+            <a class="utility-button" href="https://github.com/mitch-b/OpenWish" target="_blank" rel="noopener noreferrer" aria-label="OpenWish on GitHub">
+                <OpenWishIcon Name="github" />
             </a>
             <AuthorizeView>
                 <Authorized>
@@ -18,8 +18,10 @@
             </AuthorizeView>
         </div>
 
-        <article class="content px-4">
-            @Body
+        <article class="content">
+            <div class="content-frame">
+                @Body
+            </div>
         </article>
     </main>
 </div>
@@ -27,5 +29,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">&times;</span>
 </div>

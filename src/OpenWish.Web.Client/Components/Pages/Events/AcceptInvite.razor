@@ -82,11 +82,11 @@
                                             <p class="mb-0 text-muted">@_event.Description</p>
                                         }
                                         <div class="mt-2 small text-muted">
-                                            <i class="bi bi-calendar-event"></i>
+                                            <OpenWishIcon Name="calendar-event" />
                                             @_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")
                                         </div>
                                         <div class="small text-muted">
-                                            <i class="bi bi-person-circle"></i>
+                                            <OpenWishIcon Name="person-circle" />
                                             Hosted by @_event.CreatedBy?.UserName ?? _event.CreatedBy?.Email ?? "a friend"
                                         </div>
                                     </div>

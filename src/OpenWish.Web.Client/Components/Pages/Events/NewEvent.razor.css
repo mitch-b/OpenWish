@@ -1,51 +1,44 @@
-.event-header {
-    background: linear-gradient(135deg, var(--color-primary-bg) 0%, var(--color-link-hover) 100%);
-    color: var(--color-text);
-    padding: 2rem;
-    border-radius: 8px;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transition: background .25s ease, color .25s ease;
+.page-shell {
+    padding-top: 0.5rem;
 }
 
-.event-content {
+.step-indicator {
+    display: inline-flex;
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 0.78rem;
+    font-weight: 750;
+}
+
+.event-content,
+.add-item-section {
+    padding: 1.5rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
     background: var(--color-surface);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-    padding: 2rem;
-    transition: background-color .25s ease, color .25s ease;
+    box-shadow: var(--shadow-sm);
     color: var(--color-text);
-}
-
-.view-transition {
-    transition: all 0.3s ease-in-out;
 }
 
 .add-item-section {
-    background: var(--color-surface);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    padding: 1.5rem;
-    transition: background-color .25s ease, color .25s ease;
-    color: var(--color-text);
+    position: sticky;
+    top: 5.5rem;
 }
 
-/* Mobile responsive improvements */
+.add-item-section ol {
+    color: var(--color-text-muted);
+    line-height: 1.65;
+}
+
 @media (max-width: 767.98px) {
-    .event-header {
-        padding: 1.5rem 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .event-header h1 {
-        font-size: 1.75rem;
-    }
-
-    .event-content {
+    .event-content,
+    .add-item-section {
         padding: 1rem;
     }
 
     .add-item-section {
-        padding: 1rem;
+        position: static;
     }
 }

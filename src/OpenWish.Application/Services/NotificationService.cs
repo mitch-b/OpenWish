@@ -87,10 +87,11 @@ public class NotificationService(IDbContextFactory<ApplicationDbContext> context
         return _mapper.Map<NotificationModel>(notification);
     }
 
-    public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
+    public async Task<bool> MarkNotificationAsReadAsync(string notificationPublicId, string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var notification = await context.Notifications.FindAsync(notificationId);
+        var notification = await context.Notifications
+            .FirstOrDefaultAsync(item => item.PublicId == notificationPublicId && item.UserId == userId);
 
         if (notification == null || notification.Deleted)
         {
@@ -126,10 +127,14 @@ public class NotificationService(IDbContextFactory<ApplicationDbContext> context
         return true;
     }
 
-    public async Task<bool> DeleteNotificationAsync(int notificationId)
+    public async Task<bool> DeleteNotificationAsync(string notificationPublicId, string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var notification = await context.Notifications.FindAsync(notificationId);
+        var notification = await context.Notifications
+            .FirstOrDefaultAsync(item =>
+                item.PublicId == notificationPublicId &&
+                item.UserId == userId &&
+                !item.Deleted);
 
         if (notification == null)
         {

@@ -1,6 +1,7 @@
 ﻿@page "/Account/Register"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics.CodeAnalysis
 @using System.Text
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
@@ -33,17 +34,36 @@
     <div class="col-lg-6">
         <section class="auth-card">
           <StatusMessage Message="@Message" />
-          <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+          <EditForm Model="Input"
+                    asp-route-returnUrl="@ReturnUrl"
+                    asp-route-invite="@Invite"
+                    method="post"
+                    OnValidSubmit="RegisterUser"
+                    FormName="register">
             <DataAnnotationsValidator />
             <h2>Your details</h2>
             <ValidationSummary class="text-danger" role="alert" />
+            @if (_isInvitedRegistration)
+            {
+                <div class="mb-3">
+                    <label for="Input.Email" class="form-label">Email</label>
+                    <div id="Input.Email" class="form-control-plaintext">@Input.Email</div>
+                    <InputHidden @bind-Value="Input.Email" />
+                    <div class="form-text">
+                        Invitations are tied to the address they were sent to. To use another address, request a new invitation.
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus placeholder="name@example.com" />
+                    <label for="Input.Email">Email</label>
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+            }
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" autofocus="@_isInvitedRegistration" placeholder="password" />
                 <label for="Input.Password">Password</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
@@ -68,37 +88,50 @@
 @code {
     private IEnumerable<IdentityError>? identityErrors;
     private string? inviterUserId;
+    private bool _isInvitedRegistration;
+    private InputModel _input = new();
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm(FormName = "register")]
+    [AllowNull]
+    private InputModel Input
+    {
+        get => _input;
+        set => _input = value ?? new();
+    }
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
     
-    [SupplyParameterFromQuery]
-    private string? invite { get; set; }
+    [SupplyParameterFromQuery(Name = "invite")]
+    private string? Invite { get; set; }
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
     protected override void OnInitialized()
     {
         // Process invite parameter if present
-        if (!string.IsNullOrEmpty(invite))
+        if (!string.IsNullOrEmpty(Invite))
         {
             try
             {
                 // The invite parameter contains email|userId
-                var inviteData = Uri.UnescapeDataString(invite).Split('|');
-                if (inviteData.Length == 2)
+                var inviteData = Uri.UnescapeDataString(Invite).Split('|');
+                if (inviteData.Length == 2 &&
+                    !string.IsNullOrWhiteSpace(inviteData[0]) &&
+                    !string.IsNullOrWhiteSpace(inviteData[1]))
                 {
-                    Input.Email = inviteData[0]; // Pre-fill email field
-                    inviterUserId = inviteData[1]; // Store inviter user ID for friendship creation
+                    Input.Email = inviteData[0];
+                    inviterUserId = inviteData[1];
+                    _isInvitedRegistration = true;
+                }
+                else
+                {
+                    Logger.LogWarning("Invalid friend invitation parameter received.");
                 }
             }
-            catch
+            catch (UriFormatException ex)
             {
-                // If there's an error parsing the invite parameter, ignore it
-                Logger.LogWarning("Invalid invite parameter received: {Invite}", invite);
+                Logger.LogWarning(ex, "Invalid friend invitation parameter received.");
             }
         }
         

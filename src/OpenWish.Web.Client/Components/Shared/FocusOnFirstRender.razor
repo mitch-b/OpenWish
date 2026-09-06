@@ -1,0 +1,17 @@
+@inject IJSRuntime JSRuntime
+
+@code {
+    [Parameter, EditorRequired]
+    public string ElementId { get; set; } = string.Empty;
+
+    [Parameter]
+    public bool Enabled { get; set; } = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && Enabled)
+        {
+            await JSRuntime.InvokeVoidAsync("openWishFocusElement", ElementId);
+        }
+    }
+}

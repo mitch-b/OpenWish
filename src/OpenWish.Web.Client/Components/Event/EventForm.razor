@@ -1,4 +1,5 @@
 
+<FocusOnFirstRender ElementId="name" Enabled="@AutoFocusName" />
 <EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="EventForm">
     <DataAnnotationsValidator />
 
@@ -40,6 +41,7 @@
     <div class="mb-4">
         <label for="name" class="form-label fw-bold">Event Name</label>
         <InputText id="name" class="form-control form-control-lg"
+                   autofocus="@AutoFocusName"
                    placeholder="e.g. Family Secret Santa 2026" @bind-Value="@Model!.Name" />
         <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
     </div>
@@ -95,6 +97,7 @@
     [Parameter] public bool ShowValidationSummary { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
     [Parameter] public bool LockEventType { get; set; }
+    [Parameter] public bool AutoFocusName { get; set; }
 
     private bool _isEditMode => Model?.Id > 0;
 

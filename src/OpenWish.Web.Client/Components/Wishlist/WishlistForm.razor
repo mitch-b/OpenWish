@@ -1,22 +1,56 @@
 
 @if (Model is not null)
 {
+    <FocusOnFirstRender ElementId="name" Enabled="@AutoFocusName" />
     <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <div class="mb-3">
-            <label for="name" class="form-label">Name</label>
-            <InputText id="name" class="form-control" 
-            @bind-Value="@Model!.Name" />
+            <label for="name" class="form-label">Title</label>
+            <InputText id="name"
+                       class="form-control"
+                       autofocus="@AutoFocusName"
+                       @bind-Value="@Model!.Name" />
             <ValidationMessage For="@(() => Model.Name)" />
         </div>
 
-        <div class="mb-3">
-            <label for="icon" class="form-label">Icon (emoji or single character)</label>
-            <InputText id="icon" class="form-control" maxlength="1" placeholder="Optional emoji"
-            @bind-Value="@Model!.Icon" />
-            <div class="form-text">Choose an emoji or letter to represent your wishlist (optional)</div>
+        <div class="mb-3 wishlist-icon-field">
+            <label class="form-label">Icon <span class="text-muted fw-normal">(optional)</span></label>
+            <InputHidden @bind-Value="@Model!.Icon" />
+            <div class="wishlist-icon-controls">
+                <button type="button"
+                        class="wishlist-icon-trigger"
+                        aria-expanded="@_showIconPicker"
+                        aria-controls="wishlist-icon-picker"
+                        @onclick="ToggleIconPicker">
+                    <span class="wishlist-icon-preview" aria-hidden="true">@(Model.Icon ?? "＋")</span>
+                    <span>@(Model.Icon is null ? "Choose an icon" : "Change icon")</span>
+                </button>
+                @if (Model.Icon is not null)
+                {
+                    <button type="button" class="btn btn-link wishlist-icon-clear" @onclick="ClearIcon">
+                        Clear
+                    </button>
+                }
+            </div>
+            @if (_showIconPicker)
+            {
+                <div id="wishlist-icon-picker" class="wishlist-icon-picker" role="group" aria-label="Choose a wishlist icon">
+                    @foreach (var option in IconOptions)
+                    {
+                        <button type="button"
+                                class="wishlist-icon-option @(Model.Icon == option.Value ? "selected" : null)"
+                                aria-label="@option.Label"
+                                aria-pressed="@(Model.Icon == option.Value)"
+                                title="@option.Label"
+                                @onclick="() => SelectIcon(option.Value)">
+                            @option.Value
+                        </button>
+                    }
+                </div>
+            }
+            <div class="form-text">Choose a symbol that makes this list easy to spot.</div>
             <ValidationMessage For="@(() => Model.Icon)" />
         </div>
 
@@ -107,6 +141,43 @@ else
     [Parameter] public WishlistModel? Model { get; set; }
     [Parameter] public EventCallback<WishlistModel> OnSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool AutoFocusName { get; set; }
+
+    private static readonly (string Value, string Label)[] IconOptions =
+    [
+        ("🎁", "Wrapped gift"),
+        ("✨", "Sparkles"),
+        ("⭐", "Star"),
+        ("❤️", "Heart"),
+        ("🎂", "Birthday cake"),
+        ("🎄", "Christmas tree"),
+        ("🏠", "Home"),
+        ("✈️", "Travel"),
+        ("📚", "Books"),
+        ("🎮", "Games"),
+        ("🎵", "Music"),
+        ("🏕️", "Outdoors"),
+        ("🍳", "Cooking"),
+        ("👕", "Clothing"),
+        ("🧸", "Toys"),
+        ("💡", "Ideas")
+    ];
+
+    private bool _showIconPicker;
+
+    private void ToggleIconPicker() => _showIconPicker = !_showIconPicker;
+
+    private void SelectIcon(string icon)
+    {
+        Model!.Icon = icon;
+        _showIconPicker = false;
+    }
+
+    private void ClearIcon()
+    {
+        Model!.Icon = null;
+        _showIconPicker = false;
+    }
 
     private void SetVisibility(bool isPrivate, bool isFriendsOnly)
     {

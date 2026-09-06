@@ -3,12 +3,18 @@
 @inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 
+<FocusOnFirstRender ElementId="product-url-import" Enabled="@AutoFocusImport" />
 <div class="url-import-section mb-4">
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Import from URL</h5>
             <div class="input-group">
-                <InputText class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
+                <InputText id="product-url-import"
+                           class="form-control"
+                           autofocus="@AutoFocusImport"
+                           placeholder="Paste a product URL"
+                           @bind-Value="@ImportUrl"
+                           @onopenwishpaste="HandleUrlPaste" />
                 <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
                     @if (isLoading)
                     {
@@ -94,6 +100,7 @@
     [Parameter] public WishlistItemModel Model { get; set; } = new();
     [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
+    [Parameter] public bool AutoFocusImport { get; set; }
 
     private bool isLoading;
     private string ImportUrl { get; set; } = string.Empty;

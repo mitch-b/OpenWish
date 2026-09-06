@@ -204,6 +204,21 @@ else
         {
             RedirectManager.RedirectTo("Account/Lockout");
         }
+        else if (result.IsNotAllowed)
+        {
+            var linkedUser = await UserManager.FindByLoginAsync(
+                externalLoginInfo.LoginProvider,
+                externalLoginInfo.ProviderKey);
+            if (linkedUser is not null)
+            {
+                await CompleteExternalSignInAsync(linkedUser);
+            }
+
+            RedirectManager.RedirectToWithStatus(
+                "Account/Login",
+                "This account is not allowed to sign in.",
+                HttpContext);
+        }
 
         if (!string.IsNullOrEmpty(providerEmail))
         {
@@ -252,15 +267,7 @@ else
             if (result.Succeeded)
             {
                 Logger.LogInformation("User created an account using {Name} provider.", externalLoginInfo.LoginProvider);
-
-                var userId = await UserManager.GetUserIdAsync(user);
-                var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
-                code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-
-                var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-                    BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-                    new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-                await EmailSender.SendConfirmationLinkAsync(user, email, callbackUrl);
+                await SendConfirmationLinkAsync(user, email);
 
                 // If account confirmation is required, we need to show the link if we don't have a real email sender
                 if (UserManager.Options.SignIn.RequireConfirmedAccount)
@@ -313,9 +320,7 @@ else
             login.LoginProvider == externalLoginInfo.LoginProvider &&
             login.ProviderKey == externalLoginInfo.ProviderKey))
         {
-            await SignInManager.UpdateExternalAuthenticationTokensAsync(externalLoginInfo);
-            await SignInManager.SignInAsync(user, isPersistent: false, externalLoginInfo.LoginProvider);
-            RedirectManager.RedirectTo(ReturnUrl);
+            await CompleteExternalSignInAsync(user);
             return;
         }
 
@@ -327,9 +332,55 @@ else
             return;
         }
 
-        await SignInManager.UpdateExternalAuthenticationTokensAsync(externalLoginInfo);
-        await SignInManager.SignInAsync(user, isPersistent: false, externalLoginInfo.LoginProvider);
+        await CompleteExternalSignInAsync(user);
+    }
+
+    private async Task CompleteExternalSignInAsync(ApplicationUser user)
+    {
+        if (UserManager.SupportsUserLockout && await UserManager.IsLockedOutAsync(user))
+        {
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+
+        if (!await SignInManager.CanSignInAsync(user))
+        {
+            var email = await UserManager.GetEmailAsync(user);
+            if (UserManager.Options.SignIn.RequireConfirmedAccount &&
+                !string.IsNullOrWhiteSpace(email) &&
+                !await UserManager.IsEmailConfirmedAsync(user))
+            {
+                await SendConfirmationLinkAsync(user, email);
+                RedirectManager.RedirectTo(
+                    "Account/RegisterConfirmation",
+                    new() { ["email"] = email, ["returnUrl"] = ReturnUrl });
+            }
+
+            RedirectManager.RedirectToWithStatus(
+                "Account/Login",
+                "This account is not allowed to sign in.",
+                HttpContext);
+        }
+
+        await SignInManager.UpdateExternalAuthenticationTokensAsync(externalLoginInfo!);
+        await SignInManager.SignInAsync(user, isPersistent: false, externalLoginInfo!.LoginProvider);
         RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private async Task SendConfirmationLinkAsync(ApplicationUser user, string email)
+    {
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?>
+            {
+                ["userId"] = userId,
+                ["code"] = code,
+                ["returnUrl"] = ReturnUrl
+            });
+        await EmailSender.SendConfirmationLinkAsync(user, email, callbackUrl);
     }
 
     private ApplicationUser CreateUser()

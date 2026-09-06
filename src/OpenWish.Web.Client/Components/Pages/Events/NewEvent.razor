@@ -27,7 +27,10 @@
             {
                 <div class="alert alert-danger" role="alert">@_errorMessage</div>
             }
-            <EventForm Model="@_event" OnSubmit="@HandleSubmit" IsSubmitting="@_isSubmitting" />
+            <EventForm Model="@_event"
+                       OnSubmit="@HandleSubmit"
+                       IsSubmitting="@_isSubmitting"
+                       AutoFocusName="true" />
         </div>
     </div>
     <div class="col-md-4">

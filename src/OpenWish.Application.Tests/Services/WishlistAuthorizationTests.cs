@@ -37,7 +37,11 @@ public class WishlistAuthorizationTests
             await context.SaveChangesAsync();
         }
 
-        var service = new WishlistService(factory, _mapper, new NoOpActivityService());
+        var service = new WishlistService(
+            factory,
+            _mapper,
+            new NoOpActivityService(),
+            NullLogger<WishlistService>.Instance);
 
         var canEdit = await service.CanUserEditWishlistAsync(1, "collaborator");
 
@@ -55,7 +59,11 @@ public class WishlistAuthorizationTests
             await context.SaveChangesAsync();
         }
 
-        var service = new WishlistService(factory, _mapper, new NoOpActivityService());
+        var service = new WishlistService(
+            factory,
+            _mapper,
+            new NoOpActivityService(),
+            NullLogger<WishlistService>.Instance);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             service.UpdateWishlistByPublicIdAsync(

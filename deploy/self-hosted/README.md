@@ -30,7 +30,8 @@ OPENWISH_ENV_FILE=/opt/openwish/.env \
   /home/your-user/src/OpenWish/deploy/self-hosted/maintain.sh
 ```
 
-With no argument, `update` is implied. This makes the script suitable for a
+With no argument, `all` is implied. The `update` argument is retained as an
+alias. This makes the script suitable for a
 root cron job or systemd timer. It uses `git pull --ff-only`; local source
 changes or divergent history stop the deployment rather than being discarded.
 
@@ -56,6 +57,8 @@ failure.
 ./maintain.sh backup
 ./maintain.sh deploy
 ./maintain.sh pull
+./maintain.sh all
+./maintain.sh update
 ./maintain.sh status
 ./maintain.sh logs
 ./maintain.sh logs web

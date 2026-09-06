@@ -246,7 +246,8 @@ usage() {
 Usage: $0 [COMMAND]
 
 Commands:
-  update             Back up, pull source and images, deploy, and verify (default)
+  all                Back up, pull source and images, deploy, and verify (default)
+  update             Alias for all
   deploy             Sync Compose, start services, and verify
   backup             Create a PostgreSQL backup archive
   restore FILE       Replace the database from a backup archive
@@ -259,14 +260,14 @@ EOF
 }
 
 main() {
-    local command="${1:-update}"
+    local command="${1:-all}"
 
     mkdir -p "$OPENWISH_DEPLOY_DIR"
     require_command docker
     docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is required."
 
     case "$command" in
-        update)
+        all|update)
             require_command curl
             update
             ;;

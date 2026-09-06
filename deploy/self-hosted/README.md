@@ -67,7 +67,7 @@ List services or follow logs:
 Restore a backup:
 
 ```bash
-./maintain.sh restore ./backups/openwish-YYYYMMDDTHHMMSSZ.dump
+./maintain.sh restore ./backups/openwish-YYYYMMDDTHHMMSSZ-PID.dump
 ```
 
 Restore requires typing `RESTORE`, creates another backup first, and stops the

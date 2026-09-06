@@ -52,6 +52,7 @@ wait_for_database() {
 
     printf 'Waiting for PostgreSQL'
     while (( attempts > 0 )); do
+        # shellcheck disable=SC2016 # Expand PostgreSQL variables inside the container.
         if compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
             printf ' ready\n'
             return
@@ -70,23 +71,28 @@ backup() {
     database_is_running || fail "The database service is not running."
     directory="$(backup_directory)"
     timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    backup_file="${directory}/openwish-${timestamp}.dump"
+    backup_file="${directory}/openwish-${timestamp}-${BASHPID}.dump"
     temporary_file="${backup_file}.tmp"
     retention_days="$(env_value BACKUP_RETENTION_DAYS 30)"
     [[ "$retention_days" =~ ^[0-9]+$ ]] || fail "BACKUP_RETENTION_DAYS must be a non-negative integer."
 
     mkdir -p "$directory"
     chmod 700 "$directory"
-    trap 'rm -f -- "$temporary_file"' RETURN
 
     printf 'Backing up PostgreSQL to %s\n' "$backup_file"
-    compose exec -T db sh -c \
+    # shellcheck disable=SC2016 # Expand PostgreSQL variables inside the container.
+    if ! compose exec -T db sh -c \
         'pg_dump --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --format=custom --no-owner --no-privileges' \
-        > "$temporary_file"
-    [[ -s "$temporary_file" ]] || fail "PostgreSQL produced an empty backup."
+        > "$temporary_file"; then
+        rm -f -- "$temporary_file"
+        fail "PostgreSQL backup failed."
+    fi
+    if [[ ! -s "$temporary_file" ]]; then
+        rm -f -- "$temporary_file"
+        fail "PostgreSQL produced an empty backup."
+    fi
     chmod 600 "$temporary_file"
     mv -- "$temporary_file" "$backup_file"
-    trap - RETURN
 
     if (( retention_days > 0 )); then
         find "$directory" -maxdepth 1 -type f -name 'openwish-*.dump' \
@@ -132,12 +138,14 @@ restore() {
 
     backup
     compose stop web
-    trap 'compose up --detach web >/dev/null' RETURN
-    compose exec -T db sh -c \
+    # shellcheck disable=SC2016 # Expand PostgreSQL variables inside the container.
+    if ! compose exec -T db sh -c \
         'pg_restore --clean --if-exists --username="$POSTGRES_USER" --dbname="$POSTGRES_DB" --no-owner --no-privileges' \
-        < "$backup_file"
+        < "$backup_file"; then
+        compose up --detach web
+        fail "Database restore failed; the web service was restarted."
+    fi
     compose up --detach web
-    trap - RETURN
     printf 'Restore complete.\n'
 }
 

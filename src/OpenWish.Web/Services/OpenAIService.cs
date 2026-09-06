@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+
 namespace OpenWish.Web.Services;
 
 public interface IOpenAIService
@@ -52,9 +54,21 @@ public class OpenAIService : IOpenAIService
         var response = await _httpClient.PostAsJsonAsync("chat/completions", requestBody);
         response.EnsureSuccessStatusCode();
 
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var chatResponse = await response.Content.ReadFromJsonAsync<ChatResponse>()
+            ?? throw new InvalidOperationException("Received a null response from the OpenAI API.");
 
-        return responseContent;
+        if (chatResponse.Choices is null || chatResponse.Choices.Count == 0)
+        {
+            throw new InvalidOperationException("OpenAI API response contained no choices.");
+        }
+
+        var content = chatResponse.Choices[0].Message?.Content;
+        if (string.IsNullOrEmpty(content))
+        {
+            throw new InvalidOperationException("OpenAI API response message content was empty or null.");
+        }
+
+        return content;
     }
 }
 

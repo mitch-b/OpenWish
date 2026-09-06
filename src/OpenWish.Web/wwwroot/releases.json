@@ -12,6 +12,10 @@
       "An isolated agent-managed environment can be promoted without changing the developer's Aspire data or ports.",
       "Private social, event, notification, activity, and reservation data is now protected by stricter authorization and privacy controls.",
       "Self-hosted deployments now include safer login, proxy, browser, email, and product-link defaults.",
+      "Google sign-in now recovers unconfirmed linked accounts through email confirmation instead of asking users to link again.",
+      "Notification deletion now updates immediately and reports failures instead of closing without feedback.",
+      "Creation forms now focus their first useful field, and wishlists include a compact icon picker.",
+      "Invitation registration now clearly keeps the email address that received the invitation.",
       "Wishlist collaboration actions now consistently use the signed-in user's identity.",
       "Local time formatting is safer and accurate across partial-hour time zones."
     ]

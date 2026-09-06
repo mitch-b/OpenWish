@@ -5,6 +5,7 @@
 
 @if (IsVisible)
 {
+    <FocusOnFirstRender ElementId="product-url-import-modal" />
     <div class="modal-backdrop" @onclick="Cancel"></div>
     <div class="modal-dialog-container" @onclick:stopPropagation="true">
         <div class="modal-content">
@@ -35,7 +36,7 @@
                 <div class="url-import-section mb-4">
                     <label class="form-label">Quick Import from URL</label>
                     <div class="input-group">
-                        <InputText class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
+                        <InputText id="product-url-import-modal" class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
                         <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
                             @if (isLoading)
                             {

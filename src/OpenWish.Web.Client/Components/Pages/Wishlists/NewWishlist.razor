@@ -21,7 +21,10 @@
 
 <div class="card">
     <div class="card-body">
-        <WishlistForm Model="@_wishlist" OnSubmit="@HandleSubmit" OnCancel="@HandleCancel" />
+        <WishlistForm Model="@_wishlist"
+                      OnSubmit="@HandleSubmit"
+                      OnCancel="@HandleCancel"
+                      AutoFocusName="true" />
     </div>
 </div>
 

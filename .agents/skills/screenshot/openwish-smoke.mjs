@@ -191,9 +191,29 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "wishlist-details.png");
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
+  await page.waitForTimeout(2000);
+  if (await page.evaluate(() => document.activeElement?.id) !== "name") {
+    throw new Error("The wishlist title field did not retain focus after interactivity started.");
+  }
+  await page.getByRole("button", { name: "Choose an icon" }).click();
+  await screenshot(page, "create-wishlist.png");
+  await page.getByRole("button", { name: "Wrapped gift" }).click();
+  await page.locator("#name").fill("Emoji Test Wishlist");
+  await page.getByRole("button", { name: "Create Wishlist" }).click();
+  await page.waitForURL(`${baseUrl}/wishlists`);
+  const createdWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
+  const createdWishlists = await createdWishlistsResponse.json();
+  const emojiWishlist = createdWishlists.find(wishlist => wishlist.name === "Emoji Test Wishlist");
+  if (emojiWishlist?.icon !== "🎁") {
+    throw new Error("The selected wishlist emoji was not persisted.");
+  }
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage Wishlist", visitedRoutes);
   await assertVisible(page, "Who can see this?");
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
+  await page.waitForTimeout(2000);
+  if (await page.evaluate(() => document.activeElement?.getAttribute("placeholder")) !== "Paste a product URL") {
+    throw new Error("The product URL field did not retain focus after interactivity started.");
+  }
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
@@ -209,6 +229,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "event-details.png");
 
   await visit(page, "/events/new", "Create a Secret Santa", visitedRoutes);
+  await page.waitForTimeout(2000);
+  if (await page.evaluate(() => document.activeElement?.id) !== "name") {
+    throw new Error("The event name field did not retain focus after interactivity started.");
+  }
   const secretSantaOption = page.getByRole("button", { name: /Secret Santa/ });
   if (!(await secretSantaOption.getAttribute("class"))?.includes("event-type-option-selected")) {
     throw new Error("Secret Santa was not the default event type.");
@@ -251,6 +275,22 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Event invitation");
   await assertVisible(page, "Wishlist activity");
   await screenshot(page, "notifications.png");
+  const notificationCountBeforeDelete = await page.locator(".notification-item").count();
+  const notificationToDelete = page.locator(".notification-item").first();
+  await notificationToDelete.getByRole("button", { name: "Delete notification" }).click();
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.waitForFunction(
+    expectedCount => document.querySelectorAll(".notification-item").length === expectedCount,
+    notificationCountBeforeDelete - 1
+  );
+  const notificationsAfterDeleteResponse = await context.request.get(
+    `${baseUrl}/api/notifications?includeRead=true`
+  );
+  const notificationsAfterDelete = await notificationsAfterDeleteResponse.json();
+  if (notificationsAfterDelete.length !== notifications.length - 1 ||
+      notificationsAfterDelete.some(notification => notification.publicId === notificationPublicId)) {
+    throw new Error("Deleted notification remained available from the API.");
+  }
   await page.getByRole("button", { name: "Close notifications" }).click();
 
   await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {
@@ -323,7 +363,30 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
 
+  const invite = encodeURIComponent("invited@example.com|inviter-id");
+  await visit(page, `/Account/Register?invite=${invite}`, "Invitations are tied to the address", visitedRoutes);
+  await assertVisible(page, "invited@example.com");
+  const invitedEmailInput = page.locator('input[name="Input.Email"]');
+  if (await invitedEmailInput.getAttribute("type") !== "hidden") {
+    throw new Error("Invited registration exposed an editable email field.");
+  }
+  if (await page.evaluate(() => document.activeElement?.id) !== "Input.Password") {
+    throw new Error("Invited registration did not focus the first editable field.");
+  }
+  await screenshot(page, "invited-registration.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 600 },
+    { width: 1024, height: 700 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "invited-registration-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 900 });
+
   await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
+  if (await page.evaluate(() => document.activeElement?.id) !== "Input.Email") {
+    throw new Error("Login did not focus the first editable field.");
+  }
   await screenshot(page, "login.png");
   await page.getByRole("button", { name: "Sign in as AlexDemo (organizer)" }).click();
   await assertVisible(page, "AlexDemo");

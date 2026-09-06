@@ -6,6 +6,7 @@
 @inject IEventService EventService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILogger<NotificationFlyout> Logger
 @rendermode InteractiveServer
 
 <div class="notification-flyout-container position-relative">
@@ -45,6 +46,12 @@
             </div>
 
             <div class="notification-content">
+                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                {
+                    <div class="alert alert-danger notification-error" role="alert">
+                        @_errorMessage
+                    </div>
+                }
                 @if (_isLoading)
                 {
                     <div class="text-center p-4">
@@ -143,10 +150,16 @@
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title">Delete Notification</h6>
+                    <h6 class="modal-title">Delete notification</h6>
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">Are you sure you want to delete this notification?</p>
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0" role="alert">
+                            @_errorMessage
+                        </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" @onclick="CancelDelete">Cancel</button>
@@ -169,6 +182,7 @@
     private bool _isDeleting = false;
     private bool _showDeleteConfirmation = false;
     private bool _isMarkingRead = false;
+    private string? _errorMessage;
     private int _unreadCount = 0;
     private string? _userId;
     private IEnumerable<NotificationModel>? _notifications;
@@ -193,8 +207,9 @@
                 _unreadCount = await NotificationService.GetUnreadNotificationCountAsync(_userId);
                 StateHasChanged();
             }
-            catch
+            catch (InvalidOperationException ex)
             {
+                Logger.LogError(ex, "Unable to load the notification count for user {UserId}.", _userId);
                 _unreadCount = 0;
             }
         }
@@ -209,8 +224,10 @@
             {
                 _notifications = await NotificationService.GetUserNotificationsAsync(_userId, includeRead: true);
             }
-            catch
+            catch (InvalidOperationException ex)
             {
+                Logger.LogError(ex, "Unable to load notifications for user {UserId}.", _userId);
+                _errorMessage = "Notifications could not be loaded. Refresh the page and try again.";
                 _notifications = new List<NotificationModel>();
             }
             finally
@@ -312,6 +329,7 @@
 
     private void ShowDeleteConfirmation(NotificationModel notification)
     {
+        _errorMessage = null;
         _notificationToDelete = notification;
         _showDeleteConfirmation = true;
         StateHasChanged();
@@ -326,31 +344,32 @@
 
     private async Task ConfirmDelete()
     {
-        if (_notificationToDelete != null)
+        if (_notificationToDelete is null || _userId is null || _isDeleting)
         {
-            _isDeleting = true;
-            var notificationIdToDelete = _notificationToDelete.PublicId;
-            try
-            {
-                var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete, _userId!);
-                if (success)
-                {
-                    _notifications = _notifications?.Where(n => n.PublicId != notificationIdToDelete).ToList();
-                    await LoadNotificationCount();
-                }
-            }
-            catch
-            {
-                // Handle gracefully
-            }
-            finally
-            {
-                _isDeleting = false;
-                _showDeleteConfirmation = false;
-                _notificationToDelete = null;
-                StateHasChanged();
-            }
+            return;
         }
+
+        _isDeleting = true;
+        _errorMessage = null;
+        var notificationIdToDelete = _notificationToDelete.PublicId;
+
+        var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete, _userId);
+        if (!success)
+        {
+            _isDeleting = false;
+            _errorMessage = "This notification could not be deleted. Refresh the page and try again.";
+            Logger.LogWarning(
+                "Notification {NotificationPublicId} could not be deleted for user {UserId}.",
+                notificationIdToDelete,
+                _userId);
+            return;
+        }
+
+        _notifications = _notifications?.Where(n => n.PublicId != notificationIdToDelete).ToList();
+        await LoadNotificationCount();
+        _isDeleting = false;
+        _showDeleteConfirmation = false;
+        _notificationToDelete = null;
     }
 
     private bool IsNotificationProcessing(int notificationId) => _notificationsInFlight.Contains(notificationId);

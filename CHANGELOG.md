@@ -27,6 +27,12 @@ All notable user-facing changes to OpenWish are documented here.
 - Self-hosted deployments now default to trusted proxy configuration, secure
   production cookies, browser security headers, login lockout, and abuse
   limits for invitation and product-scraping endpoints.
+- Google sign-in now sends unconfirmed linked accounts back through email
+  confirmation instead of repeatedly asking them to link the same account.
+- Notification deletion now updates immediately and reports failures instead
+  of closing without feedback.
+- Creation forms now focus their first useful field, and wishlists use a
+  compact, accessible icon picker instead of a full-width emoji input.
 - Product metadata scraping validates every redirect and connection address,
   blocks private networks, and limits response size.
 - Core page headings and actions use a shared layout for more consistent
@@ -47,6 +53,8 @@ All notable user-facing changes to OpenWish are documented here.
   membership.
 - User-supplied links and email content are validated or encoded to prevent
   unsafe navigation and injected markup.
+- Invitation registration now clearly shows that the invited email address is
+  fixed and requires a new invitation to use another address.
 - Wishlist mutations and collaboration actions now derive the acting user
   from the authenticated session instead of accepting a caller-supplied
   identity.

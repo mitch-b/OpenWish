@@ -70,6 +70,10 @@
     overflow-y: auto;
 }
 
+.notification-error {
+    margin: 0.75rem;
+}
+
 .notification-list {
     background: var(--color-surface);
 }

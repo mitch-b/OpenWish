@@ -18,6 +18,8 @@ docker-compose.*.yml
 
 .idea
 
+*.lscache
+
 # User-specific files
 *.rsuser
 *.suo

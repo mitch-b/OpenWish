@@ -1,0 +1,59 @@
+name: openwish
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:18}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-OpenWish}
+      POSTGRES_USER: ${POSTGRES_USER:-openwish}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - openwish-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 1m
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  web:
+    image: ${OPENWISH_IMAGE:-ghcr.io/mitch-b/openwish-web:latest}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TZ: ${TZ:-UTC}
+      ConnectionStrings__OpenWish: Host=db;Port=5432;Database=${POSTGRES_DB:-OpenWish};Username=${POSTGRES_USER:-openwish};******
+      OpenWishSettings__BaseUri: ${OPENWISH_BASE_URI:?Set OPENWISH_BASE_URI in .env}
+      OpenWishSettings__OwnDatabaseUpgrades: "true"
+      OpenWishSettings__EnableDevelopmentLogin: "false"
+      OpenWishSettings__EmailConfig__SmtpHost: ${SMTP_HOST:-}
+      OpenWishSettings__EmailConfig__SmtpPort: ${SMTP_PORT:-587}
+      OpenWishSettings__EmailConfig__SmtpUser: ${SMTP_USER:-}
+      OpenWishSettings__EmailConfig__SmtpPass: ${SMTP_PASSWORD:-}
+      OpenWishSettings__EmailConfig__SmtpFrom: ${SMTP_FROM:-}
+      OpenWishSettings__OpenAI__ApiKey: ${OPENAI_API_KEY:-}
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      ForwardedHeaders__KnownProxies__0: ${TRUSTED_PROXY_IP:-}
+      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
+    ports:
+      - "${OPENWISH_BIND_ADDRESS:-127.0.0.1}:${OPENWISH_PORT:-5001}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  openwish-db:

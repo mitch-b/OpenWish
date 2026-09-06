@@ -5,10 +5,10 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    animation: fadeIn 0.2s ease-in;
-    backdrop-filter: blur(2px);
+    background-color: rgba(13, 15, 26, 0.62);
+    z-index: 1060;
+    animation: fadeIn 0.16s ease-in;
+    backdrop-filter: blur(8px);
 }
 
 .dialog-container.show {
@@ -21,13 +21,13 @@
     background: var(--color-surface);
     color: var(--color-text);
     border: 1px solid var(--color-border-muted);
-    border-radius: 6px;
-    padding: 1rem;
+    border-radius: 1.1rem;
+    padding: 1.25rem;
     min-width: 300px;
     max-width: 90%;
     max-height: 90vh;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.35);
-    animation: slideIn 0.2s ease-out;
+    box-shadow: var(--shadow-lg);
+    animation: slideIn 0.18s ease-out;
     transition: background-color .25s ease, color .25s ease, border-color .25s ease;
 }
 
@@ -36,6 +36,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border-muted);
 }
 
 .close-button {
@@ -46,7 +48,7 @@
     padding: 0.25rem;
     color: var(--color-text);
     transition: color .2s ease, background-color .2s ease;
-    border-radius: 4px;
+    border-radius: 0.6rem;
 }
 
 .close-button:hover {
@@ -60,7 +62,7 @@
 }
 
 @keyframes slideIn {
-    from { transform: translateY(-10%); }
+    from { transform: translateY(0.75rem) scale(.98); opacity: 0; }
     to { transform: translateY(0); }
 }
 

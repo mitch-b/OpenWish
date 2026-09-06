@@ -26,6 +26,52 @@ dotnet user-secrets set Parameters:sqlPassword "D0 not use this in prod!"
 
 The secret will be passed into `OpenWish.Web` automatically (well, from Aspire).
 
+## Optional Google login
+
+Create an OAuth 2.0 Client ID for a Web application in Google Cloud, then add
+the OpenWish callback URL as an authorized redirect URI. Use the HTTPS
+`openwish-web` endpoint shown by the Aspire dashboard followed by
+`/signin-google`; with the committed local launch profile, this is:
+
+```text
+https://localhost:7054/signin-google
+```
+
+Store the client credentials in the AppHost user-secrets store:
+
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set "Authentication:Google:ClientId" "<google-client-id>"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "<google-client-secret>"
+```
+
+The AppHost forwards both values to `OpenWish.Web`. Google login remains
+disabled when either value is missing. Restart the AppHost after changing
+these secrets.
+
+## Optional OpenTelemetry export
+
+OpenWish records ASP.NET Core and outbound HTTP traces plus runtime, ASP.NET
+Core, and HTTP client metrics. Export is disabled unless an OTLP endpoint is
+configured. To send traces and metrics to separate OTLP/HTTP receivers in a
+local observability stack, pass the standard OpenTelemetry settings to the
+AppHost:
+
+```bash
+cd src
+dotnet run --project OpenWish.AppHost -- \
+  --OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:4318/v1/traces \
+  --OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics \
+  --OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=http/protobuf \
+  --OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf
+```
+
+Either signal can be configured independently. `OTEL_EXPORTER_OTLP_ENDPOINT`
+remains supported when one collector endpoint handles traces, metrics, and
+logs. Docker-based runs can provide the same variables through their
+environment. The agent Compose stack maps `host.docker.internal` to the Docker
+host so it can reach a collector running there.
+
 ## EntityFramework Core Changes
 
 The EFCore context is found in the [OpenWish.Data](./src/OpenWish.Data) project as a reference, but the [OpenWish.Web](./src/OpenWish.Web) project owns running the Migrations on Startup. 
@@ -94,3 +140,83 @@ docker run --rm \
   -p 8080:80 \
   openwishlocal:$TAG_NAME
 ```
+
+## Automated verification
+
+Run the complete local gate from the repository root:
+
+```bash
+cd src
+dotnet format --verify-no-changes
+dotnet build
+dotnet test
+cd ..
+scripts/verify-e2e.sh
+```
+
+The E2E script creates an isolated PostgreSQL and OpenWish stack with a unique
+Compose project name, enables synthetic login and fixtures only in that
+Development environment, and runs the committed Playwright journey. It
+verifies the owner, guest, and friend perspectives across every main route,
+including authorization boundaries, gift assignments, reservations,
+notifications, account settings, theme persistence, and mobile rendering.
+Machine-readable results are written to `.docs/images/verification/`, and the
+README walkthrough is regenerated under `.docs/images/walkthrough/`.
+
+See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
+pull-request evidence, and release assets belong.
+
+## Isolated agent environment
+
+The agent-managed environment is separate from the Aspire development
+resources. By default, it uses Compose project `openwish-agent`, web port
+`9090`, PostgreSQL port `55433`, database `OpenWishAgent`, and its own persistent
+volume. It does not connect to or update the PostgreSQL container, network,
+volume, or web port used by `OpenWish.AppHost`.
+
+Copy `.env.agent.example` to `.env.agent` to change those local-only defaults.
+The file is ignored so credentials and machine-specific ports are not
+committed.
+
+```bash
+# Verify the candidate, then promote it to http://localhost:9090.
+scripts/agent-environment.sh deploy
+
+# Inspect the isolated environment.
+scripts/agent-environment.sh status
+scripts/agent-environment.sh logs
+
+# Explicitly restore the deterministic demo personas and fixtures.
+scripts/agent-environment.sh seed
+
+# Stop containers without removing agent data.
+scripts/agent-environment.sh stop
+
+# Explicitly remove the isolated database volume and containers.
+scripts/agent-environment.sh reset
+```
+
+Deployment is lock-protected. It first runs the ephemeral E2E gate, builds a
+candidate image, and updates only the agent Compose project after verification
+succeeds. A new environment receives the same synthetic owner, guest, friend,
+wishlist, event, and collaboration data used by the browser suite. Later
+deployments preserve local testing changes; `seed` is the explicit destructive
+fixture reset. A failed verification leaves the running environment unchanged,
+and a failed post-promotion health or data check restores the previous image.
+This lets an agent work and validate changes while the normal Aspire instance
+continues independently.
+
+For manual testing, open `http://localhost:9090/Account/Login`. In this
+Development-only stack the login page offers passwordless synthetic personas:
+
+| Persona | Role | Email |
+|---|---|---|
+| AlexDemo | Organizer | `playwright-owner@openwish.local` |
+| JordanDemo | Confirmed friend | `playwright-friend@openwish.local` |
+| CaseyDemo | Confirmed friend | `playwright-friend2@openwish.local` |
+| TaylorDemo | Pending invitee | `playwright-guest@openwish.local` |
+
+The fixtures include wishlists with gift ideas, two confirmed friends, a
+pending friend request, a completed Secret Santa, a pending event invitation,
+reservations, notifications, and activity. The persistent review database
+keeps manual changes across verified deployments.

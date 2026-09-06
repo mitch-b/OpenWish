@@ -21,10 +21,10 @@
     <h3>Manage Wishlist</h3>
     <div class="btn-group">
         <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Wishlist
+            <OpenWishIcon Name="arrow-left" /> Back to Wishlist
         </a>
         <button class="btn btn-danger" type="button" @onclick="ShowDeleteDialog">
-            <i class="bi bi-trash"></i> Delete Wishlist
+            <OpenWishIcon Name="trash" /> Delete Wishlist
         </button>
     </div>
 </div>
@@ -50,10 +50,10 @@ else
     <div class="card mt-4 friends-access-card">
         <div class="card-body">
             <div class="section-header">
-                <div class="section-icon">👀</div>
+                <div class="section-icon"><OpenWishIcon Name="eye" /></div>
                 <div>
-                    <h4 class="h5 mb-0">Who Can See This?</h4>
-                    <p class="text-muted small mb-0">Manage who has access to your wishlist</p>
+                    <h4 class="h5 mb-0">Who can see this?</h4>
+                    <p class="text-muted small mb-0">Manage access to your wishlist.</p>
                 </div>
             </div>
 
@@ -71,23 +71,23 @@ else
                 <div class="empty-state-card">
                     @if (_wishlist.IsPrivate)
                     {
-                        <div class="empty-icon">🔐</div>
-                        <h5>Secret Mode Activated!</h5>
-                        <p>This wishlist is private. Only you can see it – your wishes are safe with you!</p>
+                        <div class="empty-icon"><OpenWishIcon Name="lock" /></div>
+                        <h5>Private wishlist</h5>
+                        <p>Only you can see this wishlist.</p>
                     }
                     else if (_wishlist.IsFriendsOnly)
                     {
-                        <div class="empty-icon">🎯</div>
-                        <h5>Ready to Share?</h5>
-                        <p>Your wishlist is set to "Specific Friends Only" but you haven't added anyone yet. Use the dropdown below to invite friends!</p>
+                        <div class="empty-icon"><OpenWishIcon Name="person-check" /></div>
+                        <h5>Choose specific friends</h5>
+                        <p>No one has access yet. Select friends below when you're ready to share.</p>
                     }
                     else
                     {
-                        <div class="empty-icon">💫</div>
-                        <h5>No Friends Yet</h5>
-                        <p>All your friends can see this wishlist, but it looks like you're new here!</p>
+                        <div class="empty-icon"><OpenWishIcon Name="people" /></div>
+                        <h5>Build your circle</h5>
+                        <p>Add friends to start sharing this wishlist.</p>
                         <a href="/friends" class="btn btn-primary btn-fun">
-                            <span>🤝</span> Find Friends
+                            <OpenWishIcon Name="person-plus" /> Find friends
                         </a>
                     }
                 </div>
@@ -97,15 +97,15 @@ else
                 <div class="visibility-status">
                     @if (_wishlist.IsPrivate)
                     {
-                        <span class="status-badge status-private">🔐 Private</span>
+                        <span class="status-badge status-private"><OpenWishIcon Name="lock" /> Private</span>
                     }
                     else if (_wishlist.IsFriendsOnly)
                     {
-                        <span class="status-badge status-specific">🎯 Specific Friends</span>
+                        <span class="status-badge status-specific"><OpenWishIcon Name="person-check" /> Specific friends</span>
                     }
                     else
                     {
-                        <span class="status-badge status-all">👥 All Friends</span>
+                        <span class="status-badge status-all"><OpenWishIcon Name="people" /> All friends</span>
                     }
                     <span class="friend-count">@_friendsWithAccess.Count friend@(_friendsWithAccess.Count != 1 ? "s" : "") can see this</span>
                 </div>
@@ -124,7 +124,7 @@ else
                                         @onclick="() => RemoveFriendAccess(friend.Id!)"
                                         disabled="@_sharingBusy"
                                         title="Remove access">
-                                    ✕
+                                    <OpenWishIcon Name="x-lg" />
                                 </button>
                             }
                         </div>
@@ -151,7 +151,7 @@ else
                                 type="button"
                                 disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy)"
                                 @onclick="AddFriendAccess">
-                            <span>🎁</span> Share
+                            <OpenWishIcon Name="share" /> Share
                         </button>
                     </div>
                 </div>
@@ -160,14 +160,14 @@ else
             @if (!string.IsNullOrEmpty(_sharingStatusMessage))
             {
                 <div class="alert alert-success success-toast mt-3" role="alert">
-                    <span>✨</span> @_sharingStatusMessage
+                    <OpenWishIcon Name="check-circle" /> @_sharingStatusMessage
                 </div>
             }
 
             @if (!string.IsNullOrEmpty(_sharingErrorMessage))
             {
                 <div class="alert alert-danger error-toast mt-3" role="alert">
-                    <span>😕</span> @_sharingErrorMessage
+                    <OpenWishIcon Name="exclamation-circle" /> @_sharingErrorMessage
                 </div>
             }
         </div>
@@ -175,7 +175,7 @@ else
 
     <div class="card mt-4">
         <div class="card-body">
-            <h4 class="h5">Event Association</h4>
+            <h4 class="h5">Event connection</h4>
 
             @if (!string.IsNullOrEmpty(_eventStatusMessage))
             {
@@ -242,7 +242,6 @@ else
 
 <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDeleteWishlist" />
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
     [Parameter]

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenWish.Application.Models;
@@ -21,9 +23,33 @@ public static class ServiceCollectionExtensions
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
+            AllowAutoRedirect = false,
             PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
-            EnableMultipleHttp2Connections = true
+            EnableMultipleHttp2Connections = true,
+            ConnectCallback = async (context, cancellationToken) =>
+            {
+                var addresses = await Dns.GetHostAddressesAsync(
+                    context.DnsEndPoint.Host,
+                    cancellationToken);
+                var safeAddresses = addresses.Where(ProductService.IsSafeAddress).ToArray();
+                if (safeAddresses.Length == 0 || safeAddresses.Length != addresses.Length)
+                {
+                    throw new HttpRequestException("The requested address is not publicly routable.");
+                }
+
+                var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                try
+                {
+                    await socket.ConnectAsync(safeAddresses, context.DnsEndPoint.Port, cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch
+                {
+                    socket.Dispose();
+                    throw;
+                }
+            }
         });
 
         services.AddScoped<IAppEmailSender, OpenWishEmailSender>();
@@ -38,7 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFriendService, FriendService>();
         services.AddScoped<INotificationService, NotificationService>();
 
-        services.AddAutoMapper(typeof(OpenWishProfile).Assembly);
+        services.AddAutoMapper(_ => { }, typeof(OpenWishProfile).Assembly);
 
         return services;
     }

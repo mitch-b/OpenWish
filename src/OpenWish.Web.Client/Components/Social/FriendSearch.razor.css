@@ -1,0 +1,35 @@
+.social-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+}
+
+.social-heading-icon {
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.15rem;
+}
+
+.social-heading h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.social-heading p {
+    margin: 0.2rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.friend-search .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}

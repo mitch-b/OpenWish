@@ -56,7 +56,7 @@
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
-        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, callbackUrl);
 
         message = "Verification email sent. Please check your email.";
     }

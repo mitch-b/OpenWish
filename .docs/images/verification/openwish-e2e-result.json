@@ -1,0 +1,82 @@
+{
+  "passed": true,
+  "baseUrl": "http://web:8080",
+  "manifest": {
+    "ownerEmail": "playwright-owner@openwish.local",
+    "guestEmail": "playwright-guest@openwish.local",
+    "friendEmail": "playwright-friend@openwish.local",
+    "wishlistPublicId": "demo-family-gift-ideas",
+    "privateWishlistPublicId": "demo-private-ideas",
+    "friendWishlistPublicId": "demo-jordan-favorites",
+    "eventPublicId": "demo-holiday-gift-exchange",
+    "reservedItemId": 2
+  },
+  "scenarios": [
+    {
+      "scenario": "development-login",
+      "visitedRoutes": [
+        "/Account/Login"
+      ]
+    },
+    {
+      "scenario": "owner-desktop",
+      "loginStatus": 200,
+      "visitedRoutes": [
+        "/",
+        "/wishlists",
+        "/wishlists/demo-family-gift-ideas",
+        "/wishlists/new",
+        "/wishlists/demo-family-gift-ideas/manage",
+        "/wishlists/demo-family-gift-ideas/items/new",
+        "/events",
+        "/events/demo-holiday-gift-exchange",
+        "/events/new",
+        "/events/demo-holiday-gift-exchange/manage",
+        "/friends",
+        "/events/demo-holiday-gift-exchange",
+        "/whats-new",
+        "/Account/Manage",
+        "/events"
+      ],
+      "assertions": [
+        "dashboard data",
+        "owned and friend wishlists",
+        "wishlist items and pricing",
+        "event details and gift assignment",
+        "friends and pending requests",
+        "notifications",
+        "theme persistence",
+        "release history",
+        "account profile"
+      ]
+    },
+    {
+      "scenario": "guest-collaboration",
+      "loginStatus": 200,
+      "seedAuthorizationStatus": 403,
+      "deleteAuthorizationStatus": 403,
+      "visitedRoutes": [
+        "/events",
+        "/events/demo-holiday-gift-exchange",
+        "/wishlists/demo-family-gift-ideas"
+      ]
+    },
+    {
+      "scenario": "friend-gift-exchange",
+      "loginStatus": 200,
+      "visitedRoutes": [
+        "/events",
+        "/events/demo-holiday-gift-exchange"
+      ]
+    },
+    {
+      "scenario": "owner-mobile",
+      "loginStatus": 200,
+      "visitedRoutes": [
+        "/",
+        "/wishlists/demo-family-gift-ideas",
+        "/events/demo-holiday-gift-exchange"
+      ]
+    }
+  ]
+}

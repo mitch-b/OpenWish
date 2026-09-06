@@ -6,6 +6,7 @@ public class WishlistPermissionModel : BaseEntityModel
 {
     [JsonIgnore]
     public int WishlistId { get; set; }
+    [JsonIgnore]
     public WishlistModel? Wishlist { get; set; }
 
     public string UserId { get; set; }

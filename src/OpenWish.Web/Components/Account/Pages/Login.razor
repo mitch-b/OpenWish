@@ -3,24 +3,36 @@
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.RateLimiting
+@using Microsoft.Extensions.Options
+@using OpenWish.Application.Models.Configuration
 @using OpenWish.Data.Entities
+@attribute [EnableRateLimiting("authentication")]
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IWebHostEnvironment Environment
+@inject IOptions<OpenWishSettings> OpenWishSettings
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
+<div class="auth-page">
+<header class="auth-heading">
+    <span class="auth-mark"><OpenWishIcon Name="gift" /></span>
+    <div>
+        <h1>Welcome back</h1>
+        <p>Sign in to your wishlists, events, and gift exchanges.</p>
+    </div>
+</header>
+<div class="row g-4 auth-grid">
     <div class="col-lg-6">
-        <section>
+        <section class="auth-card">
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
+                <h2>Sign in with email</h2>
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
                     <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
@@ -56,12 +68,36 @@
         </section>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
+        <section class="auth-card auth-card-secondary">
+            <h2>Single sign-on</h2>
             <ExternalLoginPicker />
         </section>
     </div>
+</div>
+
+@if (Environment.IsDevelopment() && OpenWishSettings.Value.EnableDevelopmentLogin)
+{
+    <section class="mt-4 demo-account-panel">
+        <div class="alert alert-info">
+            <h2 class="h4">Local demo accounts</h2>
+            <p>Choose a seeded persona. No password is required in this isolated Development environment.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="post" action="@BuildDevelopmentLoginUrl("owner")">
+                    <button type="submit" class="btn btn-primary">Sign in as AlexDemo (organizer)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("friend")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as JordanDemo (friend)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("friend2")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as CaseyDemo (friend)</button>
+                </form>
+                <form method="post" action="@BuildDevelopmentLoginUrl("guest")">
+                    <button type="submit" class="btn btn-outline-primary">Sign in as TaylorDemo (invitee)</button>
+                </form>
+            </div>
+        </div>
+    </section>
+}
 </div>
 
 @code {
@@ -85,11 +121,15 @@
         }
     }
 
+    private string BuildDevelopmentLoginUrl(string persona)
+    {
+        var returnUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl;
+        return $"/auth/dev-login/browser?persona={persona}&returnUrl={Uri.EscapeDataString(returnUrl)}";
+    }
+
     public async Task LoginUser()
     {
-        // This doesn't count login failures towards account lockout
-        // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");

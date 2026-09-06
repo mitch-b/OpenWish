@@ -11,7 +11,11 @@ public class OpenWishProfile : Profile
         CreateMap<ApplicationUserModel, ApplicationUser>()
             .ReverseMap();
         CreateMap<WishlistModel, Wishlist>()
-            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ForMember(dest => dest.PublicId, opt => opt.Ignore())
+            .ForMember(dest => dest.OwnerId, opt => opt.Ignore())
+            .ForMember(dest => dest.Deleted, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.Items, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.Owner, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.Event, opt => opt.Ignore())
@@ -19,14 +23,19 @@ public class OpenWishProfile : Profile
             .ReverseMap()
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))  // map from EF entity to DtoModel
             .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner))  // map from EF entity to DtoModel
-            .ForMember(dest => dest.Event, opt => opt.MapFrom(src => src.Event)); // map from EF entity to DtoModel
+            .ForMember(dest => dest.Event, opt => opt.Ignore());
         CreateMap<WishlistItemModel, WishlistItem>()
-            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
-                                                                                                                // Prevent client-supplied WishlistId from overwriting the existing FK on update
+            .ForMember(dest => dest.PublicId, opt => opt.Ignore())
+            .ForMember(dest => dest.Deleted, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.WishlistId, opt => opt.Ignore())
             .ReverseMap();
         CreateMap<EventModel, Event>()
-            .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
+            .ForMember(dest => dest.PublicId, opt => opt.Ignore())
+            .ForMember(dest => dest.Deleted, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
@@ -43,7 +52,8 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.PairingRules, opt => opt.MapFrom(src => src.PairingRules));
         CreateMap<EventUserModel, EventUser>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
-            .ReverseMap();
+            .ReverseMap()
+            .ForMember(dest => dest.Event, opt => opt.Ignore());
 
         // Social feature mappings
         CreateMap<FriendModel, Friend>()

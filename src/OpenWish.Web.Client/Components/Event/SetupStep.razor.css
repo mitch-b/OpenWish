@@ -1,0 +1,41 @@
+.setup-step {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.85rem;
+    min-height: 4.25rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.setup-step-marker {
+    display: grid;
+    flex: 0 0 2rem;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: #fff;
+    font-weight: 700;
+}
+
+.setup-step-complete .setup-step-marker {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+    box-shadow: inset 0 0 0 1px var(--color-success-border);
+}
+
+@media (max-width: 575.98px) {
+    .setup-step {
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: flex-start;
+    }
+
+    .setup-step .btn {
+        grid-column: 2;
+        justify-self: start;
+    }
+}

@@ -27,8 +27,8 @@ else
 {
     <div class="event-header">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
+            <div class="event-header-content">
+                <div class="event-header-copy">
                     <h1 class="display-4">@_event.Name</h1>
                     <p class="lead mb-0">@_event.Description</p>
                     @if (_event.Tags != null)
@@ -36,24 +36,56 @@ else
                         <div class="mt-3">
                             @foreach (var tag in _event.Tags ?? [])
                             {
-                                <span class="badge bg-light text-dark me-2">@tag.Trim()</span>
+                                <span class="badge event-tag me-2">@tag.Trim()</span>
                             }
                         </div>
                     }
                 </div>
                 @if (_isOwner)
                 {
-                    <a href="/events/@EventId/manage" class="btn btn-light d-inline-flex align-items-center">
-                        <i class="bi bi-gear me-2"></i> Manage Event
+                    <a href="/events/@EventId/manage" class="btn btn-light event-manage-action">
+                        <OpenWishIcon Name="gear" Class="me-2" /> Manage Event
                     </a>
                 }
             </div>
         </div>
     </div>
 
-    <div class="container py-5">
-        <div class="row g-4">
-            <div class="col-md-8">
+    <div class="container event-page py-4">
+        @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
+        {
+            <div id="secret-santa-setup">
+                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" />
+            </div>
+        }
+        else if (_event.IsGiftExchange && _isAcceptedParticipant && !_event.NamesDrawnOn.HasValue)
+        {
+            <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" role="status">
+                <div>
+                    <strong>You're in the Secret Santa.</strong>
+                    Add a few gift ideas now, then you can leave the rest to the organizer.
+                </div>
+                <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
+            </div>
+        }
+
+        @if (_isPendingInvitee)
+        {
+            <div class="alert alert-info shadow-sm" role="status">
+                <h2 class="h4">Accept your invitation to join</h2>
+                <p>
+                    Accept before the organizer draws names so you can be included and add gift ideas for your match.
+                </p>
+                @if (!string.IsNullOrWhiteSpace(PendingInvitationEmail))
+                {
+                    <a class="btn btn-success" href="@PendingInvitationLink">Review invitation</a>
+                }
+            </div>
+        }
+        else
+        {
+          <div class="row g-4">
+            <div class="col-lg-8">
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
                     <GiftExchangeDisplay EventId="@EventId"
@@ -61,90 +93,80 @@ else
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
-                <div class="card shadow-sm">
+                <div class="card shadow-sm event-overview-card">
                     <div class="card-body">
-                        <h3>Event Details</h3>
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h5>Date & Time</h5>
-                                <p class="mb-4">@_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")</p>
-
-                                @if (_event.Budget.HasValue)
-                                {
-                                    <h5>Suggested Budget</h5>
-                                    <p class="mb-4">@_event.Budget.Value.ToString("C")</p>
-                                }
-
-                                @if (_event.IsGiftExchange)
-                                {
-                                    <h5>Gift Exchange</h5>
-                                    <p class="mb-4">
-                                        <span class="badge bg-success">Active</span>
-                                        This event includes a gift exchange
-                                    </p>
-                                }
-
-                                @if (_event.IsRecurring)
-                                {
-                                    <h5>Recurring Event</h5>
-                                    <p class="mb-4">This is a recurring event</p>
-                                }
+                        <h2 class="h4 mb-3">Event overview</h2>
+                        <div class="event-facts">
+                            <div class="event-fact">
+                                <span class="event-fact-label">Date and time</span>
+                                <strong>@_event.Date.ToString("ddd, MMM d, yyyy 'at' h:mm tt")</strong>
                             </div>
-                            <div class="col-md-6">
-                                <h5>Created By</h5>
-                                <p class="mb-4">@_event.CreatedBy.UserName</p>
-
-                                @{
-                                    var participants = GetParticipantList().ToList();
-                                    var hasOwner = _event.CreatedBy != null;
-                                    var participantCount = participants.Count + (hasOwner ? 1 : 0);
-                                }
-                                <h5>Participants &amp; Invites (@participantCount)</h5>
-                                <div class="list-group">
-                                    @if (hasOwner)
-                                    {
-                                        <div class="list-group-item d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <strong>@GetOwnerDisplayName()</strong>
-                                                @if (GetOwnerContactDetail() is { } ownerContact)
-                                                {
-                                                    <div class="small text-muted">@ownerContact</div>
-                                                }
-                                                <div class="d-flex flex-wrap gap-2 mt-2">
-                                                    <span class="badge bg-secondary">Owner</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-
-                                    @foreach (var participant in participants)
-                                    {
-                                        <div class="list-group-item d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <strong>@GetParticipantDisplayName(participant)</strong>
-                                                @if (GetParticipantContactDetail(participant) is { } contact)
-                                                {
-                                                    <div class="small text-muted">@contact</div>
-                                                }
-                                                <div class="d-flex flex-wrap gap-2 mt-2">
-                                                    <span class="badge bg-primary">@participant.Role</span>
-                                                    <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }
-
-                                    @if (!hasOwner && participants.Count == 0)
-                                    {
-                                        <div class="list-group-item text-muted">No participants yet.</div>
-                                    }
+                            <div class="event-fact">
+                                <span class="event-fact-label">Budget</span>
+                                <strong>@(_event.Budget?.ToString("C") ?? "Not set")</strong>
+                            </div>
+                            <div class="event-fact">
+                                <span class="event-fact-label">Hosted by</span>
+                                <strong>@GetOwnerDisplayName()</strong>
+                            </div>
+                            <div class="event-fact">
+                                <span class="event-fact-label">Event type</span>
+                                <strong>@(_event.IsGiftExchange ? "Secret Santa" : "Celebration")</strong>
+                            </div>
+                            @if (_event.IsRecurring)
+                            {
+                                <div class="event-fact">
+                                    <span class="event-fact-label">Schedule</span>
+                                    <strong>Recurring event</strong>
                                 </div>
-                            </div>
+                            }
+                        </div>
+
+                        @{
+                            var participants = GetParticipantList().ToList();
+                            var hasOwner = _event.CreatedBy != null;
+                            var participantCount = participants.Count + (hasOwner ? 1 : 0);
+                        }
+                        <div class="section-heading">
+                            <h3 class="h5 mb-0">People</h3>
+                            <span>@participantCount total</span>
+                        </div>
+                        <div class="participant-grid">
+                            @if (!hasOwner && participants.Count == 0)
+                            {
+                                <p class="participant-empty">No participants yet.</p>
+                            }
+                            else if (hasOwner)
+                            {
+                                <div class="participant-card">
+                                    <strong>@GetOwnerDisplayName()</strong>
+                                    @if (GetOwnerContactDetail() is { } ownerContact)
+                                    {
+                                        <span class="participant-contact">@ownerContact</span>
+                                    }
+                                    <span class="participant-status">Organizer</span>
+                                </div>
+                            }
+
+                            @foreach (var participant in participants)
+                            {
+                                <div class="participant-card">
+                                    <strong>@GetParticipantDisplayName(participant)</strong>
+                                    @if (GetParticipantContactDetail(participant) is { } contact)
+                                    {
+                                        <span class="participant-contact">@contact</span>
+                                    }
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="participant-status">@participant.Role</span>
+                                        <span class="participant-status @GetStatusClass(participant)">@GetNormalizedStatus(participant)</span>
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4" id="event-wishlists">
                     <EventWishlistManager EventId="@EventId"
                                            Event="@_event"
                                            CurrentUserId="@_currentUserId"
@@ -153,7 +175,7 @@ else
 
                 @if (_event.IsGiftExchange && _isOwner)
                 {
-                    <div class="mt-4">
+                    <div class="mt-4" id="gift-exchange">
                         <GiftExchangeManager Event="@_event"
                                              CurrentUserId="@_currentUserId"
                                              OnNamesDrawn="HandleNamesDrawn" />
@@ -177,7 +199,8 @@ else
                                                     View Wishlist
                                                 </a>
                                             </div>
-                                        </div>
+                                          </div>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -186,8 +209,16 @@ else
                 } *@
             </div>
 
-            <div class="col-md-4">
-                <EventInvitations EventId="@EventId" IsOwner="@_isOwner" CurrentUserId="@_currentUserId" />
+            <div class="col-lg-4">
+                @if (_isOwner)
+                {
+                    <div id="event-invitations">
+                        <EventInvitations EventId="@EventId"
+                                          IsOwner="true"
+                                          CurrentUserId="@_currentUserId"
+                                          NamesDrawn="@_event.NamesDrawnOn.HasValue" />
+                    </div>
+                }
 
                 <div class="mt-4">
                     <EventReservedItems EventId="@EventId"
@@ -214,6 +245,7 @@ else
                 } *@
             </div>
         </div>
+        }
     </div>
 }
 
@@ -222,6 +254,9 @@ else
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
+    private bool _isAcceptedParticipant;
+    private bool _isPendingInvitee;
+    private EventUserModel? _pendingInvitation;
 
     protected override async Task OnInitializedAsync()
     {
@@ -231,9 +266,29 @@ else
 
     private async Task LoadEvent()
     {
-        _event = await EventService.GetEventByPublicIdAsync(EventId);
+        _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
         _isOwner = _event?.CreatedBy.Id == _currentUserId;
+        _isAcceptedParticipant = _isOwner ||
+            (_event?.EventUsers?.Any(participant =>
+                !participant.Deleted &&
+                participant.IsAccepted &&
+                string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(participant.UserId, _currentUserId, StringComparison.Ordinal)) ?? false);
+        _isPendingInvitee = !_isOwner && !_isAcceptedParticipant;
+
+        if (_isPendingInvitee)
+        {
+            var invitations = await EventService.GetPendingInvitationsForUserAsync(_currentUserId!);
+            _pendingInvitation = invitations.FirstOrDefault(invitation =>
+                string.Equals(invitation.Event?.PublicId, EventId, StringComparison.Ordinal));
+        }
     }
+
+    private string PendingInvitationLink =>
+        $"/events/{EventId}/accept-invite?email={Uri.EscapeDataString(PendingInvitationEmail!)}";
+
+    private string? PendingInvitationEmail =>
+        _pendingInvitation?.InviteeEmail ?? _pendingInvitation?.User?.Email;
 
     private IEnumerable<EventUserModel> GetParticipantList() =>
         _event?.EventUsers?
@@ -254,12 +309,12 @@ else
         _ => 3
     };
 
-    private static string GetStatusBadgeClass(EventUserModel eventUser) => GetNormalizedStatus(eventUser) switch
+    private static string GetStatusClass(EventUserModel eventUser) => GetNormalizedStatus(eventUser) switch
     {
-        "Accepted" => "bg-success",
-        "Pending" => "bg-warning text-dark",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
+        "Accepted" => "participant-status-success",
+        "Pending" => "participant-status-warning",
+        "Rejected" => "participant-status-danger",
+        _ => string.Empty
     };
 
     private static string GetParticipantDisplayName(EventUserModel eventUser)

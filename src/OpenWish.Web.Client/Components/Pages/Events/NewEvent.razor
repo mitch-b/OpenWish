@@ -11,68 +11,86 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>Create New Event</PageTitle>
+<PageTitle>Create a Secret Santa</PageTitle>
 
-@if (_isLoading)
-{
-    <p>Loading...</p>
-}
-else
-{
-    <div class="event-header">
-        <h2>Create New Event</h2>
-        <span class="badge bg-info">New Event</span>
-    </div>
-
-    <div class="row">
-        <div class="col-md-8">
-            <div class="event-content view-transition">
-                @* <FormMappingScope Name="new-event"> *@
-                    <EventForm Model="@_event" OnSubmit="@HandleSubmit" />
-                @* </FormMappingScope> *@
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="add-item-section">
-                <h4>Event Details</h4>
-                <p>Plan your special occasion and organize gifts with friends and family</p>
-                <button class="btn btn-link" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
-                    <i class="bi bi-arrow-left"></i> Back to events
-                </button>
-            </div>
+<div class="container page-shell">
+  <PageHeader Title="Create a Secret Santa"
+              Description="Set the basics now. You'll invite everyone on the next screen.">
+      <Actions>
+          <span class="step-indicator">Step 1 of 3</span>
+      </Actions>
+  </PageHeader>
+  <div class="row g-4">
+    <div class="col-md-8">
+        <div class="event-content view-transition">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+            <EventForm Model="@_event" OnSubmit="@HandleSubmit" IsSubmitting="@_isSubmitting" />
         </div>
     </div>
-}
+    <div class="col-md-4">
+        <div class="add-item-section">
+            <h2 class="h4">What happens next?</h2>
+            <ol class="ps-3 mb-4">
+                <li class="mb-2">Invite everyone by email or from your friends.</li>
+                <li class="mb-2">Let people add a few gift ideas.</li>
+                <li>Draw names when your group is ready.</li>
+            </ol>
+            <button class="btn btn-outline-secondary" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
+                <OpenWishIcon Name="arrow-left" /> Back to events
+            </button>
+        </div>
+    </div>
+  </div>
+</div>
 
-<OpenWish.Web.Client.Components.Diagnostics.SessionInformation />
 
 @code {
-    private readonly EventModel _event = new() 
-    { 
-        Date = DateTimeOffset.UtcNow.AddDays(7), 
-        EventUsers = [] 
+    private readonly EventModel _event = new()
+    {
+        Date = GetSuggestedDate(),
+        Budget = 50m,
+        IsGiftExchange = true,
+        EventUsers = []
     };
-    private bool _isLoading;
+    private bool _isSubmitting;
+    private string? _errorMessage;
 
     private async Task HandleSubmit(EventModel submittedEvent)
     {
         try
         {
-            _isLoading = true;
+            _isSubmitting = true;
+            _errorMessage = null;
             var userId = await UserContextService.GetUserIdAsync();
             if (userId is not null)
             {
-                await EventService.CreateEventAsync(submittedEvent, userId);
-                NavigationManager.NavigateTo("/events");
+                var createdEvent = await EventService.CreateEventAsync(submittedEvent, userId);
+                NavigationManager.NavigateTo($"/events/{createdEvent.PublicId}");
             }
             else
             {
                 Logger.LogError("Could not determine UserId when creating event");
+                _errorMessage = "We couldn't confirm your account. Please sign in again.";
             }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create event");
+            _errorMessage = "We couldn't create the event. Please review the details and try again.";
         }
         finally
         {
-            _isLoading = false;
+            _isSubmitting = false;
         }
+    }
+
+    private static DateTimeOffset GetSuggestedDate()
+    {
+        var now = DateTimeOffset.Now;
+        var holiday = new DateTimeOffset(now.Year, 12, 25, 18, 0, 0, now.Offset);
+        return holiday > now.AddDays(7) ? holiday : now.AddDays(30);
     }
 }

@@ -12,6 +12,16 @@ built_verification_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
 evidence_directory="$repository_root/.docs/images/verification"
 walkthrough_directory="$repository_root/.docs/images/walkthrough"
+docker_repository_root="$repository_root"
+
+# Docker runs on Mate's host, while this script runs in Mate's container. Keep
+# file checks on the mounted workspace path but give Docker host-visible sources.
+if [[ -n "${MATE_HOST_WORKSPACE:-}" && "$repository_root" == /workspace/* ]]; then
+  docker_repository_root="${MATE_HOST_WORKSPACE%/}/${repository_root#/workspace/}"
+fi
+
+docker_evidence_directory="$docker_repository_root/.docs/images/verification"
+docker_walkthrough_directory="$docker_repository_root/.docs/images/walkthrough"
 
 cleanup() {
   "${compose[@]}" down --remove-orphans
@@ -52,8 +62,8 @@ docker run --rm \
   --env OPENWISH_BASE_URL=http://web:8080 \
   --env OPENWISH_EVIDENCE_DIR=/evidence \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
-  --volume "$evidence_directory:/evidence" \
-  --volume "$walkthrough_directory:/walkthrough" \
+  --volume "$docker_evidence_directory:/evidence" \
+  --volume "$docker_walkthrough_directory:/walkthrough" \
   openwish-playwright:1.63.0
 
 test -s "$walkthrough_directory/home-dashboard.png"

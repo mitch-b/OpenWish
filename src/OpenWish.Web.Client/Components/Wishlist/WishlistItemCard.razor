@@ -129,11 +129,13 @@
             builder.OpenElement(25, "a");
             builder.AddAttribute(26, "href", Item.Url);
             builder.AddAttribute(27, "target", "_blank");
-            builder.AddAttribute(28, "class", "btn btn-sm btn-outline-primary");
-            builder.OpenElement(29, "i");
-            builder.AddAttribute(30, "class", "bi bi-link-45deg");
+            builder.AddAttribute(28, "rel", "noopener noreferrer");
+            builder.AddAttribute(29, "class", "btn btn-sm btn-outline-primary");
+            builder.AddAttribute(30, "aria-label", $"View {Item.Name} product (opens in a new tab)");
+            builder.OpenElement(31, "i");
+            builder.AddAttribute(32, "class", "bi bi-link-45deg");
             builder.CloseElement();
-            builder.AddContent(31, " View Product");
+            builder.AddContent(33, " View Product");
             builder.CloseElement();
             builder.CloseElement();
         }

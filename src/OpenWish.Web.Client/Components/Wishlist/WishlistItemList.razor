@@ -21,7 +21,11 @@
                         <span class="item-name">@item.Name</span>
                         @if (!string.IsNullOrEmpty(item.Url))
                         {
-                            <a href="@item.Url" target="_blank" rel="noopener noreferrer" class="ms-2 text-decoration-none wishlist-external-link" title="View product">
+                            <a href="@item.Url"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="ms-2 text-decoration-none wishlist-external-link"
+                               aria-label="View @item.Name product (opens in a new tab)">
                                 <OpenWishIcon Name="box-arrow-up-right" />
                             </a>
                         }

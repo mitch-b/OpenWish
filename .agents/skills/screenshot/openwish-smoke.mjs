@@ -214,6 +214,19 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "National Park Pass");
   await assertVisible(page, "$249.99");
   await assertVisible(page, "3");
+  const productLink = page.getByRole("link", {
+    name: "View Noise-Cancelling Headphones product (opens in a new tab)"
+  });
+  await productLink.waitFor({ state: "visible" });
+  if (await productLink.getAttribute("target") !== "_blank" ||
+      await productLink.getAttribute("rel") !== "noopener noreferrer") {
+    throw new Error("Product links must safely open in a new tab.");
+  }
+  await page.getByRole("button", { name: "List View" }).click();
+  await page.getByRole("link", {
+    name: "View Noise-Cancelling Headphones product (opens in a new tab)"
+  }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Grid View" }).click();
   await screenshot(page, "wishlist-details.png");
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
@@ -339,8 +352,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "event-details-dark.png");
 
   await visit(page, "/whats-new", "What's new", visitedRoutes);
-  await assertVisible(page, "Version 0.1.0");
-  await assertVisible(page, "Sustainable improvements");
+  await assertVisible(page, "Version 0.1.1");
+  await assertVisible(page, "Clearer product links");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -371,6 +384,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "dashboard data",
       "owned and friend wishlists",
       "wishlist items and pricing",
+      "accessible product links",
       "event details and gift assignment",
       "friends and pending requests",
       "notifications",

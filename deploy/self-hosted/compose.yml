@@ -4,9 +4,9 @@ services:
   db:
     image: ${POSTGRES_IMAGE:-postgres:18}
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-OpenWish}
-      POSTGRES_USER: ${POSTGRES_USER:-openwish}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${OPENWISH_DB_NAME:-OpenWish}
+      POSTGRES_USER: ${OPENWISH_DB_USER:-openwish}
+      POSTGRES_PASSWORD: ${OPENWISH_DB_PASSWORD:?Set OPENWISH_DB_PASSWORD in .env}
     volumes:
       - openwish-db:/var/lib/postgresql
     healthcheck:
@@ -27,7 +27,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       TZ: ${TZ:-UTC}
-      ConnectionStrings__OpenWish: Host=db;Port=5432;Database=${POSTGRES_DB:-OpenWish};Username=${POSTGRES_USER:-openwish};******
+      ConnectionStrings__OpenWish: Host=db;Port=5432;Database=${OPENWISH_DB_NAME:-OpenWish};Username=${OPENWISH_DB_USER:-openwish};******
       OpenWishSettings__BaseUri: ${OPENWISH_BASE_URI:?Set OPENWISH_BASE_URI in .env}
       OpenWishSettings__OwnDatabaseUpgrades: "true"
       OpenWishSettings__EnableDevelopmentLogin: "false"

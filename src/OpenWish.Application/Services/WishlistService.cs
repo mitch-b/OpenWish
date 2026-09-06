@@ -170,12 +170,20 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return updatedModel;
     }
 
-    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlistModel)
+    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(
+        string publicId,
+        WishlistModel wishlistModel,
+        string requestorId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {publicId} not found");
+
+        if (existingWishlist.OwnerId != requestorId)
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can update wishlist settings.");
+        }
 
         // Map updated values to existing entity
         _mapper.Map(wishlistModel, existingWishlist);
@@ -643,13 +651,6 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                 return true;
             }
 
-            var hasCollabPermission = await context.WishlistPermissions
-                .AnyAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
-
-            if (hasCollabPermission)
-            {
-                return true;
-            }
         }
 
         var hasEditPermission = await context.WishlistPermissions

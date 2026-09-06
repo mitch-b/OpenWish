@@ -198,7 +198,10 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{publicId}");
     }
 
-    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(string publicId, WishlistModel wishlist)
+    public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(
+        string publicId,
+        WishlistModel wishlist,
+        string requestorId)
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{publicId}", wishlist);
         response.EnsureSuccessStatusCode();

@@ -71,13 +71,19 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
             return Unauthorized();
         }
 
-        if (!await _wishlistService.CanUserEditWishlistByPublicIdAsync(publicId, userId))
+        try
+        {
+            var updatedWishlist = await _wishlistService.UpdateWishlistByPublicIdAsync(publicId, wishlist, userId);
+            return Ok(updatedWishlist);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
-
-        var updatedWishlist = await _wishlistService.UpdateWishlistByPublicIdAsync(publicId, wishlist);
-        return Ok(updatedWishlist);
     }
 
     [HttpDelete("{publicId}")]

@@ -399,7 +399,7 @@ else
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
-        await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist);
+        await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist, _currentUserId);
         // Refresh to show updated visibility
         _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
         await RefreshFriendsWithAccessAsync();

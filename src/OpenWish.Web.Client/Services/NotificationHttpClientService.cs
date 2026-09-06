@@ -11,7 +11,7 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
 
     public async Task<IEnumerable<NotificationModel>> GetUserNotificationsAsync(string userId, bool includeRead = false)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}/user?includeRead={includeRead}")
+        return await _httpClient.GetFromJsonAsync<IEnumerable<NotificationModel>>($"{BaseUrl}?includeRead={includeRead}")
             ?? Array.Empty<NotificationModel>();
     }
 
@@ -22,10 +22,7 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
 
     public async Task<NotificationModel> CreateNotificationAsync(string userId, string message)
     {
-        var response = await _httpClient.PostAsJsonAsync(BaseUrl, message);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<NotificationModel>()
-            ?? throw new HttpRequestException("Failed to create notification");
+        throw new NotSupportedException("Notifications can only be created by trusted server-side services.");
     }
 
     public async Task<NotificationModel> CreateNotificationAsync(
@@ -36,23 +33,12 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
         string type,
         NotificationActionModel? action = null)
     {
-        var notificationData = new
-        {
-            Title = title,
-            Message = message,
-            Type = type,
-            Action = action
-        };
-
-        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/user/{targetUserId}/detailed", notificationData);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<NotificationModel>()
-            ?? throw new HttpRequestException("Failed to create notification");
+        throw new NotSupportedException("Notifications can only be created by trusted server-side services.");
     }
 
-    public async Task<bool> MarkNotificationAsReadAsync(int notificationId)
+    public async Task<bool> MarkNotificationAsReadAsync(string notificationPublicId, string userId)
     {
-        var response = await _httpClient.PutAsync($"{BaseUrl}/{notificationId}/read", null);
+        var response = await _httpClient.PutAsync($"{BaseUrl}/{notificationPublicId}/read", null);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }
@@ -64,9 +50,9 @@ public class NotificationHttpClientService(HttpClient httpClient) : INotificatio
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
-    public async Task<bool> DeleteNotificationAsync(int notificationId)
+    public async Task<bool> DeleteNotificationAsync(string notificationPublicId, string userId)
     {
-        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{notificationId}");
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/{notificationPublicId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<bool>();
     }

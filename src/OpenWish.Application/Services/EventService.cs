@@ -42,8 +42,15 @@ public class EventService(
 
         return eventEntity.EventUsers.Any(eu =>
             !eu.Deleted &&
+            eu.Status == "Accepted" &&
             string.Equals(eu.UserId, userId, StringComparison.Ordinal));
     }
+
+    private static bool IsPendingInvitee(Event eventEntity, string userId) =>
+        eventEntity.EventUsers.Any(eu =>
+            !eu.Deleted &&
+            eu.Status == "Pending" &&
+            string.Equals(eu.UserId, userId, StringComparison.Ordinal));
 
     private static void FilterGiftExchangeVisibility(EventModel eventModel, string? requestingUserId)
     {
@@ -132,7 +139,7 @@ public class EventService(
                     .Include(e => e.EventUsers)
                         .ThenInclude(eu => eu.User)
                     .Include(e => e.EventWishlists
-                        .Where(w => !w.Deleted))
+                        .Where(w => !w.Deleted && !w.IsPrivate))
                         .ThenInclude(ew => ew.Owner)
                     .Include(e => e.GiftExchanges)
                         .ThenInclude(ge => ge.Receiver)
@@ -157,14 +164,17 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Items.Where(i => !i.Deleted))
             .Where(e => !e.Deleted &&
                 (e.CreatedBy.Id == userId ||
-                 e.EventUsers.Any(eu => !eu.Deleted && eu.UserId == userId)))
+                 e.EventUsers.Any(eu =>
+                     !eu.Deleted &&
+                     eu.Status == "Accepted" &&
+                     eu.UserId == userId)))
             .OrderBy(e => e.Date)
             .ToListAsync();
 
@@ -174,6 +184,8 @@ public class EventService(
         {
             FilterGiftExchangeVisibility(eventModel, userId);
             FilterWishlistVisibility(eventModel.EventWishlists, userId);
+            var eventEntity = eventEntities.First(e => e.Id == eventModel.Id);
+            RemoveParticipantEmails(eventModel, IsEventOwner(eventEntity, userId));
         }
 
         return eventModels;
@@ -181,11 +193,28 @@ public class EventService(
 
     public async Task<IEnumerable<WishlistModel>> GetEventWishlistsAsync(int eventId, string? requestingUserId = null)
     {
+        if (string.IsNullOrWhiteSpace(requestingUserId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event to view its wishlists.");
+        }
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventEntity = await context.Events
+            .AsNoTracking()
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+
+        if (!IsEventMember(eventEntity, requestingUserId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event to view its wishlists.");
+        }
+
         var wishlistEntities = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.EventId == eventId && !w.Deleted)
+            .Where(w => w.EventId == eventId && !w.Deleted && !w.IsPrivate)
             .Include(w => w.Owner)
             .Include(w => w.Items.Where(i => !i.Deleted))
             .OrderBy(w => w.Name)
@@ -193,12 +222,18 @@ public class EventService(
 
         var wishlistModels = _mapper.Map<List<WishlistModel>>(wishlistEntities);
         FilterWishlistVisibility(wishlistModels, requestingUserId);
+        RemoveWishlistOwnerEmails(wishlistModels, IsEventOwner(eventEntity, requestingUserId));
 
         return wishlistModels;
     }
 
     public async Task<WishlistModel> CreateEventWishlistAsync(int eventId, WishlistModel wishlistModel, string ownerId)
     {
+        if (wishlistModel.IsPrivate)
+        {
+            throw new InvalidOperationException("Private wishlists cannot be shared with an event.");
+        }
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -235,6 +270,11 @@ public class EventService(
             .Include(w => w.Items.Where(i => !i.Deleted))
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
+
+        if (wishlist.IsPrivate)
+        {
+            throw new InvalidOperationException("Private wishlists cannot be shared with an event.");
+        }
 
         if (wishlist.EventId.HasValue && wishlist.EventId != eventId)
         {
@@ -308,12 +348,21 @@ public class EventService(
         return true;
     }
 
-    public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel)
+    public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var existingEvent = await context.Events.FindAsync(id)
+        var existingEvent = await context.Events
+            .Include(e => e.CreatedBy)
+            .FirstOrDefaultAsync(e => e.Id == id && !e.Deleted)
                 ?? throw new KeyNotFoundException($"Event with id {id} not found");
+
+        ValidateEventCreatorPermission(existingEvent, requestorId);
+        if (existingEvent.NamesDrawnOn.HasValue &&
+            existingEvent.IsGiftExchange != eventModel.IsGiftExchange)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before changing the event type.");
+        }
 
         _mapper.Map(eventModel, existingEvent);
         existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
@@ -324,15 +373,17 @@ public class EventService(
         return updatedModel;
     }
 
-    public async Task DeleteEventAsync(int id)
+    public async Task DeleteEventAsync(int id, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
+                .Include(e => e.CreatedBy)
                 .Include(e => e.EventWishlists)
-                .FirstOrDefaultAsync(e => e.Id == id)
+                .FirstOrDefaultAsync(e => e.Id == id && !e.Deleted)
                 ?? throw new KeyNotFoundException($"Event with id {id} not found");
 
+        ValidateEventCreatorPermission(eventEntity, requestorId);
         eventEntity.Deleted = true;
         eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
 
@@ -345,29 +396,53 @@ public class EventService(
         await context.SaveChangesAsync();
     }
 
-    public async Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant")
+    public async Task<bool> AddUserToEventAsync(int eventId, string userId, string requestorId, string role = "Participant")
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events.Include(e => e.EventUsers)
-                .FirstOrDefaultAsync(e => e.Id == eventId);
-        var user = await context.Users.FindAsync(userId);
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted);
 
-        if (eventEntity == null || user == null)
+        if (eventEntity == null)
         {
             return false;
         }
 
-        if (!eventEntity.EventUsers.Any(eu => eu.UserId == userId))
+        ValidateEventCreatorPermission(eventEntity, requestorId);
+
+        var user = await context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        var eventUser = eventEntity.EventUsers.FirstOrDefault(eu =>
+            !eu.Deleted &&
+            string.Equals(eu.UserId, userId, StringComparison.Ordinal));
+
+        if (eventUser == null)
         {
             eventEntity.EventUsers.Add(new EventUser
             {
                 EventId = eventId,
                 UserId = userId,
-                Role = role
+                Role = role,
+                Status = "Accepted",
+                IsAccepted = true,
+                InvitationDate = DateTimeOffset.UtcNow
             });
-            await context.SaveChangesAsync();
         }
+        else
+        {
+            eventUser.Role = role;
+            eventUser.Status = "Accepted";
+            eventUser.IsAccepted = true;
+            eventUser.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+
+        await context.SaveChangesAsync();
         return true;
     }
 
@@ -391,6 +466,10 @@ public class EventService(
         }
 
         ValidateEventCreatorPermission(eventUser.Event, requestorId);
+        if (eventUser.Event.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before removing an accepted participant.");
+        }
 
         var wishlists = await context.Wishlists
                 .Where(w => w.EventId == eventId && w.OwnerId == userId && !w.Deleted)
@@ -746,11 +825,30 @@ public class EventService(
             .OrderByDescending(eu => eu.InvitationDate)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<EventUserModel>>(pendingInvitations);
+        return pendingInvitations.Select(invitation =>
+        {
+            var model = _mapper.Map<EventUserModel>(invitation);
+            model.Event = new EventModel
+            {
+                Name = invitation.Event.Name,
+                Date = invitation.Event.Date,
+                PublicId = invitation.Event.PublicId,
+                CreatedBy = invitation.Event.CreatedBy is null
+                    ? null
+                    : new ApplicationUserModel
+                    {
+                        Id = invitation.Event.CreatedBy.Id,
+                        UserName = invitation.Event.CreatedBy.UserName ?? string.Empty,
+                        Email = string.Empty
+                    },
+                EventUsers = []
+            };
+            return model;
+        }).ToList();
     }
 
     // PublicId-based methods for public routes
-    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string requestingUserId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -760,7 +858,7 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted))
+                .Where(w => !w.Deleted && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.GiftExchanges)
                 .ThenInclude(ge => ge.Receiver)
@@ -771,13 +869,28 @@ public class EventService(
             throw new KeyNotFoundException($"Event with publicId {publicId} not found");
         }
 
+        var isMember = IsEventMember(eventEntity, requestingUserId);
+        var isPendingInvitee = IsPendingInvitee(eventEntity, requestingUserId);
+        if (!isMember && !isPendingInvitee)
+        {
+            throw new UnauthorizedAccessException("You must be a member of this event.");
+        }
+
         var eventModel = _mapper.Map<EventModel>(eventEntity);
+        if (isPendingInvitee)
+        {
+            eventModel.EventUsers = [];
+            eventModel.EventWishlists = [];
+            eventModel.GiftExchanges = [];
+            eventModel.PairingRules = [];
+        }
         FilterGiftExchangeVisibility(eventModel, requestingUserId);
         FilterWishlistVisibility(eventModel.EventWishlists, requestingUserId);
+        RemoveParticipantEmails(eventModel, IsEventOwner(eventEntity, requestingUserId));
         return eventModel;
     }
 
-    public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt)
+    public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -785,10 +898,10 @@ public class EventService(
             .FirstOrDefaultAsync(e => e.PublicId == publicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {publicId} not found");
 
-        return await UpdateEventAsync(existingEvent.Id, evt);
+        return await UpdateEventAsync(existingEvent.Id, evt, requestorId);
     }
 
-    public async Task DeleteEventByPublicIdAsync(string publicId)
+    public async Task DeleteEventByPublicIdAsync(string publicId, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -796,24 +909,22 @@ public class EventService(
             .FirstOrDefaultAsync(e => e.PublicId == publicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {publicId} not found");
 
-        await DeleteEventAsync(existingEvent.Id);
+        await DeleteEventAsync(existingEvent.Id, requestorId);
     }
 
-    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role, string callerId)
+    public async Task<bool> AddUserToEventByPublicIdAsync(
+        string eventPublicId,
+        string userId,
+        string requestorId,
+        string role = "Participant")
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
-        if (!IsEventOwner(eventEntity, callerId))
-        {
-            throw new UnauthorizedAccessException("Only the event creator can add users to an event.");
-        }
-
-        return await AddUserToEventAsync(eventEntity.Id, userId, role);
+        return await AddUserToEventAsync(eventEntity.Id, userId, requestorId, role);
     }
 
     public async Task<bool> RemoveUserFromEventByPublicIdAsync(string eventPublicId, string userId, string requestorId)
@@ -966,14 +1077,16 @@ public class EventService(
         return await InviteByEmailToEventAsync(eventEntity.Id, inviterId, email);
     }
 
-    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
+        ValidateEventCreatorPermission(eventEntity, requestorId);
         return await GetEventInvitationsAsync(eventEntity.Id);
     }
 
@@ -1284,14 +1397,13 @@ public class EventService(
 
         await context.SaveChangesAsync();
 
-        // Send notifications to all participants
+        // Send notifications to participants whose assignments were reset.
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
 
-        // Get all participants (owner + all invited users, regardless of status)
         var participants = new List<(string userId, string? email)> { (eventEntity.CreatedBy.Id, eventEntity.CreatedBy.Email) };
 
-        foreach (var eu in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        foreach (var eu in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
         {
             if (!string.IsNullOrEmpty(eu.UserId) && eu.User?.Email != null)
             {
@@ -1354,7 +1466,7 @@ public class EventService(
         var participants = new List<GiftExchangeParticipant>();
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        void AddParticipant(string key, string? userId, string? email, string? displayName)
+        void addParticipant(string key, string? userId, string? email, string? displayName)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -1371,16 +1483,16 @@ public class EventService(
             }
         }
 
-        AddParticipant($"user:{eventEntity.CreatedBy.Id}",
+        addParticipant($"user:{eventEntity.CreatedBy.Id}",
             eventEntity.CreatedBy.Id,
             eventEntity.CreatedBy.Email,
             eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
 
-        foreach (var eventUser in eventEntity.EventUsers.Where(eu => !eu.Deleted))
+        foreach (var eventUser in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
         {
             if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
             {
-                AddParticipant($"user:{eventUser.UserId}",
+                addParticipant($"user:{eventUser.UserId}",
                     eventUser.UserId,
                     eventUser.User.Email,
                     eventUser.User.UserName ?? eventUser.User.Email ?? eventUser.UserId);
@@ -1388,7 +1500,7 @@ public class EventService(
             else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
             {
                 var normalizedEmail = eventUser.InviteeEmail.Trim();
-                AddParticipant($"invite:{eventUser.Id}",
+                addParticipant($"invite:{eventUser.Id}",
                     null,
                     normalizedEmail,
                     normalizedEmail);
@@ -1397,6 +1509,11 @@ public class EventService(
 
         return participants;
     }
+
+    internal static bool IsEligibleGiftExchangeParticipant(EventUser participant) =>
+        !participant.Deleted &&
+        participant.IsAccepted &&
+        string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase);
 
     private static List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>? DrawNamesWithExclusions(
         IReadOnlyList<GiftExchangeParticipant> participants,
@@ -1615,15 +1732,59 @@ public class EventService(
         return _mapper.Map<IEnumerable<CustomPairingRuleModel>>(rules);
     }
 
-    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
             .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
+        ValidateEventCreatorPermission(eventEntity, requestorId);
         return await GetPairingRulesAsync(eventEntity.Id);
+    }
+
+    private static void RemoveParticipantEmails(EventModel eventModel, bool isOwner)
+    {
+        if (isOwner)
+        {
+            return;
+        }
+
+        if (eventModel.CreatedBy is not null)
+        {
+            eventModel.CreatedBy.Email = string.Empty;
+        }
+
+        foreach (var eventUser in eventModel.EventUsers ?? [])
+        {
+            eventUser.InviteeEmail = null;
+            if (eventUser.User is not null)
+            {
+                eventUser.User.Email = string.Empty;
+            }
+        }
+
+        RemoveWishlistOwnerEmails(eventModel.EventWishlists, false);
+    }
+
+    private static void RemoveWishlistOwnerEmails(
+        IEnumerable<WishlistModel>? wishlists,
+        bool isEventOwner)
+    {
+        if (isEventOwner || wishlists is null)
+        {
+            return;
+        }
+
+        foreach (var wishlist in wishlists)
+        {
+            if (wishlist.Owner is not null)
+            {
+                wishlist.Owner.Email = string.Empty;
+            }
+        }
     }
 
     public async Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId)

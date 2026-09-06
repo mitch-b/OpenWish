@@ -11,7 +11,7 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>($"{BaseUrl}/user")
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ApplicationUserModel>>(BaseUrl)
             ?? Array.Empty<ApplicationUserModel>();
     }
 
@@ -97,9 +97,7 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
 
     public async Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId)
     {
-        var response = await _httpClient.PostAsync($"{BaseUrl}/invite/complete/{inviterUserId}", null);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<bool>();
+        throw new NotSupportedException("Friend invitation completion is available only during server-side registration.");
     }
 
     public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)

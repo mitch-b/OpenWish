@@ -16,18 +16,7 @@ public class ActivityHttpClientService(HttpClient httpClient) : IActivityService
         int? wishlistId = null,
         int? wishlistItemId = null)
     {
-        var activity = new
-        {
-            ActivityType = activityType,
-            Description = description,
-            WishlistId = wishlistId,
-            WishlistItemId = wishlistItemId
-        };
-
-        var response = await _httpClient.PostAsJsonAsync(BaseUrl, activity);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ActivityLogModel>()
-            ?? throw new HttpRequestException("Failed to log activity");
+        throw new NotSupportedException("Activity entries can only be created by trusted server-side services.");
     }
 
     public async Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0)

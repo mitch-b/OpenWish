@@ -66,14 +66,17 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<IActionResult> UpdateWishlist(string publicId, WishlistModel wishlist)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
-        var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(publicId, userId);
-        if (!canEdit) return Forbid();
-        var updatedWishlist = await _wishlistService.UpdateWishlistByPublicIdAsync(publicId, wishlist);
-        if (updatedWishlist == null)
+        if (userId is null)
         {
-            return NotFound();
+            return Unauthorized();
         }
+
+        if (!await _wishlistService.CanUserEditWishlistByPublicIdAsync(publicId, userId))
+        {
+            return Forbid();
+        }
+
+        var updatedWishlist = await _wishlistService.UpdateWishlistByPublicIdAsync(publicId, wishlist);
         return Ok(updatedWishlist);
     }
 
@@ -81,9 +84,22 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<IActionResult> DeleteWishlist(string publicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
-        var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(publicId, userId);
-        if (!canEdit) return Forbid();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(publicId, userId))
+        {
+            return Forbid();
+        }
+
+        var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(publicId, userId);
+        if (wishlist.OwnerId != userId)
+        {
+            return Forbid();
+        }
+
         await _wishlistService.DeleteWishlistByPublicIdAsync(publicId);
         return NoContent();
     }
@@ -167,6 +183,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return NotFound();
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{wishlistPublicId}/items/{itemId}")]
@@ -193,11 +213,15 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
             }
 
             var updatedItem = await _wishlistService.UpdateWishlistItemByPublicIdAsync(wishlistPublicId, itemId, item);
-            return NoContent();
+            return Ok(updatedItem);
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 
@@ -237,20 +261,22 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<WishlistPermissionModel>> ShareWishlist(string wishlistPublicId, [FromBody] ShareRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
-        try
+        if (userId is null)
         {
-            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
-            if (wishlist.OwnerId != userId) return Forbid();
+            return Unauthorized();
         }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (UnauthorizedAccessException)
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
         {
             return Forbid();
         }
+
+        var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+        if (wishlist.OwnerId != userId)
+        {
+            return Forbid();
+        }
+
         var permission = await _wishlistService.ShareWishlistByPublicIdAsync(wishlistPublicId, request.UserId, request.PermissionType);
         return Ok(permission);
     }
@@ -259,28 +285,36 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<string>> CreateSharingLink(string wishlistPublicId, [FromBody] SharingLinkRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
-        try
+        if (userId is null)
         {
-            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
-            if (wishlist.OwnerId != userId) return Forbid();
+            return Unauthorized();
         }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (UnauthorizedAccessException)
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
         {
             return Forbid();
         }
+
+        var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+        if (wishlist.OwnerId != userId)
+        {
+            return Forbid();
+        }
+
         var token = await _wishlistService.CreateSharingLinkByPublicIdAsync(wishlistPublicId, request.PermissionType, request.Expiration);
         return Ok(token);
     }
 
     [HttpPost("accept-link/{token}")]
-    public async Task<ActionResult<bool>> AcceptSharingLink(string token, [FromBody] AcceptLinkRequest request)
+    public async Task<ActionResult<bool>> AcceptSharingLink(string token)
     {
-        var result = await _wishlistService.AcceptSharingLinkAsync(token, request.UserId);
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _wishlistService.AcceptSharingLinkAsync(token, userId);
         return Ok(result);
     }
 
@@ -288,20 +322,22 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<IEnumerable<WishlistPermissionModel>>> GetWishlistPermissions(string wishlistPublicId)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
-        try
+        if (userId is null)
         {
-            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
-            if (wishlist.OwnerId != userId) return Forbid();
+            return Unauthorized();
         }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (UnauthorizedAccessException)
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
         {
             return Forbid();
         }
+
+        var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+        if (wishlist.OwnerId != userId)
+        {
+            return Forbid();
+        }
+
         var permissions = await _wishlistService.GetWishlistPermissionsByPublicIdAsync(wishlistPublicId);
         return Ok(permissions);
     }
@@ -309,21 +345,23 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     [HttpDelete("{wishlistPublicId}/permissions/{userId}")]
     public async Task<ActionResult<bool>> RemovePermission(string wishlistPublicId, string userId)
     {
-        var callerId = await _userContextService.GetUserIdAsync();
-        if (callerId is null) return Unauthorized();
-        try
+        var requestingUserId = await _userContextService.GetUserIdAsync();
+        if (requestingUserId is null)
         {
-            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, callerId);
-            if (wishlist.OwnerId != callerId) return Forbid();
+            return Unauthorized();
         }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (UnauthorizedAccessException)
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, requestingUserId))
         {
             return Forbid();
         }
+
+        var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, requestingUserId);
+        if (wishlist.OwnerId != requestingUserId)
+        {
+            return Forbid();
+        }
+
         var result = await _wishlistService.RemoveWishlistPermissionByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
@@ -354,16 +392,28 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(wishlists);
     }
 
-    [HttpGet("{wishlistPublicId}/can-access/{userId}")]
-    public async Task<ActionResult<bool>> CanUserAccess(string wishlistPublicId, string userId)
+    [HttpGet("{wishlistPublicId}/can-access")]
+    public async Task<ActionResult<bool>> CanUserAccess(string wishlistPublicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var result = await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
 
-    [HttpGet("{wishlistPublicId}/can-edit/{userId}")]
-    public async Task<ActionResult<bool>> CanUserEdit(string wishlistPublicId, string userId)
+    [HttpGet("{wishlistPublicId}/can-edit")]
+    public async Task<ActionResult<bool>> CanUserEdit(string wishlistPublicId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var result = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
         return Ok(result);
     }
@@ -373,7 +423,16 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<ItemCommentModel>> AddComment(string wishlistPublicId, int itemId, [FromBody] CommentRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+        {
+            return Forbid();
+        }
+
         var comment = await _wishlistService.AddCommentToItemByPublicIdAsync(wishlistPublicId, itemId, userId, request.Text);
         return Ok(comment);
     }
@@ -381,6 +440,17 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     [HttpGet("{wishlistPublicId}/items/{itemId}/comments")]
     public async Task<ActionResult<IEnumerable<ItemCommentModel>>> GetComments(string wishlistPublicId, int itemId)
     {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+        {
+            return Forbid();
+        }
+
         var comments = await _wishlistService.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemId);
         return Ok(comments);
     }
@@ -389,7 +459,11 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<bool>> RemoveComment(int commentId)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var result = await _wishlistService.RemoveItemCommentAsync(commentId, userId);
         return Ok(result);
     }
@@ -399,7 +473,16 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<bool>> ReserveItem(string wishlistPublicId, int itemId, [FromBody] ReservationRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+        {
+            return Forbid();
+        }
+
         var result = await _wishlistService.ReserveItemByPublicIdAsync(wishlistPublicId, itemId, userId, request.IsAnonymous);
         return Ok(result);
     }
@@ -408,7 +491,11 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     public async Task<ActionResult<bool>> CancelReservation(string wishlistPublicId, int itemId)
     {
         var userId = await _userContextService.GetUserIdAsync();
-        if (userId is null) return Unauthorized();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
         var result = await _wishlistService.CancelReservationByPublicIdAsync(wishlistPublicId, itemId, userId);
         return Ok(result);
     }
@@ -416,15 +503,19 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     [HttpGet("{wishlistPublicId}/items/{itemId}/reservation")]
     public async Task<ActionResult<ItemReservationModel>> GetReservation(string wishlistPublicId, int itemId)
     {
-        var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId);
-        return Ok(reservation);
-    }
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
 
-    [HttpGet("items/{itemId}/is-reserved")]
-    public async Task<ActionResult<bool>> IsItemReserved(int itemId)
-    {
-        var isReserved = await _wishlistService.IsItemReservedAsync(itemId);
-        return Ok(isReserved);
+        if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+        {
+            return Forbid();
+        }
+
+        var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId, userId);
+        return Ok(reservation);
     }
 
     [HttpGet("{wishlistPublicId}/friends-with-access")]
@@ -460,24 +551,19 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
 
     public class ShareRequest
     {
-        public string UserId { get; set; }
-        public string PermissionType { get; set; }
+        public required string UserId { get; set; }
+        public required string PermissionType { get; set; }
     }
 
     public class SharingLinkRequest
     {
-        public string PermissionType { get; set; }
+        public required string PermissionType { get; set; }
         public TimeSpan? Expiration { get; set; }
-    }
-
-    public class AcceptLinkRequest
-    {
-        public string UserId { get; set; }
     }
 
     public class CommentRequest
     {
-        public string Text { get; set; }
+        public required string Text { get; set; }
     }
 
     public class ReservationRequest

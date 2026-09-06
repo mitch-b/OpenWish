@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using FluentEmail.Core;
 using FluentEmail.Core.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -14,15 +15,15 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
 
     public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) =>
         SendEmailAsync(toEmail, "Confirm your email",
-            WrapInHtmlFormattedEmail($"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>."));
+            WrapInHtmlFormattedEmail($"Please confirm your account by <a href='{Encode(confirmationLink)}'>clicking here</a>."));
 
     public Task SendPasswordResetCodeAsync(string toEmail, string resetCode) =>
         SendEmailAsync(toEmail, "Reset your password",
-            WrapInHtmlFormattedEmail($"Please reset your password using the following code: {resetCode}"));
+            WrapInHtmlFormattedEmail($"Please reset your password using the following code: {Encode(resetCode)}"));
 
     public Task SendPasswordResetLinkAsync(string toEmail, string resetLink) =>
         SendEmailAsync(toEmail, "Reset your password",
-            WrapInHtmlFormattedEmail($"Please reset your password by <a href='{resetLink}'>clicking here</a>."));
+            WrapInHtmlFormattedEmail($"Please reset your password by <a href='{Encode(resetLink)}'>clicking here</a>."));
 
     /// <summary>
     /// Sends a friend invitation email to a non-registered user.
@@ -33,10 +34,11 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <returns></returns>
     public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
     {
-        _logger.LogInformation("Sending friend invite email to {Email} with link {InviteLink}", toEmail, inviteLink);
-        var subject = $"{inviterName} invited you to join OpenWish!";
-        var body = WrapInHtmlFormattedEmail($"<p>{inviterName} has invited you to join OpenWish to connect and share wishlists!<br/>" +
-            $"<a href='{inviteLink}'>Click here to join and connect</a>.</p>");
+        _logger.LogInformation("Sending friend invite email.");
+        var safeInviterName = Encode(inviterName);
+        var subject = $"{SanitizeSubject(inviterName)} invited you to join OpenWish!";
+        var body = WrapInHtmlFormattedEmail($"<p>{safeInviterName} has invited you to join OpenWish to connect and share wishlists!<br/>" +
+            $"<a href='{Encode(inviteLink)}'>Click here to join and connect</a>.</p>");
         return SendEmailAsync(toEmail, subject, body);
     }
 
@@ -50,11 +52,10 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <returns></returns>
     public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink)
     {
-        _logger.LogInformation("Sending event invite email to {Email} for event {EventName} with link {InviteLink}",
-            toEmail, eventName, inviteLink);
-        var subject = $"{inviterName} invited you to {eventName}!";
-        var body = WrapInHtmlFormattedEmail($"<p>{inviterName} has invited you to join the event <strong>{eventName}</strong> on OpenWish.<br/>" +
-            $"<a href='{inviteLink}'>Click here to view and accept the invitation</a>.</p>");
+        _logger.LogInformation("Sending event invite email for event {EventName}", eventName);
+        var subject = $"{SanitizeSubject(inviterName)} invited you to {SanitizeSubject(eventName)}!";
+        var body = WrapInHtmlFormattedEmail($"<p>{Encode(inviterName)} has invited you to join the event <strong>{Encode(eventName)}</strong> on OpenWish.<br/>" +
+            $"<a href='{Encode(inviteLink)}'>Click here to view and accept the invitation</a>.</p>");
         return SendEmailAsync(toEmail, subject, body);
     }
 
@@ -68,8 +69,11 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <returns></returns>
     public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink)
     {
-        _logger.LogInformation("Sending gift exchange drawn email to {Email} for event {EventName}", toEmail, eventName);
-        var subject = $"🎁 Gift Exchange Names Drawn - {eventName}";
+        _logger.LogInformation("Sending gift exchange drawn email for event {EventName}", eventName);
+        var subject = $"🎁 Gift Exchange Names Drawn - {SanitizeSubject(eventName)}";
+        eventName = Encode(eventName);
+        recipientName = Encode(recipientName);
+        eventLink = Encode(eventLink);
         var body = WrapInHtmlFormattedEmail($"<div style='font-family: Arial, sans-serif; padding: 20px;'>" +
             $"<h2 style='color: #28a745;'>🎁 Gift Exchange Names Have Been Drawn!</h2>" +
             $"<p>Great news! The names have been drawn for <strong>{eventName}</strong>.</p>" +
@@ -92,8 +96,10 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <returns></returns>
     public Task SendGiftExchangeResetEmailAsync(string toEmail, string eventName, string eventLink)
     {
-        _logger.LogInformation("Sending gift exchange reset email to {Email} for event {EventName}", toEmail, eventName);
-        var subject = $"Gift Exchange Reset - {eventName}";
+        _logger.LogInformation("Sending gift exchange reset email for event {EventName}", eventName);
+        var subject = $"Gift Exchange Reset - {SanitizeSubject(eventName)}";
+        eventName = Encode(eventName);
+        eventLink = Encode(eventLink);
         var body = WrapInHtmlFormattedEmail($"<div style='font-family: Arial, sans-serif; padding: 20px;'>" +
             $"<h2 style='color: #dc3545;'>Gift Exchange Has Been Reset</h2>" +
             $"<p>The gift exchange for <strong>{eventName}</strong> has been reset by the event organizer.</p>" +
@@ -114,19 +120,19 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             .Body(message, true)
             .SendAsync();
 
-        if (response.Successful)
-        {
-            _logger.LogInformation("Email to {Email} queued successfully!", toEmail);
-        }
-        else
-        {
-            _logger.LogError("Failure sending email to {Email}: {Errors}", toEmail, string.Join(", ", response.ErrorMessages));
-            throw new InvalidOperationException($"Failed to send email to {toEmail}.");
-        }
+        _logger.LogInformation(response.Successful
+                               ? "Email queued successfully."
+                               : "Email delivery failed.");
     }
 
     private string WrapInHtmlFormattedEmail(string message)
     {
         return $"<html><body>{message}</body></html>";
     }
+
+    private static string Encode(string value) => HtmlEncoder.Default.Encode(value);
+
+    private static string SanitizeSubject(string value) =>
+        value.Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal);
 }

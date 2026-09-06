@@ -28,20 +28,20 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return await httpClient.GetFromJsonAsync<IEnumerable<EventModel>>("api/events");
     }
 
-    public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel)
+    public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel, string requestorId)
     {
         var response = await httpClient.PutAsJsonAsync($"api/events/{id}", eventModel);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EventModel>();
     }
 
-    public async Task DeleteEventAsync(int id)
+    public async Task DeleteEventAsync(int id, string requestorId)
     {
         var response = await httpClient.DeleteAsync($"api/events/{id}");
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<bool> AddUserToEventAsync(int eventId, string userId, string role = "Participant")
+    public async Task<bool> AddUserToEventAsync(int eventId, string userId, string requestorId, string role = "Participant")
     {
         var request = new AddUserToEventRequest { UserId = userId, Role = role };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/users", request);
@@ -164,26 +164,30 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     }
 
     // PublicId-based methods
-    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string? requestingUserId = null)
+    public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string requestingUserId)
     {
         _ = requestingUserId;
         return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{publicId}");
     }
 
-    public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt)
+    public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt, string requestorId)
     {
         var response = await httpClient.PutAsJsonAsync($"api/events/{publicId}", evt);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<EventModel>();
     }
 
-    public async Task DeleteEventByPublicIdAsync(string publicId)
+    public async Task DeleteEventByPublicIdAsync(string publicId, string requestorId)
     {
         var response = await httpClient.DeleteAsync($"api/events/{publicId}");
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task<bool> AddUserToEventByPublicIdAsync(string eventPublicId, string userId, string role, string callerId)
+    public async Task<bool> AddUserToEventByPublicIdAsync(
+        string eventPublicId,
+        string userId,
+        string requestorId,
+        string role = "Participant")
     {
         var request = new { UserId = userId, Role = role };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/users", request);
@@ -246,7 +250,7 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return await response.Content.ReadFromJsonAsync<EventUserModel>();
     }
 
-    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId, string requestorId)
     {
         return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventPublicId}/invitations");
     }
@@ -299,7 +303,7 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         throw new NotImplementedException("Use GetPairingRulesByPublicIdAsync instead");
     }
 
-    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId)
+    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId)
     {
         return await httpClient.GetFromJsonAsync<IEnumerable<CustomPairingRuleModel>>($"api/events/{eventPublicId}/pairing-rules")
             ?? Enumerable.Empty<CustomPairingRuleModel>();

@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>preview</LangVersion>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <UserSecretsId>openwish-7a370443-2fc2-41e2-9fe4-815e03888f26</UserSecretsId>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>

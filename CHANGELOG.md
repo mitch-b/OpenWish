@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.1] - 2026-09-06
+
+### Improved
+
+- Wishlist product links now identify the item they open for screen-reader
+  users and safely open in a new tab.
+
 ## [0.1.0] - 2026-09-05
 
 ### Added

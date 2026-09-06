@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.1.1",
+    "date": "2026-09-06",
+    "title": "Clearer product links",
+    "summary": "Product links now make it clearer where they lead.",
+    "highlights": [
+      "Wishlist product links identify the item they open for screen-reader users and safely open in a new tab."
+    ]
+  },
+  {
     "version": "0.1.0",
     "date": "2026-09-05",
     "title": "Sustainable improvements",

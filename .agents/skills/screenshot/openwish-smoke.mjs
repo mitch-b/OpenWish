@@ -96,10 +96,36 @@ async function visit(page, route, expectedText, visitedRoutes) {
 async function screenshot(page, fileName) {
   await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.waitForTimeout(500);
+  await assertDesktopSidebarContinuity(page);
   await page.screenshot({
     path: path.join(walkthroughDirectory, fileName),
     fullPage: true
   });
+}
+
+async function assertDesktopSidebarContinuity(page) {
+  const dimensions = await page.evaluate(() => {
+    if (window.innerWidth <= 640) {
+      return null;
+    }
+
+    const shell = document.querySelector(".page");
+    const sidebar = document.querySelector(".sidebar");
+    if (!shell || !sidebar) {
+      throw new Error("The application shell is missing its desktop sidebar.");
+    }
+
+    return {
+      shellHeight: shell.getBoundingClientRect().height,
+      sidebarHeight: sidebar.getBoundingClientRect().height
+    };
+  });
+
+  if (dimensions && dimensions.sidebarHeight + 1 < dimensions.shellHeight) {
+    throw new Error(
+      `Desktop sidebar ended at ${dimensions.sidebarHeight}px before the ${dimensions.shellHeight}px application shell.`
+    );
+  }
 }
 
 async function assertResponsiveWidths(page, viewports) {

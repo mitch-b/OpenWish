@@ -67,11 +67,16 @@
 
     .sidebar {
         width: 232px;
-        height: 100vh;
         flex: 0 0 232px;
+        align-self: stretch;
+        position: relative;
+        box-shadow: 6px 0 24px rgba(13,15,26,.08);
+    }
+
+    .sidebar-content {
         position: sticky;
         top: 0;
-        box-shadow: 6px 0 24px rgba(13,15,26,.08);
+        height: 100vh;
     }
 }
 

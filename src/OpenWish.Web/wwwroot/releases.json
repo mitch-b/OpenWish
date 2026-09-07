@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.7",
+    "date": "2026-09-07",
+    "title": "Accessible event coordination",
+    "summary": "Event coordination controls now give keyboard and screen-reader users clearer state and context.",
+    "highlights": [
+      "Invitation filters announce their selected status and matching invitations.",
+      "Invitation and removal dialogs identify their purpose, choices, and consequences.",
+      "Wishlist attachment and pairing-rule controls keep their visible labels connected."
+    ]
+  },
+  {
     "version": "0.1.6",
     "date": "2026-09-07",
     "title": "Clearer gift coordination controls",

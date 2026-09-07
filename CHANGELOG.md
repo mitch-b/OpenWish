@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.7] - 2026-09-07
+
+### Improved
+
+- Event invitations, invitation decisions, event wishlists, and gift-exchange
+  pairing rules now provide clearer keyboard and screen-reader context.
+
 ## [0.1.6] - 2026-09-07
 
 ### Improved

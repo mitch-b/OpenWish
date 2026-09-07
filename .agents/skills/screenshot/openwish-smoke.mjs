@@ -5,6 +5,7 @@ import path from "node:path";
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
 const evidenceDirectory = process.env.OPENWISH_EVIDENCE_DIR ?? "/evidence";
 const walkthroughDirectory = process.env.OPENWISH_WALKTHROUGH_DIR ?? evidenceDirectory;
+const releaseVersion = process.env.OPENWISH_RELEASE_VERSION;
 const ownerEmail = "playwright-owner@openwish.local";
 const guestEmail = "playwright-guest@openwish.local";
 const friendEmail = "playwright-friend@openwish.local";
@@ -485,8 +486,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "event-details-dark.png");
 
   await visit(page, "/whats-new", "What's new", visitedRoutes);
-  await assertVisible(page, "Version 0.1.2");
-  await assertVisible(page, "Clearer loading updates");
+  if (!releaseVersion) {
+    throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
+  }
+  await assertVisible(page, `Version ${releaseVersion}`);
+  await assertVisible(page, "Accessible event coordination");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();

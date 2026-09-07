@@ -47,6 +47,66 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-describedby=\"delete-event-dialog-description\"", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EventInvitationFilters_ExposeTheirStateAndMatchingResults()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
+
+        Assert.Contains("aria-label=\"Filter invitations by status\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(_filter == \"All\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"event-invitations-list\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"event-invitations-list\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@FilteredInvitationCountMessage", markup, StringComparison.Ordinal);
+        Assert.Contains("var count = FilteredInvitations.Count();", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventInvitationDialogs_ExposeTitlesTabsAndSearchLabels()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
+
+        Assert.Contains("aria-labelledby=\"remove-participant-dialog-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"remove-participant-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"event-invite-email-panel\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"tabpanel\"", markup, StringComparison.Ordinal);
+        Assert.Contains("hidden=\"@(_inviteMode != \"email\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("hidden=\"@(_inviteMode != \"friends\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"event-invite-friend-search\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PendingInvitationDecline_IdentifiesItsConfirmationControls()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
+
+        Assert.Contains("aria-controls=\"decline-invitation-@invitation.Id\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Confirm declining @(invitation.Event?.Name ?? \"this event\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Keep invitation", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Declining...</span>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventWishlistRemoval_ConnectsItsLabelAndDialogDescription()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+
+        Assert.Contains("for=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"remove-wishlist-dialog-description\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GiftExchangePairingRules_KeepVisibleLabelsConnectedToSelectors()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeManager.razor");
+
+        Assert.Contains("for=\"pairing-rule-source\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"pairing-rule-source\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"pairing-rule-target\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"pairing-rule-target\"", markup, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

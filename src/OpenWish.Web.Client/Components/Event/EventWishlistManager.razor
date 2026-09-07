@@ -97,9 +97,9 @@ else
                     }
                     else if (attachableWishlists.Count > 1)
                     {
-                        <label class="form-label">Attach an existing wishlist</label>
+                        <label for="event-wishlist-select" class="form-label">Attach an existing wishlist</label>
                         <div class="input-group">
-                            <select class="form-select"
+                            <select id="event-wishlist-select" class="form-select"
                                     @bind="_selectedWishlistId"
                                     disabled="@_isSubmitting">
                                 <option value="">Select a wishlist</option>
@@ -223,15 +223,17 @@ else
 
 @if (_showRemoveConfirmation && _wishlistPendingRemoval is not null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
+         aria-labelledby="remove-wishlist-dialog-title" aria-describedby="remove-wishlist-dialog-description">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Remove Wishlist</h5>
-                    <button type="button" class="btn-close" @onclick="CancelWishlistRemoval" disabled="@_isSubmitting"></button>
+                    <h5 id="remove-wishlist-dialog-title" class="modal-title">Remove wishlist</h5>
+                    <button type="button" class="btn-close" aria-label="Close removal confirmation"
+                            @onclick="CancelWishlistRemoval" disabled="@_isSubmitting"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Are you sure you want to remove <strong>@_wishlistPendingRemoval.Name</strong> from this event?</p>
+                    <p id="remove-wishlist-dialog-description">Are you sure you want to remove <strong>@_wishlistPendingRemoval.Name</strong> from this event?</p>
                     <p class="mb-0 text-muted">The wishlist remains available elsewhere, but participants will no longer see it in this event.</p>
                 </div>
                 <div class="modal-footer">

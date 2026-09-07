@@ -221,8 +221,8 @@
                             <h6>Add exclusion rule</h6>
                             <div class="row g-2">
                                 <div class="col-md-5">
-                                    <label class="form-label">Person 1</label>
-                                    <select class="form-select" @bind="_newRuleSourceKey">
+                                    <label for="pairing-rule-source" class="form-label">Person 1</label>
+                                    <select id="pairing-rule-source" class="form-select" @bind="_newRuleSourceKey">
                                         <option value="">Select...</option>
                                         @foreach (var participant in _participants)
                                         {
@@ -231,8 +231,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-5">
-                                    <label class="form-label">Person 2</label>
-                                    <select class="form-select" @bind="_newRuleTargetKey">
+                                    <label for="pairing-rule-target" class="form-label">Person 2</label>
+                                    <select id="pairing-rule-target" class="form-select" @bind="_newRuleTargetKey">
                                         <option value="">Select...</option>
                                         @foreach (var participant in _participants)
                                         {

@@ -7,6 +7,7 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
+release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
@@ -60,6 +61,7 @@ docker run --rm \
   --ipc=host \
   --network "$network_name" \
   --env OPENWISH_BASE_URL=http://web:8080 \
+  --env "OPENWISH_RELEASE_VERSION=$release_version" \
   --env OPENWISH_EVIDENCE_DIR=/evidence \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \
@@ -76,7 +78,7 @@ test -s "$walkthrough_directory/friends.png"
 test -s "$walkthrough_directory/notifications.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
-if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed'; then
-  echo "Server logs contain a failed request or unhandled exception." >&2
+if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then
+  echo "Server logs contain a failed request, exception, or concurrency conflict." >&2
   exit 1
 fi

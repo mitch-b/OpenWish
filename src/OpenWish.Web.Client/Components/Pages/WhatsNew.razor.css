@@ -23,7 +23,7 @@
     position: relative;
 }
 
-.release-search-field .ow-icon {
+.release-search-field ::deep .ow-icon {
     position: absolute;
     top: 50%;
     left: 0.9rem;

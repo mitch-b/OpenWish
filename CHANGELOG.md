@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.5] - 2026-09-07
+
+### Fixed
+
+- Compiled OpenWish assemblies now report the same version as the published
+  release metadata.
+
 ## [0.1.4] - 2026-09-07
 
 ### Fixed

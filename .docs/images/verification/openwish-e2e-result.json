@@ -20,10 +20,22 @@
       ]
     },
     {
+      "scenario": "desktop-external-login",
+      "visitedRoutes": [
+        "/Account/Login?ReturnUrl=%2F"
+      ],
+      "challengeStatus": 302,
+      "authorizationOrigin": "https://accounts.google.com",
+      "redirectUri": "http://web:8080/signin-google"
+    },
+    {
       "scenario": "mobile-external-login",
       "visitedRoutes": [
-        "/Account/Login"
-      ]
+        "/Account/Login?ReturnUrl=%2Fwishlists"
+      ],
+      "challengeStatus": 302,
+      "authorizationOrigin": "https://accounts.google.com",
+      "redirectUri": "http://web:8080/signin-google"
     },
     {
       "scenario": "owner-desktop",

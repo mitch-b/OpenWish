@@ -20,6 +20,12 @@
       ]
     },
     {
+      "scenario": "mobile-external-login",
+      "visitedRoutes": [
+        "/Account/Login"
+      ]
+    },
+    {
       "scenario": "owner-desktop",
       "loginStatus": 200,
       "visitedRoutes": [

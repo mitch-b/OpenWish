@@ -161,6 +161,40 @@ async function assertResponsiveWidths(page, viewports) {
   }
 }
 
+async function verifyExternalLogin(browser, results) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true
+  });
+  const page = await context.newPage();
+  const visitedRoutes = [];
+
+  await page.route("https://accounts.google.com/**", route => route.abort());
+  await visit(page, "/Account/Login", "Single sign-on", visitedRoutes);
+
+  const externalLoginForm = page.locator("form.external-login-form");
+  if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
+    throw new Error("External login must use a full browser navigation for the OAuth handoff.");
+  }
+
+  const signInButton = page.getByRole("button", { name: "Continue with Google" });
+  await signInButton.waitFor({ state: "visible" });
+  await screenshot(page, "login-mobile.png");
+  const postRequest = page.waitForRequest(request =>
+    request.method() === "POST" &&
+    new URL(request.url()).pathname === "/Account/PerformExternalLogin"
+  );
+
+  await signInButton.click();
+  const request = await postRequest;
+  if (!request.postData()?.includes("provider=Google")) {
+    throw new Error("Google sign-in did not submit the selected provider.");
+  }
+
+  results.push({ scenario: "mobile-external-login", visitedRoutes });
+  await context.close();
+}
+
 async function verifyOwnerJourney(browser, manifest, results) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -700,6 +734,7 @@ try {
   }
 
   await verifyDevelopmentLoginJourney(browser, results);
+  await verifyExternalLogin(browser, results);
   const securityFixture = await verifyOwnerJourney(browser, manifest, results);
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);

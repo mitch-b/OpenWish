@@ -420,6 +420,20 @@ h1:focus {
     background: var(--color-surface-alt);
 }
 
+.external-login-form p {
+    margin-bottom: 0;
+}
+
+.external-login-button {
+    min-height: 2.75rem;
+}
+
+@media (max-width: 575.98px) {
+    .external-login-button {
+        width: 100%;
+    }
+}
+
 .demo-account-panel > .alert {
     padding: 1.25rem;
 }
@@ -858,4 +872,4 @@ legend.form-label {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
     }
-}
+}

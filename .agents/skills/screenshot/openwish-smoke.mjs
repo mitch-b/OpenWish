@@ -239,7 +239,11 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       ]),
       handoffTimeout
     ]);
-    const formData = new URLSearchParams(response.request().postData());
+    const postData = response.request().postData();
+    if (postData === null) {
+      throw new Error("Google sign-in challenge POST had no form body.");
+    }
+    const formData = new URLSearchParams(postData);
     if (formData.get("provider") !== "Google" || formData.get("ReturnUrl") !== returnUrl) {
       throw new Error("Google sign-in did not preserve the provider and return destination.");
     }

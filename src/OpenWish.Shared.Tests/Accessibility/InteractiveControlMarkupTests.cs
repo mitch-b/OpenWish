@@ -19,6 +19,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("for=\"wishlist-sort\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("\"wishlist\" : \"wishlists\") found.", markup, StringComparison.Ordinal);
+        Assert.Contains("filteredWishlists = filtered.ToList();", markup, StringComparison.Ordinal);
     }
 
     [Fact]

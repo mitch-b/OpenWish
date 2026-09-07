@@ -85,7 +85,7 @@
                         <span>Loading wishlists...</span>
                     </div>
                 }
-                else if (!filteredWishlists.Any())
+                else if (filteredWishlists.Count == 0)
                 {
                     <div class="empty-state">
                         <h2>No wishlists found</h2>
@@ -96,7 +96,7 @@
                 else
                 {
                     <p class="visually-hidden" role="status" aria-live="polite">
-                        @filteredWishlists.Count() @(filteredWishlists.Count() == 1 ? "wishlist" : "wishlists") found.
+                        @filteredWishlists.Count @(filteredWishlists.Count == 1 ? "wishlist" : "wishlists") found.
                     </p>
                     <div class="row g-3">
                         @foreach (var wishlist in filteredWishlists)
@@ -146,7 +146,7 @@
 
 @code {
     private IEnumerable<WishlistModel>? wishlists;
-    private IEnumerable<WishlistModel>? filteredWishlists;
+    private IReadOnlyList<WishlistModel>? filteredWishlists;
     private IEnumerable<WishlistModel>? friendsWishlists;
     private string? _userId;
     private string activeTab = "my-wishlists";
@@ -267,7 +267,7 @@
     {
         if (wishlists == null)
         {
-            filteredWishlists = Array.Empty<WishlistModel>();
+            filteredWishlists = [];
             return;
         }
 
@@ -299,7 +299,7 @@
             _ => filtered.OrderBy(w => w.Name)
         };
 
-        filteredWishlists = filtered;
+        filteredWishlists = filtered.ToList();
     }
 
     private void HandleSearch()

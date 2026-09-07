@@ -2,6 +2,12 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.3] - 2026-09-07
+
+### Fixed
+
+- Google sign-in now reliably starts from the account login page.
+
 ## [0.1.2] - 2026-09-07
 
 ### Improved

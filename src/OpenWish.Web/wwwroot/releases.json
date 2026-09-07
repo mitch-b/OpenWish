@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.6",
+    "date": "2026-09-07",
+    "title": "Clearer gift coordination controls",
+    "summary": "Wishlist and event controls now provide clearer context when using a keyboard or screen reader.",
+    "highlights": [
+      "Wishlist tabs, search controls, and results communicate their current content and state.",
+      "Gift reservation and comment controls identify when their details are open.",
+      "Event deletion confirmation clearly describes its permanent consequence."
+    ]
+  },
+  {
     "version": "0.1.5",
     "date": "2026-09-07",
     "title": "Reliable release versioning",

@@ -134,14 +134,22 @@ else
 
 @if (_showDeleteConfirmation && _event is not null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal fade show d-block"
+         tabindex="-1"
+         role="dialog"
+         aria-labelledby="delete-event-dialog-title"
+         aria-describedby="delete-event-dialog-description">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delete Event</h5>
-                    <button type="button" class="btn-close" @onclick="CancelDeleteEvent" disabled="@_isDeleting"></button>
+                    <h5 class="modal-title" id="delete-event-dialog-title">Delete event</h5>
+                    <button type="button"
+                            class="btn-close"
+                            aria-label="Close delete event confirmation"
+                            @onclick="CancelDeleteEvent"
+                            disabled="@_isDeleting"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" id="delete-event-dialog-description">
                     @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
                     {
                         <p>Deleting <strong>@_event.Name</strong> will remove all wishlists, participants, and activity. This action cannot be undone.</p>

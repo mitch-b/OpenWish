@@ -29,28 +29,45 @@
             <div class="d-flex gap-2">
                 @if (!IsOwner)
                 {
-                    <button class="btn btn-sm btn-outline-success" @onclick="() => ShowReservation = !ShowReservation">
-                        <OpenWishIcon Name="gift" /> Reserve
+                    <button class="btn btn-sm btn-outline-success"
+                            @onclick="() => ShowReservation = !ShowReservation"
+                            aria-expanded="@ShowReservation"
+                            aria-controls="item-reservation-@Item.Id">
+                        <OpenWishIcon Name="gift" /> @(ShowReservation ? "Hide reservation" : "Reserve")
                     </button>
                 }
-                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowComments = !ShowComments">
-                    <OpenWishIcon Name="chat" /> Comments
+                <button class="btn btn-sm btn-outline-primary"
+                        @onclick="() => ShowComments = !ShowComments"
+                        aria-expanded="@ShowComments"
+                        aria-controls="item-comments-@Item.Id">
+                    <OpenWishIcon Name="chat" /> @(ShowComments ? "Hide comments" : "Show comments")
                 </button>
             </div>
             
-            @if (ShowReservation && !IsOwner)
+            @if (!IsOwner)
             {
-                <div class="mt-3">
-                    <ItemReservation WishlistId="@WishlistId" ItemId="@Item.Id" OwnerId="@OwnerId" />
+                <div class="mt-3"
+                     id="item-reservation-@Item.Id"
+                     role="region"
+                     aria-label="Reservation for @Item.Name"
+                     hidden="@(!ShowReservation)">
+                    @if (ShowReservation)
+                    {
+                        <ItemReservation WishlistId="@WishlistId" ItemId="@Item.Id" OwnerId="@OwnerId" />
+                    }
                 </div>
             }
             
-            @if (ShowComments)
-            {
-                <div class="mt-3">
+            <div class="mt-3"
+                 id="item-comments-@Item.Id"
+                 role="region"
+                 aria-label="Comments for @Item.Name"
+                 hidden="@(!ShowComments)">
+                @if (ShowComments)
+                {
                     <ItemComments WishlistId="@WishlistId" ItemId="@Item.Id" IsWishlistOwner="@IsOwner" />
-                </div>
-            }
+                }
+            </div>
         </div>
     }
 </div>

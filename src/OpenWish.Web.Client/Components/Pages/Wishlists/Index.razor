@@ -23,44 +23,58 @@
     <ul class="nav nav-tabs mb-3" id="wishlistTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link @(activeTab == "my-wishlists" ? "active" : "")" id="my-wishlists-tab" 
-                    @onclick='() => SetActiveTab("my-wishlists")' type="button" role="tab">
+                    @onclick='() => SetActiveTab("my-wishlists")' type="button" role="tab"
+                    aria-selected="@(activeTab == "my-wishlists")"
+                    aria-controls="my-wishlists-panel">
                 <OpenWishIcon Name="list-ul" Class="me-2" />My Wishlists
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link @(activeTab == "friends-wishlists" ? "active" : "")" id="friends-wishlists-tab" 
-                    @onclick='() => SetActiveTab("friends-wishlists")' type="button" role="tab">
+                    @onclick='() => SetActiveTab("friends-wishlists")' type="button" role="tab"
+                    aria-selected="@(activeTab == "friends-wishlists")"
+                    aria-controls="friends-wishlists-panel">
                 <OpenWishIcon Name="people" Class="me-2" />Friends' Wishlists
             </button>
         </li>
     </ul>
 
     <div class="tab-content" id="wishlistTabsContent">
-        @if (activeTab == "my-wishlists")
-        {
-            <div class="tab-pane fade show active">
+            <div class="tab-pane fade @(activeTab == "my-wishlists" ? "show active" : string.Empty)"
+                 id="my-wishlists-panel"
+                 role="tabpanel"
+                 aria-labelledby="my-wishlists-tab"
+                 hidden="@(activeTab != "my-wishlists")">
                 <div class="wishlist-toolbar">
                     <div class="filter-cluster">
-                        <div class="input-group search-control">
-                            <input type="search" class="form-control" placeholder="Search wishlists"
-                                   aria-label="Search wishlists"
-                                   @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
-                            <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
-                                <OpenWishIcon Name="search" /> Search
-                            </button>
+                        <div class="filter-field">
+                            <label for="wishlist-search" class="form-label">Search wishlists</label>
+                            <div class="input-group search-control">
+                                <input id="wishlist-search" type="search" class="form-control" placeholder="Search by name"
+                                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
+                                    <OpenWishIcon Name="search" /> Search
+                                </button>
+                            </div>
                         </div>
-                        <select class="form-select" aria-label="Filter wishlists" @bind="filterBy" @bind:after="HandleSearch">
-                            <option value="all">All Wishlists</option>
-                            <option value="collaborative">Collaborative Only</option>
-                            <option value="private">Private Only</option>
-                        </select>
-                        <select class="form-select" aria-label="Sort wishlists" @bind="sortBy" @bind:after="HandleSort">
-                            <option value="nameAsc">Name (A-Z)</option>
-                            <option value="nameDesc">Name (Z-A)</option>
-                            <option value="recent">Most Recent</option>
-                            <option value="oldest">Oldest</option>
-                            <option value="itemCount">Most Items</option>
-                        </select>
+                        <div class="filter-field">
+                            <label for="wishlist-filter" class="form-label">Show</label>
+                            <select id="wishlist-filter" class="form-select" @bind="filterBy" @bind:after="HandleSearch">
+                                <option value="all">All wishlists</option>
+                                <option value="collaborative">Collaborative only</option>
+                                <option value="private">Private only</option>
+                            </select>
+                        </div>
+                        <div class="filter-field">
+                            <label for="wishlist-sort" class="form-label">Sort by</label>
+                            <select id="wishlist-sort" class="form-select" @bind="sortBy" @bind:after="HandleSort">
+                                <option value="nameAsc">Name (A-Z)</option>
+                                <option value="nameDesc">Name (Z-A)</option>
+                                <option value="recent">Most recent</option>
+                                <option value="oldest">Oldest</option>
+                                <option value="itemCount">Most items</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -81,6 +95,9 @@
                 }
                 else
                 {
+                    <p class="visually-hidden" role="status" aria-live="polite">
+                        @filteredWishlists.Count() @(filteredWishlists.Count() == 1 ? "wishlist" : "wishlists") found.
+                    </p>
                     <div class="row g-3">
                         @foreach (var wishlist in filteredWishlists)
                         {
@@ -91,10 +108,11 @@
                     </div>
                 }
             </div>
-        }
-        else if (activeTab == "friends-wishlists")
-        {
-            <div class="tab-pane fade show active">
+            <div class="tab-pane fade @(activeTab == "friends-wishlists" ? "show active" : string.Empty)"
+                 id="friends-wishlists-panel"
+                 role="tabpanel"
+                 aria-labelledby="friends-wishlists-tab"
+                 hidden="@(activeTab != "friends-wishlists")">
                 @if (loadingFriendsWishlists)
                 {
                     <div class="d-flex justify-content-center">
@@ -122,7 +140,6 @@
                     </div>
                 }
             </div>
-        }
     </div>
 </div>
 

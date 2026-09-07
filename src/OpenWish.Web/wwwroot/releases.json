@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.1.5",
+    "date": "2026-09-07",
+    "title": "Reliable release versioning",
+    "summary": "OpenWish builds now report the same version as the current release.",
+    "highlights": [
+      "Compiled assembly metadata, release information, and the What's new page stay synchronized."
+    ]
+  },
+  {
     "version": "0.1.4",
     "date": "2026-09-07",
     "title": "Google sign-in handoff",

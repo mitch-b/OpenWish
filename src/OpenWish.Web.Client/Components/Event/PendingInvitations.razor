@@ -62,27 +62,32 @@
                                     </button>
                                     @if (_pendingDeclineId == invitation.Id)
                                     {
-                                        <button class="btn btn-outline-secondary"
-                                                @onclick="CancelDecline"
-                                                disabled="@IsProcessing(invitation.Id)">
-                                            Keep
-                                        </button>
-                                        <button class="btn btn-danger"
-                                                @onclick="() => DeclineInvitation(invitation)"
-                                                disabled="@IsProcessing(invitation.Id)">
-                                            @if (IsProcessing(invitation.Id) && _processingAction == "decline")
-                                            {
-                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                            }
-                                            else
-                                            {
-                                                <span>Confirm decline</span>
-                                            }
-                                        </button>
+                                        <div id="decline-invitation-@invitation.Id" role="group"
+                                             aria-label="Confirm declining @(invitation.Event?.Name ?? "this event")">
+                                            <button class="btn btn-outline-secondary"
+                                                    @onclick="CancelDecline"
+                                                    disabled="@IsProcessing(invitation.Id)">
+                                                Keep invitation
+                                            </button>
+                                            <button class="btn btn-danger"
+                                                    @onclick="() => DeclineInvitation(invitation)"
+                                                    disabled="@IsProcessing(invitation.Id)">
+                                                @if (IsProcessing(invitation.Id) && _processingAction == "decline")
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    <span>Confirm decline</span>
+                                                }
+                                            </button>
+                                        </div>
                                     }
                                     else
                                     {
                                         <button class="btn btn-outline-secondary"
+                                                aria-expanded="false"
+                                                aria-controls="decline-invitation-@invitation.Id"
                                                 @onclick="() => ConfirmDecline(invitation.Id)"
                                                 disabled="@IsProcessing(invitation.Id)">
                                             Decline

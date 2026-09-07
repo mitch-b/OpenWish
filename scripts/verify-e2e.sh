@@ -7,6 +7,7 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
+release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
@@ -60,6 +61,7 @@ docker run --rm \
   --ipc=host \
   --network "$network_name" \
   --env OPENWISH_BASE_URL=http://web:8080 \
+  --env "OPENWISH_RELEASE_VERSION=$release_version" \
   --env OPENWISH_EVIDENCE_DIR=/evidence \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \

@@ -57,26 +57,35 @@
                     <span class="badge bg-secondary">@_invitations.Count(i => HasStatus(i, "Rejected")) declined</span>
                 }
             </div>
-            <div class="d-flex flex-wrap invitation-filters mb-3" role="group">
+            <div class="d-flex flex-wrap invitation-filters mb-3" role="group" aria-label="Filter invitations by status">
                 <button type="button" class="btn btn-sm @(_filter == "All" ? "btn-primary" : "btn-outline-primary")"
+                        aria-pressed="@(_filter == "All")"
+                        aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "All")">
                     All (@_invitations.Count())
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Pending" ? "btn-warning" : "btn-outline-warning")"
+                        aria-pressed="@(_filter == "Pending")"
+                        aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Pending")">
                     Pending (@_invitations.Count(i => HasStatus(i, "Pending")))
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Accepted" ? "btn-success" : "btn-outline-success")"
+                        aria-pressed="@(_filter == "Accepted")"
+                        aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Accepted")">
                     Accepted (@_invitations.Count(IsAccepted))
                 </button>
                 <button type="button" class="btn btn-sm @(_filter == "Rejected" ? "btn-danger" : "btn-outline-danger")"
+                        aria-pressed="@(_filter == "Rejected")"
+                        aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Rejected")">
                     Rejected (@_invitations.Count(i => HasStatus(i, "Rejected")))
                 </button>
             </div>
 
-            <div class="list-group">
+            <p class="visually-hidden" aria-live="polite">@FilteredInvitationCountMessage</p>
+            <div id="event-invitations-list" class="list-group">
                 @foreach (var invitation in FilteredInvitations)
                 {
                     <div class="list-group-item">
@@ -169,15 +178,17 @@
 
 @if (_showRemoveConfirmation && _invitationPendingRemoval != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
+         aria-labelledby="remove-participant-dialog-title" aria-describedby="remove-participant-dialog-description">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Remove Participant</h5>
-                    <button type="button" class="btn-close" @onclick="CancelRemoveParticipant" disabled="@_isRemovingParticipant"></button>
+                    <h5 id="remove-participant-dialog-title" class="modal-title">Remove participant</h5>
+                    <button type="button" class="btn-close" aria-label="Close removal confirmation"
+                            @onclick="CancelRemoveParticipant" disabled="@_isRemovingParticipant"></button>
                 </div>
                 <div class="modal-body">
-                    <p>
+                    <p id="remove-participant-dialog-description">
                         Are you sure you want to remove
                         <strong>@GetInvitationDisplayName(_invitationPendingRemoval)</strong>
                         from this event?
@@ -209,12 +220,13 @@
 
 @if (_showInviteModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
+         aria-labelledby="event-invite-dialog-title">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Invite to Event</h5>
-                    <button type="button" class="btn-close" @onclick="HideInviteModal"></button>
+                    <h5 id="event-invite-dialog-title" class="modal-title">Invite to event</h5>
+                    <button type="button" class="btn-close" aria-label="Close invitation dialog" @onclick="HideInviteModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (!string.IsNullOrEmpty(_errorMessage))
@@ -230,24 +242,31 @@
                         <ul class="nav nav-tabs" role="tablist">
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link @(_inviteMode == "email" ? "active" : "")"
+                                        id="event-invite-email-tab"
+                                        role="tab"
+                                        aria-selected="@(_inviteMode == "email")"
+                                        aria-controls="event-invite-email-panel"
                                         @onclick="SetInviteModeEmailAsync"
                                         type="button">
-                                    By Email
+                                    By email
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link @(_inviteMode == "friends" ? "active" : "")"
+                                        id="event-invite-friends-tab"
+                                        role="tab"
+                                        aria-selected="@(_inviteMode == "friends")"
+                                        aria-controls="event-invite-friends-panel"
                                         @onclick="SetInviteModeFriendsAsync"
                                         type="button">
-                                    From Friends
+                                    From friends
                                 </button>
                             </li>
                         </ul>
                     </div>
 
-                    @if (_inviteMode == "email")
-                    {
-                        <div class="mb-3">
+                    <div id="event-invite-email-panel" class="mb-3" role="tabpanel"
+                         aria-labelledby="event-invite-email-tab" hidden="@(_inviteMode != "email")">
                             <label for="emailInput" class="form-label">Email addresses</label>
                             <textarea class="form-control" id="emailInput" rows="4"
                                       @bind="_emailsToInvite"
@@ -256,80 +275,80 @@
                             <div class="form-text">
                                 Paste as many addresses as you need, separated by commas, semicolons, or new lines.
                             </div>
-                        </div>
-                    }
-                    else
-                    {
-                        @if (_friends == null || _pendingFriendInvites == null)
-                        {
-                            <div class="text-center py-3">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading friends...</span>
-                                </div>
-                            </div>
-                        }
-                        else if (_friends.Count == 0 && _pendingFriendInvites.Count == 0)
-                        {
-                            <p class="text-muted">You don't have any friends or pending invites yet.</p>
-                        }
-                        else
-                        {
-                            <div class="mb-3">
-                                <label class="form-label">Select Friends or Pending Invites</label>
-                                <input class="form-control form-control-sm mb-2"
-                                       type="search"
-                                       placeholder="Search friends..."
-                                       @bind="_friendSearchTerm"
-                                       @bind:event="oninput" />
-                                @{ 
-                                    var filteredFriends = FilteredFriends.ToList();
-                                    var filteredPendingInvites = FilteredPendingInvites.ToList();
-                                }
-                                @if (filteredFriends.Any() || filteredPendingInvites.Any())
-                                {
-                                    <div class="friend-list border rounded overflow-auto">
-                                        @foreach (var friend in filteredFriends)
-                                        {
-                                            var isSelected = _selectedFriendIds.Contains(friend.Id);
-                                            <label class="friend-option border-bottom" for="friend-@friend.Id">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       id="friend-@friend.Id"
-                                                       checked="@isSelected"
-                                                       @onchange="args => ToggleFriendSelection(friend.Id, IsChecked(args.Value))" />
-                                                <div class="friend-option__content">
-                                                    <span>@(friend.UserName ?? friend.Email ?? "Unnamed Friend")</span>
-                                                    @if (!string.IsNullOrWhiteSpace(friend.Email))
-                                                    {
-                                                        <small class="text-muted">@friend.Email</small>
-                                                    }
-                                                </div>
-                                            </label>
-                                        }
-                                        @foreach (var pendingInvite in filteredPendingInvites)
-                                        {
-                                            var isSelected = _selectedPendingInviteEmails.Contains(pendingInvite.Email);
-                                            <label class="friend-option border-bottom" for="pending-@pendingInvite.Id">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       id="pending-@pendingInvite.Id"
-                                                       checked="@isSelected"
-                                                       @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, IsChecked(args.Value))" />
-                                                <div class="friend-option__content">
-                                                    <span>@pendingInvite.Email</span>
-                                                    <small class="text-warning"><OpenWishIcon Name="clock-history" /> Pending registration</small>
-                                                </div>
-                                            </label>
-                                        }
+                    </div>
+                    <div id="event-invite-friends-panel" role="tabpanel"
+                         aria-labelledby="event-invite-friends-tab" hidden="@(_inviteMode != "friends")">
+                            @if (_friends == null || _pendingFriendInvites == null)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading friends...</span>
                                     </div>
-                                }
-                                else
-                                {
-                                    <p class="text-muted mb-0">No friends match your search.</p>
-                                }
-                            </div>
-                        }
-                    }
+                                </div>
+                            }
+                            else if (_friends.Count == 0 && _pendingFriendInvites.Count == 0)
+                            {
+                                <p class="text-muted">You don't have any friends or pending invites yet.</p>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label for="event-invite-friend-search" class="form-label">Select friends or pending invites</label>
+                                    <input class="form-control form-control-sm mb-2"
+                                           id="event-invite-friend-search"
+                                           type="search"
+                                           placeholder="Search friends..."
+                                           @bind="_friendSearchTerm"
+                                           @bind:event="oninput" />
+                                    @{
+                                        var filteredFriends = FilteredFriends.ToList();
+                                        var filteredPendingInvites = FilteredPendingInvites.ToList();
+                                    }
+                                    @if (filteredFriends.Any() || filteredPendingInvites.Any())
+                                    {
+                                        <div class="friend-list border rounded overflow-auto">
+                                            @foreach (var friend in filteredFriends)
+                                            {
+                                                var isFriendSelected = _selectedFriendIds.Contains(friend.Id);
+                                                <label class="friend-option border-bottom" for="friend-@friend.Id">
+                                                    <input class="form-check-input"
+                                                           type="checkbox"
+                                                           id="friend-@friend.Id"
+                                                           checked="@isFriendSelected"
+                                                           @onchange="args => ToggleFriendSelection(friend.Id, IsChecked(args.Value))" />
+                                                    <div class="friend-option__content">
+                                                        <span>@(friend.UserName ?? friend.Email ?? "Unnamed Friend")</span>
+                                                        @if (!string.IsNullOrWhiteSpace(friend.Email))
+                                                        {
+                                                            <small class="text-muted">@friend.Email</small>
+                                                        }
+                                                    </div>
+                                                </label>
+                                            }
+                                            @foreach (var pendingInvite in filteredPendingInvites)
+                                            {
+                                                var isPendingInviteSelected = _selectedPendingInviteEmails.Contains(pendingInvite.Email);
+                                                <label class="friend-option border-bottom" for="pending-@pendingInvite.Id">
+                                                    <input class="form-check-input"
+                                                           type="checkbox"
+                                                           id="pending-@pendingInvite.Id"
+                                                           checked="@isPendingInviteSelected"
+                                                           @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, IsChecked(args.Value))" />
+                                                    <div class="friend-option__content">
+                                                        <span>@pendingInvite.Email</span>
+                                                        <small class="text-warning"><OpenWishIcon Name="clock-history" /> Pending registration</small>
+                                                    </div>
+                                                </label>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mb-0">No friends match your search.</p>
+                                    }
+                                </div>
+                            }
+                        </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">
@@ -381,6 +400,9 @@
     private string SendButtonLabel => _inviteMode == "email" && ParsedEmailAddresses.Count > 1
         ? $"Send {ParsedEmailAddresses.Count} invitations"
         : "Send invitation";
+    private string FilteredInvitationCountMessage =>
+        $"{FilteredInvitations.Count()} {(_filter == "All" ? "total" : _filter.ToLowerInvariant())} " +
+        $"invitation{(FilteredInvitations.Count() == 1 ? string.Empty : "s")} shown.";
 
     private IEnumerable<EventUserModel> FilteredInvitations =>
         _filter == "All" ? _invitations : _invitations.Where(i => i.Status == _filter);

@@ -113,21 +113,31 @@ else
     <div class="search-filter-bar">
         <div class="search-container">
             <OpenWishIcon Name="search" Class="search-icon" />
-            <input type="text"
+            <label for="wishlist-item-search" class="visually-hidden">Search wishlist items</label>
+            <input id="wishlist-item-search"
+                   type="search"
                    class="search-input"
                    placeholder="Search items by name, description, or store..."
+                   aria-controls="wishlist-items"
                    @bind="SearchQuery"
                    @bind:event="oninput"
-                   @onkeyup="HandleSearchInput" />
+                   @bind:after="ApplyFiltersAndSort" />
             @if (!string.IsNullOrEmpty(SearchQuery))
             {
-                <button class="search-clear" @onclick="ClearSearch">
+                <button class="search-clear"
+                        type="button"
+                        aria-label="Clear wishlist item search"
+                        @onclick="ClearSearch">
                     <OpenWishIcon Name="x-lg" />
                 </button>
             }
         </div>
 
-        <button class="btn btn-filter @(_showFilters ? "active" : "")" @onclick="ToggleFilters">
+        <button class="btn btn-filter @(_showFilters ? "active" : "")"
+                type="button"
+                aria-expanded="@(_showFilters ? "true" : "false")"
+                aria-controls="wishlist-filters"
+                @onclick="ToggleFilters">
             <OpenWishIcon Name="funnel" />
             <span class="btn-text">Filters</span>
             @if (GetActiveFilterCount() > 0)
@@ -136,57 +146,87 @@ else
             }
         </button>
 
-        <div class="btn-group view-toggle">
-            <button type="button" class="btn @(ViewMode == "grid" ? "active" : "")" @onclick="@(() => SetViewMode("grid"))" aria-label="Grid View">
+        <div class="btn-group view-toggle" role="group" aria-label="Wishlist view">
+            <button type="button"
+                    class="btn @(ViewMode == "grid" ? "active" : "")"
+                    aria-label="Grid view"
+                    aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
+                    aria-controls="wishlist-items"
+                    @onclick="@(() => SetViewMode("grid"))">
                 <OpenWishIcon Name="grid-3x3-gap" />
             </button>
-            <button type="button" class="btn @(ViewMode == "list" ? "active" : "")" @onclick="@(() => SetViewMode("list"))" aria-label="List View">
+            <button type="button"
+                    class="btn @(ViewMode == "list" ? "active" : "")"
+                    aria-label="List view"
+                    aria-pressed="@(ViewMode == "list" ? "true" : "false")"
+                    aria-controls="wishlist-items"
+                    @onclick="@(() => SetViewMode("list"))">
                 <OpenWishIcon Name="list-ul" />
             </button>
         </div>
     </div>
+    <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
 
     @if (_showFilters)
     {
-        <div class="filter-panel">
-            <div class="filter-section">
-                <label class="filter-label">Priority</label>
+        <div id="wishlist-filters" class="filter-panel">
+            <div class="filter-section" role="group" aria-labelledby="priority-filter-label">
+                <span id="priority-filter-label" class="filter-label">Priority</span>
                 <div class="filter-chips">
-                    <button class="filter-chip @(PriorityFilters.Contains("1") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "1")'>
+                    <button type="button"
+                            class="filter-chip @(PriorityFilters.Contains("1") ? "active" : "")"
+                            aria-pressed="@(PriorityFilters.Contains("1") ? "true" : "false")"
+                            @onclick='() => ToggleFilter(PriorityFilters, "1")'>
                         <span class="priority-dot high"></span> High
                     </button>
-                    <button class="filter-chip @(PriorityFilters.Contains("2") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "2")'>
+                    <button type="button"
+                            class="filter-chip @(PriorityFilters.Contains("2") ? "active" : "")"
+                            aria-pressed="@(PriorityFilters.Contains("2") ? "true" : "false")"
+                            @onclick='() => ToggleFilter(PriorityFilters, "2")'>
                         <span class="priority-dot medium"></span> Medium
                     </button>
-                    <button class="filter-chip @(PriorityFilters.Contains("3") ? "active" : "")" @onclick='() => ToggleFilter(PriorityFilters, "3")'>
+                    <button type="button"
+                            class="filter-chip @(PriorityFilters.Contains("3") ? "active" : "")"
+                            aria-pressed="@(PriorityFilters.Contains("3") ? "true" : "false")"
+                            @onclick='() => ToggleFilter(PriorityFilters, "3")'>
                         <span class="priority-dot low"></span> Low
                     </button>
                 </div>
             </div>
 
-            <div class="filter-section">
-                <label class="filter-label">Status</label>
+            <div class="filter-section" role="group" aria-labelledby="status-filter-label">
+                <span id="status-filter-label" class="filter-label">Status</span>
                 <div class="filter-chips">
                     @if (!_isOwner)
                     {
-                        <button class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
+                        <button type="button"
+                                class="filter-chip @(StatusFilters.Contains("reserved") ? "active" : "")"
+                                aria-pressed="@(StatusFilters.Contains("reserved") ? "true" : "false")"
+                                @onclick='() => ToggleFilter(StatusFilters, "reserved")'>
                             <OpenWishIcon Name="check-circle" /> Reserved
                         </button>
-                        <button class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
+                        <button type="button"
+                                class="filter-chip @(StatusFilters.Contains("unreserved") ? "active" : "")"
+                                aria-pressed="@(StatusFilters.Contains("unreserved") ? "true" : "false")"
+                                @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
                             <OpenWishIcon Name="circle" /> Available
                         </button>
                     }
-                    <button class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")" @onclick='() => ToggleFilter(StatusFilters, "commented")'>
+                    <button type="button"
+                            class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")"
+                            aria-pressed="@(StatusFilters.Contains("commented") ? "true" : "false")"
+                            @onclick='() => ToggleFilter(StatusFilters, "commented")'>
                         <OpenWishIcon Name="chat" /> Has Comments
                     </button>
                 </div>
             </div>
 
             <div class="filter-section">
-                <label class="filter-label">Price Range: @GetPriceRangeLabel()</label>
+                <span class="filter-label">Price range: @GetPriceRangeLabel()</span>
                 <div class="price-range-slider">
                     <input type="range"
                            class="form-range"
+                           aria-label="Minimum price"
                            min="0"
                            max="@GetMaxPrice()"
                            step="10"
@@ -195,6 +235,7 @@ else
                            @onchange="ApplyFiltersAndSort" />
                     <input type="range"
                            class="form-range"
+                           aria-label="Maximum price"
                            min="0"
                            max="@GetMaxPrice()"
                            step="10"
@@ -204,32 +245,44 @@ else
                 </div>
             </div>
 
-            <div class="filter-section">
-                <label class="filter-label">Sort By</label>
+            <div class="filter-section" role="group" aria-labelledby="wishlist-sort-label">
+                <span id="wishlist-sort-label" class="filter-label">Sort by</span>
                 <div class="sort-options">
-                    <button class="sort-option @(SortBy == "priority" ? "active" : "")" @onclick="@(() => SortItems("priority"))">
+                    <button type="button"
+                            class="sort-option @(SortBy == "priority" ? "active" : "")"
+                            aria-pressed="@(SortBy == "priority" ? "true" : "false")"
+                            @onclick="@(() => SortItems("priority"))">
                         <OpenWishIcon Name="star" /> Priority
                         @if (SortBy == "priority")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
-                    <button class="sort-option @(SortBy == "price" ? "active" : "")" @onclick="@(() => SortItems("price"))">
+                    <button type="button"
+                            class="sort-option @(SortBy == "price" ? "active" : "")"
+                            aria-pressed="@(SortBy == "price" ? "true" : "false")"
+                            @onclick="@(() => SortItems("price"))">
                         <OpenWishIcon Name="currency-dollar" /> Price
                         @if (SortBy == "price")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
-                    <button class="sort-option @(SortBy == "name" ? "active" : "")" @onclick="@(() => SortItems("name"))">
+                    <button type="button"
+                            class="sort-option @(SortBy == "name" ? "active" : "")"
+                            aria-pressed="@(SortBy == "name" ? "true" : "false")"
+                            @onclick="@(() => SortItems("name"))">
                         <OpenWishIcon Name="sort-alpha-down" /> Name
                         @if (SortBy == "name")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
-                    <button class="sort-option @(SortBy == "date" ? "active" : "")" @onclick="@(() => SortItems("date"))">
-                        <OpenWishIcon Name="calendar" /> Date Added
+                    <button type="button"
+                            class="sort-option @(SortBy == "date" ? "active" : "")"
+                            aria-pressed="@(SortBy == "date" ? "true" : "false")"
+                            @onclick="@(() => SortItems("date"))">
+                        <OpenWishIcon Name="calendar" /> Date added
                         @if (SortBy == "date")
                         {
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
@@ -239,13 +292,13 @@ else
             </div>
 
             <div class="filter-actions">
-                <button class="btn btn-link" @onclick="ClearAllFilters">Clear All</button>
+                <button class="btn btn-link" type="button" @onclick="ClearAllFilters">Clear all</button>
                 <span class="filter-results">Showing @_filteredItems.Count of @_items.Count items</span>
             </div>
         </div>
     }
 
-    <div class="wishlist-content @ViewMode-view">
+    <div id="wishlist-items" class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
             @if (_filteredItems.Count == 0)
@@ -269,7 +322,7 @@ else
                         <h3>No items match your filters</h3>
                         <p>Try adjusting your search or filter criteria</p>
                         <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
-                            <OpenWishIcon Name="x-circle" /> Clear Filters
+                            <OpenWishIcon Name="x-circle" /> Clear filters
                         </button>
                     }
                 </div>
@@ -445,7 +498,7 @@ else
 
     @if (_canEdit)
     {
-        <button class="fab" @onclick="ShowAddItemModal" title="Add New Item">
+        <button class="fab" type="button" aria-label="Add item" @onclick="ShowAddItemModal">
             <OpenWishIcon Name="plus-lg" />
         </button>
     }
@@ -467,6 +520,8 @@ else
     private string? _currentUserId;
     private bool _canEdit;
     private bool _isOwner;
+    private string FilteredItemCountMessage =>
+        $"{_filteredItems.Count} of {_items.Count} wishlist {(_items.Count == 1 ? "item" : "items")} shown.";
     private string SortBy { get; set; } = "priority";
     private bool SortAscending { get; set; } = true;
     private string ViewMode { get; set; } = "list"; // "grid" or "list"
@@ -609,11 +664,6 @@ else
         {
             filterSet.Add(value);
         }
-        ApplyFiltersAndSort();
-    }
-
-    private void HandleSearchInput()
-    {
         ApplyFiltersAndSort();
     }
 

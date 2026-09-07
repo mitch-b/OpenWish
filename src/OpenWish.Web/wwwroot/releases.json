@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.8",
+    "date": "2026-09-07",
+    "title": "Accessible wishlist browsing",
+    "summary": "Wishlist discovery and item capture now communicate their controls and current state more clearly.",
+    "highlights": [
+      "Item search announces matching ideas and provides a clearly named reset action.",
+      "Filters and sorting communicate which options are active.",
+      "Grid and list controls identify the current view.",
+      "Product URL import fields include connected guidance and prevent empty imports.",
+      "The add-item dialog keeps keyboard focus contained and returns it to the opener when closed."
+    ]
+  },
+  {
     "version": "0.1.7",
     "date": "2026-09-07",
     "title": "Accessible event coordination",

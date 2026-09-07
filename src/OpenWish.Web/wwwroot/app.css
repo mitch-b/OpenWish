@@ -29,6 +29,10 @@ body {
     line-height: 1.5;
 }
 
+body.dialog-open {
+    overflow: hidden;
+}
+
 a, .btn-link {
     color: var(--color-link);
 }

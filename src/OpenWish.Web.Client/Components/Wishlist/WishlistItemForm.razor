@@ -8,14 +8,23 @@
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">Import from URL</h5>
+            <label for="product-url-import" class="form-label">Product URL</label>
             <div class="input-group">
-                <InputText id="product-url-import"
-                           class="form-control"
-                           autofocus="@AutoFocusImport"
-                           placeholder="Paste a product URL"
-                           @bind-Value="@ImportUrl"
-                           @onopenwishpaste="HandleUrlPaste" />
-                <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
+                <input id="product-url-import"
+                       class="form-control"
+                       type="url"
+                       inputmode="url"
+                       autocomplete="url"
+                       aria-describedby="product-url-import-help"
+                       autofocus="@AutoFocusImport"
+                       placeholder="Paste a product URL"
+                       value="@ImportUrl"
+                       @oninput="UpdateImportUrl"
+                       @onopenwishpaste="HandleUrlPaste" />
+                <button class="btn btn-primary"
+                        type="button"
+                        @onclick="ImportFromUrl"
+                        disabled="@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))">
                     @if (isLoading)
                     {
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -27,7 +36,7 @@
                     }
                 </button>
             </div>
-            <small class="text-muted">Paste a product URL to automatically fill in details from popular websites</small>
+            <small id="product-url-import-help" class="text-muted">Paste a product URL to fill in any details OpenWish can find.</small>
         </div>
     </div>
     @if (showImportMessage && !string.IsNullOrEmpty(importMessage))
@@ -62,7 +71,7 @@
 
     <div class="mb-3">
         <label for="url" class="form-label">URL</label>
-        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" />
+        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" />
         <ValidationMessage For="@(() => Model.Url)" />
     </div>
 
@@ -107,6 +116,11 @@
     private string importMessage = string.Empty;
     private bool showImportMessage;
     private bool importSuccess;
+
+    private void UpdateImportUrl(ChangeEventArgs eventArgs)
+    {
+        ImportUrl = eventArgs.Value?.ToString() ?? string.Empty;
+    }
 
     private async Task ImportFromUrl()
     {

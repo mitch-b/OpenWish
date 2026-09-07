@@ -78,7 +78,7 @@ test -s "$walkthrough_directory/friends.png"
 test -s "$walkthrough_directory/notifications.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
-if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed'; then
-  echo "Server logs contain a failed request or unhandled exception." >&2
+if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then
+  echo "Server logs contain a failed request, exception, or concurrency conflict." >&2
   exit 1
 fi

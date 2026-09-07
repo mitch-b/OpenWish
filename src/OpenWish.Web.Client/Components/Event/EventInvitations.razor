@@ -400,9 +400,15 @@
     private string SendButtonLabel => _inviteMode == "email" && ParsedEmailAddresses.Count > 1
         ? $"Send {ParsedEmailAddresses.Count} invitations"
         : "Send invitation";
-    private string FilteredInvitationCountMessage =>
-        $"{FilteredInvitations.Count()} {(_filter == "All" ? "total" : _filter.ToLowerInvariant())} " +
-        $"invitation{(FilteredInvitations.Count() == 1 ? string.Empty : "s")} shown.";
+    private string FilteredInvitationCountMessage
+    {
+        get
+        {
+            var count = FilteredInvitations.Count();
+            return $"{count} {(_filter == "All" ? "total" : _filter.ToLowerInvariant())} " +
+                $"invitation{(count == 1 ? string.Empty : "s")} shown.";
+        }
+    }
 
     private IEnumerable<EventUserModel> FilteredInvitations =>
         _filter == "All" ? _invitations : _invitations.Where(i => i.Status == _filter);

@@ -57,6 +57,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-controls=\"event-invitations-list\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"event-invitations-list\"", markup, StringComparison.Ordinal);
         Assert.Contains("@FilteredInvitationCountMessage", markup, StringComparison.Ordinal);
+        Assert.Contains("var count = FilteredInvitations.Count();", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -80,7 +81,9 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("aria-controls=\"decline-invitation-@invitation.Id\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Confirm declining @(invitation.Event?.Name ?? \"this event\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"true\"", markup, StringComparison.Ordinal);
         Assert.Contains("Keep invitation", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Declining...</span>", markup, StringComparison.Ordinal);
     }
 
     [Fact]

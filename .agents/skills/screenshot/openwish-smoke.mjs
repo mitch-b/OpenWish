@@ -175,6 +175,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
   const page = await context.newPage();
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
+  let handoffTimer;
 
   try {
     // Playwright routes do not intercept subsequent requests in a redirect chain.
@@ -184,13 +185,21 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       patterns: [{ urlPattern: "https://accounts.google.com/*", requestStage: "Request" }]
     });
     const authorizationRequest = new Promise((resolve, reject) => {
-      session.once("Fetch.requestPaused", event => {
+      session.on("Fetch.requestPaused", event => {
+        const isAuthorization = event.resourceType === "Document" &&
+          new URL(event.request.url).pathname === "/o/oauth2/v2/auth";
         session.send("Fetch.fulfillRequest", {
           requestId: event.requestId,
-          responseCode: 200,
+          responseCode: isAuthorization ? 200 : 204,
           responseHeaders: [{ name: "Content-Type", value: "text/html" }],
-          body: Buffer.from("<h1>Google authorization boundary</h1>").toString("base64")
-        }).then(() => resolve(event.request), reject);
+          body: isAuthorization
+            ? Buffer.from("<h1>Google authorization boundary</h1>").toString("base64")
+            : ""
+        }).then(() => {
+          if (isAuthorization) {
+            resolve(event.request);
+          }
+        }, reject);
       });
     });
     const returnUrl = isMobile ? "/wishlists" : "/";
@@ -214,11 +223,21 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       new URL(response.url()).pathname === "/Account/PerformExternalLogin"
     );
 
-    const [response, authorization] = await Promise.all([
-      challengeResponse,
-      authorizationRequest,
-      page.getByRole("heading", { name: "Google authorization boundary", exact: true }).waitFor(),
-      signInButton.click({ noWaitAfter: true })
+    const handoffTimeout = new Promise((_, reject) => {
+      handoffTimer = setTimeout(() => reject(new Error(
+        `Google authorization handoff timed out at ${page.url()}. Browser diagnostics: ${[
+          ...diagnostics.browserErrors, ...diagnostics.failedResponses
+        ].join(" | ") || "none"}`
+      )), 10000);
+    });
+    const [response, authorization] = await Promise.race([
+      Promise.all([
+        challengeResponse,
+        authorizationRequest,
+        page.getByRole("heading", { name: "Google authorization boundary", exact: true }).waitFor(),
+        signInButton.click({ noWaitAfter: true })
+      ]),
+      handoffTimeout
     ]);
     const formData = new URLSearchParams(response.request().postData());
     if (formData.get("provider") !== "Google" || formData.get("ReturnUrl") !== returnUrl) {
@@ -251,6 +270,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       redirectUri: authorizationUrl.searchParams.get("redirect_uri")
     });
   } finally {
+    clearTimeout(handoffTimer);
     await context.close();
   }
 }

@@ -176,6 +176,9 @@ async function verifyExternalLogin(browser, results) {
   if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
     throw new Error("External login must use a full browser navigation for the OAuth handoff.");
   }
+  if (await externalLoginForm.getAttribute("action") !== "/Account/PerformExternalLogin") {
+    throw new Error("External login must post to the root-relative challenge endpoint.");
+  }
 
   const signInButton = page.getByRole("button", { name: "Continue with Google" });
   await signInButton.waitFor({ state: "visible" });

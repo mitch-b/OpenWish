@@ -1,20 +1,25 @@
 @using OpenWish.Web.Client.CustomEvents
+@implements IAsyncDisposable
 
 @inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 
 @if (IsVisible)
 {
-    <FocusOnFirstRender ElementId="product-url-import-modal" />
     <div class="modal-backdrop" @onclick="Cancel"></div>
-    <div class="modal-dialog-container" @onclick:stopPropagation="true">
+    <div class="modal-dialog-container"
+         id="wishlist-item-dialog"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="wishlist-item-dialog-title"
+         @onclick:stopPropagation="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">@(Model?.Id > 0 ? "Edit Item" : "Add New Item")</h5>
-                <button type="button" class="btn-close" @onclick="Cancel" aria-label="Close"></button>
+                <h5 id="wishlist-item-dialog-title" class="modal-title">@(Model?.Id > 0 ? "Edit item" : "Add item")</h5>
+                <button type="button" class="btn-close" data-dialog-close @onclick="Cancel" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                @if (!string.IsNullOrEmpty(ImportUrl))
+                @if (isLoading)
                 {
                     <div class="alert alert-info">
                         <div class="d-flex align-items-center">
@@ -34,10 +39,23 @@
                 }
                 
                 <div class="url-import-section mb-4">
-                    <label class="form-label">Quick Import from URL</label>
+                    <label for="product-url-import-modal" class="form-label">Product URL</label>
                     <div class="input-group">
-                        <InputText id="product-url-import-modal" class="form-control" placeholder="Paste a product URL" @bind-Value="@ImportUrl" @onopenwishpaste="HandleUrlPaste" />
-                        <button class="btn btn-primary" type="button" @onclick="ImportFromUrl" disabled="@isLoading">
+                        <input id="product-url-import-modal"
+                               class="form-control"
+                               type="url"
+                               inputmode="url"
+                               autocomplete="url"
+                               aria-describedby="product-url-import-modal-help"
+                               data-dialog-initial-focus
+                               placeholder="Paste a product URL"
+                               value="@ImportUrl"
+                               @oninput="UpdateImportUrl"
+                               @onopenwishpaste="HandleUrlPaste" />
+                        <button class="btn btn-primary"
+                                type="button"
+                                @onclick="ImportFromUrl"
+                                disabled="@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))">
                             @if (isLoading)
                             {
                                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -49,7 +67,7 @@
                             Import
                         </button>
                     </div>
-                    <small class="text-muted">Or fill in the details manually below</small>
+                    <small id="product-url-import-modal-help" class="text-muted">Paste a product URL to fill in details, or enter them manually below.</small>
                 </div>
 
                 <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemModal">
@@ -105,7 +123,7 @@
 
                     <div class="mb-3">
                         <label for="url" class="form-label">Product Link</label>
-                        <InputText id="url" class="form-control" @bind-Value="@Model!.Url" placeholder="https://..." />
+                        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" placeholder="https://..." />
                         <ValidationMessage For="@(() => Model.Url)" />
                     </div>
 
@@ -118,9 +136,9 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" @onclick="Cancel">Cancel</button>
+                        <button type="button" class="btn btn-outline-secondary" data-dialog-close @onclick="Cancel">Cancel</button>
                         <button type="submit" class="btn btn-primary">
-                            <OpenWishIcon Name="check-lg" /> @(Model.Id > 0 ? "Save Changes" : "Add Item")
+                            <OpenWishIcon Name="check-lg" /> @(Model.Id > 0 ? "Save changes" : "Add item")
                         </button>
                     </div>
                 </EditForm>
@@ -140,6 +158,21 @@
     private string _importMessage = string.Empty;
     private bool _showImportMessage;
     private bool _importSuccess;
+    private bool _dialogActive;
+
+    private void UpdateImportUrl(ChangeEventArgs eventArgs)
+    {
+        ImportUrl = eventArgs.Value?.ToString() ?? string.Empty;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible && !_dialogActive)
+        {
+            await JSRuntime.InvokeVoidAsync("openWishActivateDialog", "wishlist-item-dialog");
+            _dialogActive = true;
+        }
+    }
 
     public void Show(WishlistItemModel? model = null)
     {
@@ -148,8 +181,14 @@
         StateHasChanged();
     }
 
-    public void Hide()
+    private async Task HideAsync()
     {
+        if (_dialogActive)
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "wishlist-item-dialog");
+            _dialogActive = false;
+        }
+
         IsVisible = false;
         ImportUrl = string.Empty;
         _showImportMessage = false;
@@ -237,8 +276,9 @@
         if (OnSubmit.HasDelegate)
         {
             await OnSubmit.InvokeAsync(Model);
-            Hide();
         }
+
+        await HideAsync();
     }
 
     private async Task Cancel()
@@ -247,6 +287,23 @@
         {
             await OnCancel.InvokeAsync();
         }
-        Hide();
+
+        await HideAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (!_dialogActive)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "wishlist-item-dialog");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 }

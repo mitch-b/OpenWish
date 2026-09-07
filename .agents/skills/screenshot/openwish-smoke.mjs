@@ -348,6 +348,29 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "National Park Pass");
   await assertVisible(page, "$249.99");
   await assertVisible(page, "3");
+  const itemSearch = page.getByRole("searchbox", { name: "Search wishlist items" });
+  if (await itemSearch.getAttribute("aria-controls") !== "wishlist-items") {
+    throw new Error("Wishlist search does not identify the item results it filters.");
+  }
+  await itemSearch.fill("Dutch Oven");
+  await page.getByRole("status").filter({ hasText: "1 of 3 wishlist items shown." })
+    .waitFor({ state: "attached" });
+  await page.getByRole("button", { name: "Clear wishlist item search" }).click();
+
+  const filtersButton = page.getByRole("button", { name: "Filters" });
+  await filtersButton.click();
+  await page.getByRole("button", { name: "Filters", expanded: true })
+    .waitFor({ state: "visible" });
+  const highPriorityFilter = page.getByRole("button", { name: "High" });
+  await highPriorityFilter.click();
+  await page.getByRole("button", { name: "High", pressed: true })
+    .waitFor({ state: "visible" });
+  const priceSort = page.getByRole("button", { name: "Price" });
+  await priceSort.click();
+  await page.getByRole("button", { name: "Price", pressed: true })
+    .waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Clear all" }).click();
+
   const productLink = page.getByRole("link", {
     name: "View Noise-Cancelling Headphones product (opens in a new tab)"
   });
@@ -356,12 +379,49 @@ async function verifyOwnerJourney(browser, manifest, results) {
       await productLink.getAttribute("rel") !== "noopener noreferrer") {
     throw new Error("Product links must safely open in a new tab.");
   }
-  await page.getByRole("button", { name: "List View" }).click();
+  const listView = page.getByRole("button", { name: "List view" });
+  await listView.click();
+  await page.getByRole("button", { name: "List view", pressed: true })
+    .waitFor({ state: "visible" });
   await page.getByRole("link", {
     name: "View Noise-Cancelling Headphones product (opens in a new tab)"
   }).waitFor({ state: "visible" });
-  await page.getByRole("button", { name: "Grid View" }).click();
+  const gridView = page.getByRole("button", { name: "Grid view" });
+  await gridView.click();
+  await page.getByRole("button", { name: "Grid view", pressed: true })
+    .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
+  const addItemButton = page.getByRole("button", { name: "Add item" });
+  await addItemButton.click();
+  const itemDialog = page.getByRole("dialog", { name: "Add item" });
+  await itemDialog.waitFor({ state: "visible" });
+  const modalProductUrl = itemDialog.getByLabel("Product URL");
+  if (!(await modalProductUrl.evaluate(element => element === document.activeElement))) {
+    throw new Error("The item dialog did not initially focus the product URL field.");
+  }
+  if (await modalProductUrl.getAttribute("aria-describedby") !== "product-url-import-modal-help") {
+    throw new Error("The item dialog product URL is not connected to its help text.");
+  }
+  if (!(await itemDialog.getByRole("button", { name: "Import" }).isDisabled())) {
+    throw new Error("The item dialog allows an empty product URL import.");
+  }
+  await modalProductUrl.fill("https://example.com/gift");
+  await itemDialog.getByRole("button", { name: "Import" }).click({ trial: true });
+  if (await itemDialog.getByText("Importing product details...").isVisible()) {
+    throw new Error("Typing a product URL incorrectly displayed an import-in-progress state.");
+  }
+  await itemDialog.getByRole("button", { name: "Close" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  if (!(await itemDialog.getByRole("button", { name: "Add item", exact: true })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Keyboard focus did not wrap within the item dialog.");
+  }
+  await screenshot(page, "wishlist-item-dialog.png");
+  await page.keyboard.press("Escape");
+  await itemDialog.waitFor({ state: "detached" });
+  if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
+    throw new Error("Closing the item dialog did not restore focus to its opener.");
+  }
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
@@ -384,9 +444,18 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Who can see this?");
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
-  if (await page.evaluate(() => document.activeElement?.getAttribute("placeholder")) !== "Paste a product URL") {
+  const productUrl = page.getByLabel("Product URL");
+  if (await page.evaluate(() => document.activeElement?.id) !== "product-url-import") {
     throw new Error("The product URL field did not retain focus after interactivity started.");
   }
+  if (await productUrl.getAttribute("aria-describedby") !== "product-url-import-help") {
+    throw new Error("The product URL field is not connected to its help text.");
+  }
+  if (!(await page.getByRole("button", { name: "Import" }).isDisabled())) {
+    throw new Error("The item form allows an empty product URL import.");
+  }
+  await productUrl.fill("https://example.com/gift");
+  await page.getByRole("button", { name: "Import" }).click({ trial: true });
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");

@@ -107,6 +107,90 @@ public class InteractiveControlMarkupTests
         Assert.Contains("id=\"pairing-rule-target\"", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void WishlistItemSearch_HasALabelClearNameAndLiveResultCount()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("for=\"wishlist-item-search\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Clear wishlist item search\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"wishlist-items\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@bind:after=\"ApplyFiltersAndSort\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@FilteredItemCountMessage", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistFilters_ExposeDisclosureAndSelectedStates()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("aria-expanded=\"@(_showFilters ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"wishlist-filters\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"wishlist-filters\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"priority-filter-label\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"status-filter-label\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(PriorityFilters.Contains", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(StatusFilters.Contains", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Minimum price\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Maximum price\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistSorting_ExposesItsCurrentSelection()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("aria-labelledby=\"wishlist-sort-label\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"wishlist-sort-label\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(SortBy == \"priority\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(SortBy == \"price\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(SortBy == \"name\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(SortBy == \"date\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistViewSwitcher_ExposesItsCurrentView()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("role=\"group\" aria-label=\"Wishlist view\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Grid view\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(ViewMode == \"grid\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"List view\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(ViewMode == \"list\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemImport_LabelsUrlFieldsAndDialog()
+    {
+        var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
+        var modalMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var dialogScript = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+
+        Assert.Contains("for=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"product-url-import-help\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("@oninput=\"UpdateImportUrl\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("type=\"url\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("@if (isLoading)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Model.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("IAsyncDisposable", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("event.key === \"Escape\"", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("event.key !== \"Tab\"", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("dialog.querySelector(\"[data-dialog-initial-focus]\")", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("existingState?.dialog.isConnected", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.8] - 2026-09-07
+
+### Improved
+
+- Wishlist item search is labelled and announces the number of matching ideas.
+- Wishlist filters identify when they are open and which choices are active.
+- Wishlist sorting identifies the current ordering choice.
+- Grid and list controls identify the current wishlist view.
+- Product URL import fields and the item dialog provide clearer labels,
+  guidance, disabled states, predictable initial focus, and consistent actions.
+
 ## [0.1.7] - 2026-09-07
 
 ### Improved

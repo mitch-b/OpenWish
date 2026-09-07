@@ -20,6 +20,10 @@
     min-width: 0;
 }
 
+.filter-field .form-label {
+    margin-bottom: 0.35rem;
+}
+
 .empty-state {
     margin-top: 1rem;
 }

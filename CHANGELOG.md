@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.6] - 2026-09-07
+
+### Improved
+
+- Wishlist browsing, gift coordination, and event deletion confirmations now
+  provide clearer controls and context for keyboard and screen-reader users.
+
 ## [0.1.5] - 2026-09-07
 
 ### Fixed

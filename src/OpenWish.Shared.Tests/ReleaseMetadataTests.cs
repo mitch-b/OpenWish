@@ -14,7 +14,8 @@ public class ReleaseMetadataTests
         var buildVersion = XDocument.Load(Path.Combine(repositoryDirectory, "src", "Directory.Build.props"))
             .Descendants("Version")
             .Single()
-            .Value;
+            .Value
+            .Trim();
         var releases = JsonSerializer.Deserialize<List<ReleaseEntry>>(
             File.ReadAllText(Path.Combine(repositoryDirectory, "src", "OpenWish.Web", "wwwroot", "releases.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

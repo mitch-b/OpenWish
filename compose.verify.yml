@@ -18,6 +18,8 @@ services:
       ConnectionStrings__OpenWish: Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification
       OpenWishSettings__OwnDatabaseUpgrades: "true"
       OpenWishSettings__EnableDevelopmentLogin: "true"
+      Authentication__Google__ClientId: playwright-test-client-id
+      Authentication__Google__ClientSecret: playwright-test-client-secret
     depends_on:
       db:
         condition: service_healthy

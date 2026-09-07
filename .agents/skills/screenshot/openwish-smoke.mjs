@@ -185,8 +185,10 @@ async function verifyExternalLogin(browser, results) {
     new URL(request.url()).pathname === "/Account/PerformExternalLogin"
   );
 
-  await signInButton.click();
-  const request = await postRequest;
+  const [request] = await Promise.all([
+    postRequest,
+    signInButton.click({ noWaitAfter: true })
+  ]);
   if (!request.postData()?.includes("provider=Google")) {
     throw new Error("Google sign-in did not submit the selected provider.");
   }

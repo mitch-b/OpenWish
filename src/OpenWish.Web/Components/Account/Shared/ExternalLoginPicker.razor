@@ -20,12 +20,12 @@ else
         <div>
             <AntiforgeryToken />
             <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-            <p>
+            <div class="external-login-actions">
                 @foreach (var provider in externalLogins)
                 {
                     <button type="submit" class="btn btn-primary external-login-button" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">Continue with @provider.DisplayName</button>
                 }
-            </p>
+            </div>
         </div>
     </form>
 }

@@ -420,7 +420,10 @@ h1:focus {
     background: var(--color-surface-alt);
 }
 
-.external-login-form p {
+.external-login-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin-bottom: 0;
 }
 

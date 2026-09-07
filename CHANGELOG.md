@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.2] - 2026-09-07
+
+### Improved
+
+- Loading updates now describe the content being retrieved for screen-reader
+  users without announcing decorative button spinners.
+
 ## [0.1.1] - 2026-09-06
 
 ### Improved

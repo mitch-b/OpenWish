@@ -88,9 +88,24 @@ async function visit(page, route, expectedText, visitedRoutes) {
   if (await blazorError.isVisible()) {
     throw new Error(`Blazor error UI was visible on ${route}.`);
   }
+  await assertNoEmptySpinnerStatuses(page, route);
 
   visitedRoutes.push(route);
   return response;
+}
+
+async function assertNoEmptySpinnerStatuses(page, route) {
+  const emptyStatuses = await page.locator('.spinner-border[role="status"]').evaluateAll(elements =>
+    elements
+      .filter(element =>
+        !element.getAttribute("aria-label")?.trim() &&
+        !element.textContent?.trim())
+      .map(element => element.outerHTML)
+  );
+
+  if (emptyStatuses.length > 0) {
+    throw new Error(`${route} exposed empty spinner statuses: ${emptyStatuses.join(" | ")}`);
+  }
 }
 
 async function screenshot(page, fileName) {
@@ -352,8 +367,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "event-details-dark.png");
 
   await visit(page, "/whats-new", "What's new", visitedRoutes);
-  await assertVisible(page, "Version 0.1.1");
-  await assertVisible(page, "Clearer product links");
+  await assertVisible(page, "Version 0.1.2");
+  await assertVisible(page, "Clearer loading updates");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -388,6 +403,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "event details and gift assignment",
       "friends and pending requests",
       "notifications",
+      "accessible loading updates",
       "theme persistence",
       "release history",
       "account profile"

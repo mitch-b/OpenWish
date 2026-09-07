@@ -27,7 +27,7 @@
         <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
             @if (_sendingInvites)
             {
-                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                 <span class="ms-1">Sending...</span>
             }
             else

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.1.4",
+    "date": "2026-09-07",
+    "title": "Google sign-in handoff",
+    "summary": "Google sign-in can now navigate to Google's authorization page.",
+    "highlights": [
+      "The browser form destination policy permits Google's authorization origin only when Google sign-in is configured."
+    ]
+  },
+  {
     "version": "0.1.2",
     "date": "2026-09-07",
     "title": "Clearer loading updates",

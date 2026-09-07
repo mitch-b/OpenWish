@@ -162,42 +162,97 @@ async function assertResponsiveWidths(page, viewports) {
 }
 
 async function verifyExternalLogin(browser, results) {
+  for (const isMobile of [false, true]) {
+    await verifyExternalLoginHandoff(browser, results, isMobile);
+  }
+}
+
+async function verifyExternalLoginHandoff(browser, results, isMobile) {
   const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    isMobile: true
+    viewport: isMobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+    isMobile
   });
   const page = await context.newPage();
+  const diagnostics = monitorPage(page);
   const visitedRoutes = [];
 
-  await page.route("https://accounts.google.com/**", route => route.abort());
-  await visit(page, "/Account/Login", "Single sign-on", visitedRoutes);
+  try {
+    // Playwright routes do not intercept subsequent requests in a redirect chain.
+    // Intercept at the protocol level so the real 302 runs without contacting Google.
+    const session = await context.newCDPSession(page);
+    await session.send("Fetch.enable", {
+      patterns: [{ urlPattern: "https://accounts.google.com/*", requestStage: "Request" }]
+    });
+    const authorizationRequest = new Promise((resolve, reject) => {
+      session.once("Fetch.requestPaused", event => {
+        session.send("Fetch.fulfillRequest", {
+          requestId: event.requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: "Content-Type", value: "text/html" }],
+          body: Buffer.from("<h1>Google authorization boundary</h1>").toString("base64")
+        }).then(() => resolve(event.request), reject);
+      });
+    });
+    const returnUrl = isMobile ? "/wishlists" : "/";
+    await visit(page, `/Account/Login?ReturnUrl=${encodeURIComponent(returnUrl)}`, "Single sign-on", visitedRoutes);
 
-  const externalLoginForm = page.locator("form.external-login-form");
-  if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
-    throw new Error("External login must use a full browser navigation for the OAuth handoff.");
+    const externalLoginForm = page.locator("form.external-login-form");
+    if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
+      throw new Error("External login must use a full browser navigation for the OAuth handoff.");
+    }
+    if (await externalLoginForm.getAttribute("action") !== "/Account/PerformExternalLogin") {
+      throw new Error("External login must post to the root-relative challenge endpoint.");
+    }
+
+    const signInButton = page.getByRole("button", { name: "Continue with Google" });
+    await signInButton.waitFor({ state: "visible" });
+    if (isMobile) {
+      await screenshot(page, "login-mobile.png");
+    }
+    const challengeResponse = page.waitForResponse(response =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname === "/Account/PerformExternalLogin"
+    );
+
+    const [response, authorization] = await Promise.all([
+      challengeResponse,
+      authorizationRequest,
+      page.getByRole("heading", { name: "Google authorization boundary", exact: true }).waitFor(),
+      signInButton.click({ noWaitAfter: true })
+    ]);
+    const formData = new URLSearchParams(response.request().postData());
+    if (formData.get("provider") !== "Google" || formData.get("ReturnUrl") !== returnUrl) {
+      throw new Error("Google sign-in did not preserve the provider and return destination.");
+    }
+    if (response.status() !== 302) {
+      throw new Error(`Google sign-in challenge returned ${response.status()} instead of a redirect.`);
+    }
+    const authorizationUrl = new URL(authorization.url);
+    if (authorizationUrl.origin !== "https://accounts.google.com" ||
+        authorizationUrl.pathname !== "/o/oauth2/v2/auth" ||
+        authorizationUrl.searchParams.get("redirect_uri") !== `${baseUrl}/signin-google` ||
+        authorizationUrl.searchParams.get("response_type") !== "code" ||
+        !authorizationUrl.searchParams.get("state") ||
+        page.url() !== authorizationUrl.href ||
+        response.headers()["location"] !== authorizationUrl.href) {
+      throw new Error("Google sign-in did not navigate to the expected OAuth authorization URL.");
+    }
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`External login browser failures: ${[
+        ...diagnostics.browserErrors, ...diagnostics.failedResponses
+      ].join(" | ")}`);
+    }
+
+    results.push({
+      scenario: isMobile ? "mobile-external-login" : "desktop-external-login",
+      visitedRoutes,
+      challengeStatus: response.status(),
+      authorizationOrigin: authorizationUrl.origin,
+      redirectUri: authorizationUrl.searchParams.get("redirect_uri")
+    });
+  } finally {
+    await context.close();
   }
-  if (await externalLoginForm.getAttribute("action") !== "/Account/PerformExternalLogin") {
-    throw new Error("External login must post to the root-relative challenge endpoint.");
-  }
-
-  const signInButton = page.getByRole("button", { name: "Continue with Google" });
-  await signInButton.waitFor({ state: "visible" });
-  await screenshot(page, "login-mobile.png");
-  const postRequest = page.waitForRequest(request =>
-    request.method() === "POST" &&
-    new URL(request.url()).pathname === "/Account/PerformExternalLogin"
-  );
-
-  const [request] = await Promise.all([
-    postRequest,
-    signInButton.click({ noWaitAfter: true })
-  ]);
-  if (!request.postData()?.includes("provider=Google")) {
-    throw new Error("Google sign-in did not submit the selected provider.");
-  }
-
-  results.push({ scenario: "mobile-external-login", visitedRoutes });
-  await context.close();
 }
 
 async function verifyOwnerJourney(browser, manifest, results) {

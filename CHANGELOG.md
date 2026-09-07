@@ -2,6 +2,13 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.4] - 2026-09-07
+
+### Fixed
+
+- Google sign-in can now leave OpenWish without being blocked by the browser's
+  form destination policy.
+
 ## [0.1.3] - 2026-09-07
 
 ### Fixed

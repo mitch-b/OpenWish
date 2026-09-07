@@ -60,9 +60,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var googleClientId = builder.Configuration.GetValue<string>("Authentication:Google:ClientId");
 var googleClientSecret = builder.Configuration.GetValue<string>("Authentication:Google:ClientSecret");
+var formActionSources = "'self'";
 if (!string.IsNullOrWhiteSpace(googleClientId) &&
     !string.IsNullOrWhiteSpace(googleClientSecret))
 {
+    // Browsers also enforce form-action on redirects from an OAuth challenge.
+    formActionSources += " https://accounts.google.com";
     builder.Services.AddAuthentication().AddGoogle(googleOptions =>
     {
         googleOptions.ClientId = googleClientId;
@@ -199,7 +202,7 @@ app.Use(async (context, next) =>
     context.Response.Headers.XFrameOptions = "DENY";
     context.Response.Headers.ContentSecurityPolicy =
         "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        "form-action 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+        $"form-action {formActionSources}; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
     await next();

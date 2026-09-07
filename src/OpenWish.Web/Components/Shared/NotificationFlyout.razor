@@ -54,10 +54,8 @@
                 }
                 @if (_isLoading)
                 {
-                    <div class="text-center p-4">
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
+                    <div class="text-center p-4" role="status">
+                        <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
                         <div class="mt-2">Loading notifications...</div>
                     </div>
                 }
@@ -91,7 +89,7 @@
                                                                 @onclick:stopPropagation="true">
                                                             @if (option.IsPrimary && IsNotificationProcessing(notification.Id))
                                                             {
-                                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                                                             }
                                                             @option.Label
                                                         </button>
@@ -166,7 +164,7 @@
                     <button type="button" class="btn btn-danger btn-sm" @onclick="ConfirmDelete" disabled="@_isDeleting">
                         @if (_isDeleting)
                         {
-                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                         }
                         Delete
                     </button>

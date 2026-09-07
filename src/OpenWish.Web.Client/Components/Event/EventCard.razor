@@ -110,7 +110,7 @@ else
             <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">
                 @if (_isDeleting)
                 {
-                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 }
                 <span>Delete Event</span>
             </button>

@@ -21,7 +21,7 @@
                     {
                         <div class="text-center py-5">
                             <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                <span class="visually-hidden">Loading invitation...</span>
                             </div>
                         </div>
                     }
@@ -117,14 +117,14 @@
                                             <button class="btn btn-success" @onclick="AcceptInviteAsync" disabled="@_isProcessing">
                                                 @if (_isProcessing && _processingAction == "accept")
                                                 {
-                                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                                 }
                                                 Accept invite
                                             </button>
                                             <button class="btn btn-outline-secondary" @onclick="RejectInviteAsync" disabled="@_isProcessing">
                                                 @if (_isProcessing && _processingAction == "reject")
                                                 {
-                                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                                 }
                                                 No thanks
                                             </button>

@@ -18,7 +18,7 @@
 {
     <div class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <span class="visually-hidden">Loading event...</span>
         </div>
     </div>
 }
@@ -164,7 +164,7 @@ else
                         <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteEventAsync" disabled="@_isDeleting">
                             @if (_isDeleting)
                             {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                 <span>Deleting...</span>
                             }
                             else

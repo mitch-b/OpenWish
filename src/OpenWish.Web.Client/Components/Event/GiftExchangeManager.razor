@@ -52,7 +52,7 @@
                             <button class="btn btn-danger me-2" @onclick="ResetGiftExchange" disabled="@_resetting">
                                 @if (_resetting)
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                     <span>Resetting...</span>
                                 }
                                 else
@@ -136,7 +136,7 @@
                                 <button class="btn btn-success btn-lg me-2" @onclick="DrawNames" disabled="@_drawing">
                                     @if (_drawing)
                                     {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                                         <span>Drawing Names...</span>
                                     }
                                     else

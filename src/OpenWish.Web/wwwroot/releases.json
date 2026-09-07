@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.1.2",
+    "date": "2026-09-07",
+    "title": "Clearer loading updates",
+    "summary": "Loading updates now say what OpenWish is working on.",
+    "highlights": [
+      "Screen readers receive contextual loading updates without duplicate announcements from decorative button spinners."
+    ]
+  },
+  {
     "version": "0.1.1",
     "date": "2026-09-06",
     "title": "Clearer product links",

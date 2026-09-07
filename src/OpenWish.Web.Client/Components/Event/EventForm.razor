@@ -71,7 +71,7 @@
         <button type="submit" class="btn btn-primary btn-lg" disabled="@IsSubmitting">
             @if (IsSubmitting)
             {
-                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 <span>Creating your event...</span>
             }
             else if (_isEditMode)

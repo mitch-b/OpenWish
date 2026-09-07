@@ -14,7 +14,7 @@
     <div class="card shadow-sm event-wishlist-manager">
         <div class="card-body text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Loading event wishlists...</span>
             </div>
         </div>
     </div>
@@ -242,7 +242,7 @@ else
                             disabled="@_isSubmitting">
                         @if (_isSubmitting)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                             <span>Removing…</span>
                         }
                         else

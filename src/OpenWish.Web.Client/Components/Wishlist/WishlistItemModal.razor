@@ -47,6 +47,7 @@
                                inputmode="url"
                                autocomplete="url"
                                aria-describedby="product-url-import-modal-help"
+                               data-dialog-initial-focus
                                placeholder="Paste a product URL"
                                value="@ImportUrl"
                                @oninput="UpdateImportUrl"
@@ -137,7 +138,7 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-dialog-close @onclick="Cancel">Cancel</button>
                         <button type="submit" class="btn btn-primary">
-                            <OpenWishIcon Name="check-lg" /> @(Model.Id > 0 ? "Save Changes" : "Add Item")
+                            <OpenWishIcon Name="check-lg" /> @(Model.Id > 0 ? "Save changes" : "Add item")
                         </button>
                     </div>
                 </EditForm>

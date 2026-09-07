@@ -396,6 +396,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const itemDialog = page.getByRole("dialog", { name: "Add item" });
   await itemDialog.waitFor({ state: "visible" });
   const modalProductUrl = itemDialog.getByLabel("Product URL");
+  if (!(await modalProductUrl.evaluate(element => element === document.activeElement))) {
+    throw new Error("The item dialog did not initially focus the product URL field.");
+  }
   if (await modalProductUrl.getAttribute("aria-describedby") !== "product-url-import-modal-help") {
     throw new Error("The item dialog product URL is not connected to its help text.");
   }
@@ -409,7 +412,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await itemDialog.getByRole("button", { name: "Close" }).focus();
   await page.keyboard.press("Shift+Tab");
-  if (!(await itemDialog.getByRole("button", { name: "Add item" })
+  if (!(await itemDialog.getByRole("button", { name: "Add item", exact: true })
     .evaluate(element => element === document.activeElement))) {
     throw new Error("Keyboard focus did not wrap within the item dialog.");
   }

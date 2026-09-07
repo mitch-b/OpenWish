@@ -179,11 +179,14 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@if (isLoading)", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Model.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("IAsyncDisposable", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("event.key === \"Escape\"", dialogScript, StringComparison.Ordinal);
         Assert.Contains("event.key !== \"Tab\"", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("dialog.querySelector(\"[data-dialog-initial-focus]\")", dialogScript, StringComparison.Ordinal);
         Assert.Contains("existingState?.dialog.isConnected", dialogScript, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
     }

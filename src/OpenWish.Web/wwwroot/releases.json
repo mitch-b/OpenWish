@@ -9,7 +9,7 @@
       "Filters and sorting communicate which options are active.",
       "Grid and list controls identify the current view.",
       "Product URL import fields include connected guidance and prevent empty imports.",
-      "The add-item dialog keeps keyboard focus contained and returns it to the opener when closed."
+      "The add-item dialog starts at the product URL, contains keyboard focus, and returns it to the opener when closed."
     ]
   },
   {

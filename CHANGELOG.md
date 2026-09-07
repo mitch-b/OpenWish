@@ -11,7 +11,7 @@ All notable user-facing changes to OpenWish are documented here.
 - Wishlist sorting identifies the current ordering choice.
 - Grid and list controls identify the current wishlist view.
 - Product URL import fields and the item dialog provide clearer labels,
-  guidance, and disabled states.
+  guidance, disabled states, predictable initial focus, and consistent actions.
 
 ## [0.1.7] - 2026-09-07
 

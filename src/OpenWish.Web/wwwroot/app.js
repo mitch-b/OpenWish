@@ -78,7 +78,8 @@ window.openWishActivateDialog = function (id) {
     openWishDialogs.set(id, { dialog, handleKeyDown, previouslyFocused });
     document.body.classList.add("dialog-open");
 
-    const firstFocusable = dialog.querySelector(focusableSelector);
+    const firstFocusable = dialog.querySelector("[data-dialog-initial-focus]")
+        ?? dialog.querySelector(focusableSelector);
     if (firstFocusable instanceof HTMLElement) {
         firstFocusable.focus({ preventScroll: true });
     } else {

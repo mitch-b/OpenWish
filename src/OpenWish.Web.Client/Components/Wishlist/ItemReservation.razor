@@ -4,7 +4,7 @@
 @inject IWishlistService WishlistService
 @inject IUserContextService UserContextService
 
-<div class="item-reservation">
+<div class="item-reservation" aria-busy="@(_loading || _isUpdating)">
     @if (_loading)
     {
         <div class="spinner-border spinner-border-sm" role="status">
@@ -23,8 +23,12 @@
                             <strong>You have reserved this item.</strong>
                             <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
                         </div>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="CancelReservation">
-                            <OpenWishIcon Name="x-circle" /> Cancel
+                        <button class="btn btn-sm btn-outline-danger"
+                                @ref="_cancelReservationButton"
+                                type="button"
+                                disabled="@_isUpdating"
+                                @onclick="ShowCancelConfirmation">
+                            <OpenWishIcon Name="x-circle" /> Cancel reservation
                         </button>
                     </div>
                 }
@@ -43,25 +47,64 @@
                     </div>
                 }
             </div>
+            @if (_showCancelConfirmation)
+            {
+                <div class="alert alert-warning mt-2"
+                     role="alertdialog"
+                     aria-labelledby="cancel-reservation-title-@ItemId"
+                     aria-describedby="cancel-reservation-description-@ItemId">
+                    <div id="cancel-reservation-title-@ItemId" class="fw-semibold">Release this reservation?</div>
+                    <p id="cancel-reservation-description-@ItemId" class="mb-2">
+                        Other shoppers will be able to reserve this item.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button @ref="_keepReservationButton"
+                                type="button"
+                                class="btn btn-sm btn-secondary"
+                                disabled="@_isUpdating"
+                                @onclick="KeepReservation">
+                            Keep reservation
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-danger"
+                                disabled="@_isUpdating"
+                                @onclick="CancelReservation">
+                            @(_isUpdating ? "Releasing..." : "Release reservation")
+                        </button>
+                    </div>
+                </div>
+            }
         }
         else
         {
             <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="anonymousCheckbox" @bind="_anonymous" />
-                <label class="form-check-label" for="anonymousCheckbox">
+                <input class="form-check-input" type="checkbox" id="anonymousCheckbox-@ItemId" disabled="@_isUpdating" @bind="_anonymous" />
+                <label class="form-check-label" for="anonymousCheckbox-@ItemId">
                     Reserve anonymously
                 </label>
             </div>
             
-            <button class="btn btn-success w-100" @onclick="ReserveItem">
-                <OpenWishIcon Name="gift" /> I'll Get This
+            <button class="btn btn-success w-100"
+                    @ref="_reserveItemButton"
+                    type="button"
+                    disabled="@_isUpdating"
+                    aria-busy="@_isUpdating"
+                    @onclick="ReserveItem">
+                <OpenWishIcon Name="gift" /> @(_isUpdating ? "Reserving..." : "Reserve this item")
             </button>
         }
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <div class="alert alert-success mt-2" role="status" aria-live="polite">
+            @_statusMessage
+        </div>
     }
     
     @if (_error)
     {
-        <div class="alert alert-danger mt-2">
+        <div @ref="_errorAlert" class="alert alert-danger mt-2" role="alert" tabindex="-1">
             @_errorMessage
         </div>
     }
@@ -83,13 +126,19 @@
     private bool _isReserved = false;
     private bool _myReservation = false;
     private bool _anonymous = false;
+    private bool _isUpdating;
+    private bool _showCancelConfirmation;
+    private bool _focusCancelConfirmation;
+    private string? _statusMessage;
+    private ElementReference _keepReservationButton;
+    private ElementReference _cancelReservationButton;
+    private ElementReference _reserveItemButton;
+    private ElementReference _errorAlert;
+    private bool _focusCancelReservationButton;
+    private bool _focusReserveItemButton;
+    private bool _focusErrorAlert;
     private ItemReservationModel _reservation = new ItemReservationModel();
     private string? _currentUserId;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await CheckReservation();
-    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -98,6 +147,30 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_focusCancelConfirmation)
+        {
+            _focusCancelConfirmation = false;
+            await _keepReservationButton.FocusAsync();
+        }
+
+        if (_focusCancelReservationButton)
+        {
+            _focusCancelReservationButton = false;
+            await _cancelReservationButton.FocusAsync();
+        }
+
+        if (_focusReserveItemButton)
+        {
+            _focusReserveItemButton = false;
+            await _reserveItemButton.FocusAsync();
+        }
+
+        if (_focusErrorAlert)
+        {
+            _focusErrorAlert = false;
+            await _errorAlert.FocusAsync();
+        }
+
         if (firstRender && _error && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
@@ -107,29 +180,26 @@
 
     [Inject] private ILogger<ItemReservation> Logger { get; set; } = default!;
 
-    private async Task CheckReservation()
+    private async Task<bool> CheckReservation()
     {
-        Logger.LogInformation($"CheckReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
             _error = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
-            // If no user ID available (e.g., during SSR), don't show reservation options
             if (_currentUserId == null)
             {
                 _loading = false;
                 _isReserved = false;
-                return;
+                return true;
             }
 
-            // Check if the current user is the wishlist owner
             if (_currentUserId == OwnerId)
             {
                 _loading = false;
                 _isReserved = false;
-                return; // Wishlist owners can't reserve their own items
+                return true;
             }
 
             var reservation = await WishlistService.GetItemReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
@@ -144,29 +214,30 @@
             {
                 _isReserved = false;
             }
+
+            return true;
         }
         catch (Exception ex)
         {
-            // Handle errors gracefully - could be SSR issues or actual service errors
             _error = true;
             _errorMessage = "Failed to check reservation status. This may be resolved when the page becomes interactive.";
-            Logger.LogError(ex, "CheckReservation error");
+            Logger.LogError(ex, "Failed to check reservation for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
+            return false;
         }
         finally
         {
             _loading = false;
-            Logger.LogInformation($"CheckReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
 
     private async Task ReserveItem()
     {
-        Logger.LogInformation($"ReserveItem START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
-            _loading = true;
+            _isUpdating = true;
             _error = false;
+            _statusMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -175,7 +246,16 @@
                 
                 if (result)
                 {
-                    await CheckReservation();
+                    if (await CheckReservation())
+                    {
+                        _statusMessage = "Item reserved. Other shoppers can see that it is taken.";
+                    }
+                    else
+                    {
+                        _error = true;
+                        _errorMessage = "The item was reserved, but its status could not be refreshed. Reload this page.";
+                        _focusErrorAlert = true;
+                    }
                 }
                 else
                 {
@@ -193,40 +273,78 @@
         {
             _error = true;
             _errorMessage = "Failed to reserve this item. Please try again.";
-            Logger.LogError(ex, "ReserveItem error");
+            Logger.LogError(ex, "Failed to reserve wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
         }
         finally
         {
-            _loading = false;
-            Logger.LogInformation($"ReserveItem END {DateTime.Now:O} Task: {Task.CurrentId}");
+            _isUpdating = false;
             StateHasChanged();
         }
     }
 
+    private void ShowCancelConfirmation()
+    {
+        _showCancelConfirmation = true;
+        _statusMessage = null;
+        _error = false;
+        _focusCancelConfirmation = true;
+    }
+
+    private void KeepReservation()
+    {
+        _showCancelConfirmation = false;
+        _focusCancelReservationButton = true;
+    }
+
     private async Task CancelReservation()
     {
-        Logger.LogInformation($"CancelReservation START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
-            _loading = true;
+            _isUpdating = true;
             _error = false;
+            _statusMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await WishlistService.CancelReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
-                await CheckReservation();
+                var canceled = await WishlistService.CancelReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
+                _showCancelConfirmation = false;
+                var refreshed = await CheckReservation();
+                if (canceled && refreshed)
+                {
+                    _statusMessage = "Reservation released.";
+                    _focusReserveItemButton = true;
+                }
+                else if (canceled)
+                {
+                    _error = true;
+                    _errorMessage = "The reservation was released, but its status could not be refreshed. Reload this page.";
+                    _focusErrorAlert = true;
+                }
+                else
+                {
+                    _error = true;
+                    _errorMessage = "The reservation could not be released. It may have already changed.";
+                    _focusErrorAlert = true;
+                }
+            }
+            else
+            {
+                _showCancelConfirmation = false;
+                _error = true;
+                _errorMessage = "Sign in again to release this reservation.";
+                _focusErrorAlert = true;
             }
         }
-        catch
+        catch (Exception ex)
         {
             _error = true;
             _errorMessage = "Failed to cancel the reservation. Please try again.";
+            Logger.LogError(ex, "Failed to cancel reservation for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
         }
         finally
         {
-            _loading = false;
-            Logger.LogInformation($"CancelReservation END {DateTime.Now:O} Task: {Task.CurrentId}");
+            _isUpdating = false;
             StateHasChanged();
         }
     }

@@ -3,8 +3,9 @@
 
 @inject IFriendService FriendService
 @inject IUserContextService UserContextService
+@inject ILogger<FriendRequestList> Logger
 
-<div class="friend-requests">
+<div class="friend-requests" aria-busy="@(_loading || _processingRequestId.HasValue)">
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
         <div>
@@ -36,10 +37,19 @@
                         <strong>@request.Requester?.UserName</strong>
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm" @onclick="() => AcceptRequest(request.Id)">
-                            <OpenWishIcon Name="check" /> Accept
+                        <button class="btn btn-primary btn-sm"
+                                type="button"
+                                disabled="@_processingRequestId.HasValue"
+                                aria-label="Accept friend request from @GetRequesterName(request)"
+                                @onclick="() => AcceptRequest(request)">
+                            <OpenWishIcon Name="check" />
+                            @(_processingRequestId == request.Id ? "Accepting..." : "Accept")
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => RejectRequest(request.Id)">
+                        <button class="btn btn-outline-secondary btn-sm"
+                                type="button"
+                                disabled="@_processingRequestId.HasValue"
+                                aria-label="Reject friend request from @GetRequesterName(request)"
+                                @onclick="() => RejectRequest(request)">
                             <OpenWishIcon Name="x" /> Reject
                         </button>
                     </div>
@@ -50,7 +60,7 @@
 
     @if (_sentRequests.Any())
     {
-        <h5 class="mt-4 mb-3">Sent Requests</h5>
+        <h5 class="mt-4 mb-3">Sent requests</h5>
         <div class="list-group">
             @foreach (var request in _sentRequests)
             {
@@ -62,11 +72,19 @@
                     <div class="d-flex gap-2 align-items-center">
                         <span class="badge bg-secondary">Pending</span>
                         <div class="btn-group btn-group-sm" role="group" aria-label="Sent request actions">
-                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1" @onclick="() => ResendSentRequest(request.Id)" title="Resend invitation">
+                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1"
+                                    type="button"
+                                    disabled="@_processingRequestId.HasValue"
+                                    aria-label="Resend friend request to @GetReceiverName(request)"
+                                    @onclick="() => ResendSentRequest(request)">
                                 <OpenWishIcon Name="arrow-clockwise" />
-                                <span>Resend</span>
+                                <span>@(_processingRequestId == request.Id ? "Resending..." : "Resend")</span>
                             </button>
-                            <button class="btn btn-outline-danger d-flex align-items-center gap-1" @onclick="() => CancelSentRequest(request.Id)" title="Cancel invitation">
+                            <button class="btn btn-outline-danger d-flex align-items-center gap-1"
+                                    type="button"
+                                    disabled="@_processingRequestId.HasValue"
+                                    aria-label="Cancel friend request to @GetReceiverName(request)"
+                                    @onclick="() => CancelSentRequest(request)">
                                 <OpenWishIcon Name="trash" />
                                 <span>Cancel</span>
                             </button>
@@ -77,20 +95,32 @@
         </div>
     }
 
-    @if (_error)
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
     {
-        <div class="alert alert-danger mt-3">
-            An error occurred while loading friend requests. Please try again.
+        <div class="alert alert-success mt-3" role="status" aria-live="polite">
+            @_statusMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            @_errorMessage
         </div>
     }
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback OnFriendshipsChanged { get; set; }
+
     private List<FriendRequestModel> _receivedRequests = [];
     private List<FriendRequestModel> _sentRequests = [];
     private bool _loading = true;
-    private bool _error = false;
     private string? _currentUserId;
+    private int? _processingRequestId;
+    private string? _statusMessage;
+    private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,19 +129,23 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _error && _currentUserId == null)
+        if (firstRender && _errorMessage is not null && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
             await LoadRequests();
         }
     }
 
-    private async Task LoadRequests()
+    private async Task LoadRequests(bool clearFeedback = true)
     {
         try
         {
             _loading = true;
-            _error = false;
+            if (clearFeedback)
+            {
+                _statusMessage = null;
+                _errorMessage = null;
+            }
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -123,9 +157,10 @@
                 _sentRequests = sentRequests.ToList();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
+            Logger.LogError(ex, "Failed to load friend requests");
+            _errorMessage = "Friend requests could not be loaded. Try again.";
         }
         finally
         {
@@ -134,79 +169,155 @@
         }
     }
 
-    private async Task AcceptRequest(int requestId)
+    private async Task AcceptRequest(FriendRequestModel request)
     {
+        var requesterName = GetRequesterName(request);
         try
         {
+            BeginRequestAction(request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.AcceptFriendRequestAsync(requestId, _currentUserId);
-                await LoadRequests();
+                if (await FriendService.AcceptFriendRequestAsync(request.Id, _currentUserId))
+                {
+                    await LoadRequests(clearFeedback: false);
+                    await OnFriendshipsChanged.InvokeAsync();
+                    _statusMessage = $"{requesterName} is now your friend.";
+                }
+                else
+                {
+                    _errorMessage = $"The friend request from {requesterName} is no longer pending. Refresh and try again.";
+                }
+            }
+            else
+            {
+                _errorMessage = "Sign in again to accept this friend request.";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to accept friend request {FriendRequestId}", request.Id);
+            _errorMessage = $"The friend request from {requesterName} could not be accepted. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
         }
     }
 
-    private async Task RejectRequest(int requestId)
+    private async Task RejectRequest(FriendRequestModel request)
     {
+        var requesterName = GetRequesterName(request);
         try
         {
+            BeginRequestAction(request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.RejectFriendRequestAsync(requestId, _currentUserId);
-                await LoadRequests();
+                if (await FriendService.RejectFriendRequestAsync(request.Id, _currentUserId))
+                {
+                    await LoadRequests(clearFeedback: false);
+                    _statusMessage = $"Friend request from {requesterName} rejected.";
+                }
+                else
+                {
+                    _errorMessage = $"The friend request from {requesterName} is no longer pending. Refresh and try again.";
+                }
+            }
+            else
+            {
+                _errorMessage = "Sign in again to reject this friend request.";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to reject friend request {FriendRequestId}", request.Id);
+            _errorMessage = $"The friend request from {requesterName} could not be rejected. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
         }
     }
 
-    private async Task CancelSentRequest(int requestId)
+    private async Task CancelSentRequest(FriendRequestModel request)
     {
+        var receiverName = GetReceiverName(request);
         try
         {
+            BeginRequestAction(request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.CancelFriendRequestAsync(requestId, _currentUserId);
-                await LoadRequests();
+                if (await FriendService.CancelFriendRequestAsync(request.Id, _currentUserId))
+                {
+                    await LoadRequests(clearFeedback: false);
+                    _statusMessage = $"Friend request to {receiverName} canceled.";
+                }
+                else
+                {
+                    _errorMessage = $"The friend request to {receiverName} is no longer pending. Refresh and try again.";
+                }
+            }
+            else
+            {
+                _errorMessage = "Sign in again to cancel this friend request.";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to cancel friend request {FriendRequestId}", request.Id);
+            _errorMessage = $"The friend request to {receiverName} could not be canceled. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
         }
     }
 
-    private async Task ResendSentRequest(int requestId)
+    private async Task ResendSentRequest(FriendRequestModel request)
     {
+        var receiverName = GetReceiverName(request);
         try
         {
+            BeginRequestAction(request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.ResendFriendRequestAsync(requestId, _currentUserId);
-                await LoadRequests();
+                await FriendService.ResendFriendRequestAsync(request.Id, _currentUserId);
+                await LoadRequests(clearFeedback: false);
+                _statusMessage = $"Friend request sent to {receiverName} again.";
+            }
+            else
+            {
+                _errorMessage = "Sign in again to resend this friend request.";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to resend friend request {FriendRequestId}", request.Id);
+            _errorMessage = $"The friend request to {receiverName} could not be resent. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
         }
     }
+
+    private void BeginRequestAction(int requestId)
+    {
+        _processingRequestId = requestId;
+        _statusMessage = null;
+        _errorMessage = null;
+    }
+
+    private static string GetRequesterName(FriendRequestModel request) =>
+        request.Requester?.UserName ?? request.Requester?.Email ?? "this person";
+
+    private static string GetReceiverName(FriendRequestModel request) =>
+        request.Receiver?.UserName ?? request.Receiver?.Email ?? "this person";
 }

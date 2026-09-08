@@ -2,7 +2,6 @@
 
 @inject IEventService EventService
 @inject ILogger<EventCard> Logger
-@inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
 
 @if (Event == null)
@@ -11,7 +10,7 @@
 }
 else
 {
-    <div class="card h-100 event-card" @onclick="NavigateToEvent">
+    <div class="card h-100 event-card">
         <div class="card-body">
             <div class="card-title-row">
                 <span class="event-card-icon"><OpenWishIcon Name="calendar-event" /></span>
@@ -46,7 +45,7 @@ else
                 </div>
             }
             <div class="card-footer-row">
-                <small>
+                <a class="event-card-link" href="/events/@Event.PublicId">
                     @if (_currentUserId == Event.CreatedBy?.Id && Event.IsGiftExchange && !Event.NamesDrawnOn.HasValue)
                     {
                         <span>Continue setup</span>
@@ -55,7 +54,9 @@ else
                     {
                         <span>Open event</span>
                     }
-                </small>
+                    <OpenWishIcon Name="arrow-right" />
+                    <span class="visually-hidden">: @Event.Name</span>
+                </a>
                 @if (_currentUserId == Event.CreatedBy?.Id)
                 {
                     <div class="dropdown d-inline-block">
@@ -71,7 +72,6 @@ else
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
                             <li>
                                 <button class="dropdown-item text-danger"
-                                        @onclick:stopPropagation="true"
                                         @onclick="ShowDeleteDialog">
                                     Delete
                                 </button>
@@ -226,9 +226,6 @@ else
             StateHasChanged();
         }
     }
-
-    private void NavigateToEvent() => NavigationManager.NavigateTo($"/events/{Event?.PublicId}");
-
     private enum DeleteConfirmationStage
     {
         First,

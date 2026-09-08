@@ -3,8 +3,10 @@
 
 @inject IWishlistService WishlistService
 @inject IUserContextService UserContextService
+@inject ILogger<ItemComments> Logger
+@inject IJSRuntime JSRuntime
 
-<div class="item-comments">
+<div class="item-comments" aria-busy="@(_loading || _isAdding || _deletingCommentId.HasValue)">
     <h5 class="mb-3">Comments</h5>
 
     @if (_loading)
@@ -24,24 +26,58 @@
             <div class="comment-list mb-3">
                 @foreach (var comment in _comments)
                 {
-                    <div class="comment-item d-flex mb-2 p-2 @(comment.UserId == _currentUserId ? "comment-item-self" : string.Empty)">
-                        <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between">
-                                <div class="fw-bold">
-                                    <OpenWishIcon Name="person-circle" /> @(comment.User?.UserName ?? "Unknown User")
+                    <div @key="comment.Id">
+                        <div class="comment-item d-flex mb-2 p-2 @(comment.UserId == _currentUserId ? "comment-item-self" : string.Empty)">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <div class="fw-bold">
+                                        <OpenWishIcon Name="person-circle" /> @(comment.User?.UserName ?? "Unknown User")
+                                    </div>
+                                    <small class="text-muted">
+                                        @comment.CreatedOn.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                                    </small>
                                 </div>
-                                <small class="text-muted">
-                                    @comment.CreatedOn.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
-                                </small>
+                                <div class="mt-1">@comment.Text</div>
                             </div>
-                            <div class="mt-1">@comment.Text</div>
+                            @if (comment.UserId == _currentUserId || _isWishlistOwner)
+                            {
+                                <div class="ms-2">
+                                    <button class="btn btn-sm btn-link text-danger"
+                                            id="delete-comment-@comment.Id"
+                                            type="button"
+                                            disabled="@(_pendingDeleteComment is not null || _deletingCommentId.HasValue)"
+                                            aria-label="Delete comment by @GetCommentAuthor(comment)"
+                                            @onclick="() => ShowDeleteConfirmation(comment)">
+                                        <OpenWishIcon Name="trash" />
+                                    </button>
+                                </div>
+                            }
                         </div>
-                        @if (comment.UserId == _currentUserId || _isWishlistOwner)
+                        @if (_pendingDeleteComment?.Id == comment.Id)
                         {
-                            <div class="ms-2">
-                                <button class="btn btn-sm btn-link text-danger" aria-label="Delete comment" @onclick="() => DeleteComment(comment.Id)">
-                                    <OpenWishIcon Name="trash" />
-                                </button>
+                            <div class="alert alert-warning mb-3"
+                                 role="alertdialog"
+                                 aria-labelledby="delete-comment-title-@comment.Id"
+                                 aria-describedby="delete-comment-description-@comment.Id">
+                                <div id="delete-comment-title-@comment.Id" class="fw-semibold">Delete this comment?</div>
+                                <p id="delete-comment-description-@comment.Id" class="mb-2">
+                                    The comment by @GetCommentAuthor(comment) will be permanently removed.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button @ref="_keepCommentButton"
+                                            type="button"
+                                            class="btn btn-sm btn-secondary"
+                                            disabled="@_deletingCommentId.HasValue"
+                                            @onclick="CancelDelete">
+                                        Keep comment
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-danger"
+                                            disabled="@_deletingCommentId.HasValue"
+                                            @onclick="ConfirmDeleteComment">
+                                        @(_deletingCommentId == comment.Id ? "Deleting..." : "Delete comment")
+                                    </button>
+                                </div>
                             </div>
                         }
                     </div>
@@ -51,19 +87,33 @@
 
         <div class="comment-form">
             <div class="form-floating mb-2">
-                <textarea class="form-control" placeholder="Add a comment..." id="commentText" rows="2" style="height: 100px"
-                          @bind="commentText"></textarea>
-                <label for="commentText">Add a comment...</label>
+                <textarea class="form-control" placeholder="Add a comment..." id="commentText-@ItemId" rows="2" style="height: 100px"
+                          @ref="_commentComposer"
+                          disabled="@(_isAdding || _deletingCommentId.HasValue)"
+                          @bind="commentText"
+                          @bind:event="oninput"></textarea>
+                <label for="commentText-@ItemId">Add a comment</label>
             </div>
-            <button class="btn btn-primary" @onclick="AddComment" disabled="@(string.IsNullOrWhiteSpace(commentText))">
-                <OpenWishIcon Name="chat" /> Comment
+            <button class="btn btn-primary"
+                    type="button"
+                    aria-busy="@_isAdding"
+                    @onclick="AddComment"
+                    disabled="@(string.IsNullOrWhiteSpace(commentText) || _isAdding || _deletingCommentId.HasValue)">
+                <OpenWishIcon Name="chat" /> @(_isAdding ? "Adding..." : "Add comment")
             </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <div class="alert alert-success mt-3" role="status" aria-live="polite">
+            @_statusMessage
         </div>
     }
 
     @if (_error)
     {
-        <div class="alert alert-danger mt-3">
+        <div @ref="_errorAlert" class="alert alert-danger mt-3" role="alert" tabindex="-1">
             @_errorMessage
         </div>
     }
@@ -84,13 +134,19 @@
     private bool _loading = true;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
+    private string? _statusMessage;
     private string? _currentUserId;
     private bool _isWishlistOwner => IsWishlistOwner;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadComments();
-    }
+    private bool _isAdding;
+    private int? _deletingCommentId;
+    private ItemCommentModel? _pendingDeleteComment;
+    private ElementReference _keepCommentButton;
+    private ElementReference _commentComposer;
+    private ElementReference _errorAlert;
+    private bool _focusDeleteConfirmation;
+    private bool _focusCommentComposer;
+    private bool _focusErrorAlert;
+    private string? _restoreDeleteButtonId;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -99,6 +155,31 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (_focusDeleteConfirmation)
+        {
+            _focusDeleteConfirmation = false;
+            await _keepCommentButton.FocusAsync();
+        }
+
+        if (_restoreDeleteButtonId is not null)
+        {
+            var elementId = _restoreDeleteButtonId;
+            _restoreDeleteButtonId = null;
+            await JSRuntime.InvokeVoidAsync("openWishFocusElement", elementId);
+        }
+
+        if (_focusCommentComposer)
+        {
+            _focusCommentComposer = false;
+            await _commentComposer.FocusAsync();
+        }
+
+        if (_focusErrorAlert)
+        {
+            _focusErrorAlert = false;
+            await _errorAlert.FocusAsync();
+        }
+
         if (firstRender && _error && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
@@ -121,7 +202,7 @@
         {
             _error = true;
             _errorMessage = "Failed to load comments. This may be resolved when the page becomes interactive.";
-            System.Diagnostics.Debug.WriteLine($"LoadComments error: {ex.Message}");
+            Logger.LogError(ex, "Failed to load comments for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
         }
         finally
         {
@@ -137,7 +218,9 @@
 
         try
         {
+            _isAdding = true;
             _error = false;
+            _statusMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -145,6 +228,7 @@
                 await WishlistService.AddCommentToItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, commentText);
                 commentText = "";
                 await LoadComments();
+                _statusMessage = "Comment added.";
             }
             else
             {
@@ -156,22 +240,59 @@
         {
             _error = true;
             _errorMessage = "Failed to add comment. Please try again.";
-            System.Diagnostics.Debug.WriteLine($"AddComment error: {ex.Message}");
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to add comment to wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
+        }
+        finally
+        {
+            _isAdding = false;
         }
     }
 
-    private async Task DeleteComment(int commentId)
+    private void ShowDeleteConfirmation(ItemCommentModel comment)
     {
+        _pendingDeleteComment = comment;
+        _statusMessage = null;
+        _error = false;
+        _focusDeleteConfirmation = true;
+    }
+
+    private void CancelDelete()
+    {
+        _restoreDeleteButtonId = $"delete-comment-{_pendingDeleteComment?.Id}";
+        _pendingDeleteComment = null;
+    }
+
+    private async Task ConfirmDeleteComment()
+    {
+        if (_pendingDeleteComment is null)
+        {
+            return;
+        }
+
+        var commentId = _pendingDeleteComment.Id;
         try
         {
+            _deletingCommentId = commentId;
             _error = false;
+            _statusMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
+                var removed = await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
+                _pendingDeleteComment = null;
                 await LoadComments();
+                if (removed)
+                {
+                    _statusMessage = "Comment deleted.";
+                    _focusCommentComposer = true;
+                }
+                else
+                {
+                    _error = true;
+                    _errorMessage = "The comment could not be deleted. It may have already been removed.";
+                    _focusErrorAlert = true;
+                }
             }
             else
             {
@@ -183,8 +304,14 @@
         {
             _error = true;
             _errorMessage = "Failed to delete comment. Please try again.";
-            System.Diagnostics.Debug.WriteLine($"DeleteComment error: {ex.Message}");
-            StateHasChanged();
+            Logger.LogError(ex, "Failed to delete comment {CommentId}", commentId);
+        }
+        finally
+        {
+            _deletingCommentId = null;
         }
     }
+
+    private static string GetCommentAuthor(ItemCommentModel comment) =>
+        comment.User?.UserName ?? "an OpenWish member";
 }

@@ -31,16 +31,16 @@
                 <div class="card-body">
                     <FriendList @key="_friendListVersion" />
                 </div>
-
-                @code {
-                    private int _friendListVersion;
-
-                    private void HandleFriendshipsChanged()
-                    {
-                        _friendListVersion++;
-                    }
-                }
             </div>
         </div>
     </div>
 </div>
+
+@code {
+    private int _friendListVersion;
+
+    private void HandleFriendshipsChanged()
+    {
+        _friendListVersion++;
+    }
+}

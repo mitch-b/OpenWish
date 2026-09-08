@@ -328,6 +328,13 @@
                     _focusErrorAlert = true;
                 }
             }
+            else
+            {
+                _showCancelConfirmation = false;
+                _error = true;
+                _errorMessage = "Sign in again to release this reservation.";
+                _focusErrorAlert = true;
+            }
         }
         catch (Exception ex)
         {

@@ -87,12 +87,12 @@
 
         <div class="comment-form">
             <div class="form-floating mb-2">
-                <textarea class="form-control" placeholder="Add a comment..." id="commentText" rows="2" style="height: 100px"
+                <textarea class="form-control" placeholder="Add a comment..." id="commentText-@ItemId" rows="2" style="height: 100px"
                           @ref="_commentComposer"
                           disabled="@(_isAdding || _deletingCommentId.HasValue)"
                           @bind="commentText"
                           @bind:event="oninput"></textarea>
-                <label for="commentText">Add a comment</label>
+                <label for="commentText-@ItemId">Add a comment</label>
             </div>
             <button class="btn btn-primary"
                     type="button"

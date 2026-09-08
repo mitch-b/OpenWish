@@ -317,6 +317,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("var removed = await WishlistService.RemoveItemCommentAsync", markup, StringComparison.Ordinal);
         Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("Comment deleted.", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("id=\"commentText\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -335,6 +338,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("var canceled = await WishlistService.CancelReservationByPublicIdAsync", markup, StringComparison.Ordinal);
         Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("Reservation released.", markup, StringComparison.Ordinal);
+        Assert.Contains("Sign in again to release this reservation.", markup, StringComparison.Ordinal);
         Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
         Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
         var reservationMethods = client[

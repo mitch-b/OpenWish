@@ -843,6 +843,21 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const giftCoordination = page.getByRole("region", {
     name: "Gift coordination for Cast-Iron Dutch Oven"
   });
+  const dutchOvenComposer = giftCoordination.getByLabel("Add a comment");
+  const dutchOvenComposerId = await dutchOvenComposer.getAttribute("id");
+  const parkPassRow = page.locator("tr").filter({ hasText: "National Park Pass" });
+  await parkPassRow.getByRole("button", { name: "Show" }).click();
+  const parkPassCoordination = page.getByRole("region", {
+    name: "Gift coordination for National Park Pass"
+  });
+  const parkPassComposerId = await parkPassCoordination.getByLabel("Add a comment").getAttribute("id");
+  if (!dutchOvenComposerId?.startsWith("commentText-") ||
+      !parkPassComposerId?.startsWith("commentText-") ||
+      dutchOvenComposerId === parkPassComposerId) {
+    throw new Error(
+      `Wishlist comment composers did not have item-specific IDs: ${dutchOvenComposerId}, ${parkPassComposerId}`
+    );
+  }
   await giftCoordination.getByRole("button", { name: "Reserve this item" }).click();
   await giftCoordination.getByRole("status").filter({
     hasText: "Item reserved. Other shoppers can see that it is taken."

@@ -6,7 +6,7 @@
 
 @if (IsVisible)
 {
-    <div class="modal-backdrop" @onclick="Cancel"></div>
+    <div class="modal-backdrop" data-dialog-background-allowed @onclick="Cancel"></div>
     <div class="modal-dialog-container"
          id="wishlist-item-dialog"
          role="dialog"

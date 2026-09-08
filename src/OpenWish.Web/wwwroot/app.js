@@ -17,6 +17,58 @@ window.openWishFocusElement = function (id) {
 };
 
 const openWishDialogs = new Map();
+const openWishInertElements = new Map();
+
+function makeDialogBackgroundInert(dialog) {
+    const inertElements = [];
+    let currentElement = dialog;
+
+    while (currentElement.parentElement && currentElement.parentElement !== document.body) {
+        const parentElement = currentElement.parentElement;
+        for (const sibling of parentElement.children) {
+            if (!(sibling instanceof HTMLElement) ||
+                sibling === currentElement ||
+                sibling.hasAttribute("data-dialog-background-allowed")) {
+                continue;
+            }
+
+            const inertState = openWishInertElements.get(sibling);
+            if (inertState) {
+                inertState.count += 1;
+            } else {
+                openWishInertElements.set(sibling, {
+                    count: 1,
+                    wasInert: sibling.inert
+                });
+                sibling.inert = true;
+            }
+            inertElements.push(sibling);
+        }
+        currentElement = parentElement;
+    }
+
+    return inertElements;
+}
+
+function restoreDialogBackground(inertElements) {
+    for (const element of inertElements) {
+        const inertState = openWishInertElements.get(element);
+        if (!inertState) {
+            continue;
+        }
+
+        inertState.count -= 1;
+        if (inertState.count === 0) {
+            element.inert = inertState.wasInert;
+            openWishInertElements.delete(element);
+        }
+    }
+}
+
+function releaseDialogState(state) {
+    state.dialog.removeEventListener("keydown", state.handleKeyDown);
+    restoreDialogBackground(state.inertElements);
+}
 
 window.openWishActivateDialog = function (id) {
     const dialog = document.getElementById(id);
@@ -29,7 +81,7 @@ window.openWishActivateDialog = function (id) {
         return;
     }
     if (existingState) {
-        existingState.dialog.removeEventListener("keydown", existingState.handleKeyDown);
+        releaseDialogState(existingState);
         openWishDialogs.delete(id);
     }
 
@@ -75,7 +127,8 @@ window.openWishActivateDialog = function (id) {
     };
 
     dialog.addEventListener("keydown", handleKeyDown);
-    openWishDialogs.set(id, { dialog, handleKeyDown, previouslyFocused });
+    const inertElements = makeDialogBackgroundInert(dialog);
+    openWishDialogs.set(id, { dialog, handleKeyDown, inertElements, previouslyFocused });
     document.body.classList.add("dialog-open");
 
     const firstFocusable = dialog.querySelector("[data-dialog-initial-focus]")
@@ -94,7 +147,7 @@ window.openWishDeactivateDialog = function (id) {
         return;
     }
 
-    state.dialog.removeEventListener("keydown", state.handleKeyDown);
+    releaseDialogState(state);
     openWishDialogs.delete(id);
     if (openWishDialogs.size === 0) {
         document.body.classList.remove("dialog-open");

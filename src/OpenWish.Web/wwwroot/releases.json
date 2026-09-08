@@ -7,7 +7,7 @@
     "highlights": [
       "Wishlist discovery filters immediately, includes a clear action, and announces empty results.",
       "Friend invitations connect guidance and feedback while preventing empty submission.",
-      "The notification panel communicates its open state and manages keyboard focus.",
+      "The notification panel communicates its open state, keeps background controls unavailable, and manages keyboard focus.",
       "Notification deletion clearly names the item, explains permanence, and begins on the safe action.",
       "Notification updates expose busy, success, and failure states."
     ]

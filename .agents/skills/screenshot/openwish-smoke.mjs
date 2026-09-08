@@ -400,10 +400,13 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Grid view", pressed: true })
     .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
-  const addItemButton = page.getByRole("button", { name: "Add item" });
+  const addItemButton = page.getByRole("button", { name: "Add item" }).first();
   await addItemButton.click();
   const itemDialog = page.getByRole("dialog", { name: "Add item" });
   await itemDialog.waitFor({ state: "visible" });
+  if (!(await addItemButton.evaluate(element => element.closest("[inert]") !== null))) {
+    throw new Error("The item dialog did not make background content inert.");
+  }
   const modalProductUrl = itemDialog.getByLabel("Product URL");
   if (!(await modalProductUrl.evaluate(element => element === document.activeElement))) {
     throw new Error("The item dialog did not initially focus the product URL field.");
@@ -539,6 +542,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "visible" });
   const notificationDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationDialog.waitFor({ state: "visible" });
+  if (!(await page.locator(".content").evaluate(element => element.inert)) ||
+      !(await page.locator(".sidebar").evaluate(element => element.inert))) {
+    throw new Error("The modal notification panel did not make background content inert.");
+  }
   if (!(await notificationDialog.getByRole("button", { name: "Mark all as read" })
     .evaluate(element => element === document.activeElement))) {
     throw new Error("Notification flyout did not focus its first useful action.");
@@ -559,6 +566,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await deleteNotification.click();
   const deleteDialog = page.getByRole("dialog", { name: "Delete notification" });
   await deleteDialog.waitFor({ state: "visible" });
+  if (!(await notificationDialog.evaluate(element => element.closest("[inert]") !== null))) {
+    throw new Error("The notification panel remained interactive behind its delete dialog.");
+  }
   await assertVisible(page, "This cannot be undone.");
   if (!(await deleteDialog.getByRole("button", { name: "Keep notification" })
     .evaluate(element => element === document.activeElement))) {
@@ -592,6 +602,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await notificationBell.getAttribute("aria-expanded") !== "false" ||
       !(await notificationBell.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing notifications did not collapse the disclosure and restore focus.");
+  }
+  if (await page.locator(".content").evaluate(element => element.inert) ||
+      await page.locator(".sidebar").evaluate(element => element.inert)) {
+    throw new Error("Closing notifications left background content inert.");
   }
 
   await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {

@@ -55,7 +55,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-expanded=\"@(_isVisible ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"notification-flyout\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"notification-flyout-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("!_showDeleteConfirmation && !string.IsNullOrWhiteSpace(_errorMessage)", markup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog\", \"notification-flyout\"", markup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-close", markup, StringComparison.Ordinal);
     }
@@ -68,6 +70,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("id=\"notification-delete-dialog\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"notification-delete-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"notification-modal-backdrop\" aria-hidden=\"true\"", markup, StringComparison.Ordinal);
         Assert.Contains("This cannot be undone.", markup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
         Assert.Contains("Keep notification", markup, StringComparison.Ordinal);
@@ -252,11 +255,14 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Model.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-background-allowed", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("IAsyncDisposable", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("event.key === \"Escape\"", dialogScript, StringComparison.Ordinal);
         Assert.Contains("event.key !== \"Tab\"", dialogScript, StringComparison.Ordinal);
         Assert.Contains("dialog.querySelector(\"[data-dialog-initial-focus]\")", dialogScript, StringComparison.Ordinal);
         Assert.Contains("existingState?.dialog.isConnected", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("sibling.inert = true", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("restoreDialogBackground", dialogScript, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
     }
 

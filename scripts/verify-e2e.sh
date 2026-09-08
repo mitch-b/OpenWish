@@ -76,6 +76,7 @@ test -s "$walkthrough_directory/events.png"
 test -s "$walkthrough_directory/event-details.png"
 test -s "$walkthrough_directory/friends.png"
 test -s "$walkthrough_directory/notifications.png"
+test -s "$walkthrough_directory/notification-delete-dialog.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
 if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then

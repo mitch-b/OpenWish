@@ -33,6 +33,11 @@ body.dialog-open {
     overflow: hidden;
 }
 
+body.dialog-open .top-row {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
 a, .btn-link {
     color: var(--color-link);
 }

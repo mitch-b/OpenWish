@@ -337,6 +337,15 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Private Ideas");
+  const wishlistSearch = page.getByRole("searchbox", { name: "Search wishlists" });
+  if (await wishlistSearch.getAttribute("aria-controls") !== "wishlist-results") {
+    throw new Error("Wishlist discovery search does not identify its results.");
+  }
+  await wishlistSearch.fill("Private");
+  await page.getByRole("status").filter({ hasText: "1 wishlist found." }).waitFor({ state: "attached" });
+  const clearWishlistSearch = page.getByRole("button", { name: "Clear wishlist search" });
+  await clearWishlistSearch.click();
+  await assertVisible(page, "Family Gift Ideas");
   await screenshot(page, "wishlists.png");
 
   await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
@@ -511,20 +520,65 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "CaseyDemo");
   await assertVisible(page, "TaylorDemo");
+  const friendInvites = page.getByLabel("Email addresses");
+  if (await friendInvites.getAttribute("aria-describedby") !== "emailInvitesHelp") {
+    throw new Error("Friend invitation guidance is not connected to its field.");
+  }
+  const sendInvitations = page.getByRole("button", { name: "Send invitations" });
+  if (!(await sendInvitations.isDisabled())) {
+    throw new Error("Friend invitations can be submitted without an email address.");
+  }
   await screenshot(page, "friends.png");
+  await page.waitForTimeout(2000);
+  await friendInvites.fill("new-friend@example.com");
+  await sendInvitations.click({ trial: true });
 
-  await page.locator(".notification-bell").click();
+  const notificationBell = page.locator(".notification-bell");
+  await notificationBell.click();
+  await page.getByRole("button", { name: /Notifications/, expanded: true })
+    .waitFor({ state: "visible" });
+  const notificationDialog = page.getByRole("dialog", { name: "Notifications" });
+  await notificationDialog.waitFor({ state: "visible" });
+  if (!(await notificationDialog.getByRole("button", { name: "Mark all as read" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Notification flyout did not focus its first useful action.");
+  }
   await assertVisible(page, "Event invitation");
   await assertVisible(page, "Wishlist activity");
   await screenshot(page, "notifications.png");
+  await notificationDialog.getByRole("button", { name: "Mark all as read" }).click();
+  await page.getByRole("status").filter({ hasText: "All notifications marked as read." })
+    .waitFor({ state: "attached" });
+  const closeNotifications = page.getByRole("button", { name: "Close notifications" });
+  await page.waitForFunction(() =>
+    document.activeElement?.id === "notification-close-button"
+  );
   const notificationCountBeforeDelete = await page.locator(".notification-item").count();
   const notificationToDelete = page.locator(".notification-item").first();
-  await notificationToDelete.getByRole("button", { name: "Delete notification" }).click();
+  const deleteNotification = notificationToDelete.getByRole("button", { name: "Delete notification" });
+  await deleteNotification.click();
+  const deleteDialog = page.getByRole("dialog", { name: "Delete notification" });
+  await deleteDialog.waitFor({ state: "visible" });
+  await assertVisible(page, "This cannot be undone.");
+  if (!(await deleteDialog.getByRole("button", { name: "Keep notification" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Notification deletion did not focus its safe action.");
+  }
+  await screenshot(page, "notification-delete-dialog.png");
+  await page.keyboard.press("Escape");
+  await deleteDialog.waitFor({ state: "detached" });
+  if (!(await deleteNotification.evaluate(element => element === document.activeElement))) {
+    throw new Error("Closing notification deletion did not restore focus.");
+  }
+  await deleteNotification.click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   await page.waitForFunction(
     expectedCount => document.querySelectorAll(".notification-item").length === expectedCount,
     notificationCountBeforeDelete - 1
   );
+  if (!(await closeNotifications.evaluate(element => element === document.activeElement))) {
+    throw new Error("Successful notification deletion did not keep focus in the open panel.");
+  }
   const notificationsAfterDeleteResponse = await context.request.get(
     `${baseUrl}/api/notifications?includeRead=true`
   );
@@ -533,7 +587,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
       notificationsAfterDelete.some(notification => notification.publicId === notificationPublicId)) {
     throw new Error("Deleted notification remained available from the API.");
   }
-  await page.getByRole("button", { name: "Close notifications" }).click();
+  await page.keyboard.press("Escape");
+  await notificationDialog.waitFor({ state: "detached" });
+  if (await notificationBell.getAttribute("aria-expanded") !== "false" ||
+      !(await notificationBell.evaluate(element => element === document.activeElement))) {
+    throw new Error("Closing notifications did not collapse the disclosure and restore focus.");
+  }
 
   await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {
     element.checked = true;
@@ -593,7 +652,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "accessible product links",
       "event details and gift assignment",
       "friends and pending requests",
-      "notifications",
+      "accessible notification updates and deletion",
+      "immediate wishlist discovery",
+      "friend invitation validation",
       "accessible loading updates",
       "theme persistence",
       "release history",

@@ -51,10 +51,16 @@
                             <label for="wishlist-search" class="form-label">Search wishlists</label>
                             <div class="input-group search-control">
                                 <input id="wishlist-search" type="search" class="form-control" placeholder="Search by name"
-                                       @bind="searchTerm" @bind:event="oninput" @onkeyup="HandleSearch" />
-                                <button class="btn btn-outline-secondary" type="button" @onclick="HandleSearch">
-                                    <OpenWishIcon Name="search" /> Search
-                                </button>
+                                       aria-controls="wishlist-results"
+                                       @bind="searchTerm" @bind:event="oninput" @bind:after="HandleSearch" />
+                                @if (!string.IsNullOrWhiteSpace(searchTerm))
+                                {
+                                    <button class="btn btn-outline-secondary" type="button"
+                                            aria-label="Clear wishlist search"
+                                            @onclick="ClearSearch">
+                                        <OpenWishIcon Name="x-lg" /> Clear
+                                    </button>
+                                }
                             </div>
                         </div>
                         <div class="filter-field">
@@ -78,6 +84,7 @@
                     </div>
                 </div>
 
+                <div id="wishlist-results">
                 @if (filteredWishlists == null)
                 {
                     <div class="d-flex align-items-center gap-2" role="status">
@@ -87,6 +94,7 @@
                 }
                 else if (filteredWishlists.Count == 0)
                 {
+                    <p class="visually-hidden" role="status" aria-live="polite">No wishlists found.</p>
                     <div class="empty-state">
                         <h2>No wishlists found</h2>
                         <p>Create a wishlist or change the current search and filters.</p>
@@ -107,6 +115,7 @@
                         }
                     </div>
                 }
+                </div>
             </div>
             <div class="tab-pane fade @(activeTab == "friends-wishlists" ? "show active" : string.Empty)"
                  id="friends-wishlists-panel"
@@ -304,6 +313,12 @@
 
     private void HandleSearch()
     {
+        ApplyFiltersAndSort();
+    }
+
+    private void ClearSearch()
+    {
+        searchTerm = string.Empty;
         ApplyFiltersAndSort();
     }
 

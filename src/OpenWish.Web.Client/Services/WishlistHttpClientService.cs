@@ -304,14 +304,16 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         _ = userId;
         var request = new { IsAnonymous = isAnonymous };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve", request);
-        return response.IsSuccessStatusCode;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
     }
 
     public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, int itemId, string userId)
     {
         _ = userId;
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation");
-        return response.IsSuccessStatusCode;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
     }
 
     public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(

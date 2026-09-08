@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.10] - 2026-09-08
+
+### Improved
+
+- Event cards now use an explicit, named link instead of pointer-only card
+  navigation.
+- Reserved-item refreshes announce progress and results, while errors, counts,
+  and new-tab destinations provide clearer context.
+- Friend-request actions name the person involved, prevent duplicate updates,
+  and announce success or failure.
+- Comment deletion now requires a focused confirmation, explains permanence,
+  and communicates progress and completion.
+- Reservation cancellation now requires a focused confirmation, explains when
+  an item becomes available again, and communicates completion.
+
 ## [0.1.9] - 2026-09-07
 
 ### Improved

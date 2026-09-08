@@ -5,7 +5,7 @@
 @inject IUserContextService UserContextService
 @inject ILogger<EventReservedItems> Logger
 
-<div class="card shadow-sm event-reserved-items">
+<div class="card shadow-sm event-reserved-items" aria-busy="@_isLoading">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">
             <div>
@@ -15,20 +15,24 @@
             <div class="d-flex align-items-center gap-2">
                 @if (_items.Count > 0)
                 {
-                    <span class="badge bg-primary">@_items.Count</span>
+                    <span class="badge bg-primary" aria-label="@($"{_items.Count} reserved {(_items.Count == 1 ? "item" : "items")}")">@_items.Count</span>
                 }
                 <button class="btn btn-sm btn-outline-secondary"
                         type="button"
                         disabled="@_isLoading"
+                        aria-describedby="reserved-items-status"
                         @onclick="RefreshAsync">
-                    <OpenWishIcon Name="arrow-clockwise" Class="me-1" /> Refresh
+                    <OpenWishIcon Name="arrow-clockwise" Class="me-1" />
+                    @(_isLoading && _attemptedLoad ? "Refreshing..." : "Refresh")
                 </button>
             </div>
         </div>
 
+        <div id="reserved-items-status" class="visually-hidden" role="status" aria-live="polite">@_statusMessage</div>
+
         @if (!string.IsNullOrEmpty(_errorMessage))
         {
-            <div class="alert alert-danger mb-0">@_errorMessage</div>
+            <div class="alert alert-danger mb-0" role="alert">@_errorMessage</div>
         }
         else if (_isLoading && !_attemptedLoad)
         {
@@ -66,7 +70,8 @@
                             <div class="reserved-wishlist-header d-flex justify-content-between align-items-center">
                                 <a href="/wishlists/@wishlist.WishlistPublicId"
                                    class="fw-semibold text-decoration-none"
-                                   target="_blank" rel="noopener noreferrer">
+                                   target="_blank" rel="noopener noreferrer"
+                                   aria-label="Open @wishlist.WishlistName wishlist in a new tab">
                                     <OpenWishIcon Name="card-checklist" Class="me-1" />@wishlist.WishlistName
                                 </a>
                                 <span class="badge bg-light text-dark">@wishlist.Items.Count</span>
@@ -106,14 +111,16 @@
                                                 <div class="reserved-item-links mt-2 d-flex flex-wrap gap-2">
                                                     <a href="/wishlists/@wishlist.WishlistPublicId"
                                                        class="btn btn-sm btn-outline-primary"
-                                                       target="_blank" rel="noopener noreferrer">
+                                                       target="_blank" rel="noopener noreferrer"
+                                                       aria-label="View @wishlist.WishlistName wishlist in a new tab">
                                                         View wishlist
                                                     </a>
                                                     @if (!string.IsNullOrWhiteSpace(item.Url))
                                                     {
                                                         <a href="@item.Url"
                                                            class="btn btn-sm btn-outline-secondary"
-                                                           target="_blank" rel="noopener noreferrer">
+                                                           target="_blank" rel="noopener noreferrer"
+                                                           aria-label="Open @item.ItemName product in a new tab">
                                                             Product link
                                                         </a>
                                                     }
@@ -138,7 +145,7 @@
 
             @if (_isLoading)
             {
-                <div class="text-center text-muted small">Refreshing…</div>
+                <div class="text-center text-muted small" aria-hidden="true">Refreshing...</div>
             }
         }
     </div>
@@ -158,6 +165,7 @@
     private bool _isLoading;
     private bool _attemptedLoad;
     private string? _errorMessage;
+    private string? _statusMessage;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -194,7 +202,7 @@
         }
     }
 
-    private async Task LoadReservedItemsAsync()
+    private async Task LoadReservedItemsAsync(bool announceSuccess = false)
     {
         if (_isLoading || string.IsNullOrEmpty(EventId) || string.IsNullOrEmpty(_userId))
         {
@@ -203,6 +211,7 @@
 
         _isLoading = true;
         _errorMessage = null;
+        _statusMessage = null;
 
         try
         {
@@ -211,6 +220,12 @@
             _items.AddRange(items.OrderBy(i => NormalizeOwnerName(i), StringComparer.OrdinalIgnoreCase)
                                  .ThenBy(i => i.WishlistName, StringComparer.OrdinalIgnoreCase)
                                  .ThenBy(i => i.ItemName, StringComparer.OrdinalIgnoreCase));
+            if (announceSuccess)
+            {
+                _statusMessage = _items.Count == 1
+                    ? "Reserved items refreshed. 1 item found."
+                    : $"Reserved items refreshed. {_items.Count} items found.";
+            }
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -244,7 +259,7 @@
             return Task.CompletedTask;
         }
 
-        return LoadReservedItemsAsync();
+        return LoadReservedItemsAsync(announceSuccess: true);
     }
 
     private IReadOnlyList<OwnerReservationGroup> GetOwnerGroups()

@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.10",
+    "date": "2026-09-08",
+    "title": "Safer coordination actions",
+    "summary": "Event navigation, reservations, comments, and friend requests now provide clearer keyboard behavior and dependable feedback.",
+    "highlights": [
+      "Event cards provide an explicit, named navigation link for keyboard and screen-reader users.",
+      "Reserved-item refreshes announce progress and results, and identify links that open a new tab.",
+      "Friend-request actions name the person involved, prevent duplicate updates, and announce outcomes.",
+      "Comment deletion requires a focused confirmation and explains that removal is permanent.",
+      "Reservation cancellation requires a focused confirmation and explains when the item becomes available again."
+    ]
+  },
+  {
     "version": "0.1.9",
     "date": "2026-09-07",
     "title": "Clearer discovery and notifications",

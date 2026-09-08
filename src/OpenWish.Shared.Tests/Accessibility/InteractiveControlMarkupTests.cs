@@ -266,6 +266,84 @@ public class InteractiveControlMarkupTests
         Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EventCards_UseExplicitNamedNavigationLinks()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
+
+        Assert.Contains("class=\"event-card-link\" href=\"/events/@Event.PublicId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"visually-hidden\">: @Event.Name</span>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@onclick=\"NavigateToEvent\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReservedItems_AnnounceRefreshesErrorsAndNewTabDestinations()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventReservedItems.razor");
+
+        Assert.Contains("aria-busy=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"reserved-items-status\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Reserved items refreshed.", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@_errorMessage", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Open @item.ItemName product in a new tab\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FriendRequests_NameActionsAndAnnounceTheirOutcomes()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Social", "FriendRequestList.razor");
+
+        Assert.Contains("aria-label=\"Accept friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Reject friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Resend friend request to @GetReceiverName(request)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_processingRequestId.HasValue\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
+        Assert.Contains("await OnFriendshipsChanged.InvokeAsync();", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CommentDeletion_RequiresAFocusSafeConfirmation()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ItemComments.razor");
+
+        Assert.Contains("role=\"alertdialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"delete-comment-title-@comment.Id\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"delete-comment-description-@comment.Id\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@ref=\"_keepCommentButton\"", markup, StringComparison.Ordinal);
+        Assert.Contains("await _keepCommentButton.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishFocusElement\", elementId", markup, StringComparison.Ordinal);
+        Assert.Contains("await _commentComposer.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("var removed = await WishlistService.RemoveItemCommentAsync", markup, StringComparison.Ordinal);
+        Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("Comment deleted.", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReservationCancellation_RequiresAFocusSafeConfirmation()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ItemReservation.razor");
+        var client = ReadComponent("OpenWish.Web.Client", "Services", "WishlistHttpClientService.cs");
+
+        Assert.Contains("role=\"alertdialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"cancel-reservation-title-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"cancel-reservation-description-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@ref=\"_keepReservationButton\"", markup, StringComparison.Ordinal);
+        Assert.Contains("await _keepReservationButton.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("await _cancelReservationButton.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("await _reserveItemButton.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("var canceled = await WishlistService.CancelReservationByPublicIdAsync", markup, StringComparison.Ordinal);
+        Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("Reservation released.", markup, StringComparison.Ordinal);
+        Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
+        Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
+        var reservationMethods = client[
+            client.IndexOf("public async Task<bool> ReserveItemByPublicIdAsync", StringComparison.Ordinal)..client.IndexOf("public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync", StringComparison.Ordinal)];
+        Assert.Equal(2, reservationMethods.Split(
+            "return await response.Content.ReadFromJsonAsync<bool>();",
+            StringSplitOptions.None).Length - 1);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

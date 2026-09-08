@@ -1,7 +1,6 @@
 .event-card {
     height: 100%;
     overflow: hidden;
-    cursor: pointer;
     transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -70,6 +69,20 @@
     margin-top: 1.1rem;
     padding-top: 0.85rem;
     border-top: 1px solid var(--color-border-muted);
+}
+
+.event-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-primary-bg);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.event-card-link:hover {
+    text-decoration: underline;
 }
 
 .kebab-menu {

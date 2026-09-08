@@ -473,6 +473,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Holiday Gift Exchange");
   await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
+  await page.getByRole("link", { name: /Open event.*Holiday Gift Exchange/ })
+    .waitFor({ state: "visible" });
   await screenshot(page, "events.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
@@ -480,6 +482,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "Suggested Budget");
   await assertVisible(page, "TaylorDemo");
+  const refreshReservedItems = page.getByRole("button", { name: "Refresh" });
+  await refreshReservedItems.click();
+  await page.getByRole("status").filter({ hasText: "Reserved items refreshed. 0 items found." })
+    .waitFor({ state: "attached" });
   await screenshot(page, "event-details.png");
 
   await visit(page, "/events/new", "Create a Secret Santa", visitedRoutes);
@@ -531,6 +537,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await sendInvitations.isDisabled())) {
     throw new Error("Friend invitations can be submitted without an email address.");
   }
+  const acceptTaylorRequest = page.getByRole("button", {
+    name: "Accept friend request from TaylorDemo"
+  });
+  await acceptTaylorRequest.click();
+  await page.getByRole("status").filter({ hasText: "TaylorDemo is now your friend." })
+    .waitFor({ state: "attached" });
   await screenshot(page, "friends.png");
   await page.waitForTimeout(2000);
   await friendInvites.fill("new-friend@example.com");
@@ -632,7 +644,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Accessible event coordination");
+  await assertVisible(page, "Safer coordination actions");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -826,6 +838,71 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const dutchOvenRow = page.locator("tr").filter({ hasText: "Cast-Iron Dutch Oven" });
+  await dutchOvenRow.getByRole("button", { name: "Show" }).click();
+  const giftCoordination = page.getByRole("region", {
+    name: "Gift coordination for Cast-Iron Dutch Oven"
+  });
+  await giftCoordination.getByRole("button", { name: "Reserve this item" }).click();
+  await giftCoordination.getByRole("status").filter({
+    hasText: "Item reserved. Other shoppers can see that it is taken."
+  }).waitFor({ state: "attached" });
+  const cancelReservation = giftCoordination.getByRole("button", { name: "Cancel reservation" });
+  await cancelReservation.click();
+  const reservationDialog = giftCoordination.getByRole("alertdialog", { name: "Release this reservation?" });
+  await reservationDialog.waitFor({ state: "visible" });
+  if (!(await reservationDialog.getByRole("button", { name: "Keep reservation" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Reservation cancellation did not focus its safe action.");
+  }
+  await screenshot(page, "reservation-cancel-confirmation.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "reservation-cancel-confirmation-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await reservationDialog.getByRole("button", { name: "Keep reservation" }).click();
+  await reservationDialog.waitFor({ state: "detached" });
+  if (!(await cancelReservation.evaluate(element => element === document.activeElement))) {
+    throw new Error("Keeping a reservation did not restore focus to the cancellation trigger.");
+  }
+  await cancelReservation.click();
+  await giftCoordination.getByRole("button", { name: "Release reservation" }).click();
+  await giftCoordination.getByRole("status").filter({ hasText: "Reservation released." })
+    .waitFor({ state: "attached" });
+  if (!(await giftCoordination.getByRole("button", { name: "Reserve this item" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Releasing a reservation did not focus the available reservation action.");
+  }
+
+  const commentText = `Verification comment ${Date.now()}`;
+  await giftCoordination.getByLabel("Add a comment").fill(commentText);
+  await giftCoordination.getByRole("button", { name: "Add comment" }).click();
+  await giftCoordination.getByRole("status").filter({ hasText: "Comment added." })
+    .waitFor({ state: "attached" });
+  const addedComment = giftCoordination.locator(".comment-item").filter({ hasText: commentText });
+  const deleteComment = addedComment.getByRole("button", { name: "Delete comment by TaylorDemo" });
+  await deleteComment.click();
+  const commentDialog = giftCoordination.getByRole("alertdialog", { name: "Delete this comment?" });
+  if (!(await commentDialog.getByRole("button", { name: "Keep comment" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Comment deletion did not focus its safe action.");
+  }
+  await screenshot(page, "comment-delete-confirmation.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "comment-delete-confirmation-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await commentDialog.getByRole("button", { name: "Keep comment" }).click();
+  await commentDialog.waitFor({ state: "detached" });
+  if (!(await deleteComment.evaluate(element => element === document.activeElement))) {
+    throw new Error("Keeping a comment did not restore focus to its deletion trigger.");
+  }
+  await deleteComment.click();
+  await giftCoordination.getByRole("button", { name: "Delete comment", exact: true }).click();
+  await giftCoordination.getByRole("status").filter({ hasText: "Comment deleted." })
+    .waitFor({ state: "attached" });
+  if (!(await giftCoordination.getByLabel("Add a comment")
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("Deleting a comment did not focus the surviving comment composer.");
+  }
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Guest browser errors: ${diagnostics.browserErrors.join(" | ")}`);

@@ -21,7 +21,7 @@
             
             <div class="card friends-panel mb-4">
                 <div class="card-body">
-                    <FriendRequestList />
+                    <FriendRequestList OnFriendshipsChanged="HandleFriendshipsChanged" />
                 </div>
             </div>
         </div>
@@ -29,8 +29,17 @@
         <div>
             <div class="card friends-panel">
                 <div class="card-body">
-                    <FriendList />
+                    <FriendList @key="_friendListVersion" />
                 </div>
+
+                @code {
+                    private int _friendListVersion;
+
+                    private void HandleFriendshipsChanged()
+                    {
+                        _friendListVersion++;
+                    }
+                }
             </div>
         </div>
     </div>

@@ -2,6 +2,22 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.9] - 2026-09-07
+
+### Improved
+
+- Wishlist discovery filters as people type, provides a named clear action,
+  and announces empty results.
+- Friend invitations connect their email guidance, prevent empty submission,
+  and announce validation and success feedback.
+- The notification button communicates whether its keyboard-friendly modal
+  panel is open, keeps background controls unavailable, and restores focus
+  when the panel closes.
+- Notification deletion names the selected notification, explains permanence,
+  keeps keyboard focus contained, and starts on the safe action.
+- Notification updates communicate busy, success, and failure states instead
+  of silently ignoring unsuccessful actions.
+
 ## [0.1.8] - 2026-09-07
 
 ### Improved

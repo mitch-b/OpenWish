@@ -146,6 +146,22 @@
     color: var(--color-text-subtle);
 }
 
+.notification-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal.notification-delete-modal {
+    z-index: 1070;
+}
+
+.notification-delete-modal .modal-dialog {
+    position: relative;
+    z-index: 1;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 767.98px) {
     .notification-flyout {

@@ -18,13 +18,17 @@
             <label for="emailInvites" class="form-label">Email addresses</label>
             <textarea id="emailInvites" class="form-control" rows="3" 
                       placeholder="friend@example.com, another@example.com"
-                      @bind="inviteEmails"></textarea>
-            <div class="form-text">
+                      aria-describedby="emailInvitesHelp"
+                      aria-invalid="@(_error ? "true" : "false")"
+                      value="@inviteEmails"
+                      @oninput="UpdateInviteEmails"></textarea>
+            <div class="form-text" id="emailInvitesHelp">
                 Separate multiple addresses with commas, spaces, or semicolons.
             </div>
         </div>
         
-        <button class="btn btn-primary" @onclick="SendEmailInvites" disabled="@_sendingInvites">
+        <button class="btn btn-primary" @onclick="SendEmailInvites"
+                disabled="@(_sendingInvites || string.IsNullOrWhiteSpace(inviteEmails))">
             @if (_sendingInvites)
             {
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -39,14 +43,14 @@
     
     @if (_error)
     {
-        <div class="alert alert-danger mt-3">
+        <div class="alert alert-danger mt-3" role="alert">
             @_errorMessage
         </div>
     }
     
     @if (_success)
     {
-        <div class="alert alert-success mt-3">
+        <div class="alert alert-success mt-3" role="status">
             @_successMessage
         </div>
     }
@@ -63,6 +67,13 @@
     private string _errorMessage = "An error occurred. Please try again.";
     private string _successMessage = "";
     private string? _currentUserId;
+
+    private void UpdateInviteEmails(ChangeEventArgs eventArgs)
+    {
+        inviteEmails = eventArgs.Value?.ToString() ?? string.Empty;
+        _error = false;
+        _success = false;
+    }
     
     private async Task SendEmailInvites()
     {

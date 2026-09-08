@@ -1,4 +1,6 @@
 @using System.Collections.Generic
+@using System.Data.Common
+@using Microsoft.EntityFrameworkCore
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 @inject INotificationService NotificationService
@@ -8,12 +10,15 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<NotificationFlyout> Logger
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 
 <div class="notification-flyout-container position-relative">
     <button class="btn btn-link text-decoration-none notification-bell"
             @onclick="ToggleFlyout"
             @onclick:stopPropagation="true"
             aria-label="@(_unreadCount > 0 ? $"Notifications, {_unreadCount} unread" : "Notifications")"
+            aria-expanded="@(_isVisible ? "true" : "false")"
+            aria-controls="notification-flyout"
             type="button">
         <OpenWishIcon Name="bell" />
         @if (_unreadCount > 0)
@@ -26,30 +31,51 @@
 
     @if (_isVisible)
     {
-        <div class="notification-flyout shadow-lg" @onclick:stopPropagation="true">
+        <div id="notification-flyout"
+             class="notification-flyout shadow-lg"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="notification-flyout-title"
+             aria-describedby="notification-flyout-description"
+             @onclick:stopPropagation="true">
             <div class="notification-header d-flex justify-content-between align-items-center p-3 border-bottom">
                 <div>
-                    <h2 class="notification-heading">Notifications</h2>
-                    <p class="notification-subheading">Recent updates and invitations</p>
+                    <h2 class="notification-heading" id="notification-flyout-title">Notifications</h2>
+                    <p class="notification-subheading" id="notification-flyout-description">Recent updates and invitations</p>
                 </div>
                 <div class="d-flex gap-2">
                     @if (_notifications?.Any(n => !n.IsRead) == true)
                     {
-                        <button class="btn btn-sm btn-outline-primary" @onclick="MarkAllAsRead" disabled="@(_isLoading || _isMarkingRead)">
-                            Mark All Read
+                        <button class="btn btn-sm btn-outline-primary"
+                                @onclick="MarkAllAsRead"
+                                disabled="@(_isLoading || _isMarkingRead)"
+                                aria-busy="@_isMarkingRead"
+                                data-dialog-initial-focus>
+                            Mark all as read
                         </button>
                     }
-                    <button class="btn btn-sm btn-outline-secondary" aria-label="Close notifications" @onclick="CloseFlyout">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            id="notification-close-button"
+                            aria-label="Close notifications"
+                            data-dialog-close
+                            data-dialog-initial-focus="@(_notifications?.Any(n => !n.IsRead) != true)"
+                            @onclick="CloseFlyout">
                         <OpenWishIcon Name="x-lg" />
                     </button>
                 </div>
             </div>
 
             <div class="notification-content">
-                @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                @if (!_showDeleteConfirmation && !string.IsNullOrWhiteSpace(_errorMessage))
                 {
                     <div class="alert alert-danger notification-error" role="alert">
                         @_errorMessage
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(_statusMessage))
+                {
+                    <div class="visually-hidden" role="status" aria-live="polite">
+                        @_statusMessage
                     </div>
                 }
                 @if (_isLoading)
@@ -85,6 +111,7 @@
                                                         var buttonClass = option.IsPrimary ? "btn btn-sm btn-success" : "btn btn-sm btn-outline-secondary";
                                                         <button class="@buttonClass"
                                                                 disabled="@IsNotificationProcessing(notification.Id)"
+                                                                aria-busy="@IsNotificationProcessing(notification.Id)"
                                                                 @onclick="() => HandleActionOption(notification, option.Key)"
                                                                 @onclick:stopPropagation="true">
                                                             @if (option.IsPrimary && IsNotificationProcessing(notification.Id))
@@ -144,14 +171,24 @@
 
 @if (_showDeleteConfirmation && _notificationToDelete != null)
 {
-    <div class="modal show d-block" tabindex="-1">
-        <div class="modal-dialog modal-sm">
+    <div class="modal notification-delete-modal show d-block"
+         id="notification-delete-dialog"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="notification-delete-title"
+         aria-describedby="notification-delete-description"
+         tabindex="-1"
+         @onclick="CancelDelete">
+        <div class="notification-modal-backdrop" aria-hidden="true"></div>
+        <div class="modal-dialog modal-sm" @onclick:stopPropagation="true">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title">Delete notification</h6>
+                    <h2 class="modal-title h6" id="notification-delete-title">Delete notification</h2>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0">Are you sure you want to delete this notification?</p>
+                    <p class="mb-0" id="notification-delete-description">
+                        Delete “@GetNotificationName(_notificationToDelete)”? This cannot be undone.
+                    </p>
                     @if (!string.IsNullOrWhiteSpace(_errorMessage))
                     {
                         <div class="alert alert-danger mt-3 mb-0" role="alert">
@@ -160,7 +197,10 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            data-dialog-close
+                            data-dialog-initial-focus
+                            @onclick="CancelDelete">Keep notification</button>
                     <button type="button" class="btn btn-danger btn-sm" @onclick="ConfirmDelete" disabled="@_isDeleting">
                         @if (_isDeleting)
                         {
@@ -181,11 +221,15 @@
     private bool _showDeleteConfirmation = false;
     private bool _isMarkingRead = false;
     private string? _errorMessage;
+    private string? _statusMessage;
     private int _unreadCount = 0;
     private string? _userId;
     private IEnumerable<NotificationModel>? _notifications;
     private NotificationModel? _notificationToDelete;
     private readonly HashSet<int> _notificationsInFlight = new();
+    private bool _activateFlyoutAfterRender;
+    private bool _activateDeleteDialogAfterRender;
+    private bool _focusFlyoutCloseAfterRender;
 
     protected override async Task OnInitializedAsync()
     {
@@ -193,6 +237,27 @@
         if (_userId != null)
         {
             await LoadNotificationCount();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_activateFlyoutAfterRender)
+        {
+            _activateFlyoutAfterRender = false;
+            await JSRuntime.InvokeVoidAsync("openWishActivateDialog", "notification-flyout");
+        }
+
+        if (_activateDeleteDialogAfterRender)
+        {
+            _activateDeleteDialogAfterRender = false;
+            await JSRuntime.InvokeVoidAsync("openWishActivateDialog", "notification-delete-dialog");
+        }
+
+        if (_focusFlyoutCloseAfterRender)
+        {
+            _focusFlyoutCloseAfterRender = false;
+            await JSRuntime.InvokeVoidAsync("openWishFocusElement", "notification-close-button");
         }
     }
 
@@ -205,7 +270,7 @@
                 _unreadCount = await NotificationService.GetUnreadNotificationCountAsync(_userId);
                 StateHasChanged();
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
             {
                 Logger.LogError(ex, "Unable to load the notification count for user {UserId}.", _userId);
                 _unreadCount = 0;
@@ -222,7 +287,7 @@
             {
                 _notifications = await NotificationService.GetUserNotificationsAsync(_userId, includeRead: true);
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
             {
                 Logger.LogError(ex, "Unable to load notifications for user {UserId}.", _userId);
                 _errorMessage = "Notifications could not be loaded. Refresh the page and try again.";
@@ -237,16 +302,31 @@
 
     private async Task ToggleFlyout()
     {
-        _isVisible = !_isVisible;
-        if (_isVisible && _notifications == null)
+        if (_isVisible)
+        {
+            await CloseFlyout();
+            return;
+        }
+
+        _isVisible = true;
+        _errorMessage = null;
+        _statusMessage = null;
+        _activateFlyoutAfterRender = true;
+        if (_notifications == null)
         {
             await LoadNotifications();
         }
         StateHasChanged();
     }
 
-    private void CloseFlyout()
+    private async Task CloseFlyout()
     {
+        if (_showDeleteConfirmation)
+        {
+            await CancelDelete();
+        }
+
+        await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-flyout");
         _isVisible = false;
         StateHasChanged();
     }
@@ -273,6 +353,7 @@
         if (_isMarkingRead) return;
 
         _isMarkingRead = true;
+        _errorMessage = null;
         try
         {
             var success = await NotificationService.MarkNotificationAsReadAsync(notification.PublicId, _userId!);
@@ -282,10 +363,15 @@
                 await LoadNotificationCount();
                 StateHasChanged();
             }
+            else
+            {
+                _errorMessage = "This notification could not be marked as read. Try again.";
+            }
         }
-        catch
+        catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
         {
-            // Handle gracefully
+            Logger.LogError(ex, "Unable to mark notification {NotificationPublicId} as read.", notification.PublicId);
+            _errorMessage = "This notification could not be marked as read. Try again.";
         }
         finally
         {
@@ -298,6 +384,8 @@
         if (_userId is not null && !_isMarkingRead)
         {
             _isMarkingRead = true;
+            _errorMessage = null;
+            _statusMessage = null;
             try
             {
                 var success = await NotificationService.MarkAllNotificationsAsReadAsync(_userId);
@@ -311,12 +399,19 @@
                         }
                     }
                     await LoadNotificationCount();
+                    _statusMessage = "All notifications marked as read.";
+                    _focusFlyoutCloseAfterRender = true;
                     StateHasChanged();
                 }
+                else
+                {
+                    _errorMessage = "Notifications could not be marked as read. Try again.";
+                }
             }
-            catch
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
             {
-                // Handle gracefully
+                Logger.LogError(ex, "Unable to mark all notifications as read for user {UserId}.", _userId);
+                _errorMessage = "Notifications could not be marked as read. Try again.";
             }
             finally
             {
@@ -328,13 +423,16 @@
     private void ShowDeleteConfirmation(NotificationModel notification)
     {
         _errorMessage = null;
+        _statusMessage = null;
         _notificationToDelete = notification;
         _showDeleteConfirmation = true;
+        _activateDeleteDialogAfterRender = true;
         StateHasChanged();
     }
 
-    private void CancelDelete()
+    private async Task CancelDelete()
     {
+        await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-delete-dialog");
         _showDeleteConfirmation = false;
         _notificationToDelete = null;
         StateHasChanged();
@@ -350,24 +448,40 @@
         _isDeleting = true;
         _errorMessage = null;
         var notificationIdToDelete = _notificationToDelete.PublicId;
-
-        var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete, _userId);
-        if (!success)
+        try
         {
-            _isDeleting = false;
-            _errorMessage = "This notification could not be deleted. Refresh the page and try again.";
-            Logger.LogWarning(
-                "Notification {NotificationPublicId} could not be deleted for user {UserId}.",
+            var success = await NotificationService.DeleteNotificationAsync(notificationIdToDelete, _userId);
+            if (!success)
+            {
+                _errorMessage = "This notification could not be deleted. Refresh the page and try again.";
+                Logger.LogWarning(
+                    "Notification {NotificationPublicId} could not be deleted for user {UserId}.",
+                    notificationIdToDelete,
+                    _userId);
+                return;
+            }
+
+            _notifications = _notifications?.Where(n => n.PublicId != notificationIdToDelete).ToList();
+            await LoadNotificationCount();
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-delete-dialog");
+            _showDeleteConfirmation = false;
+            _notificationToDelete = null;
+            _statusMessage = "Notification deleted.";
+            _focusFlyoutCloseAfterRender = true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
+        {
+            Logger.LogError(
+                ex,
+                "Unable to delete notification {NotificationPublicId} for user {UserId}.",
                 notificationIdToDelete,
                 _userId);
-            return;
+            _errorMessage = "This notification could not be deleted. Refresh the page and try again.";
         }
-
-        _notifications = _notifications?.Where(n => n.PublicId != notificationIdToDelete).ToList();
-        await LoadNotificationCount();
-        _isDeleting = false;
-        _showDeleteConfirmation = false;
-        _notificationToDelete = null;
+        finally
+        {
+            _isDeleting = false;
+        }
     }
 
     private bool IsNotificationProcessing(int notificationId) => _notificationsInFlight.Contains(notificationId);
@@ -389,7 +503,7 @@
 
         if (!handled && !string.IsNullOrWhiteSpace(notification.Action.NavigateTo))
         {
-            NavigateTo(notification.Action.NavigateTo);
+            await NavigateTo(notification.Action.NavigateTo);
         }
     }
 
@@ -427,37 +541,58 @@
         }
 
         _notificationsInFlight.Add(notification.Id);
+        _errorMessage = null;
+        _statusMessage = null;
         try
         {
-            var success = accept
-                ? await EventService.AcceptEventInvitationAsync(eventUserId, userId)
-                : await EventService.RejectEventInvitationAsync(eventUserId, userId);
-
-            if (!success)
+            bool success;
+            try
             {
+                success = accept
+                    ? await EventService.AcceptEventInvitationAsync(eventUserId, userId)
+                    : await EventService.RejectEventInvitationAsync(eventUserId, userId);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
+            {
+                Logger.LogError(ex, "Unable to update invitation from notification {NotificationPublicId}.", notification.PublicId);
+                _errorMessage = "The invitation could not be updated. Try again.";
                 return true;
             }
 
-            notification.IsRead = true;
+            if (!success)
+            {
+                _errorMessage = "The invitation could not be updated. Try again.";
+                return true;
+            }
+
             try
             {
-                await NotificationService.MarkNotificationAsReadAsync(notification.PublicId, _userId!);
+                var markedAsRead = await NotificationService.MarkNotificationAsReadAsync(notification.PublicId, _userId!);
+                if (markedAsRead)
+                {
+                    notification.IsRead = true;
+                }
+                else
+                {
+                    _errorMessage = "The invitation was updated, but its notification could not be marked as read.";
+                }
             }
-            catch
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
             {
-                // ignore marking errors to avoid blocking user flow
+                Logger.LogError(
+                    ex,
+                    "Invitation was updated, but notification {NotificationPublicId} could not be marked as read.",
+                    notification.PublicId);
+                _errorMessage = "The invitation was updated, but its notification could not be marked as read.";
             }
 
             await LoadNotificationCount();
+            _statusMessage = accept ? "Invitation accepted." : "Invitation declined.";
 
             if (accept && !string.IsNullOrWhiteSpace(notification.Action?.NavigateTo))
             {
-                NavigateTo(notification.Action.NavigateTo);
+                await NavigateTo(notification.Action.NavigateTo);
             }
-        }
-        catch
-        {
-            // swallow for now; future enhancement could surface toast
         }
         finally
         {
@@ -494,14 +629,29 @@
         return false;
     }
 
-    private void NavigateTo(string route)
+    private async Task NavigateTo(string route)
     {
         if (string.IsNullOrWhiteSpace(route))
         {
             return;
         }
 
-        CloseFlyout();
+        await CloseFlyout();
         NavigationManager.NavigateTo(route, forceLoad: true);
+    }
+
+    private static string GetNotificationName(NotificationModel notification) =>
+        !string.IsNullOrWhiteSpace(notification.Title) ? notification.Title : "this notification";
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-delete-dialog");
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-flyout");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 }

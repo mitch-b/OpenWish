@@ -23,6 +23,78 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistDiscovery_UpdatesImmediatelyAndProvidesAClearAction()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+
+        Assert.Contains("aria-controls=\"wishlist-results\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@bind:event=\"oninput\" @bind:after=\"HandleSearch\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Clear wishlist search\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<div id=\"wishlist-results\">", markup, StringComparison.Ordinal);
+        Assert.Contains("No wishlists found.</p>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FriendInvitations_ConnectGuidanceValidationAndFeedback()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Social", "FriendSearch.razor");
+
+        Assert.Contains("aria-describedby=\"emailInvitesHelp\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-invalid=\"@(_error ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@oninput=\"UpdateInviteEmails\"", markup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(inviteEmails)", markup, StringComparison.Ordinal);
+        Assert.Contains("alert alert-danger mt-3\" role=\"alert\"", markup, StringComparison.Ordinal);
+        Assert.Contains("alert alert-success mt-3\" role=\"status\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotificationFlyout_ExposesDisclosureStateAndDialogContext()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+
+        Assert.Contains("aria-expanded=\"@(_isVisible ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"notification-flyout\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"dialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"notification-flyout-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("!_showDeleteConfirmation && !string.IsNullOrWhiteSpace(_errorMessage)", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishActivateDialog\", \"notification-flyout\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-close", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotificationDeletion_ProvidesAFocusSafeDestructiveConfirmation()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+
+        Assert.Contains("id=\"notification-delete-dialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"notification-delete-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"notification-modal-backdrop\" aria-hidden=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("This cannot be undone.", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("Keep notification", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishDeactivateDialog\", \"notification-delete-dialog\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotificationUpdates_ExposeBusySuccessAndFailureStates()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+
+        Assert.Contains("aria-busy=\"@_isMarkingRead\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsNotificationProcessing(notification.Id)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
+        Assert.Contains("All notifications marked as read.", markup, StringComparison.Ordinal);
+        Assert.Contains("The invitation could not be updated. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("Unable to delete notification {NotificationPublicId}", markup, StringComparison.Ordinal);
+        Assert.Contains("ex is InvalidOperationException or DbUpdateException or DbException", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishFocusElement\", \"notification-close-button\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("// Handle gracefully", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("// swallow for now", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistItemInteractions_ExposeTheirExpandedStateAndContent()
     {
         var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
@@ -183,11 +255,14 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Model.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-background-allowed", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("IAsyncDisposable", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("event.key === \"Escape\"", dialogScript, StringComparison.Ordinal);
         Assert.Contains("event.key !== \"Tab\"", dialogScript, StringComparison.Ordinal);
         Assert.Contains("dialog.querySelector(\"[data-dialog-initial-focus]\")", dialogScript, StringComparison.Ordinal);
         Assert.Contains("existingState?.dialog.isConnected", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("sibling.inert = true", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("restoreDialogBackground", dialogScript, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
     }
 

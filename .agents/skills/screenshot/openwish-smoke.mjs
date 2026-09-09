@@ -440,11 +440,33 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The wishlist title field did not retain focus after interactivity started.");
   }
+  const allFriendsVisibility = page.getByRole("radio", { name: /^All friends/ });
+  const privateVisibility = page.getByRole("radio", { name: /^Private/ });
+  if (!(await allFriendsVisibility.isChecked())) {
+    throw new Error("All friends was not the default wishlist visibility.");
+  }
+  await privateVisibility.focus();
+  const privateVisibilityFocus = await privateVisibility.evaluate(element => {
+    const option = element.closest(".visibility-option");
+    const styles = option ? getComputedStyle(option) : null;
+    return styles ? { outlineStyle: styles.outlineStyle, outlineWidth: styles.outlineWidth } : null;
+  });
+  if (!privateVisibilityFocus ||
+      privateVisibilityFocus.outlineStyle === "none" ||
+      privateVisibilityFocus.outlineWidth === "0px") {
+    throw new Error("The focused wishlist visibility choice had no visible focus indicator.");
+  }
+  await page.keyboard.press("Space");
+  if (!(await privateVisibility.isChecked()) || await allFriendsVisibility.isChecked()) {
+    throw new Error("Wishlist visibility choices were not mutually exclusive.");
+  }
   await page.getByRole("button", { name: "Choose an icon" }).click();
   await screenshot(page, "create-wishlist.png");
   await page.getByRole("button", { name: "Wrapped gift" }).click();
+  await allFriendsVisibility.focus();
+  await page.keyboard.press("Space");
   await page.locator("#name").fill("Emoji Test Wishlist");
-  await page.getByRole("button", { name: "Create Wishlist" }).click();
+  await page.getByRole("button", { name: "Create wishlist" }).click();
   await page.waitForURL(`${baseUrl}/wishlists`);
   const createdWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
   const createdWishlists = await createdWishlistsResponse.json();
@@ -468,6 +490,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await productUrl.fill("https://example.com/gift");
   await page.getByRole("button", { name: "Import" }).click({ trial: true });
+  await page.getByLabel("Name").fill("Travel Mug");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.waitForURL(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`);
+  await assertVisible(page, "Travel Mug");
+  await screenshot(page, "added-wishlist-item.png");
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
@@ -644,7 +671,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Safer coordination actions");
+  await assertVisible(page, "Dependable creation and dialogs");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -654,11 +681,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
-  await createdEventCard.getByRole("button", { name: "Actions for Neighborhood Secret Santa" }).click();
+  const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Secret Santa" });
+  await createdEventActions.click();
+  await createdEventCard.getByRole("button", { name: "Delete" }).click();
+  const eventDeleteDialog = page.getByRole("dialog", { name: "Delete Event" });
+  await eventDeleteDialog.waitFor({ state: "visible" });
+  const cancelEventDeletion = eventDeleteDialog.getByRole("button", { name: "Cancel" });
+  if (!(await cancelEventDeletion.evaluate(element => element === document.activeElement))) {
+    throw new Error("The shared dialog did not focus its safe action.");
+  }
+  if (!(await createdEventActions.evaluate(element => element.closest("[inert]") !== null))) {
+    throw new Error("The shared dialog did not make background content inert.");
+  }
+  await eventDeleteDialog.getByRole("button", { name: "Continue" }).click();
+  await eventDeleteDialog.getByRole("button", { name: "Delete Event" }).waitFor({ state: "visible" });
+  await screenshot(page, "event-delete-dialog.png");
+  await page.keyboard.press("Escape");
+  await eventDeleteDialog.waitFor({ state: "detached" });
+  if (!(await createdEventActions.evaluate(element => element === document.activeElement))) {
+    throw new Error("The shared dialog did not restore focus to its opener.");
+  }
+  await createdEventActions.click();
   await createdEventCard.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("button", { name: "Delete Event" }).click();
   await createdEventCard.waitFor({ state: "detached" });
+  await page.waitForFunction(() => document.activeElement?.matches("main h1, main h2, main h3, main"));
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Owner browser errors: ${diagnostics.browserErrors.join(" | ")}`);

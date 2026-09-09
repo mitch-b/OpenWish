@@ -47,7 +47,7 @@
     }
 </div>
 
-<EditForm Enhance Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm">
+<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@IsSubmitting">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -97,7 +97,17 @@
     </div>
 
     <div class="d-flex justify-content-between">
-        <button type="submit" class="btn btn-primary">@(Model.Id > 0 ? "Edit" : "Create") Item</button>
+        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+            @if (IsSubmitting)
+            {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+            }
+            else
+            {
+                <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
+            }
+        </button>
         @if (OnCancel.HasDelegate)
         {
             <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
@@ -110,6 +120,7 @@
     [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
     [Parameter] public bool AutoFocusImport { get; set; }
+    [Parameter] public bool IsSubmitting { get; set; }
 
     private bool isLoading;
     private string ImportUrl { get; set; } = string.Empty;

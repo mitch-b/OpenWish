@@ -70,7 +70,7 @@ function releaseDialogState(state) {
     restoreDialogBackground(state.inertElements);
 }
 
-window.openWishActivateDialog = function (id) {
+window.openWishActivateDialog = function (id, returnFocusId, monitorOpenerRemoval = false) {
     const dialog = document.getElementById(id);
     if (!(dialog instanceof HTMLElement)) {
         throw new Error(`Unable to activate missing dialog: ${id}`);
@@ -85,9 +85,14 @@ window.openWishActivateDialog = function (id) {
         openWishDialogs.delete(id);
     }
 
-    const previouslyFocused = document.activeElement instanceof HTMLElement
-        ? document.activeElement
+    const returnFocusElement = returnFocusId
+        ? document.getElementById(returnFocusId)
         : null;
+    const previouslyFocused = returnFocusElement instanceof HTMLElement
+        ? returnFocusElement
+        : document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
     const focusableSelector = [
         "button:not([disabled])",
         "input:not([disabled])",
@@ -128,7 +133,13 @@ window.openWishActivateDialog = function (id) {
 
     dialog.addEventListener("keydown", handleKeyDown);
     const inertElements = makeDialogBackgroundInert(dialog);
-    openWishDialogs.set(id, { dialog, handleKeyDown, inertElements, previouslyFocused });
+    openWishDialogs.set(id, {
+        dialog,
+        handleKeyDown,
+        inertElements,
+        previouslyFocused,
+        monitorOpenerRemoval
+    });
     document.body.classList.add("dialog-open");
 
     const firstFocusable = dialog.querySelector("[data-dialog-initial-focus]")
@@ -152,7 +163,35 @@ window.openWishDeactivateDialog = function (id) {
     if (openWishDialogs.size === 0) {
         document.body.classList.remove("dialog-open");
     }
-    state.previouslyFocused?.focus({ preventScroll: true });
+    if (state.previouslyFocused?.isConnected && !state.previouslyFocused.inert) {
+        state.previouslyFocused.focus({ preventScroll: true });
+    }
+
+    const focusMainContent = () => {
+        const fallback = document.querySelector("main h1, main h2, main h3, main");
+        if (fallback instanceof HTMLElement) {
+            if (!fallback.hasAttribute("tabindex")) {
+                fallback.tabIndex = -1;
+            }
+            fallback.focus({ preventScroll: true });
+        }
+    };
+    if (!state.previouslyFocused?.isConnected) {
+        focusMainContent();
+        return;
+    }
+    if (!state.monitorOpenerRemoval) {
+        return;
+    }
+
+    const openerObserver = new MutationObserver(() => {
+        if (!state.previouslyFocused?.isConnected) {
+            openerObserver.disconnect();
+            focusMainContent();
+        }
+    });
+    openerObserver.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => openerObserver.disconnect(), 2000);
 };
 
 document.addEventListener("click", event => {

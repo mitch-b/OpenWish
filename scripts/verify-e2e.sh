@@ -72,6 +72,7 @@ test -s "$walkthrough_directory/home-dashboard.png"
 test -s "$walkthrough_directory/home-mobile.png"
 test -s "$walkthrough_directory/wishlists.png"
 test -s "$walkthrough_directory/wishlist-details.png"
+test -s "$walkthrough_directory/added-wishlist-item.png"
 test -s "$walkthrough_directory/events.png"
 test -s "$walkthrough_directory/event-details.png"
 test -s "$walkthrough_directory/friends.png"
@@ -81,6 +82,7 @@ test -s "$walkthrough_directory/reservation-cancel-confirmation.png"
 test -s "$walkthrough_directory/reservation-cancel-confirmation-mobile.png"
 test -s "$walkthrough_directory/comment-delete-confirmation.png"
 test -s "$walkthrough_directory/comment-delete-confirmation-mobile.png"
+test -s "$walkthrough_directory/event-delete-dialog.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
 if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then

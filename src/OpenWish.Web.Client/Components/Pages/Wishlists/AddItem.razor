@@ -5,6 +5,7 @@
 
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
+@inject ILogger<AddItem> Logger
 
 @rendermode InteractiveAuto
 
@@ -12,8 +13,15 @@
 
 <div class="row">
     <div class="col-md-6">
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
         @* <FormMappingScope Name="new-wishlist-item"> *@
-            <WishlistItemForm Model="@_item" OnSubmit="@HandleSubmit" AutoFocusImport="true" />
+            <WishlistItemForm Model="@_item"
+                              OnSubmit="@HandleSubmit"
+                              AutoFocusImport="true"
+                              IsSubmitting="@_isSubmitting" />
         @* </FormMappingScope> *@
     </div>
 </div>
@@ -22,10 +30,34 @@
 @code {
     [Parameter] public string WishlistId { get; set; } = string.Empty;
     private readonly WishlistItemModel _item = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
 
     private async Task HandleSubmit(WishlistItemModel item)
     {
-        await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
-        NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _errorMessage = null;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
+            NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add an item to wishlist {WishlistPublicId}", WishlistId);
+            _errorMessage = "We couldn't add this item. Review the details and try again.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
     }
 }

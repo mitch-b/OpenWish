@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.11",
+    "date": "2026-09-09",
+    "title": "Dependable creation and dialogs",
+    "summary": "Wishlist creation and confirmation workflows now provide safer keyboard behavior and truthful progress and failure states.",
+    "highlights": [
+      "Confirmation dialogs contain keyboard focus, close with Escape, and return focus to their opener.",
+      "Wishlist visibility uses native, mutually exclusive radio choices.",
+      "Wishlist creation prevents duplicate submissions and keeps actionable failures on the form.",
+      "Standalone item creation prevents duplicate submissions and keeps actionable failures on the form.",
+      "Secret Santa assignment failures provide a clear retry action instead of appearing as no assignment."
+    ]
+  },
+  {
     "version": "0.1.10",
     "date": "2026-09-08",
     "title": "Safer coordination actions",

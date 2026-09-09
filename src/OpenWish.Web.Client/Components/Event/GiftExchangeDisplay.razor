@@ -2,13 +2,24 @@
 @using OpenWish.Shared.Services
 
 @inject IEventService EventService
+@inject ILogger<GiftExchangeDisplay> Logger
 
+<div aria-busy="@_loading">
 @if (_loading)
 {
     <div class="text-center py-3">
         <div class="spinner-border spinner-border-sm" role="status">
             <span class="visually-hidden">Loading gift exchange...</span>
         </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <p class="mb-2">@_errorMessage</p>
+        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadGiftExchange">
+            Try again
+        </button>
     </div>
 }
 else if (_giftExchange != null)
@@ -58,6 +69,7 @@ else if (_giftExchange != null)
         </div>
     </div>
 }
+</div>
 
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;
@@ -67,6 +79,7 @@ else if (_giftExchange != null)
     private GiftExchangeModel? _giftExchange;
     private WishlistModel? _recipientWishlist;
     private bool _loading = true;
+    private string? _errorMessage;
 
     private string RecipientDisplayName => _giftExchange?.Receiver?.UserName
         ?? _giftExchange?.Receiver?.Email
@@ -81,6 +94,7 @@ else if (_giftExchange != null)
     private async Task LoadGiftExchange()
     {
         _loading = true;
+        _errorMessage = null;
         try
         {
             _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
@@ -95,10 +109,12 @@ else if (_giftExchange != null)
                 _recipientWishlist = null;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // No gift exchange found, which is fine
+            Logger.LogError(ex, "Failed to load the gift exchange assignment for event {EventPublicId}", EventId);
             _giftExchange = null;
+            _recipientWishlist = null;
+            _errorMessage = "We couldn't load your Secret Santa match. Try again.";
         }
         finally
         {

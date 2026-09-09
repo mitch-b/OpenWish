@@ -263,7 +263,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("existingState?.dialog.isConnected", dialogScript, StringComparison.Ordinal);
         Assert.Contains("sibling.inert = true", dialogScript, StringComparison.Ordinal);
         Assert.Contains("restoreDialogBackground", dialogScript, StringComparison.Ordinal);
-        Assert.Contains("state.previouslyFocused?.focus", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("state.previouslyFocused?.isConnected", dialogScript, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -346,6 +346,91 @@ public class InteractiveControlMarkupTests
         Assert.Equal(2, reservationMethods.Split(
             "return await response.Content.ReadFromJsonAsync<bool>();",
             StringSplitOptions.None).Length - 1);
+    }
+
+    [Fact]
+    public void SharedDialog_ContainsFocusAndRestoresItToTheOpener()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "Dialog.razor");
+
+        Assert.Contains("role=\"dialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"@_titleId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-close", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishActivateDialog\", _dialogId, ReturnFocusElementId, true", markup, StringComparison.Ordinal);
+        Assert.Contains("openWishDeactivateDialog\", _dialogId", markup, StringComparison.Ordinal);
+        Assert.Contains("IAsyncDisposable", markup, StringComparison.Ordinal);
+
+        var eventCardMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
+        var dialogScript = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+        Assert.Contains("data-dialog-initial-focus", eventCardMarkup, StringComparison.Ordinal);
+        Assert.Contains("ReturnFocusElementId=\"@($\"dropdownMenu{Event?.Id}\")\"", eventCardMarkup, StringComparison.Ordinal);
+        Assert.Contains("await _cancelDeleteButton.FocusAsync();", eventCardMarkup, StringComparison.Ordinal);
+        Assert.Contains("state.previouslyFocused?.isConnected", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("document.querySelector(\"main h1, main h2, main h3, main\")", dialogScript, StringComparison.Ordinal);
+        Assert.Contains("new MutationObserver", dialogScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistVisibility_UsesNativeExclusiveChoices()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistForm.razor");
+
+        Assert.Equal(3, markup.Split(
+            "type=\"radio\" name=\"wishlist-visibility\"",
+            StringSplitOptions.None).Length - 1);
+        Assert.Contains("checked=\"@(!Model.IsPrivate && !Model.IsFriendsOnly)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@onchange=\"@(() => SetVisibility(true, false))\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("role=\"radio\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("HandleVisibilityKeyDown", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistCreation_PreventsDuplicatesAndKeepsFailuresVisible()
+    {
+        var pageMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "NewWishlist.razor");
+        var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistForm.razor");
+
+        Assert.Contains("if (_isSubmitting)", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@_errorMessage", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't create the wishlist.", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("Creating wishlist...", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+
+        var eventManagerMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+        Assert.Contains("IsSubmitting=\"@_isSubmitting\"", eventManagerMarkup, StringComparison.Ordinal);
+        Assert.Contains("var createdSuccessfully = false;", eventManagerMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (createdSuccessfully)", eventManagerMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StandaloneItemCreation_PreventsDuplicatesAndKeepsFailuresVisible()
+    {
+        var pageMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
+        var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
+
+        Assert.Contains("if (_isSubmitting)", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@_errorMessage", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't add this item.", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GiftExchangeDisplay_DistinguishesLoadingFailuresFromNoAssignment()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
+
+        Assert.Contains("aria-busy=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load your Secret Santa match. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"LoadGiftExchange\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

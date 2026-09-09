@@ -2,7 +2,7 @@
 @if (Model is not null)
 {
     <FocusOnFirstRender ElementId="name" Enabled="@AutoFocusName" />
-    <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm">
+    <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm" aria-busy="@IsSubmitting">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
@@ -64,17 +64,16 @@
 
         <fieldset class="mb-4">
             <legend class="form-label h6 mb-3"><OpenWishIcon Name="lock" /> Who can see this wishlist?</legend>
-            <div class="visibility-options" role="radiogroup" aria-label="Wishlist visibility">
-                <div class="visibility-option @(!Model.IsPrivate && !Model.IsFriendsOnly ? "selected" : "")" 
-                     role="radio"
-                     aria-checked="@(!Model.IsPrivate && !Model.IsFriendsOnly ? "true" : "false")"
-                     tabindex="0"
-                     @onclick="@(() => SetVisibility(false, false))"
-                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, false, false))">
+            <div class="visibility-options">
+                <label class="visibility-option @(!Model.IsPrivate && !Model.IsFriendsOnly ? "selected" : "")">
+                    <input class="visually-hidden" type="radio" name="wishlist-visibility"
+                           value="all-friends"
+                           checked="@(!Model.IsPrivate && !Model.IsFriendsOnly)"
+                           @onchange="@(() => SetVisibility(false, false))" />
                     <div class="visibility-icon"><OpenWishIcon Name="people" /></div>
                     <div class="visibility-content">
-                        <div class="visibility-title">All Friends</div>
-                        <div class="visibility-desc">Everyone in your friend list can see this wishlist</div>
+                        <div class="visibility-title">All friends</div>
+                        <div class="visibility-desc">Everyone in your friend list can see this wishlist.</div>
                     </div>
                     <div class="visibility-check">
                         @if (!Model.IsPrivate && !Model.IsFriendsOnly)
@@ -82,17 +81,16 @@
                             <OpenWishIcon Name="check-circle-fill" Class="text-success" />
                         }
                     </div>
-                </div>
-                <div class="visibility-option @(!Model.IsPrivate && Model.IsFriendsOnly ? "selected" : "")" 
-                     role="radio"
-                     aria-checked="@(!Model.IsPrivate && Model.IsFriendsOnly ? "true" : "false")"
-                     tabindex="0"
-                     @onclick="@(() => SetVisibility(false, true))"
-                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, false, true))">
+                </label>
+                <label class="visibility-option @(!Model.IsPrivate && Model.IsFriendsOnly ? "selected" : "")">
+                    <input class="visually-hidden" type="radio" name="wishlist-visibility"
+                           value="specific-friends"
+                           checked="@(!Model.IsPrivate && Model.IsFriendsOnly)"
+                           @onchange="@(() => SetVisibility(false, true))" />
                     <div class="visibility-icon"><OpenWishIcon Name="person-check" /></div>
                     <div class="visibility-content">
-                        <div class="visibility-title">Specific Friends Only</div>
-                        <div class="visibility-desc">Hand-pick who gets to see your wishlist</div>
+                        <div class="visibility-title">Specific friends only</div>
+                        <div class="visibility-desc">Hand-pick who gets to see this wishlist.</div>
                     </div>
                     <div class="visibility-check">
                         @if (!Model.IsPrivate && Model.IsFriendsOnly)
@@ -100,13 +98,12 @@
                             <OpenWishIcon Name="check-circle-fill" Class="text-success" />
                         }
                     </div>
-                </div>
-                <div class="visibility-option @(Model.IsPrivate ? "selected" : "")" 
-                     role="radio"
-                     aria-checked="@(Model.IsPrivate ? "true" : "false")"
-                     tabindex="0"
-                     @onclick="@(() => SetVisibility(true, false))"
-                     @onkeydown="@((e) => HandleVisibilityKeyDown(e, true, false))">
+                </label>
+                <label class="visibility-option @(Model.IsPrivate ? "selected" : "")">
+                    <input class="visually-hidden" type="radio" name="wishlist-visibility"
+                           value="private"
+                           checked="@Model.IsPrivate"
+                           @onchange="@(() => SetVisibility(true, false))" />
                     <div class="visibility-icon"><OpenWishIcon Name="lock" /></div>
                     <div class="visibility-content">
                         <div class="visibility-title">Private</div>
@@ -118,12 +115,22 @@
                             <OpenWishIcon Name="check-circle-fill" Class="text-success" />
                         }
                     </div>
-                </div>
+                </label>
             </div>
         </fieldset>
 
         <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">@(Model.Id == 0 ? "Create" : "Update") Wishlist</button>
+            <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                @if (IsSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>@(Model.Id == 0 ? "Creating wishlist..." : "Saving changes...")</span>
+                }
+                else
+                {
+                    <span>@(Model.Id == 0 ? "Create wishlist" : "Save changes")</span>
+                }
+            </button>
             @if (OnCancel.HasDelegate)
             {
                 <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
@@ -142,6 +149,7 @@ else
     [Parameter] public EventCallback<WishlistModel> OnSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool AutoFocusName { get; set; }
+    [Parameter] public bool IsSubmitting { get; set; }
 
     private static readonly (string Value, string Label)[] IconOptions =
     [
@@ -185,14 +193,6 @@ else
         {
             Model.IsPrivate = isPrivate;
             Model.IsFriendsOnly = isFriendsOnly;
-        }
-    }
-
-    private void HandleVisibilityKeyDown(KeyboardEventArgs e, bool isPrivate, bool isFriendsOnly)
-    {
-        if (e.Key is " " or "Enter")
-        {
-            SetVisibility(isPrivate, isFriendsOnly);
         }
     }
 

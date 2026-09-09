@@ -139,7 +139,8 @@ else
                     <div class="mt-3">
                         <WishlistForm Model="_draftWishlist"
                                       OnSubmit="HandleCreateWishlistAsync"
-                                      OnCancel="CancelCreateWishlist" />
+                                      OnCancel="CancelCreateWishlist"
+                                      IsSubmitting="@_isSubmitting" />
                     </div>
                 }
             </section>
@@ -512,20 +513,31 @@ else
 
     private async Task HandleCreateWishlistAsync(WishlistModel model)
     {
-        if (string.IsNullOrEmpty(_currentUserId))
+        if (_isSubmitting)
         {
             return;
         }
 
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            _errorMessage = "We couldn't confirm your account. Please sign in again.";
+            return;
+        }
+
+        var createdSuccessfully = false;
         await ExecuteWithFeedback(async () =>
         {
             model.EventId = Event?.Id; // Use the integer ID from the Event model
             var created = await EventService.CreateEventWishlistByPublicIdAsync(EventId, model, _currentUserId);
             _statusMessage = $"Created wishlist '{created.Name}'.";
+            createdSuccessfully = true;
         });
 
-        _showCreateForm = false;
-        ResetDraftWishlist();
+        if (createdSuccessfully)
+        {
+            _showCreateForm = false;
+            ResetDraftWishlist();
+        }
     }
 
     private void ToggleCreateForm()

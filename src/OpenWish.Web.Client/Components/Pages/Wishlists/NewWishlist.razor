@@ -21,29 +21,58 @@
 
 <div class="card">
     <div class="card-body">
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@_errorMessage</div>
+        }
         <WishlistForm Model="@_wishlist"
                       OnSubmit="@HandleSubmit"
                       OnCancel="@HandleCancel"
-                      AutoFocusName="true" />
+                      AutoFocusName="true"
+                      IsSubmitting="@_isSubmitting" />
     </div>
 </div>
 
 
 @code {
     private readonly WishlistModel? _wishlist = new() { Name = "" };
+    private bool _isSubmitting;
+    private string? _errorMessage;
 
     private async Task HandleSubmit(WishlistModel submittedWishlist)
     {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (userId is not null)
+        if (_isSubmitting)
         {
+            return;
+        }
+
+        _isSubmitting = true;
+        _errorMessage = null;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (userId is null)
+            {
+                Logger.LogError("Could not determine UserId from new Wishlist page.");
+                _errorMessage = "We couldn't confirm your account. Please sign in again.";
+                return;
+            }
+
             await WishlistService.CreateWishlistAsync(submittedWishlist, userId);
+            NavigationManager.NavigateTo("/wishlists");
         }
-        else
+        catch (Exception ex)
         {
-            Logger.LogError("Could not determine UserId from new Wishlist page.");
+            Logger.LogError(ex, "Failed to create wishlist");
+            _errorMessage = "We couldn't create the wishlist. Review the details and try again.";
         }
-        NavigationManager.NavigateTo("/wishlists");
+        finally
+        {
+            _isSubmitting = false;
+        }
     }
 
     private void HandleCancel()

@@ -85,7 +85,9 @@ else
 
 }
 
-<Dialog @ref="_deleteDialog" Title="@_deleteDialogTitle">
+<Dialog @ref="_deleteDialog"
+        Title="@_deleteDialogTitle"
+        ReturnFocusElementId="@($"dropdownMenu{Event?.Id}")">
     <div class="modal-body">
         <p>@_deleteDialogMessage</p>
         @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
@@ -98,7 +100,12 @@ else
         }
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteDialog" disabled="@_isDeleting">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dialog-initial-focus
+                @ref="_cancelDeleteButton"
+                @onclick="CloseDeleteDialog"
+                disabled="@_isDeleting">
             Cancel
         </button>
         @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
@@ -134,6 +141,7 @@ else
     private string _deleteDialogTitle = "Delete Event";
     private string _deleteDialogMessage = string.Empty;
     private bool _isDeleting;
+    private ElementReference _cancelDeleteButton;
     private DeleteConfirmationStage _deleteConfirmationStage = DeleteConfirmationStage.First;
     private int AcceptedParticipantCount
     {
@@ -173,7 +181,7 @@ else
         _deleteDialog.Show();
     }
 
-    private void CloseDeleteDialog()
+    private async Task CloseDeleteDialog()
     {
         if (_isDeleting)
         {
@@ -181,10 +189,10 @@ else
         }
 
         _deleteConfirmationStage = DeleteConfirmationStage.First;
-        _deleteDialog.Close();
+        await _deleteDialog.CloseAsync();
     }
 
-    private void ConfirmFirstDeleteStep()
+    private async Task ConfirmFirstDeleteStep()
     {
         if (Event is null)
         {
@@ -193,6 +201,9 @@ else
 
         _deleteConfirmationStage = DeleteConfirmationStage.Second;
         _deleteDialogMessage = $"This is your final confirmation. '{Event.Name}' cannot be recovered once deleted.";
+        StateHasChanged();
+        await Task.Yield();
+        await _cancelDeleteButton.FocusAsync();
     }
 
     private async Task ConfirmDeleteAsync()
@@ -214,7 +225,7 @@ else
                 await OnDelete.InvokeAsync(Event);
             }
 
-            _deleteDialog.Close();
+            await _deleteDialog.CloseAsync();
         }
         catch (Exception ex)
         {

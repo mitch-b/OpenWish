@@ -6,20 +6,20 @@
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Remove</button>
-        <button type="button" class="btn btn-secondary" @onclick="Close">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="Close">Cancel</button>
     </div>
 </Dialog>
 
 @code {
-    private Dialog dialog;
-    private string Title { get; set; }
-    private string Message { get; set; }
+    private Dialog dialog = default!;
+    private string Title { get; set; } = string.Empty;
+    private string Message { get; set; } = string.Empty;
 
     [Parameter]
     public EventCallback<string> OnConfirm { get; set; }
     
     [Parameter]
-    public string FriendId { get; set; }
+    public string FriendId { get; set; } = string.Empty;
 
     public void Show(string title, string message, string friendId)
     {
@@ -29,11 +29,11 @@
         dialog.Show();
     }
 
-    public void Close() => dialog.Close();
+    public Task Close() => dialog.CloseAsync();
 
     private async Task HandleConfirm()
     {
         await OnConfirm.InvokeAsync(FriendId);
-        dialog.Close();
+        await dialog.CloseAsync();
     }
 }

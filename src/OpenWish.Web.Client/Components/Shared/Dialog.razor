@@ -1,23 +1,41 @@
-<div class="dialog-container @(_isOpen ? "show" : "")" @onclick="HandleBackdropClick">
-    <div class="dialog" @onclick:stopPropagation>
-        @if (!string.IsNullOrEmpty(Title))
-        {
+@implements IAsyncDisposable
+
+@inject IJSRuntime JSRuntime
+
+@if (_isOpen)
+{
+    <div class="dialog-container show" @onclick="HandleBackdropClick">
+        <div id="@_dialogId"
+             class="dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="@_titleId"
+             tabindex="-1"
+             @onclick:stopPropagation>
             <div class="dialog-header">
-                <h3>@Title</h3>
-                <button class="close-button" aria-label="Close" @onclick="Close">&times;</button>
+                <h3 id="@_titleId">@Title</h3>
+                <button type="button"
+                        class="close-button"
+                        aria-label="Close"
+                        data-dialog-close
+                        @onclick="CloseAsync">&times;</button>
             </div>
-        }
-        <div class="dialog-content">
-            @ChildContent
+            <div class="dialog-content">
+                @ChildContent
+            </div>
         </div>
     </div>
-</div>
+}
 
 @code {
+    private readonly string _dialogId = $"dialog-{Guid.NewGuid():N}";
+    private readonly string _titleId = $"dialog-title-{Guid.NewGuid():N}";
     private bool _isOpen;
+    private bool _activateAfterRender;
 
     [Parameter]
-    public string? Title { get; set; }
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -25,21 +43,53 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    [Parameter]
+    public string? ReturnFocusElementId { get; set; }
+
     public void Show()
     {
         _isOpen = true;
+        _activateAfterRender = true;
         StateHasChanged();
     }
 
-    public void Close()
+    public async Task CloseAsync()
     {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", _dialogId);
         _isOpen = false;
-        StateHasChanged();
-        OnClose.InvokeAsync();
+        await OnClose.InvokeAsync();
     }
 
-    private void HandleBackdropClick()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        Close();
+        if (_activateAfterRender)
+        {
+            _activateAfterRender = false;
+            await JSRuntime.InvokeVoidAsync("openWishActivateDialog", _dialogId, ReturnFocusElementId, true);
+        }
+    }
+
+    private Task HandleBackdropClick()
+    {
+        return CloseAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isOpen)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", _dialogId);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

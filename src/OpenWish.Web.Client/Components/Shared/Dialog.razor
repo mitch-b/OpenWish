@@ -60,8 +60,14 @@
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", _dialogId);
         _isOpen = false;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", _dialogId);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
         await OnClose.InvokeAsync();
     }
 

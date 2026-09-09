@@ -446,6 +446,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("All friends was not the default wishlist visibility.");
   }
   await privateVisibility.focus();
+  const privateVisibilityFocus = await privateVisibility.evaluate(element => {
+    const option = element.closest(".visibility-option");
+    const styles = option ? getComputedStyle(option) : null;
+    return styles ? { outlineStyle: styles.outlineStyle, outlineWidth: styles.outlineWidth } : null;
+  });
+  if (!privateVisibilityFocus ||
+      privateVisibilityFocus.outlineStyle === "none" ||
+      privateVisibilityFocus.outlineWidth === "0px") {
+    throw new Error("The focused wishlist visibility choice had no visible focus indicator.");
+  }
   await page.keyboard.press("Space");
   if (!(await privateVisibility.isChecked()) || await allFriendsVisibility.isChecked()) {
     throw new Error("Wishlist visibility choices were not mutually exclusive.");

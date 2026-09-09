@@ -8,8 +8,8 @@ All notable user-facing changes to OpenWish are documented here.
 
 - Confirmation dialogs now contain keyboard focus, close with Escape, and
   return focus to the action that opened them.
-- Wishlist visibility uses native, mutually exclusive choices that work
-  predictably with keyboards and assistive technology.
+- Wishlist visibility uses native, mutually exclusive choices with visible
+  keyboard focus across supported browsers.
 - Wishlist and item creation prevent duplicate submissions and keep actionable
   errors on the form instead of navigating away.
 - Secret Santa assignment failures are distinct from an assignment that has

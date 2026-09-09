@@ -359,6 +359,10 @@ public class InteractiveControlMarkupTests
         Assert.Contains("data-dialog-close", markup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog\", _dialogId, ReturnFocusElementId, true", markup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog\", _dialogId", markup, StringComparison.Ordinal);
+        Assert.Contains("catch (JSDisconnectedException)", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("_isOpen = false;", StringComparison.Ordinal) <
+            markup.IndexOf("openWishDeactivateDialog\", _dialogId", StringComparison.Ordinal));
         Assert.Contains("IAsyncDisposable", markup, StringComparison.Ordinal);
 
         var eventCardMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
@@ -375,6 +379,7 @@ public class InteractiveControlMarkupTests
     public void WishlistVisibility_UsesNativeExclusiveChoices()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistForm.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistForm.razor.css");
 
         Assert.Equal(3, markup.Split(
             "type=\"radio\" name=\"wishlist-visibility\"",
@@ -383,6 +388,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onchange=\"@(() => SetVisibility(true, false))\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("role=\"radio\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("HandleVisibilityKeyDown", markup, StringComparison.Ordinal);
+        Assert.Contains(".visibility-option:focus-within", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain(".visibility-option:has(", styles, StringComparison.Ordinal);
     }
 
     [Fact]

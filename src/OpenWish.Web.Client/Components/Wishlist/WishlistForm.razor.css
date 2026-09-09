@@ -98,7 +98,7 @@
 }
 
 .visibility-option:hover,
-.visibility-option:has(input:focus-visible) {
+.visibility-option:focus-within {
     border-color: var(--color-primary-bg);
     background: var(--color-surface-alt);
     outline: 2px solid var(--color-primary-bg);

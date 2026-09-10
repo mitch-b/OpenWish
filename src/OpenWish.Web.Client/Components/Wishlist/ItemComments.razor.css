@@ -1,0 +1,9 @@
+@media (max-width: 767.98px) {
+    .item-comments .btn {
+        min-height: 2.75rem;
+    }
+
+    .item-comments .btn-link {
+        min-width: 2.75rem;
+    }
+}

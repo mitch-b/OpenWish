@@ -49,6 +49,7 @@
                             {
                                 <button
                                     class="btn btn-sm btn-outline-info"
+                                    type="button"
                                     @onclick="() => ToggleInteractions(item.Id)"
                                     aria-expanded="@ExpandedInteractions.Contains(item.Id)"
                                     aria-controls="item-interactions-@item.Id"
@@ -62,8 +63,10 @@
                                 {
                                     <button
                                         class="btn btn-sm btn-primary"
+                                        type="button"
+                                        aria-label="Edit @item.Name"
                                         @onclick="() => HandleEdit(item)"
-                                        title="Edit item">
+                                        title="Edit @item.Name">
                                         <OpenWishIcon Name="pencil" />
                                     </button>
                                 }
@@ -71,8 +74,10 @@
                                 {
                                     <button
                                         class="btn btn-sm btn-danger"
+                                        type="button"
+                                        aria-label="Delete @item.Name"
                                         @onclick="() => ShowDeleteConfirm(item)"
-                                        title="Delete item">
+                                        title="Delete @item.Name">
                                         <OpenWishIcon Name="trash" />
                                     </button>
                                 }

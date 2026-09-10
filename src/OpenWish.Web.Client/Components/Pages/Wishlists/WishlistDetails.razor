@@ -298,6 +298,18 @@ else
         </div>
     }
 
+    @if (_canEdit)
+    {
+        <button id="add-wishlist-item"
+                class="fab"
+                type="button"
+                aria-label="Add item"
+                @onclick="ShowAddItemModal">
+            <OpenWishIcon Name="plus-lg" />
+            <span class="fab-label">Add item</span>
+        </button>
+    }
+
     <div id="wishlist-items" class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
@@ -410,14 +422,24 @@ else
                             <div class="item-actions">
                                 @if (_canEdit)
                                 {
-                                    <button class="btn-icon" @onclick="() => HandleItemEditClick(item)" title="Edit">
+                                    <button class="btn-icon"
+                                            type="button"
+                                            aria-label="Edit @item.Name"
+                                            @onclick="() => HandleItemEditClick(item)">
                                         <OpenWishIcon Name="pencil" />
                                     </button>
-                                    <button class="btn-icon btn-danger" @onclick="() => HandleItemDelete(item)" title="Delete">
+                                    <button class="btn-icon btn-danger"
+                                            type="button"
+                                            aria-label="Delete @item.Name"
+                                            @onclick="() => HandleItemDelete(item)">
                                         <OpenWishIcon Name="trash" />
                                     </button>
                                 }
-                                <button class="btn-icon" @onclick="() => ToggleItemDetails(item.Id)" title="More Details">
+                                <button class="btn-icon"
+                                        type="button"
+                                        aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
+                                        aria-expanded="@(_expandedItemId == item.Id)"
+                                        @onclick="() => ToggleItemDetails(item.Id)">
                                     <OpenWishIcon Name="three-dots" />
                                 </button>
                             </div>
@@ -495,13 +517,6 @@ else
             </div>
         }
     </div>
-
-    @if (_canEdit)
-    {
-        <button class="fab" type="button" aria-label="Add item" @onclick="ShowAddItemModal">
-            <OpenWishIcon Name="plus-lg" />
-        </button>
-    }
 }
 
 <WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />

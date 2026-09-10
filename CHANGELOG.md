@@ -2,6 +2,19 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.12] - 2026-09-10
+
+### Improved
+
+- The add-item action stays in the wishlist flow on phones, remains visibly
+  labelled, and no longer covers nearby controls or content.
+- Wishlist item edit, delete, filter, sort, and view actions provide
+  comfortable mobile touch targets.
+- Secret Santa setup actions use full-width mobile controls that are easier to
+  reach without disturbing the step hierarchy.
+- Comment deletion and reservation release confirmations provide comfortable
+  mobile touch targets for both safe and destructive choices.
+
 ## [0.1.11] - 2026-09-09
 
 ### Improved

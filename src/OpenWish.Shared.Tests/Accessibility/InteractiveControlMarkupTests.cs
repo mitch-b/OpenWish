@@ -440,6 +440,80 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MobileWishlistAddAction_IsInFlowAndVisiblyLabelled()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+
+        Assert.Contains("id=\"add-wishlist-item\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"fab-label\">Add item</span>", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("id=\"add-wishlist-item\"", StringComparison.Ordinal) <
+            markup.IndexOf("id=\"wishlist-items\"", StringComparison.Ordinal));
+        Assert.Contains(".fab-label", styles, StringComparison.Ordinal);
+        Assert.Contains("position: static;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemActions_HaveNamesAndMobileTouchTargets()
+    {
+        var pageMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var pageStyles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+        var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        var listStyles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor.css");
+
+        Assert.Contains("aria-label=\"Edit @item.Name\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Delete @item.Name\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"@(_expandedItemId == item.Id)\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Edit @item.Name\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Delete @item.Name\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("min-width: 2.75rem;", pageStyles, StringComparison.Ordinal);
+        Assert.Contains(".edit-actions .btn", listStyles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", listStyles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistFilterAndViewControls_HaveMobileTouchTargets()
+    {
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+
+        Assert.Contains(".search-clear", styles, StringComparison.Ordinal);
+        Assert.Contains(".view-toggle .btn", styles, StringComparison.Ordinal);
+        Assert.Contains(".filter-chip", styles, StringComparison.Ordinal);
+        Assert.Contains(".sort-option", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("flex: 1;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SecretSantaSetupActions_HaveMobileTouchTargets()
+    {
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "SetupStep.razor.css");
+
+        Assert.Contains(".setup-step .btn", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("grid-column: 1 / -1;", styles, StringComparison.Ordinal);
+        Assert.Contains("width: 100%;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineConfirmations_HaveMobileTouchTargets()
+    {
+        var commentStyles = ReadComponent(
+            "OpenWish.Web.Client", "Components", "Wishlist", "ItemComments.razor.css");
+        var reservationStyles = ReadComponent(
+            "OpenWish.Web.Client", "Components", "Wishlist", "ItemReservation.razor.css");
+
+        Assert.Contains(".item-comments .btn", commentStyles, StringComparison.Ordinal);
+        Assert.Contains("min-width: 2.75rem;", commentStyles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", commentStyles, StringComparison.Ordinal);
+        Assert.Contains(".item-reservation .btn", reservationStyles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", reservationStyles, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

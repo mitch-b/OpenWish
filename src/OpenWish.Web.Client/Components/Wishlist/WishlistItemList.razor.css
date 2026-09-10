@@ -318,6 +318,11 @@
 
     .edit-actions .btn {
         flex: 1;
+        min-height: 2.75rem;
+    }
+
+    .action-buttons > .btn {
+        min-height: 2.75rem;
     }
 
     .interaction-container {

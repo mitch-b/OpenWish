@@ -162,6 +162,18 @@ async function assertResponsiveWidths(page, viewports) {
   }
 }
 
+async function assertMinimumTouchTarget(locator, description) {
+  const bounds = await locator.boundingBox();
+  const subpixelTolerance = 0.01;
+  if (!bounds ||
+      bounds.width + subpixelTolerance < 44 ||
+      bounds.height + subpixelTolerance < 44) {
+    throw new Error(
+      `${description} measured ${bounds?.width ?? 0}x${bounds?.height ?? 0}px; expected at least 44x44px.`
+    );
+  }
+}
+
 async function verifyExternalLogin(browser, results) {
   for (const isMobile of [false, true]) {
     await verifyExternalLoginHandoff(browser, results, isMobile);
@@ -538,6 +550,15 @@ async function verifyOwnerJourney(browser, manifest, results) {
     { width: 1024, height: 600 }
   ]);
   await page.setViewportSize({ width: 390, height: 700 });
+  const setupSteps = page.locator(".secret-santa-setup");
+  await assertMinimumTouchTarget(
+    setupSteps.getByRole("link", { name: "Edit" }),
+    "Mobile Secret Santa edit action"
+  );
+  await assertMinimumTouchTarget(
+    setupSteps.getByRole("link", { name: "Invite people" }),
+    "Mobile Secret Santa invitation action"
+  );
   await screenshot(page, "secret-santa-setup-mobile.png");
   await page.setViewportSize({ width: 1440, height: 1000 });
 
@@ -671,7 +692,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Dependable creation and dialogs");
+  await assertVisible(page, "Comfortable mobile controls");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -920,6 +941,14 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   await screenshot(page, "reservation-cancel-confirmation.png");
   await page.setViewportSize({ width: 390, height: 844 });
+  await assertMinimumTouchTarget(
+    reservationDialog.getByRole("button", { name: "Keep reservation" }),
+    "Mobile keep-reservation action"
+  );
+  await assertMinimumTouchTarget(
+    reservationDialog.getByRole("button", { name: "Release reservation" }),
+    "Mobile release-reservation action"
+  );
   await screenshot(page, "reservation-cancel-confirmation-mobile.png");
   await page.setViewportSize({ width: 1280, height: 900 });
   await reservationDialog.getByRole("button", { name: "Keep reservation" }).click();
@@ -951,6 +980,14 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   await screenshot(page, "comment-delete-confirmation.png");
   await page.setViewportSize({ width: 390, height: 844 });
+  await assertMinimumTouchTarget(
+    commentDialog.getByRole("button", { name: "Keep comment" }),
+    "Mobile keep-comment action"
+  );
+  await assertMinimumTouchTarget(
+    commentDialog.getByRole("button", { name: "Delete comment", exact: true }),
+    "Mobile delete-comment action"
+  );
   await screenshot(page, "comment-delete-confirmation-mobile.png");
   await page.setViewportSize({ width: 1280, height: 900 });
   await commentDialog.getByRole("button", { name: "Keep comment" }).click();
@@ -1061,6 +1098,61 @@ async function verifyMobileJourney(browser, manifest, results) {
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");
+  const mobileAddItem = page.getByRole("button", { name: "Add item", exact: true });
+  const mobileViewToggle = page.getByRole("group", { name: "Wishlist view" });
+  const [addItemPosition, controlsOverlap] = await Promise.all([
+    mobileAddItem.evaluate(element => getComputedStyle(element).position),
+    page.evaluate(() => {
+      const addItem = document.querySelector("#add-wishlist-item")?.getBoundingClientRect();
+      const viewToggle = document.querySelector(".view-toggle")?.getBoundingClientRect();
+      if (!addItem || !viewToggle) {
+        throw new Error("Mobile wishlist actions were not rendered.");
+      }
+
+      return !(
+        addItem.right <= viewToggle.left ||
+        addItem.left >= viewToggle.right ||
+        addItem.bottom <= viewToggle.top ||
+        addItem.top >= viewToggle.bottom
+      );
+    })
+  ]);
+  if (addItemPosition === "fixed" || controlsOverlap) {
+    throw new Error("The mobile add-item action obscured the wishlist view controls.");
+  }
+  await assertVisible(page, "Add item");
+  await assertMinimumTouchTarget(mobileAddItem, "Mobile add-item action");
+  const mobileAddItemBounds = await mobileAddItem.boundingBox();
+  if (!mobileAddItemBounds || mobileAddItemBounds.width < 250) {
+    throw new Error("The mobile add-item action did not span the available content width.");
+  }
+  await assertMinimumTouchTarget(
+    mobileViewToggle.getByRole("button", { name: "Grid view" }),
+    "Mobile grid-view action"
+  );
+  await assertMinimumTouchTarget(
+    mobileViewToggle.getByRole("button", { name: "List view" }),
+    "Mobile list-view action"
+  );
+  await page.getByRole("button", { name: "Filters" }).click();
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "High" }),
+    "Mobile priority filter"
+  );
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Price" }),
+    "Mobile sort action"
+  );
+  await page.getByRole("button", { name: "Filters" }).click();
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
+    "Mobile grid item edit action"
+  );
+  await mobileViewToggle.getByRole("button", { name: "List view" }).click();
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
+    "Mobile list item edit action"
+  );
   await screenshot(page, "wishlist-mobile.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);

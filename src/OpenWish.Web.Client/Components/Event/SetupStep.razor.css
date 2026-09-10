@@ -28,6 +28,12 @@
     box-shadow: inset 0 0 0 1px var(--color-success-border);
 }
 
+.setup-step .btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+}
+
 @media (max-width: 575.98px) {
     .setup-step {
         grid-template-columns: auto minmax(0, 1fr);
@@ -35,7 +41,8 @@
     }
 
     .setup-step .btn {
-        grid-column: 2;
-        justify-self: start;
+        grid-column: 1 / -1;
+        justify-content: center;
+        width: 100%;
     }
 }

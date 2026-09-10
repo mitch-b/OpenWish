@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.12",
+    "date": "2026-09-10",
+    "title": "Comfortable mobile controls",
+    "summary": "Wishlist and Secret Santa actions are easier to reach on phones without obscuring nearby content.",
+    "highlights": [
+      "The mobile add-item action stays in the wishlist flow with a visible label instead of floating over content.",
+      "Wishlist item edit and delete actions have explicit names and comfortable mobile touch targets.",
+      "Wishlist filter, sort, and view controls provide consistent 44-pixel mobile touch targets.",
+      "Secret Santa setup actions expand safely on small screens and meet the mobile touch-target guideline.",
+      "Comment deletion and reservation release confirmations provide larger mobile actions."
+    ]
+  },
+  {
     "version": "0.1.11",
     "date": "2026-09-09",
     "title": "Dependable creation and dialogs",

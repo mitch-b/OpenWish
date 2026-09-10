@@ -439,6 +439,7 @@ else
                                         type="button"
                                         aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
                                         aria-expanded="@(_expandedItemId == item.Id)"
+                                        aria-controls="item-details-@item.Id"
                                         @onclick="() => ToggleItemDetails(item.Id)">
                                     <OpenWishIcon Name="three-dots" />
                                 </button>
@@ -446,7 +447,7 @@ else
 
                             @if (_expandedItemId == item.Id)
                             {
-                                <div class="item-details-expanded">
+                                <div id="item-details-@item.Id" class="item-details-expanded">
                                     <div class="details-section">
                                         <h4><OpenWishIcon Name="info-circle" /> Details</h4>
                                         <div class="details-grid">

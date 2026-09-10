@@ -466,6 +466,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-label=\"Edit @item.Name\"", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Delete @item.Name\"", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-expanded=\"@(_expandedItemId == item.Id)\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Edit @item.Name\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Delete @item.Name\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("min-width: 2.75rem;", pageStyles, StringComparison.Ordinal);

@@ -164,7 +164,10 @@ async function assertResponsiveWidths(page, viewports) {
 
 async function assertMinimumTouchTarget(locator, description) {
   const bounds = await locator.boundingBox();
-  if (!bounds || bounds.width < 44 || bounds.height < 44) {
+  const subpixelTolerance = 0.01;
+  if (!bounds ||
+      bounds.width + subpixelTolerance < 44 ||
+      bounds.height + subpixelTolerance < 44) {
     throw new Error(
       `${description} measured ${bounds?.width ?? 0}x${bounds?.height ?? 0}px; expected at least 44x44px.`
     );

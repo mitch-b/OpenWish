@@ -2,6 +2,19 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.13] - 2026-09-11
+
+### Improved
+
+- Personal wishlist failures now appear as actionable errors instead of an
+  empty wishlist collection.
+- Friends' wishlist failures are distinct from having no shared wishlists yet.
+- Friend invitations prevent duplicate sends and communicate busy,
+  authentication, success, and failure states.
+- Friend loading and removal provide retryable errors, named actions, accurate
+  sharing consequences, duplicate-action protection, and announced completion.
+- The personalized dashboard communicates when its content is loading.
+
 ## [0.1.12] - 2026-09-10
 
 ### Improved

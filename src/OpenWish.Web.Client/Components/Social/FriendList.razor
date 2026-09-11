@@ -3,8 +3,9 @@
 
 @inject IFriendService FriendService
 @inject IUserContextService UserContextService
+@inject ILogger<FriendList> Logger
 
-<div class="friend-list">
+<div class="friend-list" aria-busy="@(_loading ? "true" : "false")">
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="people" /></span>
         <div>
@@ -17,6 +18,15 @@
     {
         <div class="spinner-border spinner-border-sm" role="status">
             <span class="visually-hidden">Loading friends...</span>
+        </div>
+    }
+    else if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            <p class="mb-2">@_errorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="LoadFriends">
+                Try again
+            </button>
         </div>
     }
     else if (!_friends.Any())
@@ -36,7 +46,10 @@
                         <strong>@friend.UserName</strong>
                     </div>
                     <div>
-                        <button class="btn btn-outline-danger btn-sm" @onclick="() => ShowRemoveConfirmation(friend)">
+                        <button class="btn btn-outline-danger btn-sm"
+                                type="button"
+                                aria-label="Remove @GetFriendName(friend) from friends"
+                                @onclick="() => ShowRemoveConfirmation(friend)">
                             <OpenWishIcon Name="person-dash" /> Remove
                         </button>
                     </div>
@@ -45,10 +58,10 @@
         </div>
     }
     
-    @if (_error)
+    @if (_statusMessage is not null)
     {
-        <div class="alert alert-danger mt-3">
-            An error occurred while loading your friends. Please try again.
+        <div class="alert alert-success mt-3" role="status" aria-live="polite">
+            @_statusMessage
         </div>
     }
 </div>
@@ -58,8 +71,9 @@
 @code {
     private List<ApplicationUserModel> _friends = [];
     private bool _loading = true;
-    private bool _error = false;
     private string? _currentUserId;
+    private string? _errorMessage;
+    private string? _statusMessage;
     private FriendRemoveConfirmationDialog _removeConfirmationDialog;
     
     protected override async Task OnInitializedAsync()
@@ -67,11 +81,9 @@
         await LoadFriends();
     }
     
-    [Inject] private ILogger<FriendList> Logger { get; set; } = default!;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _error && _currentUserId == null)
+        if (firstRender && _errorMessage is not null && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
             await LoadFriends();
@@ -80,11 +92,10 @@
 
     private async Task LoadFriends()
     {
-        Logger.LogInformation($"LoadFriends START {DateTime.Now:O} Task: {Task.CurrentId}");
         try
         {
             _loading = true;
-            _error = false;
+            _errorMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
             
             if (_currentUserId != null)
@@ -92,23 +103,28 @@
                 var friends = await FriendService.GetFriendsAsync(_currentUserId);
                 _friends = friends.ToList();
             }
+            else
+            {
+                _errorMessage = "Sign in again to load your friends.";
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
+            Logger.LogError(ex, "Failed to load friends.");
+            _errorMessage = "Your friends could not be loaded. Try again.";
         }
         finally
         {
             _loading = false;
-            Logger.LogInformation($"LoadFriends END {DateTime.Now:O} Task: {Task.CurrentId}");
             StateHasChanged();
         }
     }
     
     private void ShowRemoveConfirmation(ApplicationUserModel friend)
     {
-        string title = "Remove Friend";
-        string message = $"Are you sure you want to remove {friend.UserName} from your friends list?";
+        var friendName = GetFriendName(friend);
+        const string title = "Remove friend";
+        var message = $"Remove {friendName} from your friends? You will no longer see each other's friends-only wishlists. Wishlists shared directly may remain available.";
         _removeConfirmationDialog.Show(title, message, friend.Id);
     }
     
@@ -116,18 +132,37 @@
     {
         try
         {
+            _errorMessage = null;
+            _statusMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
             
             if (_currentUserId != null)
             {
-                await FriendService.RemoveFriendAsync(_currentUserId, friendId);
-                await LoadFriends();
+                var friend = _friends.FirstOrDefault(candidate => candidate.Id == friendId);
+                var friendName = friend is null ? "Friend" : GetFriendName(friend);
+                if (await FriendService.RemoveFriendAsync(_currentUserId, friendId))
+                {
+                    _statusMessage = $"{friendName} removed from your friends.";
+                    await LoadFriends();
+                }
+                else
+                {
+                    _errorMessage = $"{friendName} could not be removed. Refresh and try again.";
+                }
+            }
+            else
+            {
+                _errorMessage = "Sign in again to remove this friend.";
             }
         }
-        catch
+        catch (Exception ex)
         {
-            _error = true;
+            Logger.LogError(ex, "Failed to remove friend {FriendId}.", friendId);
+            _errorMessage = "This friend could not be removed. Try again.";
             StateHasChanged();
         }
     }
+
+    private static string GetFriendName(ApplicationUserModel friend) =>
+        friend.UserName ?? friend.Email ?? "this person";
 }

@@ -10,6 +10,7 @@
              role="dialog"
              aria-modal="true"
              aria-labelledby="@_titleId"
+             aria-describedby="@DescriptionId"
              tabindex="-1"
              @onclick:stopPropagation>
             <div class="dialog-header">
@@ -45,6 +46,9 @@
 
     [Parameter]
     public string? ReturnFocusElementId { get; set; }
+
+    [Parameter]
+    public string? DescriptionId { get; set; }
 
     public void Show()
     {

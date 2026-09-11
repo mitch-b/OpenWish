@@ -344,11 +344,17 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Holiday Gift Exchange");
   await assertVisible(page, "Friend Requests");
+  if (await page.locator(".dashboard-content").getAttribute("aria-busy") !== "false") {
+    throw new Error("The loaded dashboard remained marked as busy.");
+  }
   await screenshot(page, "home-dashboard.png");
 
   await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Private Ideas");
+  if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
+    throw new Error("The loaded personal wishlist panel remained marked as busy.");
+  }
   const wishlistSearch = page.getByRole("searchbox", { name: "Search wishlists" });
   if (await wishlistSearch.getAttribute("aria-controls") !== "wishlist-results") {
     throw new Error("Wishlist discovery search does not identify its results.");
@@ -362,6 +368,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
   await assertVisible(page, "Jordan's Favorites");
+  if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
+    throw new Error("The loaded friends' wishlist panel remained marked as busy.");
+  }
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");
@@ -578,6 +587,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "CaseyDemo");
   await assertVisible(page, "TaylorDemo");
   const friendInvites = page.getByLabel("Email addresses");
+  if (await page.locator(".friend-search").getAttribute("aria-busy") !== "false") {
+    throw new Error("The idle friend invitation form remained marked as busy.");
+  }
   if (await friendInvites.getAttribute("aria-describedby") !== "emailInvitesHelp") {
     throw new Error("Friend invitation guidance is not connected to its field.");
   }
@@ -585,6 +597,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await sendInvitations.isDisabled())) {
     throw new Error("Friend invitations can be submitted without an email address.");
   }
+  const friendList = page.locator(".friend-list");
+  if (await friendList.getAttribute("aria-busy") !== "false") {
+    throw new Error("The loaded friend list remained marked as busy.");
+  }
+  await page.getByRole("button", { name: "Remove JordanDemo from friends" })
+    .waitFor({ state: "visible" });
   const acceptTaylorRequest = page.getByRole("button", {
     name: "Accept friend request from TaylorDemo"
   });

@@ -3,8 +3,9 @@
 
 @inject IFriendService FriendService
 @inject IUserContextService UserContextService
+@inject ILogger<FriendSearch> Logger
 
-<div class="friend-search">
+<div class="friend-search" aria-busy="@(_sendingInvites ? "true" : "false")">
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="person-plus" /></span>
         <div>
@@ -27,7 +28,7 @@
             </div>
         </div>
         
-        <button class="btn btn-primary" @onclick="SendEmailInvites"
+        <button class="btn btn-primary" type="button" @onclick="SendEmailInvites"
                 disabled="@(_sendingInvites || string.IsNullOrWhiteSpace(inviteEmails))">
             @if (_sendingInvites)
             {
@@ -50,7 +51,7 @@
     
     @if (_success)
     {
-        <div class="alert alert-success mt-3" role="status">
+        <div class="alert alert-success mt-3" role="status" aria-live="polite">
             @_successMessage
         </div>
     }
@@ -77,6 +78,11 @@
     
     private async Task SendEmailInvites()
     {
+        if (_sendingInvites)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(inviteEmails))
         {
             _error = true;
@@ -123,14 +129,27 @@
                     _errorMessage = "Some invitations could not be sent. Please check the email addresses and try again.";
                 }
             }
+            else
+            {
+                _error = true;
+                _errorMessage = "Sign in again to send friend invitations.";
+            }
         }
         catch (ArgumentException ex)
         {
             _error = true;
             _errorMessage = ex.Message;
         }
-        catch
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
+            Logger.LogWarning(ex, "Friend invitation session expired.");
+            _currentUserId = null;
+            _error = true;
+            _errorMessage = "Sign in again to send friend invitations.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to send friend invitations.");
             _error = true;
             _errorMessage = "An error occurred while sending invitations. Please try again.";
         }

@@ -140,6 +140,13 @@
             _error = true;
             _errorMessage = ex.Message;
         }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Logger.LogWarning(ex, "Friend invitation session expired.");
+            _currentUserId = null;
+            _error = true;
+            _errorMessage = "Sign in again to send friend invitations.";
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to send friend invitations.");

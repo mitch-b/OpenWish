@@ -519,7 +519,9 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
 
-        Assert.Contains("aria-busy=\"@(filteredWishlists is null ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_loadingWishlists ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("else if (_loadingWishlists)", markup, StringComparison.Ordinal);
+        Assert.Contains("if (firstRender && _loadingWishlists)", markup, StringComparison.Ordinal);
         Assert.Contains("@if (!string.IsNullOrWhiteSpace(_wishlistLoadError))", markup, StringComparison.Ordinal);
         Assert.Contains("Your wishlists could not be loaded. Refresh the page to try again.", markup, StringComparison.Ordinal);
     }
@@ -532,6 +534,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-busy=\"@(loadingFriendsWishlists ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("else if (!string.IsNullOrWhiteSpace(_friendsWishlistLoadError))", markup, StringComparison.Ordinal);
         Assert.Contains("Friends' wishlists could not be loaded. Refresh the page to try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("Sign in again to load friends' wishlists.", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -543,6 +546,10 @@ public class InteractiveControlMarkupTests
         Assert.Contains("if (_sendingInvites)", markup, StringComparison.Ordinal);
         Assert.Contains("type=\"button\" @onclick=\"SendEmailInvites\"", markup, StringComparison.Ordinal);
         Assert.Contains("Sign in again to send friend invitations.", markup, StringComparison.Ordinal);
+        Assert.Contains(
+            "catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)",
+            markup,
+            StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex, \"Failed to send friend invitations.\")", markup, StringComparison.Ordinal);
     }
 
@@ -561,6 +568,15 @@ public class InteractiveControlMarkupTests
         Assert.Contains("DescriptionId=\"friend-removal-description\"", dialogMarkup, StringComparison.Ordinal);
         Assert.Contains("Keep friend", dialogMarkup, StringComparison.Ordinal);
         Assert.Contains("Remove friend", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (_isRemoving)", dialogMarkup, StringComparison.Ordinal);
+        Assert.Equal(2, dialogMarkup.Split("disabled=\"@_isRemoving\"", StringSplitOptions.None).Length - 1);
+        Assert.Contains("Wishlists shared directly may remain available.", listMarkup, StringComparison.Ordinal);
+        Assert.True(
+            listMarkup.IndexOf("_statusMessage = $\"{friendName} removed", StringComparison.Ordinal) <
+            listMarkup.IndexOf(
+                "await LoadFriends();",
+                listMarkup.IndexOf("private async Task ConfirmRemoveFriend", StringComparison.Ordinal),
+                StringComparison.Ordinal));
         Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
     }
 
@@ -575,6 +591,7 @@ public class InteractiveControlMarkupTests
             markup,
             StringComparison.Ordinal);
         Assert.Contains("Loading your dashboard...", markup, StringComparison.Ordinal);
+        Assert.Contains("else", markup, StringComparison.Ordinal);
         Assert.Contains("finally", markup, StringComparison.Ordinal);
         Assert.Contains("_isLoading = false;", markup, StringComparison.Ordinal);
     }

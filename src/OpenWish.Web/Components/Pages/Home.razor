@@ -45,7 +45,8 @@
                 <span>Loading your dashboard...</span>
             </div>
         }
-
+        else
+        {
         @if (_loadError is not null)
         {
             <div class="alert alert-warning" role="alert">@_loadError</div>
@@ -199,6 +200,7 @@
                     }
                 </section>
             </div>
+        }
         }
         </div>
     </Authorized>

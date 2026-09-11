@@ -8,7 +8,7 @@
       "Personal wishlist failures appear as actionable errors instead of empty results.",
       "Friends' wishlist failures remain distinct from a genuinely empty shared list.",
       "Friend invitations expose progress, prevent duplicate sends, and explain authentication or delivery failures.",
-      "Friend loading and removal provide retryable errors, named controls, clear consequences, and completion feedback.",
+      "Friend loading and removal provide retryable errors, named controls, accurate sharing consequences, duplicate-action protection, and completion feedback.",
       "The personalized dashboard exposes its loading state to assistive technology."
     ]
   },

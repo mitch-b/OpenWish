@@ -44,7 +44,7 @@
                  id="my-wishlists-panel"
                  role="tabpanel"
                  aria-labelledby="my-wishlists-tab"
-                 aria-busy="@(filteredWishlists is null ? "true" : "false")"
+                 aria-busy="@(_loadingWishlists ? "true" : "false")"
                  hidden="@(activeTab != "my-wishlists")">
                 <div class="wishlist-toolbar">
                     <div class="filter-cluster">
@@ -92,7 +92,7 @@
                         @_wishlistLoadError
                     </div>
                 }
-                else if (filteredWishlists == null)
+                else if (_loadingWishlists)
                 {
                     <div class="d-flex align-items-center gap-2" role="status">
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -173,6 +173,7 @@
     private IEnumerable<WishlistModel>? friendsWishlists;
     private string? _userId;
     private string activeTab = "my-wishlists";
+    private bool _loadingWishlists = true;
     private bool loadingFriendsWishlists = false;
     private string? _wishlistLoadError;
     private string? _friendsWishlistLoadError;
@@ -190,6 +191,7 @@
             if (_userId != null)
             {
                 await LoadWishlists();
+                _loadingWishlists = false;
             }
             else
             {
@@ -205,12 +207,13 @@
             _wishlistLoadError = "Your wishlists could not be loaded. Refresh the page to try again.";
             wishlists = new List<WishlistModel>();
             ApplyFiltersAndSort();
+            _loadingWishlists = false;
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && (_userId == null || !wishlists?.Any() == true))
+        if (firstRender && _loadingWishlists)
         {
             // If we didn't get user data during SSR, try again after first render
             try
@@ -219,13 +222,20 @@
                 if (_userId != null)
                 {
                     await LoadWishlists();
-                    StateHasChanged();
+                }
+                else
+                {
+                    _wishlistLoadError = "Sign in again to load your wishlists.";
                 }
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error loading user data after first render.");
                 _wishlistLoadError = "Your wishlists could not be loaded. Refresh the page to try again.";
+            }
+            finally
+            {
+                _loadingWishlists = false;
                 StateHasChanged();
             }
         }
@@ -274,6 +284,7 @@
                 }
                 else
                 {
+                    _friendsWishlistLoadError = "Sign in again to load friends' wishlists.";
                     friendsWishlists = new List<WishlistModel>();
                 }
             }

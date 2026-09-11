@@ -124,7 +124,7 @@
     {
         var friendName = GetFriendName(friend);
         const string title = "Remove friend";
-        var message = $"Remove {friendName} from your friends? You will no longer share friends-only wishlists.";
+        var message = $"Remove {friendName} from your friends? You will no longer see each other's friends-only wishlists. Wishlists shared directly may remain available.";
         _removeConfirmationDialog.Show(title, message, friend.Id);
     }
     
@@ -142,11 +142,8 @@
                 var friendName = friend is null ? "Friend" : GetFriendName(friend);
                 if (await FriendService.RemoveFriendAsync(_currentUserId, friendId))
                 {
+                    _statusMessage = $"{friendName} removed from your friends.";
                     await LoadFriends();
-                    if (_errorMessage is null)
-                    {
-                        _statusMessage = $"{friendName} removed from your friends.";
-                    }
                 }
                 else
                 {

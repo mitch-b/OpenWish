@@ -5,8 +5,12 @@
         <p id="friend-removal-description">@Message</p>
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="Close">Keep friend</button>
-        <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Remove friend</button>
+        <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@_isRemoving" @onclick="Close">
+            Keep friend
+        </button>
+        <button type="button" class="btn btn-danger" disabled="@_isRemoving" @onclick="HandleConfirm">
+            @(_isRemoving ? "Removing..." : "Remove friend")
+        </button>
     </div>
 </Dialog>
 
@@ -14,6 +18,7 @@
     private Dialog dialog = default!;
     private string Title { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
+    private bool _isRemoving;
 
     [Parameter]
     public EventCallback<string> OnConfirm { get; set; }
@@ -33,7 +38,20 @@
 
     private async Task HandleConfirm()
     {
-        await OnConfirm.InvokeAsync(FriendId);
-        await dialog.CloseAsync();
+        if (_isRemoving)
+        {
+            return;
+        }
+
+        try
+        {
+            _isRemoving = true;
+            await OnConfirm.InvokeAsync(FriendId);
+            await dialog.CloseAsync();
+        }
+        finally
+        {
+            _isRemoving = false;
+        }
     }
 }

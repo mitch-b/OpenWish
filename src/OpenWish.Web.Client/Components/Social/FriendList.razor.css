@@ -49,3 +49,9 @@
     height: 2.25rem;
     border-radius: 50%;
 }
+
+@media (max-width: 767.98px) {
+    .friend-list .btn {
+        min-height: 2.75rem;
+    }
+}

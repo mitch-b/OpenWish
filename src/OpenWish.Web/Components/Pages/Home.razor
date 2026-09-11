@@ -1,4 +1,5 @@
 ﻿@page "/"
+@attribute [StreamRendering]
 
 @using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Web.Client.Components.Event
@@ -35,6 +36,15 @@
                 <span class="hero-spark hero-spark-two"></span>
             </div>
         </section>
+
+        <div class="dashboard-content" aria-busy="@(_isLoading ? "true" : "false")">
+        @if (_isLoading)
+        {
+            <div class="d-flex align-items-center gap-2" role="status">
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Loading your dashboard...</span>
+            </div>
+        }
 
         @if (_loadError is not null)
         {
@@ -190,6 +200,7 @@
                 </section>
             </div>
         }
+        </div>
     </Authorized>
     <NotAuthorized>
         <section class="dashboard-hero marketing-hero">
@@ -234,6 +245,7 @@
 
     private string? _userId;
     private string? _loadError;
+    private bool _isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -252,6 +264,14 @@
                 Logger.LogError(ex, "Unable to load the home dashboard for user {UserId}.", _userId);
                 _loadError = "Some dashboard information could not be loaded. Refresh the page to try again.";
             }
+            finally
+            {
+                _isLoading = false;
+            }
+        }
+        else
+        {
+            _isLoading = false;
         }
     }
 

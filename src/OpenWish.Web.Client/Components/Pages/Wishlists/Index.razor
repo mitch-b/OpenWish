@@ -44,6 +44,7 @@
                  id="my-wishlists-panel"
                  role="tabpanel"
                  aria-labelledby="my-wishlists-tab"
+                 aria-busy="@(filteredWishlists is null ? "true" : "false")"
                  hidden="@(activeTab != "my-wishlists")">
                 <div class="wishlist-toolbar">
                     <div class="filter-cluster">
@@ -85,7 +86,13 @@
                 </div>
 
                 <div id="wishlist-results">
-                @if (filteredWishlists == null)
+                @if (!string.IsNullOrWhiteSpace(_wishlistLoadError))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @_wishlistLoadError
+                    </div>
+                }
+                else if (filteredWishlists == null)
                 {
                     <div class="d-flex align-items-center gap-2" role="status">
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -121,6 +128,7 @@
                  id="friends-wishlists-panel"
                  role="tabpanel"
                  aria-labelledby="friends-wishlists-tab"
+                 aria-busy="@(loadingFriendsWishlists ? "true" : "false")"
                  hidden="@(activeTab != "friends-wishlists")">
                 @if (loadingFriendsWishlists)
                 {
@@ -128,6 +136,12 @@
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading friends' wishlists...</span>
                         </div>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_friendsWishlistLoadError))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @_friendsWishlistLoadError
                     </div>
                 }
                 else if (friendsWishlists?.Any() == true)
@@ -160,6 +174,8 @@
     private string? _userId;
     private string activeTab = "my-wishlists";
     private bool loadingFriendsWishlists = false;
+    private string? _wishlistLoadError;
+    private string? _friendsWishlistLoadError;
     
     // Filter and sort properties
     private string searchTerm = "";
@@ -186,7 +202,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing the Index component.");
-            // Set empty collections to prevent null reference errors
+            _wishlistLoadError = "Your wishlists could not be loaded. Refresh the page to try again.";
             wishlists = new List<WishlistModel>();
             ApplyFiltersAndSort();
         }
@@ -209,6 +225,8 @@
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error loading user data after first render.");
+                _wishlistLoadError = "Your wishlists could not be loaded. Refresh the page to try again.";
+                StateHasChanged();
             }
         }
     }
@@ -229,6 +247,7 @@
     {
         if (!string.IsNullOrWhiteSpace(_userId))
         {
+            _wishlistLoadError = null;
             wishlists = await WishlistService.GetUserWishlistsAsync(_userId);
             ApplyFiltersAndSort();
         }
@@ -240,6 +259,7 @@
         try
         {
             loadingFriendsWishlists = true;
+            _friendsWishlistLoadError = null;
             if (_userId != null)
             {
                 friendsWishlists = await WishlistService.GetFriendsWishlistsAsync(_userId);
@@ -261,7 +281,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading friends' wishlists");
-            // Handle error gracefully - show empty list rather than crashing
+            _friendsWishlistLoadError = "Friends' wishlists could not be loaded. Refresh the page to try again.";
             friendsWishlists = new List<WishlistModel>();
         }
         finally

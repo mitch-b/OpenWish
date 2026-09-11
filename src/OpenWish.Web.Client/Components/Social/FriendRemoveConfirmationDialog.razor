@@ -1,12 +1,12 @@
 @using OpenWish.Web.Client.Components.Shared
 
-<Dialog @ref="dialog" Title="@Title">
+<Dialog @ref="dialog" Title="@Title" DescriptionId="friend-removal-description">
     <div class="modal-body">
-        <p>@Message</p>
+        <p id="friend-removal-description">@Message</p>
     </div>
     <div class="modal-footer">
-        <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Remove</button>
-        <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="Close">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="Close">Keep friend</button>
+        <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Remove friend</button>
     </div>
 </Dialog>
 

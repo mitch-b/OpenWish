@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.13",
+    "date": "2026-09-11",
+    "title": "Truthful loading and friend actions",
+    "summary": "Wishlist, friend, and dashboard workflows now communicate loading and failures more clearly while protecting repeated actions.",
+    "highlights": [
+      "Personal wishlist failures appear as actionable errors instead of empty results.",
+      "Friends' wishlist failures remain distinct from a genuinely empty shared list.",
+      "Friend invitations expose progress, prevent duplicate sends, and explain authentication or delivery failures.",
+      "Friend loading and removal provide retryable errors, named controls, clear consequences, and completion feedback.",
+      "The personalized dashboard exposes its loading state to assistive technology."
+    ]
+  },
+  {
     "version": "0.1.12",
     "date": "2026-09-10",
     "title": "Comfortable mobile controls",

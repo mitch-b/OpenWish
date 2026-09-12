@@ -257,31 +257,58 @@ else
     private bool _isAcceptedParticipant;
     private bool _isPendingInvitee;
     private EventUserModel? _pendingInvitation;
+    private string? _loadedEventId;
+    private int _loadVersion;
 
     protected override async Task OnInitializedAsync()
     {
         _currentUserId = await UserContextService.GetUserIdAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.Equals(_loadedEventId, EventId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loadedEventId = EventId;
+        _event = null;
         await LoadEvent();
     }
 
     private async Task LoadEvent()
     {
-        _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
-        _isOwner = _event?.CreatedBy.Id == _currentUserId;
-        _isAcceptedParticipant = _isOwner ||
-            (_event?.EventUsers?.Any(participant =>
+        var eventId = EventId;
+        var loadVersion = ++_loadVersion;
+        var loadedEvent = await EventService.GetEventByPublicIdAsync(eventId, _currentUserId!);
+        var isOwner = loadedEvent?.CreatedBy.Id == _currentUserId;
+        var isAcceptedParticipant = isOwner ||
+            (loadedEvent?.EventUsers?.Any(participant =>
                 !participant.Deleted &&
                 participant.IsAccepted &&
                 string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(participant.UserId, _currentUserId, StringComparison.Ordinal)) ?? false);
-        _isPendingInvitee = !_isOwner && !_isAcceptedParticipant;
+        var isPendingInvitee = !isOwner && !isAcceptedParticipant;
+        EventUserModel? pendingInvitation = null;
 
-        if (_isPendingInvitee)
+        if (isPendingInvitee)
         {
             var invitations = await EventService.GetPendingInvitationsForUserAsync(_currentUserId!);
-            _pendingInvitation = invitations.FirstOrDefault(invitation =>
-                string.Equals(invitation.Event?.PublicId, EventId, StringComparison.Ordinal));
+            pendingInvitation = invitations.FirstOrDefault(invitation =>
+                string.Equals(invitation.Event?.PublicId, eventId, StringComparison.Ordinal));
         }
+
+        if (loadVersion != _loadVersion || !string.Equals(EventId, eventId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _event = loadedEvent;
+        _isOwner = isOwner;
+        _isAcceptedParticipant = isAcceptedParticipant;
+        _isPendingInvitee = isPendingInvitee;
+        _pendingInvitation = pendingInvitation;
     }
 
     private string PendingInvitationLink =>

@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.14] - 2026-09-12
+
+### Improved
+
+- Event deletion failures are reconciled before retry, so interrupted responses
+  cannot repeat a completed deletion.
+- Pairing-rule loading failures are distinct from an empty rule list and
+  provide a retry action.
+- Pairing-rule changes are idempotent, reconcile interrupted responses, prevent
+  duplicate requests, and announce success or actionable failure.
+- Drawing names and resetting a gift exchange reconcile interrupted responses
+  before allowing another action and show safe, actionable guidance.
+- Invitation loading, friend selection, and invitation actions expose
+  recoverable errors, progress, and completion.
+
 ## [0.1.13] - 2026-09-11
 
 ### Improved

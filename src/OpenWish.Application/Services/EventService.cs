@@ -1831,6 +1831,20 @@ public class EventService(
             throw new InvalidOperationException("Participants must belong to this event.");
         }
 
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(20311, {eventId})");
+
+        var existingRules = await context.CustomPairingRules
+            .Where(existingRule => existingRule.EventId == eventId && !existingRule.Deleted)
+            .ToListAsync();
+        var existingRule = existingRules.FirstOrDefault(existingRule => PairingRulesMatch(existingRule, rule));
+        if (existingRule is not null)
+        {
+            await transaction.CommitAsync();
+            return _mapper.Map<CustomPairingRuleModel>(existingRule);
+        }
+
         var ruleEntity = _mapper.Map<CustomPairingRule>(rule);
         ruleEntity.EventId = eventId;
         ruleEntity.CreatedOn = DateTimeOffset.UtcNow;
@@ -1838,9 +1852,17 @@ public class EventService(
 
         context.CustomPairingRules.Add(ruleEntity);
         await context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return _mapper.Map<CustomPairingRuleModel>(ruleEntity);
     }
+
+    internal static bool PairingRulesMatch(CustomPairingRule existingRule, CustomPairingRuleModel requestedRule) =>
+        string.Equals(existingRule.SourceUserId, requestedRule.SourceUserId, StringComparison.Ordinal) &&
+        string.Equals(existingRule.SourceInviteeEmail, requestedRule.SourceInviteeEmail, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(existingRule.TargetUserId, requestedRule.TargetUserId, StringComparison.Ordinal) &&
+        string.Equals(existingRule.TargetInviteeEmail, requestedRule.TargetInviteeEmail, StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(existingRule.RuleType, requestedRule.RuleType, StringComparison.OrdinalIgnoreCase);
 
     public async Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId)
     {

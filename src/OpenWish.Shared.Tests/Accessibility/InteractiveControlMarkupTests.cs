@@ -280,16 +280,20 @@ public class InteractiveControlMarkupTests
     public void EventDeletionFailures_RemainVisibleAndRetryable()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
+        var indexMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "Index.razor");
 
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("_deleteErrorMessage = $\"We couldn't delete", markup, StringComparison.Ordinal);
         Assert.Contains("Sign in again to delete this event.", markup, StringComparison.Ordinal);
         Assert.Contains("Event deleted, but the event list couldn't refresh.", markup, StringComparison.Ordinal);
+        Assert.Contains("The deletion outcome couldn't be confirmed.", markup, StringComparison.Ordinal);
+        Assert.Contains("IsMissingEvent(reconciliationException)", markup, StringComparison.Ordinal);
         Assert.Contains("else if (!_deleteCompleted)", markup, StringComparison.Ordinal);
         Assert.Contains("if (_deleteCompleted)", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("_deleteCompleted = false;", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("_currentUserId!", markup, StringComparison.Ordinal);
+        Assert.Contains("@key=\"evt.PublicId\"", indexMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -319,6 +323,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Exclusion rule added.", markup, StringComparison.Ordinal);
         Assert.Contains("Exclusion rule removed.", markup, StringComparison.Ordinal);
         Assert.Contains("Your change was saved, but the rule list couldn't be refreshed.", markup, StringComparison.Ordinal);
+        Assert.Contains("The change outcome couldn't be confirmed.", markup, StringComparison.Ordinal);
+        Assert.Contains("ReconcilePairingRuleAddAsync(", markup, StringComparison.Ordinal);
+        Assert.Contains("_updatingRuleAction == PairingRuleAction.Toggle", markup, StringComparison.Ordinal);
+        Assert.Contains("_updatingRuleAction == PairingRuleAction.Remove", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Updating...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Removing...</span>", markup, StringComparison.Ordinal);
         Assert.Contains("The exclusion rule couldn't be updated. Try again.", markup, StringComparison.Ordinal);
     }
 
@@ -333,9 +343,29 @@ public class InteractiveControlMarkupTests
         Assert.Contains("The gift exchange couldn't be reset. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("Names were drawn, but event details couldn't refresh.", markup, StringComparison.Ordinal);
         Assert.Contains("The gift exchange was reset, but event details couldn't refresh.", markup, StringComparison.Ordinal);
+        Assert.Contains("ReconcileGiftExchangeStateAsync(", markup, StringComparison.Ordinal);
+        Assert.Contains("ResetEventMutationState();", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_drawing || _eventStateChanged)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_resetting || _eventStateChanged)\"", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.Split("disabled=\"@(_drawing || _eventStateChanged)\"", StringSplitOptions.None).Length >= 3,
+            "Drawing and cancel controls should both preserve reload-only recovery.");
+        Assert.True(
+            markup.Split("disabled=\"@(_resetting || _eventStateChanged)\"", StringSplitOptions.None).Length >= 3,
+            "Reset and cancel controls should both preserve reload-only recovery.");
         Assert.Contains("|| _eventStateChanged", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("_drawErrorMessage = ex.Message", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("_resetErrorMessage = ex.Message", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventDetails_ReloadsWhenInteractiveRoutingChangesTheEvent()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("protected override async Task OnParametersSetAsync()", markup, StringComparison.Ordinal);
+        Assert.Contains("_loadedEventId", markup, StringComparison.Ordinal);
+        Assert.Contains("loadVersion != _loadVersion", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -350,6 +380,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("RunInvitationActionAsync(", markup, StringComparison.Ordinal);
         Assert.Contains("Func<string, Task<bool>> operation", markup, StringComparison.Ordinal);
         Assert.Contains("if (!succeeded)", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("_inlineSuccessMessage = successMessage;", StringComparison.Ordinal) <
+            markup.IndexOf("await LoadInvitations();", markup.IndexOf("_inlineSuccessMessage = successMessage;", StringComparison.Ordinal), StringComparison.Ordinal));
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("_inlineErrorMessage = ex.Message", markup, StringComparison.Ordinal);
     }

@@ -246,25 +246,44 @@ else
 
         _isDeleting = true;
         _deleteErrorMessage = null;
+        var currentUserId = _currentUserId ?? string.Empty;
 
         try
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(_currentUserId))
+                if (string.IsNullOrWhiteSpace(currentUserId))
                 {
                     _deleteErrorMessage = "Sign in again to delete this event.";
                     return;
                 }
 
                 Logger.LogInformation("Deleting event {EventPublicId}", Event.PublicId);
-                await EventService.DeleteEventByPublicIdAsync(Event.PublicId, _currentUserId);
+                await EventService.DeleteEventByPublicIdAsync(Event.PublicId, currentUserId);
                 _deleteCompleted = true;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error deleting event {EventPublicId}", Event.PublicId);
-                _deleteErrorMessage = $"We couldn't delete '{Event.Name}'. Try again.";
+                try
+                {
+                    await EventService.GetEventByPublicIdAsync(Event.PublicId, currentUserId);
+                    _deleteErrorMessage = $"We couldn't delete '{Event.Name}'. Try again.";
+                }
+                catch (Exception reconciliationException) when (IsMissingEvent(reconciliationException))
+                {
+                    _deleteCompleted = true;
+                    _deleteErrorMessage = "Event deleted, but the confirmation response was interrupted. Reload events.";
+                }
+                catch (Exception reconciliationException)
+                {
+                    Logger.LogError(
+                        reconciliationException,
+                        "Could not reconcile deletion of event {EventPublicId}",
+                        Event.PublicId);
+                    _deleteCompleted = true;
+                    _deleteErrorMessage = "The deletion outcome couldn't be confirmed. Reload events before trying again.";
+                }
                 return;
             }
 
@@ -291,6 +310,10 @@ else
     }
 
     private void ReloadEvents() => NavigationManager.NavigateTo("/events", forceLoad: true);
+
+    private static bool IsMissingEvent(Exception exception) =>
+        exception is KeyNotFoundException ||
+        exception is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound };
 
     private enum DeleteConfirmationStage
     {

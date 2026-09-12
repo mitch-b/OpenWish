@@ -49,7 +49,7 @@
         <div class="row g-3 event-grid">
             @foreach (var evt in _events)
             {
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-4" @key="evt.PublicId">
                     <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
                 </div>
             }

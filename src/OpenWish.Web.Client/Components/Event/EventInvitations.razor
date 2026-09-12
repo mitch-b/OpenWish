@@ -1052,11 +1052,8 @@
                 return;
             }
 
+            _inlineSuccessMessage = successMessage;
             await LoadInvitations();
-            if (string.IsNullOrWhiteSpace(_loadErrorMessage))
-            {
-                _inlineSuccessMessage = successMessage;
-            }
         }
         catch (Exception ex)
         {

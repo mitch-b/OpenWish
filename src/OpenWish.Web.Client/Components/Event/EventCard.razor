@@ -3,6 +3,7 @@
 @inject IEventService EventService
 @inject ILogger<EventCard> Logger
 @inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
 
 @if (Event == null)
 {
@@ -90,6 +91,19 @@ else
         ReturnFocusElementId="@($"dropdownMenu{Event?.Id}")">
     <div class="modal-body">
         <p>@_deleteDialogMessage</p>
+        @if (!string.IsNullOrWhiteSpace(_deleteErrorMessage))
+        {
+            <div class="alert alert-danger mb-0" role="alert">
+                <OpenWishIcon Name="exclamation-circle" Class="me-1" />
+                @_deleteErrorMessage
+                @if (_deleteCompleted)
+                {
+                    <button type="button" class="btn btn-outline-danger d-block mt-2" @onclick="ReloadEvents">
+                        Reload events
+                    </button>
+                }
+            </div>
+        }
         @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
         {
             <p class="mb-0">Select "Continue" to confirm again before deleting.</p>
@@ -106,20 +120,20 @@ else
                 @ref="_cancelDeleteButton"
                 @onclick="CloseDeleteDialog"
                 disabled="@_isDeleting">
-            Cancel
+            @(_deleteCompleted ? "Close" : "Cancel")
         </button>
         @if (_deleteConfirmationStage == DeleteConfirmationStage.First)
         {
             <button type="button" class="btn btn-warning" @onclick="ConfirmFirstDeleteStep">Continue</button>
         }
-        else
+        else if (!_deleteCompleted)
         {
             <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">
                 @if (_isDeleting)
                 {
                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 }
-                <span>Delete Event</span>
+                <span>Delete event</span>
             </button>
         }
     </div>
@@ -140,7 +154,9 @@ else
     private Dialog _deleteDialog = default!;
     private string _deleteDialogTitle = "Delete Event";
     private string _deleteDialogMessage = string.Empty;
+    private string? _deleteErrorMessage;
     private bool _isDeleting;
+    private bool _deleteCompleted;
     private ElementReference _cancelDeleteButton;
     private DeleteConfirmationStage _deleteConfirmationStage = DeleteConfirmationStage.First;
     private int AcceptedParticipantCount
@@ -176,7 +192,14 @@ else
             return;
         }
 
+        if (_deleteCompleted)
+        {
+            ReloadEvents();
+            return;
+        }
+
         _deleteConfirmationStage = DeleteConfirmationStage.First;
+        _deleteErrorMessage = null;
         _deleteDialogMessage = $"Deleting '{Event.Name}' will remove all wishlists, participants, and activity.";
         _deleteDialog.Show();
     }
@@ -188,7 +211,14 @@ else
             return;
         }
 
+        if (_deleteCompleted)
+        {
+            ReloadEvents();
+            return;
+        }
+
         _deleteConfirmationStage = DeleteConfirmationStage.First;
+        _deleteErrorMessage = null;
         await _deleteDialog.CloseAsync();
     }
 
@@ -200,6 +230,7 @@ else
         }
 
         _deleteConfirmationStage = DeleteConfirmationStage.Second;
+        _deleteErrorMessage = null;
         _deleteDialogMessage = $"This is your final confirmation. '{Event.Name}' cannot be recovered once deleted.";
         StateHasChanged();
         await Task.Yield();
@@ -214,22 +245,43 @@ else
         }
 
         _isDeleting = true;
+        _deleteErrorMessage = null;
 
         try
         {
-            Logger.LogInformation("Deleting event {EventPublicId}", Event.PublicId);
-            await EventService.DeleteEventByPublicIdAsync(Event.PublicId, _currentUserId!);
-
-            if (OnDelete.HasDelegate)
+            try
             {
-                await OnDelete.InvokeAsync(Event);
+                if (string.IsNullOrWhiteSpace(_currentUserId))
+                {
+                    _deleteErrorMessage = "Sign in again to delete this event.";
+                    return;
+                }
+
+                Logger.LogInformation("Deleting event {EventPublicId}", Event.PublicId);
+                await EventService.DeleteEventByPublicIdAsync(Event.PublicId, _currentUserId);
+                _deleteCompleted = true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error deleting event {EventPublicId}", Event.PublicId);
+                _deleteErrorMessage = $"We couldn't delete '{Event.Name}'. Try again.";
+                return;
             }
 
-            await _deleteDialog.CloseAsync();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error deleting event {EventPublicId}", Event.PublicId);
+            try
+            {
+                if (OnDelete.HasDelegate)
+                {
+                    await OnDelete.InvokeAsync(Event);
+                }
+
+                await _deleteDialog.CloseAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Event {EventPublicId} was deleted but the event list did not refresh", Event.PublicId);
+                _deleteErrorMessage = "Event deleted, but the event list couldn't refresh. Reload events.";
+            }
         }
         finally
         {
@@ -237,6 +289,9 @@ else
             StateHasChanged();
         }
     }
+
+    private void ReloadEvents() => NavigationManager.NavigateTo("/events", forceLoad: true);
+
     private enum DeleteConfirmationStage
     {
         First,

@@ -9,8 +9,9 @@
 @inject IFriendService FriendService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILogger<EventInvitations> Logger
 
-<div class="card shadow-sm">
+<div class="card shadow-sm event-invitations" aria-busy="@(_isLoading || IsInvitationActionBusy ? "true" : "false")">
     <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
             <div>
@@ -34,7 +35,7 @@
 
         @if (!string.IsNullOrEmpty(_inlineSuccessMessage))
         {
-            <div class="alert alert-success" role="alert">
+            <div class="alert alert-success" role="status" aria-live="polite">
                 @_inlineSuccessMessage
             </div>
         }
@@ -45,6 +46,15 @@
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading invitations...</span>
                 </div>
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                <p class="mb-2">@_loadErrorMessage</p>
+                <button type="button" class="btn btn-outline-danger" @onclick="LoadInvitations">
+                    Try again
+                </button>
             </div>
         }
         else if (_invitations.Any())
@@ -112,19 +122,40 @@
                             {
                                 <div class="d-flex flex-wrap gap-2">
                                     <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => CopyInvitationLinkAsync(invitation)"
                                             title="Copy a link to share directly">
                                         <OpenWishIcon Name="copy" Class="me-1" /> Copy link
                                     </button>
                                     <button class="btn btn-outline-secondary btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => HandleResendInvitation(invitation.Id)"
                                             title="Resend invitation">
-                                        <OpenWishIcon Name="arrow-repeat" Class="me-1" /> Resend
+                                        @if (IsProcessingInvitation(invitation.Id, "resend"))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                            <span>Resending...</span>
+                                        }
+                                        else
+                                        {
+                                            <OpenWishIcon Name="arrow-repeat" Class="me-1" />
+                                            <span>Resend</span>
+                                        }
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => HandleCancelInvitation(invitation.Id)"
                                             title="Cancel invitation">
-                                        <OpenWishIcon Name="x-lg" Class="me-1" /> Cancel
+                                        @if (IsProcessingInvitation(invitation.Id, "cancel"))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                            <span>Canceling...</span>
+                                        }
+                                        else
+                                        {
+                                            <OpenWishIcon Name="x-lg" Class="me-1" />
+                                            <span>Cancel</span>
+                                        }
                                     </button>
                                 </div>
                             }
@@ -135,6 +166,7 @@
                             {
                                 <div class="btn-group flex-shrink-0">
                                     <button class="btn btn-outline-danger btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => PromptRemoveParticipant(invitation)"
                                             title="Remove from event">
                                         <OpenWishIcon Name="person-dash" /> @("Remove")
@@ -145,14 +177,34 @@
                             {
                                 <div class="btn-group flex-shrink-0">
                                     <button class="btn btn-success btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => HandleAcceptInvitation(invitation.Id)"
                                             title="Accept invitation">
-                                        <OpenWishIcon Name="check-lg" /> Accept
+                                        @if (IsProcessingInvitation(invitation.Id, "accept"))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                            <span>Accepting...</span>
+                                        }
+                                        else
+                                        {
+                                            <OpenWishIcon Name="check-lg" />
+                                            <span>Accept</span>
+                                        }
                                     </button>
                                     <button class="btn btn-outline-danger btn-sm"
+                                            disabled="@IsInvitationActionBusy"
                                             @onclick="() => HandleRejectInvitation(invitation.Id)"
                                             title="Reject invitation">
-                                        <OpenWishIcon Name="x-lg" /> Reject
+                                        @if (IsProcessingInvitation(invitation.Id, "reject"))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                            <span>Rejecting...</span>
+                                        }
+                                        else
+                                        {
+                                            <OpenWishIcon Name="x-lg" />
+                                            <span>Reject</span>
+                                        }
                                     </button>
                                 </div>
                             }
@@ -178,7 +230,7 @@
 
 @if (_showRemoveConfirmation && _invitationPendingRemoval != null)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-busy="@(_isRemovingParticipant ? "true" : "false")"
          aria-labelledby="remove-participant-dialog-title" aria-describedby="remove-participant-dialog-description">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -220,22 +272,22 @@
 
 @if (_showInviteModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true"
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-busy="@(_isSending ? "true" : "false")"
          aria-labelledby="event-invite-dialog-title">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 id="event-invite-dialog-title" class="modal-title">Invite to event</h5>
-                    <button type="button" class="btn-close" aria-label="Close invitation dialog" @onclick="HideInviteModal"></button>
+                    <button type="button" class="btn-close" aria-label="Close invitation dialog" @onclick="HideInviteModal" disabled="@_isSending"></button>
                 </div>
                 <div class="modal-body">
                     @if (!string.IsNullOrEmpty(_errorMessage))
                     {
-                        <div class="alert alert-danger">@_errorMessage</div>
+                        <div class="alert alert-danger" role="alert">@_errorMessage</div>
                     }
                     @if (!string.IsNullOrEmpty(_successMessage))
                     {
-                        <div class="alert alert-success">@_successMessage</div>
+                        <div class="alert alert-success" role="status" aria-live="polite">@_successMessage</div>
                     }
 
                     <div class="mb-3">
@@ -280,11 +332,23 @@
                          aria-labelledby="event-invite-friends-tab" hidden="@(_inviteMode != "friends")">
                             @if (_friends == null || _pendingFriendInvites == null)
                             {
-                                <div class="text-center py-3">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading friends...</span>
+                                @if (!string.IsNullOrWhiteSpace(_friendsLoadError))
+                                {
+                                    <div class="alert alert-danger" role="alert">
+                                        <p class="mb-2">@_friendsLoadError</p>
+                                        <button type="button" class="btn btn-outline-danger" @onclick="RetryFriendsAsync">
+                                            Try again
+                                        </button>
                                     </div>
-                                </div>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading friends...</span>
+                                        </div>
+                                    </div>
+                                }
                             }
                             else if (_friends.Count == 0 && _pendingFriendInvites.Count == 0)
                             {
@@ -351,7 +415,7 @@
                         </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">
+                    <button type="button" class="btn btn-secondary" @onclick="HideInviteModal" disabled="@_isSending">
                         @(_successMessage is null ? "Cancel" : "Done")
                     </button>
                     <button type="button" class="btn btn-primary" @onclick="HandleSendInvitation" disabled="@DisableSendButton">
@@ -382,6 +446,8 @@
     private bool _isSending = false;
     private bool _showRemoveConfirmation = false;
     private bool _isRemovingParticipant;
+    private int? _processingInvitationId;
+    private string? _processingInvitationAction;
     private string _filter = "All";
     private string _inviteMode = "email";
     private string _emailsToInvite = string.Empty;
@@ -390,7 +456,13 @@
     private string? _successMessage;
     private string? _inlineErrorMessage;
     private string? _inlineSuccessMessage;
+    private string? _loadErrorMessage;
+    private string? _friendsLoadError;
     private EventUserModel? _invitationPendingRemoval;
+    private bool IsInvitationActionBusy => _processingInvitationId.HasValue || _isRemovingParticipant;
+    private bool IsProcessingInvitation(int invitationId, string action) =>
+        _processingInvitationId == invitationId &&
+        string.Equals(_processingInvitationAction, action, StringComparison.Ordinal);
     private IReadOnlyList<string> ParsedEmailAddresses => ParseEmailAddresses(_emailsToInvite);
     private bool DisableSendButton =>
         _isSending ||
@@ -443,10 +515,17 @@
     private async Task LoadInvitations()
     {
         _isLoading = true;
+        _loadErrorMessage = null;
         try
         {
             var invitations = await EventService.GetEventInvitationsByPublicIdAsync(EventId, CurrentUserId);
             _invitations = invitations.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load invitations for event {EventPublicId}", EventId);
+            _invitations.Clear();
+            _loadErrorMessage = "We couldn't load event invitations. Try again.";
         }
         finally
         {
@@ -476,6 +555,11 @@
 
     private async Task HandleSendInvitation()
     {
+        if (_isSending)
+        {
+            return;
+        }
+
         _isSending = true;
         _errorMessage = null;
         _successMessage = null;
@@ -510,8 +594,9 @@
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, address);
                         invitedAddresses.Add(address);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        Logger.LogWarning(ex, "Failed to invite {InviteeEmail} to event {EventPublicId}", address, EventId);
                         failedAddresses.Add(address);
                     }
                 }
@@ -557,13 +642,15 @@
                         await EventService.InviteUserToEventByPublicIdAsync(EventId, userId, friendId);
                         invitedFriends.Add((friendId, friendName));
                     }
-                    catch (HttpRequestException)
+                    catch (HttpRequestException ex)
                     {
+                        Logger.LogWarning(ex, "Failed to invite friend {FriendId} to event {EventPublicId}", friendId, EventId);
                         failedFriends.Add(friendName);
                     }
                     catch (Exception ex)
                     {
-                        failedFriends.Add($"{friendName} ({ex.Message})");
+                        Logger.LogError(ex, "Unexpected failure inviting friend {FriendId} to event {EventPublicId}", friendId, EventId);
+                        failedFriends.Add(friendName);
                     }
                 }
 
@@ -575,13 +662,15 @@
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, email);
                         invitedEmails.Add(email);
                     }
-                    catch (HttpRequestException)
+                    catch (HttpRequestException ex)
                     {
+                        Logger.LogWarning(ex, "Failed to invite pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
                         failedFriends.Add(email);
                     }
                     catch (Exception ex)
                     {
-                        failedFriends.Add($"{email} ({ex.Message})");
+                        Logger.LogError(ex, "Unexpected failure inviting pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
+                        failedFriends.Add(email);
                     }
                 }
 
@@ -618,7 +707,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to send invitations for event {EventPublicId}", EventId);
+            _errorMessage = "Invitations couldn't be sent. Check the addresses and try again.";
         }
         finally
         {
@@ -647,6 +737,7 @@
 
         try
         {
+            _friendsLoadError = null;
             var userId = await UserContextService.GetUserIdAsync();
             if (string.IsNullOrEmpty(userId))
             {
@@ -670,10 +761,17 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
-            _friends = new List<ApplicationUserModel>();
-            _pendingFriendInvites = new List<PendingFriendInviteModel>();
+            Logger.LogError(ex, "Failed to load friends for event invitation {EventPublicId}", EventId);
+            _friendsLoadError = "We couldn't load your friends. Try again.";
+            _friends = null;
+            _pendingFriendInvites = null;
         }
+    }
+
+    private async Task RetryFriendsAsync()
+    {
+        _friendsLoadError = null;
+        await EnsureFriendsLoadedAsync();
     }
 
     private void ToggleFriendSelection(string friendId, bool isSelected)
@@ -747,36 +845,22 @@
 
     private async Task HandleAcceptInvitation(int invitationId)
     {
-        try
-        {
-            var userId = await UserContextService.GetUserIdAsync();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await EventService.AcceptEventInvitationAsync(invitationId, userId);
-                await LoadInvitations();
-            }
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
-        }
+        await RunInvitationActionAsync(
+            invitationId,
+            "accept",
+            "Invitation accepted.",
+            "The invitation couldn't be accepted. Try again.",
+            userId => EventService.AcceptEventInvitationAsync(invitationId, userId));
     }
 
     private async Task HandleRejectInvitation(int invitationId)
     {
-        try
-        {
-            var userId = await UserContextService.GetUserIdAsync();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await EventService.RejectEventInvitationAsync(invitationId, userId);
-                await LoadInvitations();
-            }
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
-        }
+        await RunInvitationActionAsync(
+            invitationId,
+            "reject",
+            "Invitation rejected.",
+            "The invitation couldn't be rejected. Try again.",
+            userId => EventService.RejectEventInvitationAsync(invitationId, userId));
     }
 
     private async Task CopyInvitationLinkAsync(EventUserModel invitation)
@@ -811,36 +895,24 @@
 
     private async Task HandleResendInvitation(int invitationId)
     {
-        try
-        {
-            var userId = await UserContextService.GetUserIdAsync();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await EventService.ResendEventInvitationAsync(invitationId, userId);
-                await LoadInvitations();
-            }
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
-        }
+        var name = GetInvitationName(invitationId);
+        await RunInvitationActionAsync(
+            invitationId,
+            "resend",
+            $"Invitation resent to {name}.",
+            $"The invitation for {name} couldn't be resent. Try again.",
+            userId => EventService.ResendEventInvitationAsync(invitationId, userId));
     }
 
     private async Task HandleCancelInvitation(int invitationId)
     {
-        try
-        {
-            var userId = await UserContextService.GetUserIdAsync();
-            if (!string.IsNullOrEmpty(userId))
-            {
-                await EventService.CancelEventInvitationAsync(invitationId, userId);
-                await LoadInvitations();
-            }
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
-        }
+        var name = GetInvitationName(invitationId);
+        await RunInvitationActionAsync(
+            invitationId,
+            "cancel",
+            $"Invitation canceled for {name}.",
+            $"The invitation for {name} couldn't be canceled. Try again.",
+            userId => EventService.CancelEventInvitationAsync(invitationId, userId));
     }
 
     private void PromptRemoveParticipant(EventUserModel invitation)
@@ -871,6 +943,11 @@
 
     private async Task HandleRemoveParticipantAsync()
     {
+        if (IsInvitationActionBusy)
+        {
+            return;
+        }
+
         if (_invitationPendingRemoval == null || string.IsNullOrEmpty(_invitationPendingRemoval.UserId))
         {
             _inlineErrorMessage = "Unable to remove this participant.";
@@ -907,7 +984,8 @@
         }
         catch (Exception ex)
         {
-            _inlineErrorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to remove participant from event {EventPublicId}", EventId);
+            _inlineErrorMessage = "The participant couldn't be removed. Try again.";
         }
         finally
         {
@@ -933,6 +1011,68 @@
         }
 
         return "this participant";
+    }
+
+    private string GetInvitationName(int invitationId)
+    {
+        var invitation = _invitations.FirstOrDefault(item => item.Id == invitationId);
+        return invitation is null ? "this participant" : GetInvitationDisplayName(invitation);
+    }
+
+    private async Task RunInvitationActionAsync(
+        int invitationId,
+        string action,
+        string successMessage,
+        string errorMessage,
+        Func<string, Task<bool>> operation)
+    {
+        if (IsInvitationActionBusy)
+        {
+            return;
+        }
+
+        _inlineErrorMessage = null;
+        _inlineSuccessMessage = null;
+        _processingInvitationId = invitationId;
+        _processingInvitationAction = action;
+
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _inlineErrorMessage = $"Sign in again to {action} this invitation.";
+                return;
+            }
+
+            var succeeded = await operation(userId);
+            if (!succeeded)
+            {
+                _inlineErrorMessage = errorMessage;
+                return;
+            }
+
+            await LoadInvitations();
+            if (string.IsNullOrWhiteSpace(_loadErrorMessage))
+            {
+                _inlineSuccessMessage = successMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Failed to {InvitationAction} invitation {InvitationId} for event {EventPublicId}",
+                action,
+                invitationId,
+                EventId);
+            _inlineErrorMessage = errorMessage;
+        }
+        finally
+        {
+            _processingInvitationId = null;
+            _processingInvitationAction = null;
+        }
     }
 
     private static string GetStatusBadgeClass(string status) => status switch

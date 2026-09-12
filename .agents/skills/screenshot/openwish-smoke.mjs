@@ -552,6 +552,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
   await assertVisible(page, "Draw names");
+  const pairingRules = page.locator(".pairing-rules");
+  await page.waitForFunction(() =>
+    document.querySelector(".pairing-rules")?.getAttribute("aria-busy") === "false"
+  );
+  if (await pairingRules.getAttribute("aria-busy") !== "false") {
+    throw new Error("Loaded pairing rules remained marked as busy.");
+  }
+  await page.getByRole("button", { name: "Add exclusion rule" }).waitFor({ state: "visible" });
   await screenshot(page, "secret-santa-setup.png");
   await assertResponsiveWidths(page, [
     { width: 320, height: 568 },
@@ -573,6 +581,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await page.getByRole("button", { name: "Invite people" }).first().click();
   await assertVisible(page, "Paste as many addresses as you need");
+  if (await page.getByRole("dialog", { name: "Invite to event" }).getAttribute("aria-busy") !== "false") {
+    throw new Error("The idle invitation dialog remained marked as busy.");
+  }
   await page.locator("#emailInput").fill("one@example.com, two@example.com");
   await assertVisible(page, "Send 2 invitations");
   await screenshot(page, "invitation-dialog.png");
@@ -580,6 +591,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
   await assertVisible(page, "Participants");
+  await page.waitForFunction(() =>
+    document.querySelector(".event-invitations")?.getAttribute("aria-busy") === "false"
+  );
+  if (await page.locator(".event-invitations").getAttribute("aria-busy") !== "false") {
+    throw new Error("Loaded event invitations remained marked as busy.");
+  }
   await screenshot(page, "event-management.png");
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
@@ -710,7 +727,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Comfortable mobile controls");
+  await assertVisible(page, "Dependable event coordination");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -733,7 +750,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The shared dialog did not make background content inert.");
   }
   await eventDeleteDialog.getByRole("button", { name: "Continue" }).click();
-  await eventDeleteDialog.getByRole("button", { name: "Delete Event" }).waitFor({ state: "visible" });
+  await eventDeleteDialog.getByRole("button", { name: "Delete event" }).waitFor({ state: "visible" });
   await screenshot(page, "event-delete-dialog.png");
   await page.keyboard.press("Escape");
   await eventDeleteDialog.waitFor({ state: "detached" });
@@ -743,7 +760,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await createdEventActions.click();
   await createdEventCard.getByRole("button", { name: "Delete" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Delete Event" }).click();
+  await page.getByRole("button", { name: "Delete event" }).click();
   await createdEventCard.waitFor({ state: "detached" });
   await page.waitForFunction(() => document.activeElement?.matches("main h1, main h2, main h3, main"));
 

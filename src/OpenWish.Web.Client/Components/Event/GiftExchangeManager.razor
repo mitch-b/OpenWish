@@ -4,6 +4,8 @@
 @using OpenWish.Shared.Services
 
 @inject IEventService EventService
+@inject ILogger<GiftExchangeManager> Logger
+@inject NavigationManager NavigationManager
 
 <div class="card shadow-sm mb-4">
     <div class="card-header">
@@ -31,6 +33,7 @@
                             <OpenWishIcon Name="arrow-clockwise" /> Reset Gift Exchange
                         </button>
                     }
+
                     else if (!_showFinalConfirm)
                     {
                         <div class="alert alert-warning">
@@ -69,8 +72,14 @@
 
                     @if (_resetErrorMessage != null)
                     {
-                        <div class="alert alert-danger mt-3">
+                        <div class="alert alert-danger mt-3" role="alert">
                             <OpenWishIcon Name="exclamation-circle" /> @_resetErrorMessage
+                            @if (_eventStateChanged)
+                            {
+                                <button type="button" class="btn btn-outline-danger d-block mt-2" @onclick="ReloadEvent">
+                                    Reload event
+                                </button>
+                            }
                         </div>
                     }
                 </div>
@@ -152,10 +161,16 @@
                     }
                 </div>
 
-                @if (_errorMessage != null)
+                @if (_drawErrorMessage != null)
                 {
-                    <div class="alert alert-danger">
-                        <OpenWishIcon Name="exclamation-circle" /> @_errorMessage
+                    <div class="alert alert-danger" role="alert">
+                        <OpenWishIcon Name="exclamation-circle" /> @_drawErrorMessage
+                        @if (_eventStateChanged)
+                        {
+                            <button type="button" class="btn btn-outline-danger d-block mt-2" @onclick="ReloadEvent">
+                                Reload event
+                            </button>
+                        }
                     </div>
                 }
 
@@ -164,98 +179,150 @@
                 <h5>Pairing rules <span class="text-muted fw-normal">(optional)</span></h5>
                 <p class="text-muted small">Add exclusion rules to prevent certain people from being matched together (e.g., spouses, significant others).</p>
 
-                @if (_pairingRules.Any())
+                <div class="pairing-rules" aria-busy="@(_loadingPairingRules || _updatingPairingRules ? "true" : "false")">
+                @if (_loadingPairingRules)
                 {
-                    var renderedRuleIds = new HashSet<int>();
-                    <div class="list-group mb-3 pairing-rule-list">
-                        @foreach (var rule in _pairingRules)
-                        {
-                            if (!renderedRuleIds.Add(rule.Id))
-                            {
-                                continue;
-                            }
-
-                            var reciprocalRule = FindReciprocalRule(rule);
-                            var isBidirectional = reciprocalRule is not null;
-
-                            if (reciprocalRule is not null)
-                            {
-                                renderedRuleIds.Add(reciprocalRule.Id);
-                            }
-
-                            <div class="list-group-item pairing-rule-item">
-                                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
-                                    <div>
-                                        <span>
-                                            <strong>@FormatRuleParticipant(rule, true)</strong>
-                                            cannot be matched with
-                                            <strong>@FormatRuleParticipant(rule, false)</strong>
-                                        </span>
-                                    </div>
-                                    <div class="d-flex flex-wrap gap-2 justify-content-end">
-                                        <button type="button"
-                                                class="btn btn-sm text-nowrap @(isBidirectional ? "btn-success" : "btn-outline-success")"
-                                                title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
-                                                @onclick="() => ToggleBidirectionalRuleAsync(rule)">
-                                            <OpenWishIcon Name="arrow-left-right" Class="me-1" />
-                                            <span>@(isBidirectional ? "Limit to one way" : "Make both ways")</span>
-                                        </button>
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
-                                                title="Remove this exclusion rule"
-                                                @onclick="() => RemoveRule(rule.Id)">
-                                            <OpenWishIcon Name="trash3" />
-                                            <span>Remove</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        }
+                    <div class="d-flex align-items-center gap-2 mb-3" role="status">
+                        <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                        <span>Loading pairing rules...</span>
                     </div>
                 }
-
-                @if (_showAddRule)
+                else if (!string.IsNullOrWhiteSpace(_pairingRulesLoadError))
                 {
-                    <div class="card surface-alt pairing-rule-card mb-3">
-                        <div class="card-body">
-                            <h6>Add exclusion rule</h6>
-                            <div class="row g-2">
-                                <div class="col-md-5">
-                                    <label for="pairing-rule-source" class="form-label">Person 1</label>
-                                    <select id="pairing-rule-source" class="form-select" @bind="_newRuleSourceKey">
-                                        <option value="">Select...</option>
-                                        @foreach (var participant in _participants)
-                                        {
-                                            <option value="@participant.Key">@participant.Label</option>
-                                        }
-                                    </select>
-                                </div>
-                                <div class="col-md-5">
-                                    <label for="pairing-rule-target" class="form-label">Person 2</label>
-                                    <select id="pairing-rule-target" class="form-select" @bind="_newRuleTargetKey">
-                                        <option value="">Select...</option>
-                                        @foreach (var participant in _participants)
-                                        {
-                                            <option value="@participant.Key">@participant.Label</option>
-                                        }
-                                    </select>
-                                </div>
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton)">
-                                        <OpenWishIcon Name="plus" /> Add
-                                    </button>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-link" @onclick="() => _showAddRule = false">Cancel</button>
-                        </div>
+                    <div class="alert alert-danger" role="alert">
+                        <p class="mb-2">@_pairingRulesLoadError</p>
+                        <button type="button" class="btn btn-outline-danger" @onclick="LoadPairingRules">
+                            Try again
+                        </button>
                     </div>
                 }
                 else
                 {
-                    <button class="btn btn-outline-primary" @onclick="() => _showAddRule = true">
-                        <OpenWishIcon Name="plus-circle" /> Add exclusion rule
-                    </button>
+                    @if (!string.IsNullOrWhiteSpace(_pairingRuleMessage))
+                    {
+                        <div class="alert alert-success" role="status" aria-live="polite">
+                            @_pairingRuleMessage
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_pairingRuleError))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @_pairingRuleError
+                        </div>
+                    }
+
+                    @if (_pairingRules.Any())
+                    {
+                        var renderedRuleIds = new HashSet<int>();
+                        <div class="list-group mb-3 pairing-rule-list">
+                            @foreach (var rule in _pairingRules)
+                            {
+                                if (!renderedRuleIds.Add(rule.Id))
+                                {
+                                    continue;
+                                }
+
+                                var reciprocalRule = FindReciprocalRule(rule);
+                                var isBidirectional = reciprocalRule is not null;
+
+                                if (reciprocalRule is not null)
+                                {
+                                    renderedRuleIds.Add(reciprocalRule.Id);
+                                }
+
+                                <div class="list-group-item pairing-rule-item">
+                                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+                                        <div>
+                                            <span>
+                                                <strong>@FormatRuleParticipant(rule, true)</strong>
+                                                cannot be matched with
+                                                <strong>@FormatRuleParticipant(rule, false)</strong>
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2 justify-content-end">
+                                            <button type="button"
+                                                    class="btn btn-sm text-nowrap @(isBidirectional ? "btn-success" : "btn-outline-success")"
+                                                    title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
+                                                    disabled="@_updatingPairingRules"
+                                                    @onclick="() => ToggleBidirectionalRuleAsync(rule)">
+                                                <OpenWishIcon Name="arrow-left-right" Class="me-1" />
+                                                <span>@(isBidirectional ? "Limit to one way" : "Make both ways")</span>
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
+                                                    title="Remove this exclusion rule"
+                                                    disabled="@_updatingPairingRules"
+                                                    @onclick="() => RemoveRule(rule.Id)">
+                                                @if (_updatingRuleId == rule.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    <OpenWishIcon Name="trash3" />
+                                                }
+                                                <span>Remove</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (_showAddRule)
+                    {
+                        <div class="card surface-alt pairing-rule-card mb-3">
+                            <div class="card-body">
+                                <h6>Add exclusion rule</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-5">
+                                        <label for="pairing-rule-source" class="form-label">Person 1</label>
+                                        <select id="pairing-rule-source" class="form-select" @bind="_newRuleSourceKey" disabled="@_updatingPairingRules">
+                                            <option value="">Select...</option>
+                                            @foreach (var participant in _participants)
+                                            {
+                                                <option value="@participant.Key">@participant.Label</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label for="pairing-rule-target" class="form-label">Person 2</label>
+                                        <select id="pairing-rule-target" class="form-select" @bind="_newRuleTargetKey" disabled="@_updatingPairingRules">
+                                            <option value="">Select...</option>
+                                            @foreach (var participant in _participants)
+                                            {
+                                                <option value="@participant.Key">@participant.Label</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton || _updatingPairingRules)">
+                                            @if (_updatingPairingRules)
+                                            {
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                <span>Adding...</span>
+                                            }
+                                            else
+                                            {
+                                                <OpenWishIcon Name="plus" />
+                                                <span>Add</span>
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-link" @onclick="() => _showAddRule = false" disabled="@_updatingPairingRules">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-primary" @onclick="() => _showAddRule = true" disabled="@_updatingPairingRules">
+                            <OpenWishIcon Name="plus-circle" /> Add exclusion rule
+                        </button>
+                    }
                 }
+                </div>
             }
         }
         else
@@ -280,8 +347,15 @@
     private bool _showDrawConfirm = false;
     private string? _newRuleSourceKey;
     private string? _newRuleTargetKey;
-    private string? _errorMessage;
+    private string? _drawErrorMessage;
     private string? _resetErrorMessage;
+    private string? _pairingRulesLoadError;
+    private string? _pairingRuleError;
+    private string? _pairingRuleMessage;
+    private bool _loadingPairingRules;
+    private bool _updatingPairingRules;
+    private bool _eventStateChanged;
+    private int? _updatingRuleId;
     private int _participantCount = 0;
     private int _pendingParticipantCount;
     private int _participantsWithWishlists;
@@ -367,33 +441,56 @@
     {
         if (Event?.PublicId == null) return;
 
+        _loadingPairingRules = true;
+        _pairingRulesLoadError = null;
         try
         {
             var rules = await EventService.GetPairingRulesByPublicIdAsync(Event.PublicId, CurrentUserId);
             _pairingRules = rules.ToList();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Ignore errors loading rules
+            Logger.LogError(ex, "Failed to load pairing rules for event {EventPublicId}", Event.PublicId);
+            _pairingRulesLoadError = "We couldn't load pairing rules. Try again.";
+        }
+        finally
+        {
+            _loadingPairingRules = false;
         }
     }
 
     private async Task DrawNames()
     {
-        if (Event?.PublicId == null) return;
+        if (Event?.PublicId == null || _drawing || _eventStateChanged) return;
 
         _drawing = true;
-        _errorMessage = null;
+        _drawErrorMessage = null;
 
         try
         {
-            await EventService.DrawNamesByPublicIdAsync(Event.PublicId, CurrentUserId);
-            await OnNamesDrawn.InvokeAsync();
-            CancelDrawConfirmation();
-        }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
+            try
+            {
+                await EventService.DrawNamesByPublicIdAsync(Event.PublicId, CurrentUserId);
+                _eventStateChanged = true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to draw names for event {EventPublicId}", Event.PublicId);
+                _drawErrorMessage = "Names couldn't be drawn. Check the participant list and try again.";
+                return;
+            }
+
+            try
+            {
+                await OnNamesDrawn.InvokeAsync();
+                CancelDrawConfirmation();
+                _eventStateChanged = false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Names were drawn but event {EventPublicId} did not refresh", Event.PublicId);
+                _drawErrorMessage = "Names were drawn, but event details couldn't refresh. Reload this event.";
+            }
         }
         finally
         {
@@ -403,7 +500,13 @@
 
     private async Task AddRule()
     {
-        _errorMessage = null;
+        if (_updatingPairingRules)
+        {
+            return;
+        }
+
+        _pairingRuleError = null;
+        _pairingRuleMessage = null;
 
         if (Event?.PublicId == null || string.IsNullOrEmpty(_newRuleSourceKey) || string.IsNullOrEmpty(_newRuleTargetKey))
         {
@@ -412,7 +515,7 @@
 
         if (string.Equals(_newRuleSourceKey, _newRuleTargetKey, StringComparison.Ordinal))
         {
-            _errorMessage = "Select two different participants for an exclusion.";
+            _pairingRuleError = "Select two different participants for an exclusion.";
             return;
         }
 
@@ -421,10 +524,11 @@
 
         if (source is null || target is null)
         {
-            _errorMessage = "Selected participants are no longer available.";
+            _pairingRuleError = "Selected participants are no longer available.";
             return;
         }
 
+        _updatingPairingRules = true;
         try
         {
             var rule = new CustomPairingRuleModel
@@ -438,15 +542,19 @@
             };
 
             await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, rule, CurrentUserId);
-            await LoadPairingRules();
-
             _newRuleSourceKey = null;
             _newRuleTargetKey = null;
             _showAddRule = false;
+            await RefreshPairingRulesAfterMutationAsync("Exclusion rule added.");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to add a pairing rule for event {EventPublicId}", Event.PublicId);
+            _pairingRuleError = "The exclusion rule couldn't be added. Try again.";
+        }
+        finally
+        {
+            _updatingPairingRules = false;
         }
     }
 
@@ -461,6 +569,7 @@
     private async Task EnsureBidirectionalRuleAsync(CustomPairingRuleModel rule)
     {
         if (Event?.PublicId == null ||
+            _updatingPairingRules ||
             string.IsNullOrEmpty(CurrentUserId) ||
             IsBidirectional(rule) ||
             (!HasParticipantData(rule.SourceUserId, rule.SourceInviteeEmail)) ||
@@ -469,6 +578,10 @@
             return;
         }
 
+        _pairingRuleError = null;
+        _pairingRuleMessage = null;
+        _updatingPairingRules = true;
+        _updatingRuleId = rule.Id;
         try
         {
             var reciprocalRule = new CustomPairingRuleModel
@@ -484,17 +597,24 @@
             };
 
             await EventService.AddPairingRuleByPublicIdAsync(Event.PublicId, reciprocalRule, CurrentUserId);
-            await LoadPairingRules();
+            await RefreshPairingRulesAfterMutationAsync("Exclusion now applies both ways.");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to make pairing rule {PairingRuleId} bidirectional", rule.Id);
+            _pairingRuleError = "The exclusion rule couldn't be updated. Try again.";
+        }
+        finally
+        {
+            _updatingPairingRules = false;
+            _updatingRuleId = null;
         }
     }
 
     private async Task ToggleBidirectionalRuleAsync(CustomPairingRuleModel rule)
     {
         if (Event?.PublicId == null ||
+            _updatingPairingRules ||
             string.IsNullOrEmpty(CurrentUserId) ||
             !HasParticipantData(rule.SourceUserId, rule.SourceInviteeEmail) ||
             !HasParticipantData(rule.TargetUserId, rule.TargetInviteeEmail))
@@ -509,46 +629,99 @@
             return;
         }
 
+        _pairingRuleError = null;
+        _pairingRuleMessage = null;
+        _updatingPairingRules = true;
+        _updatingRuleId = rule.Id;
         try
         {
-            await EventService.RemovePairingRuleAsync(reciprocalRule.Id, CurrentUserId);
-            await LoadPairingRules();
+            var removed = await EventService.RemovePairingRuleAsync(reciprocalRule.Id, CurrentUserId);
+            if (!removed)
+            {
+                _pairingRuleError = "The exclusion rule is no longer available. Reload the rules and try again.";
+                return;
+            }
+
+            await RefreshPairingRulesAfterMutationAsync("Exclusion now applies one way.");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to update pairing rule {PairingRuleId}", rule.Id);
+            _pairingRuleError = "The exclusion rule couldn't be updated. Try again.";
+        }
+        finally
+        {
+            _updatingPairingRules = false;
+            _updatingRuleId = null;
         }
     }
 
     private async Task RemoveRule(int ruleId)
     {
+        if (_updatingPairingRules)
+        {
+            return;
+        }
+
+        _pairingRuleError = null;
+        _pairingRuleMessage = null;
+        _updatingPairingRules = true;
+        _updatingRuleId = ruleId;
         try
         {
-            await EventService.RemovePairingRuleAsync(ruleId, CurrentUserId);
-            await LoadPairingRules();
+            var removed = await EventService.RemovePairingRuleAsync(ruleId, CurrentUserId);
+            if (!removed)
+            {
+                _pairingRuleError = "The exclusion rule is no longer available. Reload the rules and try again.";
+                return;
+            }
+
+            await RefreshPairingRulesAfterMutationAsync("Exclusion rule removed.");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Failed to remove pairing rule {PairingRuleId}", ruleId);
+            _pairingRuleError = "The exclusion rule couldn't be removed. Try again.";
+        }
+        finally
+        {
+            _updatingPairingRules = false;
+            _updatingRuleId = null;
         }
     }
 
     private async Task ResetGiftExchange()
     {
-        if (Event?.PublicId == null) return;
+        if (Event?.PublicId == null || _resetting || _eventStateChanged) return;
 
         _resetting = true;
         _resetErrorMessage = null;
 
         try
         {
-            await EventService.ResetGiftExchangeByPublicIdAsync(Event.PublicId, CurrentUserId);
-            await OnNamesDrawn.InvokeAsync();
-            CancelReset();
-        }
-        catch (Exception ex)
-        {
-            _resetErrorMessage = ex.Message;
+            try
+            {
+                await EventService.ResetGiftExchangeByPublicIdAsync(Event.PublicId, CurrentUserId);
+                _eventStateChanged = true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to reset gift exchange for event {EventPublicId}", Event.PublicId);
+                _resetErrorMessage = "The gift exchange couldn't be reset. Try again.";
+                return;
+            }
+
+            try
+            {
+                await OnNamesDrawn.InvokeAsync();
+                CancelReset();
+                _eventStateChanged = false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Gift exchange was reset but event {EventPublicId} did not refresh", Event.PublicId);
+                _resetErrorMessage = "The gift exchange was reset, but event details couldn't refresh. Reload this event.";
+            }
         }
         finally
         {
@@ -566,7 +739,30 @@
     private void CancelDrawConfirmation()
     {
         _showDrawConfirm = false;
+        _drawErrorMessage = null;
     }
+
+    private async Task RefreshPairingRulesAfterMutationAsync(string successMessage)
+    {
+        if (Event?.PublicId == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var rules = await EventService.GetPairingRulesByPublicIdAsync(Event.PublicId, CurrentUserId);
+            _pairingRules = rules.ToList();
+            _pairingRuleMessage = successMessage;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Pairing rule changed but refresh failed for event {EventPublicId}", Event.PublicId);
+            _pairingRulesLoadError = "Your change was saved, but the rule list couldn't be refreshed. Try again.";
+        }
+    }
+
+    private void ReloadEvent() => NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
 
     private static bool IsAccepted(EventUserModel participant) =>
         !participant.Deleted &&

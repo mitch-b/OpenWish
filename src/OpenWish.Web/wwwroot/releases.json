@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.14",
+    "date": "2026-09-12",
+    "title": "Dependable event coordination",
+    "summary": "Event invitations, pairing rules, gift-exchange actions, and deletion now remain clear and recoverable when requests fail.",
+    "highlights": [
+      "Event deletion failures remain visible in the confirmation dialog with a clear retry.",
+      "Pairing-rule loading failures are distinct from an empty rule list and provide a retry action.",
+      "Pairing-rule changes prevent duplicate requests and announce success or actionable failure.",
+      "Drawing names and resetting a gift exchange show safe guidance without exposing internal errors.",
+      "Invitation loading, friend selection, and invitation actions expose progress, recovery, and completion."
+    ]
+  },
+  {
     "version": "0.1.13",
     "date": "2026-09-11",
     "title": "Truthful loading and friend actions",

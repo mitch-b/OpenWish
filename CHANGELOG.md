@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.15] - 2026-09-13
+
+### Improved
+
+- Wishlist cards provide explicit, named links for keyboard and screen-reader
+  navigation.
+- Wishlist settings expose loading progress and offer an actionable retry when
+  loading fails.
+- Friend-access failures remain distinct from a genuinely empty access list.
+- Friend-access controls have clear names and labels, prevent duplicate
+  changes, announce outcomes, and provide comfortable touch targets.
+- Event connections distinguish loading failures from having no available
+  events and provide safe retry guidance.
+
 ## [0.1.14] - 2026-09-12
 
 ### Improved

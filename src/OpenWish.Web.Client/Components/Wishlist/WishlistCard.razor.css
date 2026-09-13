@@ -1,7 +1,6 @@
 .wishlist-card {
     height: 100%;
     overflow: hidden;
-    cursor: pointer;
     transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -35,8 +34,7 @@
     font-size: 1.05rem;
 }
 
-.card-owner,
-.card-footer-row small {
+.card-owner {
     color: var(--color-text-muted);
     font-size: 0.78rem;
 }
@@ -69,11 +67,34 @@
     border-top: 1px solid var(--color-border-muted);
 }
 
+.wishlist-card-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--color-primary-bg);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.wishlist-card-link:hover {
+    text-decoration: underline;
+}
+
+.wishlist-card-link:focus-visible {
+    border-radius: 0.35rem;
+    outline: 3px solid color-mix(in srgb, var(--color-primary-bg) 45%, transparent);
+    outline-offset: 3px;
+}
+
 .kebab-menu {
     display: grid;
     min-width: 2.2rem;
     width: 2.2rem;
-    min-height: 2.2rem;
+    min-height: 2.75rem;
+    height: 2.75rem;
+    width: 2.75rem;
     place-items: center;
     padding: 0;
     border: 0;

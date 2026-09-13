@@ -109,13 +109,13 @@ async function assertNoEmptySpinnerStatuses(page, route) {
   }
 }
 
-async function screenshot(page, fileName) {
+async function screenshot(page, fileName, fullPage = true) {
   await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.waitForTimeout(500);
   await assertDesktopSidebarContinuity(page);
   await page.screenshot({
     path: path.join(walkthroughDirectory, fileName),
-    fullPage: true
+    fullPage
   });
 }
 
@@ -364,6 +364,15 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const clearWishlistSearch = page.getByRole("button", { name: "Clear wishlist search" });
   await clearWishlistSearch.click();
   await assertVisible(page, "Family Gift Ideas");
+  const familyWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  await familyWishlistLink.waitFor({ state: "visible" });
+  if (await familyWishlistLink.getAttribute("href") !== `/wishlists/${manifest.wishlistPublicId}`) {
+    throw new Error("The wishlist card did not expose its stable public route as a named link.");
+  }
+  await familyWishlistLink.focus();
+  if (!(await familyWishlistLink.evaluate(element => element === document.activeElement))) {
+    throw new Error("The wishlist card navigation link could not receive keyboard focus.");
+  }
   await screenshot(page, "wishlists.png");
 
   await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
@@ -449,7 +458,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .evaluate(element => element === document.activeElement))) {
     throw new Error("Keyboard focus did not wrap within the item dialog.");
   }
-  await screenshot(page, "wishlist-item-dialog.png");
+  await screenshot(page, "wishlist-item-dialog.png", false);
   await page.keyboard.press("Escape");
   await itemDialog.waitFor({ state: "detached" });
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
@@ -495,8 +504,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (emojiWishlist?.icon !== "🎁") {
     throw new Error("The selected wishlist emoji was not persisted.");
   }
-  await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage Wishlist", visitedRoutes);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
   await assertVisible(page, "Who can see this?");
+  await assertVisible(page, "Holiday Gift Exchange");
+  await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
+  const eventConnection = page.locator('.card[aria-busy="false"]').filter({
+    has: page.getByRole("heading", { name: "Event connection" })
+  });
+  await eventConnection.waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "View event" }).waitFor({ state: "visible" });
+  await screenshot(page, "wishlist-management.png");
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
   const productUrl = page.getByLabel("Product URL");
@@ -586,7 +603,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.locator("#emailInput").fill("one@example.com, two@example.com");
   await assertVisible(page, "Send 2 invitations");
-  await screenshot(page, "invitation-dialog.png");
+  await screenshot(page, "invitation-dialog.png", false);
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
@@ -669,7 +686,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .evaluate(element => element === document.activeElement))) {
     throw new Error("Notification deletion did not focus its safe action.");
   }
-  await screenshot(page, "notification-delete-dialog.png");
+  await screenshot(page, "notification-delete-dialog.png", false);
   await page.keyboard.press("Escape");
   await deleteDialog.waitFor({ state: "detached" });
   if (!(await deleteNotification.evaluate(element => element === document.activeElement))) {
@@ -722,12 +739,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Assignments are ready");
   await screenshot(page, "event-details-dark.png");
 
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
+  await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
+  await screenshot(page, "wishlist-management-dark.png");
+
   await visit(page, "/whats-new", "What's new", visitedRoutes);
   if (!releaseVersion) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Dependable event coordination");
+  await assertVisible(page, "Dependable wishlist management");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -740,7 +761,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Secret Santa" });
   await createdEventActions.click();
   await createdEventCard.getByRole("button", { name: "Delete" }).click();
-  const eventDeleteDialog = page.getByRole("dialog", { name: "Delete Event" });
+  const eventDeleteDialog = page.getByRole("dialog", { name: "Delete event" });
   await eventDeleteDialog.waitFor({ state: "visible" });
   const cancelEventDeletion = eventDeleteDialog.getByRole("button", { name: "Cancel" });
   if (!(await cancelEventDeletion.evaluate(element => element === document.activeElement))) {
@@ -751,7 +772,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await eventDeleteDialog.getByRole("button", { name: "Continue" }).click();
   await eventDeleteDialog.getByRole("button", { name: "Delete event" }).waitFor({ state: "visible" });
-  await screenshot(page, "event-delete-dialog.png");
+  await screenshot(page, "event-delete-dialog.png", false);
   await page.keyboard.press("Escape");
   await eventDeleteDialog.waitFor({ state: "detached" });
   if (!(await createdEventActions.evaluate(element => element === document.activeElement))) {
@@ -1189,6 +1210,14 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile list item edit action"
   );
   await screenshot(page, "wishlist-mobile.png");
+
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
+  await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(
+    page.getByRole("link", { name: "View event" }),
+    "Mobile event connection link"
+  );
+  await screenshot(page, "wishlist-management-mobile.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
   await assertVisible(page, "JordanDemo");

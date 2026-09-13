@@ -53,6 +53,7 @@
         "/events/demo-holiday-gift-exchange/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
+        "/wishlists/demo-family-gift-ideas/manage",
         "/whats-new",
         "/Account/Manage",
         "/events"
@@ -98,6 +99,7 @@
       "visitedRoutes": [
         "/",
         "/wishlists/demo-family-gift-ideas",
+        "/wishlists/demo-family-gift-ideas/manage",
         "/events/demo-holiday-gift-exchange"
       ]
     }

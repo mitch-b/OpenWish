@@ -15,27 +15,48 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>Manage Wishlist - @(_wishlist?.Name ?? "")</PageTitle>
+<PageTitle>@(_wishlist is null ? "Manage wishlist" : $"Manage {_wishlist.Name}")</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Manage Wishlist</h3>
+    <h1 class="h3">Manage wishlist</h1>
     <div class="btn-group">
         <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
-            <OpenWishIcon Name="arrow-left" /> Back to Wishlist
+            <OpenWishIcon Name="arrow-left" /> Back to wishlist
         </a>
-        <button class="btn btn-danger" type="button" @onclick="ShowDeleteDialog">
-            <OpenWishIcon Name="trash" /> Delete Wishlist
-        </button>
+        @if (_isOwner)
+        {
+            <button class="btn btn-danger" type="button" @onclick="ShowDeleteDialog">
+                <OpenWishIcon Name="trash" /> Delete wishlist
+            </button>
+        }
     </div>
 </div>
 
-@if (_wishlist == null)
+@if (_loadingWishlist)
 {
-    <p>Loading...</p>
+    <div class="loading-state" role="status">
+        <span class="spinner-border text-primary" aria-hidden="true"></span>
+        <span>Loading wishlist settings...</span>
+    </div>
+}
+else if (_loadErrorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">
+        <p class="mb-2">@_loadErrorMessage</p>
+        <button class="btn btn-outline-danger" type="button" @onclick="LoadWishlistAsync">
+            Try again
+        </button>
+    </div>
+}
+else if (_wishlist is null)
+{
+    <div class="alert alert-danger" role="alert">
+        This wishlist is unavailable. Return to your wishlists and try again.
+    </div>
 }
 else if (!_isOwner)
 {
-    <div class="alert alert-danger">
+    <div class="alert alert-danger" role="alert">
         You don't have permission to manage this wishlist.
     </div>
 }
@@ -47,12 +68,13 @@ else
         </div>
     </div>
 
-    <div class="card mt-4 friends-access-card">
+    <div class="card mt-4 friends-access-card"
+         aria-busy="@(_loadingFriendsWithAccess || _loadingAvailableFriends || _sharingBusy ? "true" : "false")">
         <div class="card-body">
             <div class="section-header">
                 <div class="section-icon"><OpenWishIcon Name="eye" /></div>
                 <div>
-                    <h4 class="h5 mb-0">Who can see this?</h4>
+                    <h2 class="h5 mb-0">Who can see this?</h2>
                     <p class="text-muted small mb-0">Manage access to your wishlist.</p>
                 </div>
             </div>
@@ -66,25 +88,34 @@ else
                     <span>Finding your friends...</span>
                 </div>
             }
+            else if (_friendsLoadErrorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p class="mb-2">@_friendsLoadErrorMessage</p>
+                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshFriendsWithAccessAsync">
+                        Try again
+                    </button>
+                </div>
+            }
             else if (_friendsWithAccess.Count == 0)
             {
                 <div class="empty-state-card">
                     @if (_wishlist.IsPrivate)
                     {
                         <div class="empty-icon"><OpenWishIcon Name="lock" /></div>
-                        <h5>Private wishlist</h5>
+                        <h3 class="h5">Private wishlist</h3>
                         <p>Only you can see this wishlist.</p>
                     }
                     else if (_wishlist.IsFriendsOnly)
                     {
                         <div class="empty-icon"><OpenWishIcon Name="person-check" /></div>
-                        <h5>Choose specific friends</h5>
+                        <h3 class="h5">Choose specific friends</h3>
                         <p>No one has access yet. Select friends below when you're ready to share.</p>
                     }
                     else
                     {
                         <div class="empty-icon"><OpenWishIcon Name="people" /></div>
-                        <h5>Build your circle</h5>
+                        <h3 class="h5">Build your circle</h3>
                         <p>Add friends to start sharing this wishlist.</p>
                         <a href="/friends" class="btn btn-primary btn-fun">
                             <OpenWishIcon Name="person-plus" /> Find friends
@@ -120,10 +151,12 @@ else
                             <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
                             @if (_wishlist.IsFriendsOnly || _wishlist.IsPrivate)
                             {
+                                var friendName = GetFriendName(friend);
                                 <button class="remove-btn"
+                                        type="button"
                                         @onclick="() => RemoveFriendAccess(friend.Id!)"
                                         disabled="@_sharingBusy"
-                                        title="Remove access">
+                                        aria-label="Remove access for @friendName">
                                     <OpenWishIcon Name="x-lg" />
                                 </button>
                             }
@@ -132,15 +165,39 @@ else
                 </div>
             }
 
-            @if (_wishlist.IsFriendsOnly && _availableFriendsToShare.Count > 0)
+            @if (_friendsLoadErrorMessage is null && _wishlist.IsFriendsOnly && _loadingAvailableFriends)
+            {
+                <div class="loading-state" role="status">
+                    <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                    <span>Loading friends to share with...</span>
+                </div>
+            }
+            else if (_friendsLoadErrorMessage is null &&
+                     _wishlist.IsFriendsOnly &&
+                     _availableFriendsLoadErrorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p class="mb-2">@_availableFriendsLoadErrorMessage</p>
+                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshAvailableFriendsAsync">
+                        Try again
+                    </button>
+                </div>
+            }
+            else if (_friendsLoadErrorMessage is null &&
+                     _wishlist.IsFriendsOnly &&
+                     _availableFriendsToShare.Count > 0)
             {
                 <div class="add-friend-section">
                     <div class="add-friend-header">
-                        <span class="add-icon">➕</span>
-                        <span>Add a Friend</span>
+                        <OpenWishIcon Name="person-plus" />
+                        <span>Add a friend</span>
                     </div>
                     <div class="add-friend-form">
-                        <select class="form-select friend-select" @bind="_selectedFriendToShareId" disabled="@_sharingBusy">
+                        <label class="form-label" for="friend-access-select">Friend to share with</label>
+                        <select id="friend-access-select"
+                                class="form-select friend-select"
+                                @bind="_selectedFriendToShareId"
+                                disabled="@_sharingBusy">
                             <option value="">Choose a friend to invite...</option>
                             @foreach (var friend in _availableFriendsToShare)
                             {
@@ -151,7 +208,16 @@ else
                                 type="button"
                                 disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy)"
                                 @onclick="AddFriendAccess">
-                            <OpenWishIcon Name="share" /> Share
+                            @if (_sharingBusy)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Sharing...</span>
+                            }
+                            else
+                            {
+                                <OpenWishIcon Name="share" />
+                                <span>Share</span>
+                            }
                         </button>
                     </div>
                 </div>
@@ -159,7 +225,7 @@ else
 
             @if (!string.IsNullOrEmpty(_sharingStatusMessage))
             {
-                <div class="alert alert-success success-toast mt-3" role="alert">
+                <div class="alert alert-success success-toast mt-3" role="status" aria-live="polite">
                     <OpenWishIcon Name="check-circle" /> @_sharingStatusMessage
                 </div>
             }
@@ -173,13 +239,13 @@ else
         </div>
     </div>
 
-    <div class="card mt-4">
+    <div class="card mt-4" aria-busy="@(_loadingEvents || _eventBusy ? "true" : "false")">
         <div class="card-body">
-            <h4 class="h5">Event connection</h4>
+            <h2 class="h5">Event connection</h2>
 
             @if (!string.IsNullOrEmpty(_eventStatusMessage))
             {
-                <div class="alert alert-success" role="alert">@_eventStatusMessage</div>
+                <div class="alert alert-success" role="status" aria-live="polite">@_eventStatusMessage</div>
             }
 
             @if (!string.IsNullOrEmpty(_eventErrorMessage))
@@ -187,7 +253,22 @@ else
                 <div class="alert alert-danger" role="alert">@_eventErrorMessage</div>
             }
 
-            @if (_attachedEvent is not null)
+            @if (_eventLoadErrorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p class="mb-2">@_eventLoadErrorMessage</p>
+                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshEventsAsync">Try again</button>
+                </div>
+            }
+
+            @if (_loadingEvents)
+            {
+                <div class="loading-state" role="status">
+                    <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                    <span>Loading event connections...</span>
+                </div>
+            }
+            else if (_attachedEvent is not null)
             {
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
@@ -199,22 +280,23 @@ else
                         }
                     </div>
                     <div class="btn-group">
-                        <a href="/events/@_attachedEvent.PublicId" class="btn btn-outline-primary btn-sm">View Event</a>
+                        <a href="/events/@_attachedEvent.PublicId" class="btn btn-outline-primary btn-sm">View event</a>
                         <button class="btn btn-outline-secondary btn-sm"
                                 type="button"
                                 disabled="@_eventBusy"
                                 @onclick="DetachFromEventAsync">
-                            Remove
+                            @(_eventBusy ? "Removing..." : "Remove")
                         </button>
                     </div>
                 </div>
             }
-            else if (_availableEvents.Any())
+            else if (_eventLoadErrorMessage is null && _availableEvents.Any())
             {
                 <div class="mb-3">
-                    <label class="form-label">Attach to an event</label>
+                    <label class="form-label" for="event-connection-select">Attach to an event</label>
                     <div class="input-group">
-                        <select class="form-select"
+                        <select id="event-connection-select"
+                                class="form-select"
                                 @bind="_selectedEventId"
                                 disabled="@_eventBusy">
                             <option value="">Select an event</option>
@@ -227,12 +309,12 @@ else
                                 type="button"
                                 disabled="@(!_selectedEventId.HasValue || _eventBusy)"
                                 @onclick="AttachToSelectedEventAsync">
-                            Attach
+                            @(_eventBusy ? "Attaching..." : "Attach")
                         </button>
                     </div>
                 </div>
             }
-            else
+            else if (_eventLoadErrorMessage is null)
             {
                 <p class="text-muted small mb-0">You do not have any upcoming events to attach this wishlist to yet.</p>
             }
@@ -251,10 +333,14 @@ else
     private WishlistDeleteDialog deleteDialog = null!;
     private string? _currentUserId;
     private bool _isOwner;
+    private bool _loadingWishlist = true;
+    private string? _loadErrorMessage;
     private List<EventModel> _availableEvents = [];
     private EventModel? _attachedEvent;
     private int? _selectedEventId;
     private bool _eventBusy;
+    private bool _loadingEvents;
+    private string? _eventLoadErrorMessage;
     private string? _eventStatusMessage;
     private string? _eventErrorMessage;
 
@@ -263,13 +349,21 @@ else
     private List<ApplicationUserModel> _allFriends = [];
     private List<ApplicationUserModel> _availableFriendsToShare = [];
     private bool _loadingFriendsWithAccess = true;
+    private bool _loadingAvailableFriends;
+    private string? _friendsLoadErrorMessage;
+    private string? _availableFriendsLoadErrorMessage;
     private string _selectedFriendToShareId = "";
     private bool _sharingBusy;
     private string? _sharingStatusMessage;
     private string? _sharingErrorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadWishlistAsync();
+
+    private async Task LoadWishlistAsync()
     {
+        _loadingWishlist = true;
+        _loadErrorMessage = null;
+
         try
         {
             _currentUserId = await UserContextService.GetUserIdAsync();
@@ -283,13 +377,20 @@ else
         }
         catch (UnauthorizedAccessException)
         {
-            // Redirect to access denied or navigate away
             NavigationManager.NavigateTo("/wishlists", replace: true);
         }
         catch (KeyNotFoundException)
         {
-            // Wishlist not found, redirect to wishlists
             NavigationManager.NavigateTo("/wishlists", replace: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load wishlist management for {WishlistId}", WishlistId);
+            _loadErrorMessage = "We couldn't load this wishlist's settings. Try again.";
+        }
+        finally
+        {
+            _loadingWishlist = false;
         }
     }
 
@@ -314,32 +415,74 @@ else
         try
         {
             _loadingFriendsWithAccess = true;
+            _friendsLoadErrorMessage = null;
 
-            // Get friends with access
             _friendsWithAccess = (await WishlistService.GetFriendsWithAccessByPublicIdAsync(WishlistId)).ToList();
-
-            // Get all friends for the add dropdown
-            _allFriends = (await FriendService.GetFriendsAsync(_currentUserId)).ToList();
-
-            // Calculate available friends (those not already with access)
-            var friendsWithAccessIds = _friendsWithAccess.Select(f => f.Id).ToHashSet();
-            _availableFriendsToShare = _allFriends.Where(f => !friendsWithAccessIds.Contains(f.Id)).ToList();
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Failed to load friends with access for wishlist {WishlistId}", WishlistId);
             _friendsWithAccess.Clear();
+            _allFriends.Clear();
+            _availableFriendsToShare.Clear();
+            _availableFriendsLoadErrorMessage = null;
+            _friendsLoadErrorMessage = "We couldn't load who can see this wishlist. Try again.";
+            return;
         }
         finally
         {
             _loadingFriendsWithAccess = false;
         }
+
+        if (_wishlist.IsFriendsOnly)
+        {
+            await RefreshAvailableFriendsAsync();
+        }
+        else
+        {
+            _allFriends.Clear();
+            _availableFriendsToShare.Clear();
+            _availableFriendsLoadErrorMessage = null;
+        }
+    }
+
+    private async Task RefreshAvailableFriendsAsync()
+    {
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        try
+        {
+            _loadingAvailableFriends = true;
+            _availableFriendsLoadErrorMessage = null;
+            _allFriends = (await FriendService.GetFriendsAsync(_currentUserId)).ToList();
+
+            var friendsWithAccessIds = _friendsWithAccess.Select(friend => friend.Id).ToHashSet();
+            _availableFriendsToShare = _allFriends
+                .Where(friend => !friendsWithAccessIds.Contains(friend.Id))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load available friends for wishlist {WishlistId}", WishlistId);
+            _allFriends.Clear();
+            _availableFriendsToShare.Clear();
+            _availableFriendsLoadErrorMessage = "We couldn't load friends to share with. Try again.";
+        }
+        finally
+        {
+            _loadingAvailableFriends = false;
+        }
     }
 
     private async Task AddFriendAccess()
     {
-        if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null)
+        if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null || _sharingBusy)
+        {
             return;
+        }
 
         try
         {
@@ -369,8 +512,10 @@ else
 
     private async Task RemoveFriendAccess(string friendId)
     {
-        if (string.IsNullOrEmpty(friendId) || _wishlist == null)
+        if (string.IsNullOrEmpty(friendId) || _wishlist == null || _sharingBusy)
+        {
             return;
+        }
 
         try
         {
@@ -399,6 +544,12 @@ else
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
+        if (string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            _sharingErrorMessage = "Sign in again to update this wishlist.";
+            return;
+        }
+
         await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist, _currentUserId);
         // Refresh to show updated visibility
         _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
@@ -429,10 +580,14 @@ else
 
     private async Task RefreshEventsAsync()
     {
+        _loadingEvents = true;
+        _eventLoadErrorMessage = null;
+
         if (string.IsNullOrEmpty(_currentUserId))
         {
             _availableEvents.Clear();
             _attachedEvent = null;
+            _loadingEvents = false;
             return;
         }
 
@@ -457,6 +612,7 @@ else
         {
             Logger.LogWarning(ex, "Failed to load events for wishlist {WishlistId}", WishlistId);
             _availableEvents.Clear();
+            _eventLoadErrorMessage = "We couldn't load event connections. Try again.";
 
             if (_wishlist?.EventId is int eventId)
             {
@@ -470,6 +626,10 @@ else
                     _attachedEvent = null;
                 }
             }
+        }
+        finally
+        {
+            _loadingEvents = false;
         }
     }
 
@@ -518,6 +678,11 @@ else
 
     private async Task ExecuteEventAction(Func<Task> action)
     {
+        if (_eventBusy)
+        {
+            return;
+        }
+
         try
         {
             _eventBusy = true;
@@ -540,7 +705,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unexpected error updating event association for wishlist {WishlistId}", WishlistId);
-            _eventErrorMessage = ex.Message;
+            _eventErrorMessage = "We couldn't update the event connection. Try again.";
         }
         finally
         {
@@ -553,4 +718,7 @@ else
     {
         return $"{evt.Name} ({evt.Date:MMM d, yyyy})";
     }
+
+    private static string GetFriendName(ApplicationUserModel friend) =>
+        friend.UserName ?? friend.Email ?? "this friend";
 }

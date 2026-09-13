@@ -1,17 +1,16 @@
 @inject IWishlistService WishlistService
 @inject ILogger<WishlistCard> Logger
-@inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
 
 @using OpenWish.Shared.Services
 
 @if (Wishlist == null)
 {
-    <p>Loading...</p>
+    <p role="status">Loading wishlist...</p>
 }
 else
 {
-    <div class="card h-100 wishlist-card" @onclick="NavigateToWishlist">
+    <div class="card h-100 wishlist-card">
         <div class="card-body">
             <div class="card-title-row">
                 <span class="wishlist-card-icon">
@@ -45,7 +44,11 @@ else
                 }
             </div>
             <div class="card-footer-row">
-                <small>Open wishlist</small>
+                <a class="wishlist-card-link" href="/wishlists/@Wishlist.PublicId">
+                    <span>Open wishlist</span>
+                    <OpenWishIcon Name="arrow-right" />
+                    <span class="visually-hidden">: @Wishlist.Name</span>
+                </a>
                 @if (isCurrentUserOwner)
                 {
                     <div class="dropdown d-inline-block">
@@ -122,6 +125,4 @@ else
             }
         }
     }
-
-    private void NavigateToWishlist() => NavigationManager.NavigateTo($"/wishlists/{Wishlist?.PublicId}");
 }

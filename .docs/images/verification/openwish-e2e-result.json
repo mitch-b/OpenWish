@@ -53,6 +53,7 @@
         "/events/demo-holiday-gift-exchange/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
+        "/wishlists",
         "/wishlists/demo-family-gift-ideas/manage",
         "/whats-new",
         "/Account/Manage",
@@ -69,6 +70,7 @@
         "immediate wishlist discovery",
         "friend invitation validation",
         "accessible loading updates",
+        "wishlist management labels and contrast",
         "theme persistence",
         "release history",
         "account profile"

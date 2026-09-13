@@ -72,7 +72,7 @@
     min-height: 2.75rem;
     align-items: center;
     gap: 0.4rem;
-    color: var(--color-primary-bg);
+    color: var(--color-link);
     font-size: 0.82rem;
     font-weight: 700;
     text-decoration: none;
@@ -84,7 +84,7 @@
 
 .wishlist-card-link:focus-visible {
     border-radius: 0.35rem;
-    outline: 3px solid color-mix(in srgb, var(--color-primary-bg) 45%, transparent);
+    outline: 3px solid var(--color-link-hover);
     outline-offset: 3px;
 }
 

@@ -280,11 +280,16 @@ public class InteractiveControlMarkupTests
     public void WishlistCards_UseExplicitNamedNavigationLinks()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor.css");
 
         Assert.Contains("class=\"wishlist-card-link\" href=\"/wishlists/@Wishlist.PublicId\"", markup, StringComparison.Ordinal);
         Assert.Contains("<span class=\"visually-hidden\">: @Wishlist.Name</span>", markup, StringComparison.Ordinal);
         Assert.Contains("<p role=\"status\">Loading wishlist...</p>", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("@onclick=\"NavigateToWishlist\"", markup, StringComparison.Ordinal);
+        var linkStyles = styles[
+            styles.IndexOf(".wishlist-card-link {", StringComparison.Ordinal)..styles.IndexOf(".wishlist-card-link:hover", StringComparison.Ordinal)];
+        Assert.Contains("color: var(--color-link);", linkStyles, StringComparison.Ordinal);
+        Assert.Contains("outline: 3px solid var(--color-link-hover);", styles, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -303,9 +308,17 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "ManageWishlist.razor");
 
-        Assert.Contains("aria-busy=\"@(_loadingFriendsWithAccess || _sharingBusy ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_loadingFriendsWithAccess || _loadingAvailableFriends || _sharingBusy ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("_friendsLoadErrorMessage = \"We couldn't load who can see this wishlist. Try again.\"", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RefreshFriendsWithAccessAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("_availableFriendsLoadErrorMessage = \"We couldn't load friends to share with. Try again.\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RefreshAvailableFriendsAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("await RefreshAvailableFriendsAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("_availableFriendsToShare.Clear();", markup, StringComparison.Ordinal);
+        Assert.Contains("_friendsLoadErrorMessage is null &&", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("_friendsWithAccess = (await WishlistService.GetFriendsWithAccessByPublicIdAsync", StringComparison.Ordinal) <
+            markup.IndexOf("private async Task RefreshAvailableFriendsAsync()", StringComparison.Ordinal));
         Assert.True(
             markup.IndexOf("_friendsLoadErrorMessage is not null", StringComparison.Ordinal) <
             markup.IndexOf("_friendsWithAccess.Count == 0", StringComparison.Ordinal));
@@ -318,12 +331,16 @@ public class InteractiveControlMarkupTests
         var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "ManageWishlist.razor.css");
 
         Assert.Contains("aria-label=\"Remove access for @friendName\"", markup, StringComparison.Ordinal);
-        Assert.Contains("for=\"friend-access-select\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<label class=\"form-label\" for=\"friend-access-select\">Friend to share with</label>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h5 mb-0\">Who can see this?</h2>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h5\">Event connection</h2>", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(friendId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Sharing...</span>", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("➕", markup, StringComparison.Ordinal);
         Assert.Contains("width: 44px;", styles, StringComparison.Ordinal);
+        Assert.Contains("color: var(--color-link);", styles, StringComparison.Ordinal);
+        Assert.Contains("color: var(--color-nav-icon);", styles, StringComparison.Ordinal);
     }
 
     [Fact]

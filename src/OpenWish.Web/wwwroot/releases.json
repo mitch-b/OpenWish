@@ -8,7 +8,7 @@
       "Wishlist cards provide explicit named links for keyboard and screen-reader navigation.",
       "Wishlist settings expose loading progress and offer an actionable retry when loading fails.",
       "Friend-access failures remain distinct from a genuinely empty access list.",
-      "Friend-access controls have clear names, prevent duplicate changes, announce outcomes, and provide comfortable touch targets.",
+      "Friend-access controls have clear names, visible labels, readable contrast, duplicate-change protection, announced outcomes, and comfortable touch targets.",
       "Event connections distinguish loading failures from having no available events and provide safe retry guidance."
     ]
   },

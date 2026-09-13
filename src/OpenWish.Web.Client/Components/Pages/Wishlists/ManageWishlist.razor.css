@@ -97,7 +97,7 @@
 
 .status-specific {
     background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
+    color: var(--color-link);
 }
 
 .status-all {
@@ -138,7 +138,7 @@
     height: 32px;
     border-radius: 50%;
     background: var(--color-primary-bg);
-    color: var(--color-nav-text);
+    color: var(--color-nav-icon);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -194,7 +194,14 @@
 
 .add-friend-form {
     display: flex;
+    align-items: end;
+    flex-wrap: wrap;
     gap: 0.75rem;
+}
+
+.add-friend-form .form-label {
+    flex-basis: 100%;
+    margin-bottom: -0.25rem;
 }
 
 .friend-select {

@@ -10,16 +10,15 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<DeletePersonalData> Logger
 
-<PageTitle>Delete Personal Data</PageTitle>
+<PageTitle>Delete account</PageTitle>
 
 <StatusMessage Message="@message" />
 
-<h3>Delete Personal Data</h3>
+<h3>Delete account</h3>
 
 <div class="alert alert-warning" role="alert">
-    <p>
-        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-    </p>
+    <strong>This permanently removes your account and personal data.</strong>
+    Wishlists and event access tied to this account cannot be recovered.
 </div>
 
 <div>
@@ -34,7 +33,10 @@
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
         }
-        <button class="w-100 btn btn-lg btn-danger" type="submit">Delete data and close my account</button>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            <a class="btn btn-outline-secondary flex-fill" href="Account/Manage/PersonalData">Keep my account</a>
+            <button class="btn btn-danger flex-fill" type="submit">Delete my account</button>
+        </div>
     </EditForm>
 </div>
 

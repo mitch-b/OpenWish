@@ -13,6 +13,7 @@
 
 <h3>Profile</h3>
 <StatusMessage />
+<p class="text-muted">Review the account name others see and keep an optional phone number for your own records.</p>
 
 <div class="row">
     <div class="col-xl-6">
@@ -20,15 +21,17 @@
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
             <div class="form-floating mb-3">
-                <input type="text" value="@username" id="username" class="form-control" placeholder="Choose your username." disabled />
+                <input type="text" value="@username" id="username" class="form-control" aria-describedby="username-help" readonly />
                 <label for="username" class="form-label">Username</label>
             </div>
+            <div id="username-help" class="form-text mb-3">This sign-in name cannot be edited from your profile.</div>
             <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" autofocus placeholder="Enter your phone number" />
+                <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" autocomplete="tel" inputmode="tel" aria-describedby="phone-help" autofocus placeholder="Enter your phone number" />
                 <label for="Input.PhoneNumber" class="form-label">Phone number</label>
                 <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+            <div id="phone-help" class="form-text mb-3">Optional. Your phone number is not shown on wishlists or events.</div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Save profile</button>
         </EditForm>
     </div>
 </div>
@@ -65,7 +68,7 @@
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus("Your profile has been updated.", HttpContext);
     }
 
     private sealed class InputModel

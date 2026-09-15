@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.16",
+    "date": "2026-09-15",
+    "title": "Clearer account settings",
+    "summary": "Account settings now make identity, sign-in, and personal-data choices easier to understand and safer to navigate on any screen.",
+    "highlights": [
+      "Account navigation remains labelled, reachable, and comfortably sized on smaller screens.",
+      "Profile settings explain read-only and optional fields, support phone autofill, and clearly name the save action.",
+      "Email settings show confirmation in text and explain when a changed address takes effect.",
+      "Password settings connect the complete enforced length and character requirements to the new-password field.",
+      "Personal-data actions name their outcomes and provide a clear safe exit before account deletion."
+    ]
+  },
+  {
     "version": "0.1.15",
     "date": "2026-09-13",
     "title": "Dependable wishlist management",

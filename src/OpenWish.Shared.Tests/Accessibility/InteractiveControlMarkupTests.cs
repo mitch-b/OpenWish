@@ -831,13 +831,13 @@ public class InteractiveControlMarkupTests
         var setPasswordMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "SetPassword.razor");
 
         Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
-        Assert.Contains("at least 6 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
         Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"current-password\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"new-password\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
-        Assert.Contains("at least 6 characters", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", setPasswordMarkup, StringComparison.Ordinal);
         Assert.Contains("uppercase letter, lowercase letter, number, and symbol", setPasswordMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
     }
@@ -853,6 +853,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("cannot be undone", markup, StringComparison.Ordinal);
         Assert.Contains("Keep my account", deletionMarkup, StringComparison.Ordinal);
         Assert.Contains("Delete my account", deletionMarkup, StringComparison.Ordinal);
+        Assert.Contains("d-flex flex-column flex-sm-row gap-2", deletionMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("flex-column-reverse", deletionMarkup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

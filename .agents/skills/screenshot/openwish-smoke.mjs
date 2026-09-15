@@ -873,8 +873,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("link", { name: "Password", exact: true }).click();
   const passwordGuidance = page.locator("#password-guidance");
   await passwordGuidance.waitFor({ state: "visible" });
-  if (!(await passwordGuidance.textContent()).includes("at least 6 characters")) {
-    throw new Error("Password settings did not expose the password requirement.");
+  if (!(await passwordGuidance.textContent()).includes("6 to 100 characters")) {
+    throw new Error("Password settings did not expose the enforced length limits.");
   }
   await page.getByRole("link", { name: "Personal data", exact: true }).click();
   await assertVisible(page, "Download personal data");
@@ -884,6 +884,13 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "This permanently removes your account and personal data.");
   await assertVisible(page, "Keep my account");
   await assertVisible(page, "Delete my account");
+  const keepAccount = page.getByRole("link", { name: "Keep my account" });
+  const deleteAccount = page.getByRole("button", { name: "Delete my account" });
+  if (!(await keepAccount.evaluate((safeAction, destructiveAction) =>
+    safeAction.compareDocumentPosition(destructiveAction) & Node.DOCUMENT_POSITION_FOLLOWING,
+  await deleteAccount.elementHandle()))) {
+    throw new Error("Account deletion did not keep the safe action before the destructive action.");
+  }
   await page.getByRole("link", { name: "Keep my account" }).click();
   await page.getByRole("heading", { name: "Personal data", exact: true }).waitFor();
 
@@ -941,7 +948,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "wishlist management labels and contrast",
       "theme persistence",
       "release history",
-      "account profile"
+      "account settings requirements and deletion safety"
     ]
   });
   await context.close();
@@ -1364,6 +1371,18 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile account navigation link"
   );
   await screenshot(page, "account-settings-mobile.png");
+  await accountNavigation.getByRole("link", { name: "Personal data", exact: true }).click();
+  await page.getByRole("link", { name: "Review account deletion" }).click();
+  const mobileKeepAccount = page.getByRole("link", { name: "Keep my account" });
+  const mobileDeleteAccount = page.getByRole("button", { name: "Delete my account" });
+  const [safeBox, destructiveBox] = await Promise.all([
+    mobileKeepAccount.boundingBox(),
+    mobileDeleteAccount.boundingBox()
+  ]);
+  if (!safeBox || !destructiveBox || safeBox.y >= destructiveBox.y) {
+    throw new Error("Mobile account deletion did not display the safe action before deletion.");
+  }
+  await screenshot(page, "account-deletion-mobile.png");
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Mobile browser errors: ${diagnostics.browserErrors.join(" | ")}`);

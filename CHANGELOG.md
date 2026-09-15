@@ -12,7 +12,8 @@ All notable user-facing changes to OpenWish are documented here.
   autofill, and name the save action clearly.
 - Email settings show confirmation in text and explain when a changed address
   takes effect.
-- Password settings connect concise requirements to the new-password field.
+- Password settings connect the complete enforced length and character
+  requirements to the new-password field.
 - Personal-data actions state their outcomes, while account deletion offers a
   clear safe exit before the irreversible action.
 

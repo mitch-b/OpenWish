@@ -855,13 +855,37 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Dependable wishlist management");
+  await assertVisible(page, "Clearer account settings");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
   if (username !== "AlexDemo") {
     throw new Error(`Profile displayed unexpected username '${username}'.`);
   }
+  if (await page.locator("#username").getAttribute("readonly") === null) {
+    throw new Error("Profile username was not exposed as a readable, immutable value.");
+  }
+  await assertVisible(page, "Your phone number is not shown on wishlists or events.");
+  await page.getByRole("navigation", { name: "Account settings" }).getByRole("link", { name: "Email" }).click();
+  await page.getByRole("heading", { name: "Email", exact: true }).waitFor();
+  await assertVisible(page, "Confirmed");
+  await assertVisible(page, "We will send a confirmation link before changing your sign-in address.");
+  await page.getByRole("link", { name: "Password", exact: true }).click();
+  const passwordGuidance = page.locator("#password-guidance");
+  await passwordGuidance.waitFor({ state: "visible" });
+  if (!(await passwordGuidance.textContent()).includes("at least 6 characters")) {
+    throw new Error("Password settings did not expose the password requirement.");
+  }
+  await page.getByRole("link", { name: "Personal data", exact: true }).click();
+  await assertVisible(page, "Download personal data");
+  await assertVisible(page, "Review account deletion");
+  await screenshot(page, "account-settings.png");
+  await page.getByRole("link", { name: "Review account deletion" }).click();
+  await assertVisible(page, "This permanently removes your account and personal data.");
+  await assertVisible(page, "Keep my account");
+  await assertVisible(page, "Delete my account");
+  await page.getByRole("link", { name: "Keep my account" }).click();
+  await page.getByRole("heading", { name: "Personal data", exact: true }).waitFor();
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
@@ -1331,6 +1355,15 @@ async function verifyMobileJourney(browser, manifest, results) {
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "View JordanDemo's wishlist");
   await screenshot(page, "secret-santa-mobile.png");
+
+  await visit(page, "/Account/Manage", "Profile", visitedRoutes);
+  const accountNavigation = page.getByRole("navigation", { name: "Account settings" });
+  await accountNavigation.waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(
+    accountNavigation.getByRole("link", { name: "Profile", exact: true }),
+    "Mobile account navigation link"
+  );
+  await screenshot(page, "account-settings-mobile.png");
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Mobile browser errors: ${diagnostics.browserErrors.join(" | ")}`);

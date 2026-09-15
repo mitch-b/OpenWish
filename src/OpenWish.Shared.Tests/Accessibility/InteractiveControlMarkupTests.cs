@@ -788,6 +788,73 @@ public class InteractiveControlMarkupTests
         Assert.Contains("_isLoading = false;", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void AccountNavigation_IsLabelledAndResponsive()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");
+        var styles = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageLayout.razor.css");
+
+        Assert.Contains("<nav aria-label=\"Account settings\">", markup, StringComparison.Ordinal);
+        Assert.Contains("overflow-x: auto;", styles, StringComparison.Ordinal);
+        Assert.Contains("flex-flow: row nowrap !important;", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Profile_ExplainsReadOnlyAndOptionalFields()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Index.razor");
+
+        Assert.Contains("aria-describedby=\"username-help\" readonly", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"tel\" inputmode=\"tel\" aria-describedby=\"phone-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("cannot be edited from your profile", markup, StringComparison.Ordinal);
+        Assert.Contains("not shown on wishlists or events", markup, StringComparison.Ordinal);
+        Assert.Contains(">Save profile</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EmailSettings_ExposeConfirmationStatusAndChangeGuidance()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Email.razor");
+
+        Assert.Contains("aria-describedby=\"email-status\" readonly", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Confirmed</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("Confirmation needed", markup, StringComparison.Ordinal);
+        Assert.Contains("Send confirmation email", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"new-email-help\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordSettings_ConnectPasswordRequirements()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ChangePassword.razor");
+        var setPasswordMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "SetPassword.razor");
+
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("at least 6 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"new-password\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("at least 6 characters", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PersonalDataActions_NameTheirOutcomeAndKeepDeletionReversible()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "PersonalData.razor");
+        var deletionMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "DeletePersonalData.razor");
+
+        Assert.Contains("Download personal data", markup, StringComparison.Ordinal);
+        Assert.Contains("Review account deletion", markup, StringComparison.Ordinal);
+        Assert.Contains("cannot be undone", markup, StringComparison.Ordinal);
+        Assert.Contains("Keep my account", deletionMarkup, StringComparison.Ordinal);
+        Assert.Contains("Delete my account", deletionMarkup, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.16] - 2026-09-15
+
+### Improved
+
+- Account settings navigation stays labelled, reachable, and comfortably sized
+  on smaller screens.
+- Profile settings explain read-only and optional fields, support phone
+  autofill, and name the save action clearly.
+- Email settings show confirmation in text and explain when a changed address
+  takes effect.
+- Password settings connect concise requirements to the new-password field.
+- Personal-data actions state their outcomes, while account deletion offers a
+  clear safe exit before the irreversible action.
+
 ## [0.1.15] - 2026-09-13
 
 ### Improved

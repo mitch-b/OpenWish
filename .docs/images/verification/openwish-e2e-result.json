@@ -102,7 +102,8 @@
         "/",
         "/wishlists/demo-family-gift-ideas",
         "/wishlists/demo-family-gift-ideas/manage",
-        "/events/demo-holiday-gift-exchange"
+        "/events/demo-holiday-gift-exchange",
+        "/Account/Manage"
       ]
     }
   ]

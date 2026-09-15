@@ -3,6 +3,7 @@
 
 @inject SignInManager<ApplicationUser> SignInManager
 
+<nav aria-label="Account settings">
 <ul class="nav nav-pills flex-column">
     <li class="nav-item">
         <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
@@ -26,6 +27,7 @@
         <NavLink class="nav-link" href="Account/Manage/PersonalData">Personal data</NavLink>
     </li>
 </ul>
+</nav>
 
 @code {
     private bool hasExternalLogins;

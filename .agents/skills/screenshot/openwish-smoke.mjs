@@ -945,8 +945,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem").count() !== 10) {
     throw new Error("Authenticator setup did not provide ten recovery codes.");
   }
-  await page.getByRole("link", { name: "Done saving codes" }).click();
-  await assertVisible(page, "Two-factor authentication is on.");
+  const doneSavingCodes = page.getByRole("link", { name: "Done saving codes" });
+  if (await doneSavingCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Recovery-code display did not provide the expected completion destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
   await screenshot(page, "two-factor-settings.png");
 
   await page.getByRole("link", { name: "Replace recovery codes" }).click();

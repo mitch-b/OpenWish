@@ -48,7 +48,7 @@ else
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger" role="alert" />
                     <div class="form-floating mb-3">
-                        <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" maxlength="7" aria-describedby="verification-code-help" autofocus placeholder="123456" />
+                        <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" maxlength="11" aria-describedby="verification-code-help" autofocus placeholder="123456" />
                         <label for="Input.Code" class="control-label form-label">Verification code</label>
                         <ValidationMessage For="() => Input.Code" class="text-danger" />
                     </div>
@@ -84,8 +84,7 @@ else
 
     private async Task OnValidSubmitAsync()
     {
-        // Strip spaces and hyphens
-        var verificationCode = Input.Code.Replace(" ", string.Empty).Replace("-", string.Empty);
+        var verificationCode = NormalizeCode(Input.Code);
 
         var is2faTokenValid = await UserManager.VerifyTwoFactorTokenAsync(
             user, UserManager.Options.Tokens.AuthenticatorTokenProvider, verificationCode);
@@ -142,12 +141,27 @@ else
         return result.ToString().ToLowerInvariant();
     }
 
-    private sealed class InputModel
+    private static string NormalizeCode(string code)
+    {
+        return code.Replace(" ", string.Empty).Replace("-", string.Empty);
+    }
+
+    private sealed class InputModel : IValidatableObject
     {
         [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be 6 digits. Spaces are allowed.", MinimumLength = 6)]
         [DataType(DataType.Text)]
         [Display(Name = "verification code")]
         public string Code { get; set; } = "";
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            var normalizedCode = NormalizeCode(Code);
+            if (normalizedCode.Length != 6 || normalizedCode.Any(character => character is < '0' or > '9'))
+            {
+                yield return new ValidationResult(
+                    "The verification code must contain exactly 6 digits. Spaces and hyphens are allowed.",
+                    [nameof(Code)]);
+            }
+        }
     }
 }

@@ -866,10 +866,13 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\"", markup, StringComparison.Ordinal);
         Assert.Contains(">Set up authenticator app</a>", markup, StringComparison.Ordinal);
-        Assert.Contains("setup is not complete", markup, StringComparison.Ordinal);
+        Assert.Contains("An authenticator key is available.", markup, StringComparison.Ordinal);
+        Assert.Contains(">Verify authenticator code</a>", markup, StringComparison.Ordinal);
         Assert.Contains("Your authenticator app is connected.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Finish authenticator setup", markup, StringComparison.Ordinal);
         Assert.Contains(">Replace recovery codes</a>", markup, StringComparison.Ordinal);
         Assert.Contains(">Turn off 2FA</a>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("generate a new set of recovery codes", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -880,9 +883,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("id=\"shared-key\"", markup, StringComparison.Ordinal);
         Assert.Contains("supports time-based one-time passwords (TOTP)", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Scan the QR Code", markup, StringComparison.Ordinal);
-        Assert.Contains("autocomplete=\"one-time-code\" inputmode=\"numeric\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"one-time-code\" inputmode=\"numeric\" maxlength=\"11\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"verification-code-help\"", markup, StringComparison.Ordinal);
         Assert.Contains(">Verify and enable 2FA</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("InputModel : IValidatableObject", markup, StringComparison.Ordinal);
+        Assert.Contains("normalizedCode.Length != 6", markup, StringComparison.Ordinal);
+        Assert.Contains("character is < '0' or > '9'", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -905,6 +911,7 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ResetAuthenticator.razor");
 
         Assert.Contains("current authenticator codes will stop working immediately", markup, StringComparison.Ordinal);
+        Assert.Contains("<PageTitle>Reset authenticator app</PageTitle>", markup, StringComparison.Ordinal);
         Assert.Contains("will turn off until you connect and verify the new key", markup, StringComparison.Ordinal);
         Assert.Contains(">Keep current authenticator</a>", markup, StringComparison.Ordinal);
         Assert.Contains(">Reset authenticator app</button>", markup, StringComparison.Ordinal);

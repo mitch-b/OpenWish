@@ -934,6 +934,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!authenticatorKey) {
     throw new Error("Authenticator setup did not provide a manual key.");
   }
+  await page.getByLabel("Verification code").fill("abc123");
+  await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+  await assertVisible(page, "The verification code must contain exactly 6 digits.");
   const verificationCode = await generateTotp(authenticatorKey);
   await page.getByLabel("Verification code").fill(verificationCode);
   await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
@@ -1444,7 +1447,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   await screenshot(page, "account-settings-mobile.png");
   await accountNavigation.getByRole("link", { name: "Two-factor authentication" }).click();
   await assertVisible(page, "Two-factor authentication is off.");
-  await page.getByRole("link", { name: "Finish authenticator setup" }).click();
+  await page.getByRole("link", { name: "Verify authenticator code" }).click();
   await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
   await assertMinimumTouchTarget(
     page.getByRole("button", { name: "Verify and enable 2FA" }),

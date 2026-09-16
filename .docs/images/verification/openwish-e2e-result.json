@@ -57,6 +57,10 @@
         "/wishlists/demo-family-gift-ideas/manage",
         "/whats-new",
         "/Account/Manage",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
         "/events"
       ],
       "assertions": [
@@ -73,7 +77,8 @@
         "wishlist management labels and contrast",
         "theme persistence",
         "release history",
-        "account settings requirements and deletion safety"
+        "account settings requirements and deletion safety",
+        "two-factor status, setup, recovery, reset, and disable safety"
       ]
     },
     {

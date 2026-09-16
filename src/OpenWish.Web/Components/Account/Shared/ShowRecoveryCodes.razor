@@ -1,23 +1,16 @@
-﻿<StatusMessage Message="@StatusMessage" />
-<h3>Recovery codes</h3>
+<StatusMessage Message="@StatusMessage" />
+<h3>Save your recovery codes</h3>
 <div class="alert alert-warning" role="alert">
-    <p>
-        <strong>Put these codes in a safe place.</strong>
-    </p>
-    <p>
-        If you lose your device and don't have the recovery codes you will lose access to your account.
-    </p>
+    <strong>Store these codes somewhere private before leaving this page.</strong>
+    Each code works once when you cannot use your authenticator app. They will not be shown again.
 </div>
-<div class="row">
-    <div class="col-md-12">
-        @foreach (var recoveryCode in RecoveryCodes)
-        {
-            <div>
-                <code class="recovery-code">@recoveryCode</code>
-            </div>
-        }
-    </div>
-</div>
+<ul class="list-unstyled row row-cols-1 row-cols-sm-2 g-2" aria-label="Recovery codes">
+    @foreach (var recoveryCode in RecoveryCodes)
+    {
+        <li class="col"><code class="recovery-code d-block p-2">@recoveryCode</code></li>
+    }
+</ul>
+<a class="btn btn-primary mt-3" href="Account/Manage/TwoFactorAuthentication">Done saving codes</a>
 
 @code {
     [Parameter]

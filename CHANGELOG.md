@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.17] - 2026-09-16
+
+### Improved
+
+- Two-factor settings show whether protection is on or off and prioritize the
+  next useful action.
+- Authenticator setup provides a truthful manual-key workflow and a
+  mobile-friendly verification-code field.
+- Recovery-code replacement explains that existing codes will stop working,
+  keeps a safe exit visible, and presents new codes as an accessible list.
+- Authenticator reset explains its immediate effect and keeps the current
+  authenticator as the first action.
+- Turning off 2FA explains the reduced protection, preserves a safe exit, and
+  confirms the resulting account state.
+
 ## [0.1.16] - 2026-09-15
 
 ### Improved

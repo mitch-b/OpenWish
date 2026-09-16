@@ -8,27 +8,24 @@
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<Disable2fa> Logger
 
-<PageTitle>Disable two-factor authentication (2FA)</PageTitle>
+<PageTitle>Turn off two-factor authentication (2FA)</PageTitle>
 
 <StatusMessage />
-<h3>Disable two-factor authentication (2FA)</h3>
+<h3>Turn off two-factor authentication (2FA)</h3>
 
 <div class="alert alert-warning" role="alert">
-    <p>
-        <strong>This action only disables 2FA.</strong>
-    </p>
-    <p>
-        Disabling 2FA does not change the keys used in authenticator apps. If you wish to change the key
-        used in an authenticator app you should <a href="Account/Manage/ResetAuthenticator">reset your authenticator keys.</a>
-    </p>
+    <strong>Your account will rely on your password alone when you sign in.</strong>
+    Your existing authenticator key will remain available if you turn 2FA on again.
 </div>
 
-<div>
-    <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
-        <AntiforgeryToken />
-        <button class="btn btn-danger" type="submit">Disable 2FA</button>
-    </form>
-</div>
+<p>Only turn off 2FA if you understand the reduced account protection.</p>
+<form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
+    <AntiforgeryToken />
+    <div class="d-flex flex-column flex-sm-row gap-2">
+        <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Keep 2FA on</a>
+        <button class="btn btn-danger" type="submit">Turn off 2FA</button>
+    </div>
+</form>
 
 @code {
     private ApplicationUser user = default!;
@@ -58,7 +55,7 @@
         Logger.LogInformation("User with ID '{UserId}' has disabled 2fa.", userId);
         RedirectManager.RedirectToWithStatus(
             "Account/Manage/TwoFactorAuthentication",
-            "2fa has been disabled. You can reenable 2fa when you setup an authenticator app",
+            "Two-factor authentication is off. Your authenticator app remains available if you enable 2FA again.",
             HttpContext);
     }
 }

@@ -954,11 +954,13 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Keep current recovery codes");
   await assertVisible(page, "Replace recovery codes");
   await page.getByRole("link", { name: "Keep current recovery codes" }).click();
+  await assertVisible(page, "Two-factor authentication is on.");
 
   await page.getByRole("link", { name: "Reset authenticator app" }).click();
   await assertVisible(page, "Your current authenticator codes will stop working immediately.");
   await assertVisible(page, "Keep current authenticator");
   await page.getByRole("link", { name: "Keep current authenticator" }).click();
+  await assertVisible(page, "Two-factor authentication is on.");
 
   await page.getByRole("link", { name: "Turn off 2FA" }).click();
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");

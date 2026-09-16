@@ -953,14 +953,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Your current recovery codes will stop working immediately.");
   await assertVisible(page, "Keep current recovery codes");
   await assertVisible(page, "Replace recovery codes");
-  await page.getByRole("link", { name: "Keep current recovery codes" }).click();
-  await assertVisible(page, "Two-factor authentication is on.");
+  const keepRecoveryCodes = page.getByRole("link", { name: "Keep current recovery codes" });
+  if (await keepRecoveryCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Recovery-code replacement did not provide the expected safe destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Reset authenticator app" }).click();
   await assertVisible(page, "Your current authenticator codes will stop working immediately.");
   await assertVisible(page, "Keep current authenticator");
-  await page.getByRole("link", { name: "Keep current authenticator" }).click();
-  await assertVisible(page, "Two-factor authentication is on.");
+  const keepAuthenticator = page.getByRole("link", { name: "Keep current authenticator" });
+  if (await keepAuthenticator.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Authenticator reset did not provide the expected safe destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Turn off 2FA" }).click();
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");

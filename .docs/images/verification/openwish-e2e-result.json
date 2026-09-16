@@ -58,6 +58,8 @@
         "/whats-new",
         "/Account/Manage",
         "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
         "/events"
       ],
       "assertions": [

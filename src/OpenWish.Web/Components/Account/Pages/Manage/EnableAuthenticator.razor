@@ -1,19 +1,16 @@
-﻿@page "/Account/Manage/EnableAuthenticator"
+@page "/Account/Manage/EnableAuthenticator"
 
 @using System.ComponentModel.DataAnnotations
-@using System.Globalization
 @using System.Text
-@using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using OpenWish.Data.Entities
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityUserAccessor UserAccessor
-@inject UrlEncoder UrlEncoder
 @inject IdentityRedirectManager RedirectManager
 @inject ILogger<EnableAuthenticator> Logger
 
-<PageTitle>Configure authenticator app</PageTitle>
+<PageTitle>Set up authenticator app</PageTitle>
 
 @if (recoveryCodes is not null)
 {
@@ -22,13 +19,15 @@
 else
 {
     <StatusMessage Message="@message" />
-    <h3>Configure authenticator app</h3>
-    <div>
-        <p>To use an authenticator app go through the following steps:</p>
-        <ol class="list">
+    <h3>Set up authenticator app</h3>
+    <p>Connect any authenticator app that supports time-based one-time passwords (TOTP).</p>
+    <div class="row">
+        <div class="col-xl-8">
+        <ol class="ps-3">
             <li>
+                <h4 class="h5">Get an authenticator app</h4>
                 <p>
-                    Download a two-factor authenticator app like Microsoft Authenticator for
+                    Install an authenticator app such as Microsoft Authenticator for
                     <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
                     <a href="https://go.microsoft.com/fwlink/?Linkid=825073">iOS</a> or
                     Google Authenticator for
@@ -37,42 +36,37 @@ else
                 </p>
             </li>
             <li>
-                <p>Scan the QR Code or enter this key <kbd>@sharedKey</kbd> into your two factor authenticator app. Spaces and casing do not matter.</p>
-                <div class="alert alert-info">Learn how to <a href="https://go.microsoft.com/fwlink/?Linkid=852423">enable QR code generation</a>.</div>
-                <div></div>
-                <div data-url="@authenticatorUri"></div>
+                <h4 class="h5">Add your OpenWish key</h4>
+                <p>Choose the option to enter a setup key, then enter:</p>
+                <p><kbd id="shared-key" class="d-inline-block text-break">@sharedKey</kbd></p>
+                <p class="text-body-secondary">Spaces and letter casing do not matter. Keep this key private.</p>
             </li>
             <li>
-                <p>
-                    Once you have scanned the QR code or input the key above, your two factor authentication app will provide you
-                    with a unique code. Enter the code in the confirmation box below.
-                </p>
-                <div class="row">
-                    <div class="col-xl-6">
-                        <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
-                            <DataAnnotationsValidator />
-                            <div class="form-floating mb-3">
-                                <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="off" autofocus placeholder="Enter the code" />
-                                <label for="Input.Code" class="control-label form-label">Verification Code</label>
-                                <ValidationMessage For="() => Input.Code" class="text-danger" />
-                            </div>
-                            <button type="submit" class="w-100 btn btn-lg btn-primary">Verify</button>
-                            <ValidationSummary class="text-danger" role="alert" />
-                        </EditForm>
+                <h4 class="h5">Verify the connection</h4>
+                <p id="verification-code-help">Enter the current 6-digit code from your app.</p>
+                <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <div class="form-floating mb-3">
+                        <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" maxlength="7" aria-describedby="verification-code-help" autofocus placeholder="123456" />
+                        <label for="Input.Code" class="control-label form-label">Verification code</label>
+                        <ValidationMessage For="() => Input.Code" class="text-danger" />
                     </div>
-                </div>
+                    <div class="d-flex flex-column flex-sm-row gap-2">
+                        <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Back to two-factor settings</a>
+                        <button type="submit" class="btn btn-primary">Verify and enable 2FA</button>
+                    </div>
+                </EditForm>
             </li>
         </ol>
+        </div>
     </div>
 }
 
 @code {
-    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
-
     private string? message;
     private ApplicationUser user = default!;
     private string? sharedKey;
-    private string? authenticatorUri;
     private IEnumerable<string>? recoveryCodes;
 
     [CascadingParameter]
@@ -106,7 +100,7 @@ else
         var userId = await UserManager.GetUserIdAsync(user);
         Logger.LogInformation("User with ID '{UserId}' has enabled 2FA with an authenticator app.", userId);
 
-        message = "Your authenticator app has been verified.";
+        message = "Your authenticator app is verified and 2FA is on.";
 
         if (await UserManager.CountRecoveryCodesAsync(user) == 0)
         {
@@ -129,9 +123,6 @@ else
         }
 
         sharedKey = FormatKey(unformattedKey!);
-
-        var email = await UserManager.GetEmailAsync(user);
-        authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
     }
 
     private string FormatKey(string unformattedKey)
@@ -151,22 +142,12 @@ else
         return result.ToString().ToLowerInvariant();
     }
 
-    private string GenerateQrCodeUri(string email, string unformattedKey)
-    {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            AuthenticatorUriFormat,
-            UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
-            UrlEncoder.Encode(email),
-            unformattedKey);
-    }
-
     private sealed class InputModel
     {
         [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [StringLength(7, ErrorMessage = "The {0} must be 6 digits. Spaces are allowed.", MinimumLength = 6)]
         [DataType(DataType.Text)]
-        [Display(Name = "Verification Code")]
+        [Display(Name = "verification code")]
         public string Code { get; set; } = "";
     }
 }

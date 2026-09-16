@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -76,6 +77,38 @@ function monitorPage(page) {
 
 async function assertVisible(page, text) {
   await page.getByText(text, { exact: false }).first().waitFor({ state: "visible" });
+}
+
+async function generateTotp(secret) {
+  if (Date.now() % 30000 > 27000) {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const character of secret.replace(/\s/g, "").toUpperCase()) {
+    const value = alphabet.indexOf(character);
+    if (value < 0) {
+      throw new Error("Authenticator key was not valid base32.");
+    }
+    bits += value.toString(2).padStart(5, "0");
+  }
+
+  const key = Buffer.from(
+    Array.from({ length: Math.floor(bits.length / 8) }, (_, index) =>
+      Number.parseInt(bits.slice(index * 8, (index + 1) * 8), 2))
+  );
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+  const digest = crypto.createHmac("sha1", key).update(counter).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  const value = (
+    ((digest[offset] & 0x7f) << 24) |
+    ((digest[offset + 1] & 0xff) << 16) |
+    ((digest[offset + 2] & 0xff) << 8) |
+    (digest[offset + 3] & 0xff)
+  ) % 1000000;
+  return value.toString().padStart(6, "0");
 }
 
 async function visit(page, route, expectedText, visitedRoutes) {
@@ -855,7 +888,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Clearer account settings");
+  await assertVisible(page, "Safer two-factor settings");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -893,6 +926,43 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.getByRole("link", { name: "Keep my account" }).click();
   await page.getByRole("heading", { name: "Personal data", exact: true }).waitFor();
+
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
+  await page.getByRole("link", { name: "Set up authenticator app" }).click();
+  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  const authenticatorKey = (await page.locator("#shared-key").textContent())?.replace(/\s/g, "");
+  if (!authenticatorKey) {
+    throw new Error("Authenticator setup did not provide a manual key.");
+  }
+  const verificationCode = await generateTotp(authenticatorKey);
+  await page.getByLabel("Verification code").fill(verificationCode);
+  await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+  await page.getByRole("heading", { name: "Save your recovery codes" }).waitFor();
+  await assertVisible(page, "They will not be shown again.");
+  if (await page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem").count() !== 10) {
+    throw new Error("Authenticator setup did not provide ten recovery codes.");
+  }
+  await page.getByRole("link", { name: "Done saving codes" }).click();
+  await assertVisible(page, "Two-factor authentication is on.");
+  await screenshot(page, "two-factor-settings.png");
+
+  await page.getByRole("link", { name: "Replace recovery codes" }).click();
+  await assertVisible(page, "Your current recovery codes will stop working immediately.");
+  await assertVisible(page, "Keep current recovery codes");
+  await assertVisible(page, "Replace recovery codes");
+  await page.getByRole("link", { name: "Keep current recovery codes" }).click();
+
+  await page.getByRole("link", { name: "Reset authenticator app" }).click();
+  await assertVisible(page, "Your current authenticator codes will stop working immediately.");
+  await assertVisible(page, "Keep current authenticator");
+  await page.getByRole("link", { name: "Keep current authenticator" }).click();
+
+  await page.getByRole("link", { name: "Turn off 2FA" }).click();
+  await assertVisible(page, "Your account will rely on your password alone when you sign in.");
+  await assertVisible(page, "Keep 2FA on");
+  await screenshot(page, "two-factor-disable.png");
+  await page.getByRole("button", { name: "Turn off 2FA" }).click();
+  await assertVisible(page, "Two-factor authentication is off.");
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
@@ -948,7 +1018,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "wishlist management labels and contrast",
       "theme persistence",
       "release history",
-      "account settings requirements and deletion safety"
+      "account settings requirements and deletion safety",
+      "two-factor status, setup, recovery, reset, and disable safety"
     ]
   });
   await context.close();
@@ -1371,7 +1442,27 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile account navigation link"
   );
   await screenshot(page, "account-settings-mobile.png");
-  await accountNavigation.getByRole("link", { name: "Personal data", exact: true }).click();
+  await accountNavigation.getByRole("link", { name: "Two-factor authentication" }).click();
+  await assertVisible(page, "Two-factor authentication is off.");
+  await page.getByRole("link", { name: "Finish authenticator setup" }).click();
+  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Verify and enable 2FA" }),
+    "Mobile authenticator verification action"
+  );
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 600 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#shared-key").evaluate(element => {
+    element.textContent = "key hidden in test evidence";
+  });
+  await screenshot(page, "authenticator-setup-mobile.png");
+  await page.getByRole("link", { name: "Back to two-factor settings" }).click();
+  await page.getByRole("navigation", { name: "Account settings" })
+    .getByRole("link", { name: "Personal data", exact: true }).click();
   await page.getByRole("link", { name: "Review account deletion" }).click();
   const mobileKeepAccount = page.getByRole("link", { name: "Keep my account" });
   const mobileDeleteAccount = page.getByRole("button", { name: "Delete my account" });

@@ -857,6 +857,71 @@ public class InteractiveControlMarkupTests
         Assert.DoesNotContain("flex-column-reverse", deletionMarkup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void TwoFactorSettings_ExposeStatusAndPrioritizeTheNextAction()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "TwoFactorAuthentication.razor");
+
+        Assert.Contains("Two-factor authentication is on.", markup, StringComparison.Ordinal);
+        Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Set up authenticator app</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("setup is not complete", markup, StringComparison.Ordinal);
+        Assert.Contains("Your authenticator app is connected.", markup, StringComparison.Ordinal);
+        Assert.Contains(">Replace recovery codes</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Turn off 2FA</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AuthenticatorSetup_ProvidesAUsableManualKeyAndCodeInput()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "EnableAuthenticator.razor");
+
+        Assert.Contains("id=\"shared-key\"", markup, StringComparison.Ordinal);
+        Assert.Contains("supports time-based one-time passwords (TOTP)", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Scan the QR Code", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"one-time-code\" inputmode=\"numeric\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"verification-code-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Verify and enable 2FA</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryCodeReplacement_ExplainsInvalidationAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "GenerateRecoveryCodes.razor");
+        var codesMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ShowRecoveryCodes.razor");
+
+        Assert.Contains("current recovery codes will stop working immediately", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep current recovery codes</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Replace recovery codes</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Recovery codes\"", codesMarkup, StringComparison.Ordinal);
+        Assert.Contains("They will not be shown again.", codesMarkup, StringComparison.Ordinal);
+        Assert.Contains(">Done saving codes</a>", codesMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AuthenticatorReset_ExplainsImpactAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ResetAuthenticator.razor");
+
+        Assert.Contains("current authenticator codes will stop working immediately", markup, StringComparison.Ordinal);
+        Assert.Contains("will turn off until you connect and verify the new key", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep current authenticator</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Reset authenticator app</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DisableTwoFactor_ExplainsReducedProtectionAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Disable2fa.razor");
+
+        Assert.Contains("rely on your password alone", markup, StringComparison.Ordinal);
+        Assert.Contains("existing authenticator key will remain available", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep 2FA on</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Turn off 2FA</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

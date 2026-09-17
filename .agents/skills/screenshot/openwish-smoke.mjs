@@ -960,7 +960,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await keepRecoveryCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
     throw new Error("Recovery-code replacement did not provide the expected safe destination.");
   }
-  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
+  await keepRecoveryCodes.click();
+  await assertVisible(page, "Two-factor authentication is on.");
+  visitedRoutes.push("/Account/Manage/TwoFactorAuthentication");
 
   await page.getByRole("link", { name: "Reset authenticator app" }).click();
   await assertVisible(page, "Your current authenticator codes will stop working immediately.");
@@ -969,7 +971,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await keepAuthenticator.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
     throw new Error("Authenticator reset did not provide the expected safe destination.");
   }
-  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
+  await keepAuthenticator.click();
+  await assertVisible(page, "Two-factor authentication is on.");
+  visitedRoutes.push("/Account/Manage/TwoFactorAuthentication");
 
   await page.getByRole("link", { name: "Turn off 2FA" }).click();
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");
@@ -1047,7 +1051,13 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   const visitedRoutes = [];
 
   const invite = encodeURIComponent("invited@example.com|inviter-id");
-  await visit(page, `/Account/Register?invite=${invite}`, "Invitations are tied to the address", visitedRoutes);
+  const registrationReturnUrl = "/events";
+  await visit(
+    page,
+    `/Account/Register?invite=${invite}&ReturnUrl=${encodeURIComponent(registrationReturnUrl)}`,
+    "Invitations are tied to the address",
+    visitedRoutes
+  );
   await assertVisible(page, "invited@example.com");
   const invitedEmailInput = page.locator('input[name="Input.Email"]');
   if (await invitedEmailInput.getAttribute("type") !== "hidden") {
@@ -1055,6 +1065,14 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   }
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Password") {
     throw new Error("Invited registration did not focus the first editable field.");
+  }
+  await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
+  await page.getByRole("button", { name: "Create account" }).waitFor({ state: "visible" });
+  const registrationLoginLink = page.getByRole("link", { name: "Log in", exact: true });
+  await registrationLoginLink.waitFor({ state: "visible" });
+  const loginDestination = new URL(await registrationLoginLink.getAttribute("href"), baseUrl);
+  if (loginDestination.searchParams.get("ReturnUrl") !== registrationReturnUrl) {
+    throw new Error("Registration login navigation did not preserve the requested destination.");
   }
   await screenshot(page, "invited-registration.png");
   await assertResponsiveWidths(page, [
@@ -1070,7 +1088,34 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Email") {
     throw new Error("Login did not focus the first editable field.");
   }
+  await assertVisible(page, "Avoid this on shared devices.");
+  await assertVisible(page, "Need help signing in?");
+  await page.getByRole("link", { name: "Reset your password" }).waitFor({ state: "visible" });
   await screenshot(page, "login.png");
+
+  await visit(page, "/Account/ForgotPassword", "Request a secure link", visitedRoutes);
+  await assertVisible(page, "If an eligible account matches");
+  await page.getByRole("button", { name: "Send reset link" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Back to log in" }).waitFor({ state: "visible" });
+  await screenshot(page, "account-recovery.png");
+
+  await visit(page, "/Account/ResetPassword?Code=dGVzdA", "Choose a new password", visitedRoutes);
+  await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
+  await page.getByRole("button", { name: "Save new password" }).waitFor({ state: "visible" });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await visit(page, "/Account/ResendEmailConfirmation", "Request a new confirmation link", visitedRoutes);
+  await assertVisible(page, "For privacy, the result is the same");
+  await page.getByRole("button", { name: "Send confirmation email" }).waitFor({ state: "visible" });
+  await screenshot(page, "account-recovery-mobile.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 600 },
+    { width: 1024, height: 700 }
+  ]);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
   await page.getByRole("button", { name: "Sign in as AlexDemo (organizer)" }).click();
   await assertVisible(page, "AlexDemo");
 
@@ -1083,7 +1128,14 @@ async function verifyDevelopmentLoginJourney(browser, results) {
 
   results.push({
     scenario: "development-login",
-    visitedRoutes
+    visitedRoutes,
+    assertions: [
+      "login session safety and recovery navigation",
+      "registration password guidance and sign-in navigation",
+      "private password-recovery guidance",
+      "password reset requirements and outcome",
+      "confirmation-email privacy and recovery"
+    ]
   });
   await context.close();
 }

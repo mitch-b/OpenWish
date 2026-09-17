@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.18] - 2026-09-17
+
+### Improved
+
+- Sign-in explains when a session stays active, warns against using that option
+  on shared devices, and groups account-recovery actions.
+- Registration shows the complete password requirements before submission and
+  provides a direct route back to sign-in.
+- Password recovery explains its privacy-preserving result, uses email-friendly
+  input, and provides a safe return to sign-in.
+- Password reset shows the complete password requirements and names the action's
+  outcome clearly.
+- Confirmation-email recovery explains its privacy behavior, uses email-friendly
+  input, and provides a safe return to sign-in.
+
 ## [0.1.17] - 2026-09-16
 
 ### Improved

@@ -15,8 +15,19 @@
     {
       "scenario": "development-login",
       "visitedRoutes": [
-        "/Account/Register?invite=invited%40example.com%7Cinviter-id",
+        "/Account/Register?invite=invited%40example.com%7Cinviter-id&ReturnUrl=%2Fevents",
+        "/Account/Login",
+        "/Account/ForgotPassword",
+        "/Account/ResetPassword?Code=dGVzdA",
+        "/Account/ResendEmailConfirmation",
         "/Account/Login"
+      ],
+      "assertions": [
+        "login session safety and recovery navigation",
+        "registration password guidance and sign-in navigation",
+        "private password-recovery guidance",
+        "password reset requirements and outcome",
+        "confirmation-email privacy and recovery"
       ]
     },
     {

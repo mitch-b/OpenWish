@@ -929,6 +929,72 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Login_ExplainsPersistentSessionsAndGroupsRecoveryActions()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Login.razor");
+
+        Assert.Contains("id=\"remember-me\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"remember-me-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Avoid this on shared devices.", markup, StringComparison.Ordinal);
+        Assert.Contains("Need help signing in?", markup, StringComparison.Ordinal);
+        Assert.Contains(">Reset your password</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Resend your confirmation email</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Registration_ConnectsPasswordRequirementsAndSignInAction()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Register.razor");
+
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains(">Create account</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("GetUriWithQueryParameters(\"Account/Login\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Log in</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordRecovery_ExplainsPrivateOutcomeAndProvidesSafeNavigation()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ForgotPassword.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"reset-email-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("If an eligible account matches", markup, StringComparison.Ordinal);
+        Assert.Contains(">Send reset link</button>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Back to log in</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordReset_ConnectsRequirementsAndNamesItsOutcome()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResetPassword.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains(">Save new password</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfirmationEmailRecovery_UsesEmailSemanticsAndPrivacyGuidance()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResendEmailConfirmation.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
+        Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Back to log in</a>", markup, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

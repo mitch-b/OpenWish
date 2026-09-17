@@ -45,24 +45,27 @@
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
                 <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+                    <label class="form-label" for="remember-me">
+                        <InputCheckbox @bind-Value="Input.RememberMe"
+                                       id="remember-me"
+                                       class="darker-border-checkbox form-check-input"
+                                       aria-describedby="remember-me-help" />
                         Remember me
                     </label>
+                    <div id="remember-me-help" class="form-text">
+                        Keep me signed in on this device. Avoid this on shared devices.
+                    </div>
                 </div>
                 <div>
                     <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
                 </div>
-                <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+                <div class="mt-4">
+                    <p class="fw-semibold">Need help signing in?</p>
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2"><a href="Account/ForgotPassword">Reset your password</a></li>
+                        <li class="mb-2"><a href="Account/ResendEmailConfirmation">Resend your confirmation email</a></li>
+                        <li><a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Create an account</a></li>
+                    </ul>
                 </div>
             </EditForm>
         </section>

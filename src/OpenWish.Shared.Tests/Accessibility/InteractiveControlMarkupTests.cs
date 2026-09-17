@@ -937,7 +937,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("id=\"remember-me\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"remember-me-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("Avoid this on shared devices.", markup, StringComparison.Ordinal);
-        Assert.Contains("Need help signing in?", markup, StringComparison.Ordinal);
+        Assert.Contains("<h3 class=\"h6\">Need help signing in?</h3>", markup, StringComparison.Ordinal);
         Assert.Contains(">Reset your password</a>", markup, StringComparison.Ordinal);
         Assert.Contains(">Resend your confirmation email</a>", markup, StringComparison.Ordinal);
     }
@@ -966,7 +966,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-describedby=\"reset-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("If an eligible account matches", markup, StringComparison.Ordinal);
         Assert.Contains(">Send reset link</button>", markup, StringComparison.Ordinal);
-        Assert.Contains(">Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -992,7 +992,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
         Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
-        Assert.Contains(">Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

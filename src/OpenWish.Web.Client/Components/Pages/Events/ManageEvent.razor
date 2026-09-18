@@ -3,22 +3,36 @@
 
 @using OpenWish.Web.Client.Components.Event
 @using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Shared
 @using System.Collections.Generic
 @using System.Linq
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject NavigationManager NavigationManager
+@inject ILogger<ManageEvent> Logger
 
 @rendermode InteractiveAuto
 
 <PageTitle>Manage Event - @(_event?.Name ?? "")</PageTitle>
 
-@if (_event == null)
+@if (_isLoading && _event == null)
 {
     <div class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading event...</span>
+        </div>
+    </div>
+}
+else if (_event == null)
+{
+    <div class="container page-shell">
+        <PageHeader Title="Event management unavailable"
+                    Description="We couldn't load the event settings. The event itself has not been changed." />
+        <div class="alert alert-danger" role="alert">@_loadError</div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="button" @onclick="RetryLoadAsync">Try again</button>
+            <a class="btn btn-outline-secondary" href="/events">Back to events</a>
         </div>
     </div>
 }
@@ -44,6 +58,22 @@ else
             </Actions>
         </PageHeader>
 
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <div class="alert alert-success" role="status" aria-live="polite">@_statusMessage</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(_saveError))
+        {
+            <div class="alert alert-danger" role="alert">@_saveError</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_loadError
+                <button class="btn btn-outline-danger d-block mt-2" type="button" @onclick="RetryLoadAsync">Try again</button>
+            </div>
+        }
+
         <div class="row g-4">
             <div class="col-md-8">
                 <div class="card shadow-sm">
@@ -52,7 +82,8 @@ else
                             <EventForm Model="@_event"
                                      OnSubmit="@HandleSubmit"
                                      ShowValidationSummary="true"
-                                     LockEventType="@_event.NamesDrawnOn.HasValue" />
+                                     LockEventType="@_event.NamesDrawnOn.HasValue"
+                                     IsSubmitting="@_isSaving" />
                         @* </FormMappingScope> *@
                     </div>
                 </div>
@@ -108,12 +139,15 @@ else
                                             <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
                                         </div>
                                     </div>
-                                    @if (!_event.NamesDrawnOn.HasValue &&
+                                    @if (!_event!.NamesDrawnOn.HasValue &&
                                          participant.User?.Id is string participantUserId &&
                                          participantUserId != _currentUserId)
                                     {
                                         <button class="btn btn-outline-danger btn-sm"
-                                                @onclick="() => HandleRemoveParticipant(participant)">
+                                                id="@GetParticipantRemoveButtonId(participant)"
+                                                aria-label="@($"Remove {GetParticipantDisplayName(participant)} from event")"
+                                                disabled="@_isRemovingParticipant"
+                                                @onclick="() => PromptParticipantRemoval(participant)">
                                             Remove
                                         </button>
                                     }
@@ -131,6 +165,55 @@ else
         </div>
     </div>
 }
+
+<Dialog @ref="_participantRemovalDialog"
+        Title="Remove participant"
+        DescriptionId="remove-event-participant-description"
+        ReturnFocusElementId="@ParticipantRemovalReturnFocusId"
+        CanClose="@(!_isRemovingParticipant)"
+        OnClose="ClearParticipantRemoval">
+    <div class="modal-body">
+        <p id="remove-event-participant-description">
+            Remove <strong>@ParticipantPendingRemovalName</strong> from this event?
+            They will lose access to the event and will not be included when names are drawn.
+        </p>
+        @if (!string.IsNullOrWhiteSpace(_participantRemovalError))
+        {
+            <div class="alert alert-danger mb-0" role="alert">@_participantRemovalError</div>
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dialog-initial-focus
+                disabled="@_isRemovingParticipant"
+                @onclick="CloseParticipantRemovalAsync">
+            Keep participant
+        </button>
+        @if (_participantRemovalUncertain)
+        {
+            <button type="button"
+                    class="btn btn-primary"
+                    disabled="@_isRemovingParticipant"
+                    @onclick="ReloadParticipantRemovalAsync">
+                Reload event
+            </button>
+        }
+        else
+        {
+            <button type="button"
+                    class="btn btn-danger"
+                    disabled="@_isRemovingParticipant"
+                    @onclick="ConfirmParticipantRemovalAsync">
+                @if (_isRemovingParticipant)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                }
+                <span>Remove participant</span>
+            </button>
+        }
+    </div>
+</Dialog>
 
 @if (_showDeleteConfirmation && _event is not null)
 {
@@ -195,6 +278,16 @@ else
     private bool _isOwner;
     private bool _showDeleteConfirmation;
     private bool _isDeleting;
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _isRemovingParticipant;
+    private bool _participantRemovalUncertain;
+    private string? _loadError;
+    private string? _saveError;
+    private string? _statusMessage;
+    private string? _participantRemovalError;
+    private EventUserModel? _participantPendingRemoval;
+    private Dialog _participantRemovalDialog = default!;
     private DeleteConfirmationStep _deleteConfirmationStep = DeleteConfirmationStep.First;
 
     protected override async Task OnInitializedAsync()
@@ -203,24 +296,74 @@ else
         await LoadEvent();
     }
 
-    private async Task LoadEvent()
+    private async Task<bool> LoadEvent()
     {
-        _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId!);
-        _isOwner = _event?.CreatedBy.Id == _currentUserId;
+        _isLoading = _event == null;
+        _loadError = null;
 
-        if (!_isOwner)
+        try
         {
-            NavigationManager.NavigateTo($"/events/{EventId}");
+            if (string.IsNullOrWhiteSpace(_currentUserId))
+            {
+                throw new InvalidOperationException("The current user could not be determined.");
+            }
+
+            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+            _isOwner = _event?.CreatedBy?.Id == _currentUserId;
+
+            if (!_isOwner)
+            {
+                NavigationManager.NavigateTo($"/events/{EventId}");
+            }
+
+            return _event is not null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load event management for {EventId}", EventId);
+            _loadError = "We couldn't load the event settings. Check your connection and try again.";
+            return false;
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 
     private async Task HandleSubmit(EventModel updatedEvent)
     {
-        if (_event != null)
+        if (_event == null || _isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _saveError = null;
+        _statusMessage = null;
+
+        try
         {
             await EventService.UpdateEventByPublicIdAsync(EventId, updatedEvent, _currentUserId!);
-            NavigationManager.NavigateTo($"/events/{EventId}");
+            var reloaded = await LoadEvent();
+            _statusMessage = reloaded
+                ? "Event changes saved."
+                : "Event changes were saved, but the latest event details couldn't be reloaded.";
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to update event {EventId}", EventId);
+            _saveError = "We couldn't save the event changes. Review the details and try again.";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        _statusMessage = null;
+        await LoadEvent();
     }
 
     private void HandleCancel()
@@ -281,16 +424,107 @@ else
         }
     }
 
-    private async Task HandleRemoveParticipant(EventUserModel participant)
+    private void PromptParticipantRemoval(EventUserModel participant)
     {
-        if (participant.User?.Id is null || string.IsNullOrEmpty(_currentUserId))
+        if (_isRemovingParticipant || participant.User?.Id is null)
         {
             return;
         }
 
-        await EventService.RemoveUserFromEventByPublicIdAsync(EventId, participant.User.Id, _currentUserId);
-        await LoadEvent();
+        _participantPendingRemoval = participant;
+        _participantRemovalError = null;
+        _participantRemovalUncertain = false;
+        _participantRemovalDialog.Show();
     }
+
+    private async Task ConfirmParticipantRemovalAsync()
+    {
+        if (_isRemovingParticipant ||
+            _participantPendingRemoval is not { User.Id: string participantUserId } participantToRemove ||
+            string.IsNullOrEmpty(_currentUserId))
+        {
+            return;
+        }
+
+        _isRemovingParticipant = true;
+        _participantRemovalError = null;
+        _statusMessage = null;
+
+        try
+        {
+            var removed = await EventService.RemoveUserFromEventByPublicIdAsync(EventId, participantUserId, _currentUserId);
+            if (!removed)
+            {
+                _participantRemovalUncertain = true;
+                _participantRemovalError = "We couldn't confirm whether the participant was removed. Reload the event before trying again.";
+                return;
+            }
+
+            var participantName = ParticipantPendingRemovalName;
+            _event?.EventUsers?.Remove(participantToRemove);
+            _statusMessage = $"{participantName} was removed from the event.";
+            await _participantRemovalDialog.CloseAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to remove participant {ParticipantId} from event {EventId}", participantUserId, EventId);
+            _participantRemovalUncertain = true;
+            _participantRemovalError = "We couldn't confirm whether the participant was removed. Reload the event before trying again.";
+        }
+        finally
+        {
+            _isRemovingParticipant = false;
+        }
+    }
+
+    private async Task ReloadParticipantRemovalAsync()
+    {
+        if (_participantPendingRemoval?.User?.Id is not string participantUserId)
+        {
+            return;
+        }
+
+        _isRemovingParticipant = true;
+        var participantName = ParticipantPendingRemovalName;
+        var loaded = await LoadEvent();
+        _isRemovingParticipant = false;
+
+        if (!loaded)
+        {
+            _participantRemovalError = "We still couldn't reload the event. Check your connection and try again.";
+            return;
+        }
+
+        var participantStillExists = _event?.EventUsers?.Any(participant =>
+            string.Equals(participant.User?.Id, participantUserId, StringComparison.Ordinal)) ?? false;
+        if (participantStillExists)
+        {
+            _participantRemovalUncertain = false;
+            _participantRemovalError = "The participant was not removed. You can try again.";
+            return;
+        }
+
+        _statusMessage = $"{participantName} was removed from the event.";
+        await _participantRemovalDialog.CloseAsync();
+    }
+
+    private Task CloseParticipantRemovalAsync() => _participantRemovalDialog.CloseAsync();
+
+    private void ClearParticipantRemoval()
+    {
+        _participantPendingRemoval = null;
+        _participantRemovalError = null;
+        _participantRemovalUncertain = false;
+    }
+
+    private string ParticipantPendingRemovalName =>
+        _participantPendingRemoval is null ? "this participant" : GetParticipantDisplayName(_participantPendingRemoval);
+
+    private string? ParticipantRemovalReturnFocusId =>
+        _participantPendingRemoval is null ? null : GetParticipantRemoveButtonId(_participantPendingRemoval);
+
+    private static string GetParticipantRemoveButtonId(EventUserModel participant) =>
+        $"remove-event-participant-{participant.Id}";
 
     private IEnumerable<EventUserModel> GetParticipantList() =>
         _event?.EventUsers?

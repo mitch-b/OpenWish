@@ -19,6 +19,7 @@
                         class="close-button"
                         aria-label="Close"
                         data-dialog-close
+                        disabled="@(!CanClose)"
                         @onclick="CloseAsync">&times;</button>
             </div>
             <div class="dialog-content">
@@ -49,6 +50,9 @@
 
     [Parameter]
     public string? DescriptionId { get; set; }
+
+    [Parameter]
+    public bool CanClose { get; set; } = true;
 
     public void Show()
     {
@@ -86,7 +90,7 @@
 
     private Task HandleBackdropClick()
     {
-        return CloseAsync();
+        return CanClose ? CloseAsync() : Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

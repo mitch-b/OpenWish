@@ -10,16 +10,31 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject NavigationManager NavigationManager
+@inject ILogger<EventDetails> Logger
 
 @rendermode InteractiveAuto
 
 <PageTitle>@(_event?.Name ?? "Event Details")</PageTitle>
 
-@if (_event == null)
+@if (_isLoading && _event == null)
 {
     <div class="text-center py-5">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading event...</span>
+        </div>
+    </div>
+}
+else if (_event == null)
+{
+    <div class="container page-shell" aria-busy="@_isLoading">
+        <PageHeader Title="Event unavailable"
+                    Description="We couldn't load this event. It may have been removed, or you may no longer have access." />
+        <div class="alert alert-danger" role="alert">@_loadError</div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="button" disabled="@_isLoading" @onclick="RetryLoadAsync">
+                @(_isLoading ? "Retrying..." : "Try again")
+            </button>
+            <a class="btn btn-outline-secondary" href="/events">Back to events</a>
         </div>
     </div>
 }
@@ -51,7 +66,20 @@ else
         </div>
     </div>
 
-    <div class="container event-page py-4">
+    <div class="container event-page py-4" aria-busy="@_isLoading">
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <div class="alert alert-danger" role="alert">
+                @_loadError
+                <button class="btn btn-outline-danger d-block mt-2"
+                        type="button"
+                        disabled="@_isLoading"
+                        @onclick="RetryLoadAsync">
+                    @(_isLoading ? "Retrying..." : "Try again")
+                </button>
+            </div>
+        }
+
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
         {
             <div id="secret-santa-setup">
@@ -258,6 +286,8 @@ else
     private bool _isPendingInvitee;
     private EventUserModel? _pendingInvitation;
     private string? _loadedEventId;
+    private string? _loadError;
+    private bool _isLoading = true;
     private int _loadVersion;
 
     protected override async Task OnInitializedAsync()
@@ -274,41 +304,81 @@ else
 
         _loadedEventId = EventId;
         _event = null;
+        _loadError = null;
+        _isLoading = true;
         await LoadEvent();
     }
 
-    private async Task LoadEvent()
+    private async Task<bool> LoadEvent()
     {
         var eventId = EventId;
         var loadVersion = ++_loadVersion;
-        var loadedEvent = await EventService.GetEventByPublicIdAsync(eventId, _currentUserId!);
-        var isOwner = loadedEvent?.CreatedBy.Id == _currentUserId;
-        var isAcceptedParticipant = isOwner ||
-            (loadedEvent?.EventUsers?.Any(participant =>
-                !participant.Deleted &&
-                participant.IsAccepted &&
-                string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(participant.UserId, _currentUserId, StringComparison.Ordinal)) ?? false);
-        var isPendingInvitee = !isOwner && !isAcceptedParticipant;
-        EventUserModel? pendingInvitation = null;
+        _isLoading = true;
+        _loadError = null;
 
-        if (isPendingInvitee)
+        try
         {
-            var invitations = await EventService.GetPendingInvitationsForUserAsync(_currentUserId!);
-            pendingInvitation = invitations.FirstOrDefault(invitation =>
-                string.Equals(invitation.Event?.PublicId, eventId, StringComparison.Ordinal));
-        }
+            if (string.IsNullOrWhiteSpace(_currentUserId))
+            {
+                throw new InvalidOperationException("The current user could not be determined.");
+            }
 
-        if (loadVersion != _loadVersion || !string.Equals(EventId, eventId, StringComparison.Ordinal))
+            var loadedEvent = await EventService.GetEventByPublicIdAsync(eventId, _currentUserId);
+            var isOwner = loadedEvent?.CreatedBy?.Id == _currentUserId;
+            var isAcceptedParticipant = isOwner ||
+                (loadedEvent?.EventUsers?.Any(participant =>
+                    !participant.Deleted &&
+                    participant.IsAccepted &&
+                    string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(participant.UserId, _currentUserId, StringComparison.Ordinal)) ?? false);
+            var isPendingInvitee = !isOwner && !isAcceptedParticipant;
+            EventUserModel? pendingInvitation = null;
+
+            if (isPendingInvitee)
+            {
+                var invitations = await EventService.GetPendingInvitationsForUserAsync(_currentUserId);
+                pendingInvitation = invitations.FirstOrDefault(invitation =>
+                    string.Equals(invitation.Event?.PublicId, eventId, StringComparison.Ordinal));
+            }
+
+            if (loadVersion != _loadVersion || !string.Equals(EventId, eventId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            _event = loadedEvent;
+            _isOwner = isOwner;
+            _isAcceptedParticipant = isAcceptedParticipant;
+            _isPendingInvitee = isPendingInvitee;
+            _pendingInvitation = pendingInvitation;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load event {EventId}", eventId);
+            if (loadVersion == _loadVersion && string.Equals(EventId, eventId, StringComparison.Ordinal))
+            {
+                _loadError = "We couldn't load this event. Check your connection and try again.";
+            }
+            return false;
+        }
+        finally
+        {
+            if (loadVersion == _loadVersion)
+            {
+                _isLoading = false;
+            }
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        if (_isLoading)
         {
             return;
         }
 
-        _event = loadedEvent;
-        _isOwner = isOwner;
-        _isAcceptedParticipant = isAcceptedParticipant;
-        _isPendingInvitee = isPendingInvitee;
-        _pendingInvitation = pendingInvitation;
+        await LoadEvent();
     }
 
     private string PendingInvitationLink =>

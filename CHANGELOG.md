@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.19] - 2026-09-18
+
+### Improved
+
+- Event details distinguish loading failures from loading progress and provide
+  clear, duplicate-safe retry and exit actions.
+- Event management distinguishes loading failures from loading progress without
+  implying that settings were changed, and safely redirects non-organizers.
+- Event edits prevent duplicate saves, announce completion, and keep actionable
+  failures on the form.
+- Participant removal requires confirmation, prevents duplicate requests, and
+  safely reconciles interrupted results while keeping participant views in sync.
+- Invitation declines require confirmation, explain the consequence, and never
+  expose internal failure details.
+
 ## [0.1.18] - 2026-09-17
 
 ### Improved

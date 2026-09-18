@@ -450,6 +450,94 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventDetails_ExposeRecoverableLoadingFailures()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("Title=\"Event unavailable\"", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load this event. Check your connection and try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@(_isLoading ? \"Retrying...\" : \"Try again\")", markup, StringComparison.Ordinal);
+        Assert.Contains("Logger.LogError(ex, \"Failed to load event {EventId}\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_ExposesRecoverableLoadingFailures()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("Title=\"Event management unavailable\"", markup, StringComparison.Ordinal);
+        Assert.Contains("The event itself has not been changed.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("var loadVersion = ++_loadVersion;", markup, StringComparison.Ordinal);
+        Assert.Contains("loadVersion != _loadVersion", markup, StringComparison.Ordinal);
+        Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("NavigationManager.NavigateTo($\"/events/{eventId}\");", StringComparison.Ordinal) >
+            markup.IndexOf("catch (Exception ex)", StringComparison.Ordinal));
+        Assert.Contains("Logger.LogError(ex, \"Failed to load event management for {EventId}\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_PreventsDuplicateSavesAndKeepsFailuresOnTheForm()
+    {
+        var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor");
+        var managementMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("IsSubmitting=\"@_isSaving\"", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (_event == null || _isSaving)", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("var reloaded = await LoadEvent();", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("Event changes saved.", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't save the event changes. Review the details and try again.", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("\"Saving changes...\"", formMarkup, StringComparison.Ordinal);
+
+        var controller = ReadComponent("OpenWish.Web", "Controllers", "EventController.cs");
+        Assert.Contains("return Ok(updatedEvent);", controller, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_ConfirmsAndReconcilesParticipantRemoval()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("Title=\"Remove participant\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"remove-event-participant-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Removing...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Reloading event...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (_event?.IsGiftExchange == true)", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't confirm whether the participant was removed.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"ReloadParticipantRemovalAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("CanClose=\"@(!_isRemovingParticipant)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<EventInvitations @key=\"_invitationsVersion\"", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.Split("_invitationsVersion++;", StringSplitOptions.None).Length >= 3,
+            "Successful direct and reconciled removals should refresh invitation state.");
+
+        var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "Dialog.razor");
+        Assert.Contains("disabled=\"@(!CanClose)\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("return CanClose ? CloseAsync() : Task.CompletedTask;", dialogMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InvitationDecline_RequiresConfirmationAndUsesSafeErrors()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "AcceptInvite.razor");
+
+        Assert.Contains("Title=\"Decline invitation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"decline-invitation-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("CanClose=\"@(!_isProcessing)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Declining invitation...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("The host will see that you declined", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't accept the invitation. Check your connection and try again.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("_errorMessage = ex.Message", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("_rejectErrorMessage = ex.Message", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EventInvitations_ExposeRecoverableLoadingAndBusyActionStates()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");

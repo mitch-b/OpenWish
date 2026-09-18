@@ -695,7 +695,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.locator("#name").fill("Neighborhood Secret Santa");
   await page.getByRole("button", { name: "Create and invite people" }).click();
-  await page.waitForURL(/\/events\/[^/]+(?:#secret-santa-setup)?$/);
+  await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
+  const createdEventPublicId = new URL(page.url()).pathname.split("/").filter(Boolean).at(-1);
+  if (!createdEventPublicId) {
+    throw new Error("The created event URL did not include a public identifier.");
+  }
   await assertVisible(page, "Finish your Secret Santa setup");
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
@@ -737,7 +741,24 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "invitation-dialog.png", false);
   await page.getByRole("button", { name: "Cancel" }).click();
 
-  await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
+  const friendsResponse = await context.request.get(`${baseUrl}/api/friends`);
+  if (!friendsResponse.ok()) {
+    throw new Error(`Owner friends returned ${friendsResponse.status()}.`);
+  }
+  const friends = await friendsResponse.json();
+  const removableFriend = friends.find(friend => friend.userName === "JordanDemo") ?? friends[0];
+  if (!removableFriend?.id) {
+    throw new Error("Participant-removal verification requires a seeded friend.");
+  }
+  const participantResponse = await context.request.post(
+    `${baseUrl}/api/events/${createdEventPublicId}/users`,
+    { data: { userId: removableFriend.id, role: "Participant" } }
+  );
+  if (!participantResponse.ok()) {
+    throw new Error(`Created event participant setup returned ${participantResponse.status()}.`);
+  }
+
+  await visit(page, `/events/${createdEventPublicId}/manage`, "Manage Event", visitedRoutes);
   await assertVisible(page, "Participants");
   await page.waitForFunction(() =>
     document.querySelector(".event-invitations")?.getAttribute("aria-busy") === "false"
@@ -745,6 +766,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.locator(".event-invitations").getAttribute("aria-busy") !== "false") {
     throw new Error("Loaded event invitations remained marked as busy.");
   }
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByRole("status").filter({ hasText: "Event changes saved." })
+    .waitFor({ state: "visible" });
+  const removeEventParticipant = page.getByRole("button", { name: /Remove .* from event/ }).first();
+  await removeEventParticipant.click();
+  const participantRemovalDialog = page.getByRole("dialog", { name: "Remove participant" });
+  await participantRemovalDialog.getByText("They will lose access to the event").waitFor({ state: "visible" });
+  await screenshot(page, "event-participant-removal.png", false);
+  await participantRemovalDialog.getByRole("button", { name: "Remove participant" }).click();
+  await page.getByRole("status").filter({ hasText: "JordanDemo was removed from the event." })
+    .waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Remove JordanDemo from event" }).waitFor({ state: "detached" });
+  await page.locator(".event-invitations").getByText("JordanDemo", { exact: true })
+    .waitFor({ state: "detached" });
   await screenshot(page, "event-management.png");
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
@@ -1227,6 +1262,16 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const manageRedirectResponse = await page.goto(
+    `${baseUrl}/events/${manifest.eventPublicId}/manage`,
+    { waitUntil: "domcontentloaded" }
+  );
+  if (!manageRedirectResponse?.ok()) {
+    throw new Error(`Pending invitee event management returned ${manageRedirectResponse?.status() ?? "no response"}.`);
+  }
+  await page.waitForURL(`${baseUrl}/events/${manifest.eventPublicId}`);
+  await assertVisible(page, "Accept your invitation to join");
+  visitedRoutes.push(new URL(page.url()).pathname);
   await visit(page, `/events/${manifest.eventPublicId}`, "Accept your invitation to join", visitedRoutes);
   if (await page.getByText("You're in the Secret Santa.").isVisible()) {
     throw new Error("Pending invitee was incorrectly shown accepted-participant guidance.");
@@ -1234,6 +1279,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("link", { name: "Review invitation" }).click();
   await assertVisible(page, "You're almost in!");
   await assertVisible(page, "Accept invite");
+  await page.getByRole("button", { name: "Decline invite" }).click();
+  const declineInvitationDialog = page.getByRole("dialog", { name: "Decline invitation" });
+  await declineInvitationDialog.getByText("The host will see that you declined").waitFor({ state: "visible" });
+  await screenshot(page, "invitation-decline-dialog.png", false);
+  await declineInvitationDialog.getByRole("button", { name: "Keep invitation" }).click();
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
 

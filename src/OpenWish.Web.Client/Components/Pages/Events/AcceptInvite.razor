@@ -171,8 +171,12 @@
             @if (_isProcessing && _processingAction == "reject")
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                <span>Declining invitation...</span>
             }
-            <span>Decline invitation</span>
+            else
+            {
+                <span>Decline invitation</span>
+            }
         </button>
     </div>
 </Dialog>

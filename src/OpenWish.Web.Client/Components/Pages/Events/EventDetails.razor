@@ -26,13 +26,13 @@
 }
 else if (_event == null)
 {
-    <div class="container page-shell">
+    <div class="container page-shell" aria-busy="@_isLoading">
         <PageHeader Title="Event unavailable"
                     Description="We couldn't load this event. It may have been removed, or you may no longer have access." />
         <div class="alert alert-danger" role="alert">@_loadError</div>
         <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" type="button" @onclick="RetryLoadAsync">
-                Try again
+            <button class="btn btn-primary" type="button" disabled="@_isLoading" @onclick="RetryLoadAsync">
+                @(_isLoading ? "Retrying..." : "Try again")
             </button>
             <a class="btn btn-outline-secondary" href="/events">Back to events</a>
         </div>
@@ -66,13 +66,16 @@ else
         </div>
     </div>
 
-    <div class="container event-page py-4">
+    <div class="container event-page py-4" aria-busy="@_isLoading">
         @if (!string.IsNullOrWhiteSpace(_loadError))
         {
             <div class="alert alert-danger" role="alert">
                 @_loadError
-                <button class="btn btn-outline-danger d-block mt-2" type="button" @onclick="RetryLoadAsync">
-                    Try again
+                <button class="btn btn-outline-danger d-block mt-2"
+                        type="button"
+                        disabled="@_isLoading"
+                        @onclick="RetryLoadAsync">
+                    @(_isLoading ? "Retrying..." : "Try again")
                 </button>
             </div>
         }
@@ -310,7 +313,7 @@ else
     {
         var eventId = EventId;
         var loadVersion = ++_loadVersion;
-        _isLoading = _event == null;
+        _isLoading = true;
         _loadError = null;
 
         try
@@ -370,7 +373,11 @@ else
 
     private async Task RetryLoadAsync()
     {
-        _isLoading = _event == null;
+        if (_isLoading)
+        {
+            return;
+        }
+
         await LoadEvent();
     }
 

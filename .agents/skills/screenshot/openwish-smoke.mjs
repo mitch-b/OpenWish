@@ -774,7 +774,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const participantRemovalDialog = page.getByRole("dialog", { name: "Remove participant" });
   await participantRemovalDialog.getByText("They will lose access to the event").waitFor({ state: "visible" });
   await screenshot(page, "event-participant-removal.png", false);
-  await participantRemovalDialog.getByRole("button", { name: "Keep participant" }).click();
+  await participantRemovalDialog.getByRole("button", { name: "Remove participant" }).click();
+  await page.getByRole("status").filter({ hasText: "JordanDemo was removed from the event." })
+    .waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Remove JordanDemo from event" }).waitFor({ state: "detached" });
+  await page.locator(".event-invitations").getByText("JordanDemo", { exact: true })
+    .waitFor({ state: "detached" });
   await screenshot(page, "event-management.png");
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
@@ -1257,6 +1262,16 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const manageRedirectResponse = await page.goto(
+    `${baseUrl}/events/${manifest.eventPublicId}/manage`,
+    { waitUntil: "domcontentloaded" }
+  );
+  if (!manageRedirectResponse?.ok()) {
+    throw new Error(`Pending invitee event management returned ${manageRedirectResponse?.status() ?? "no response"}.`);
+  }
+  await page.waitForURL(`${baseUrl}/events/${manifest.eventPublicId}`);
+  await assertVisible(page, "Accept your invitation to join");
+  visitedRoutes.push(new URL(page.url()).pathname);
   await visit(page, `/events/${manifest.eventPublicId}`, "Accept your invitation to join", visitedRoutes);
   if (await page.getByText("You're in the Secret Santa.").isVisible()) {
     throw new Error("Pending invitee was incorrectly shown accepted-participant guidance.");

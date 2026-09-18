@@ -26,12 +26,14 @@
 }
 else if (_event == null)
 {
-    <div class="container page-shell">
+    <div class="container page-shell" aria-busy="@_isLoading">
         <PageHeader Title="Event management unavailable"
                     Description="We couldn't load the event settings. The event itself has not been changed." />
         <div class="alert alert-danger" role="alert">@_loadError</div>
         <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" type="button" @onclick="RetryLoadAsync">Try again</button>
+            <button class="btn btn-primary" type="button" disabled="@_isLoading" @onclick="RetryLoadAsync">
+                @(_isLoading ? "Retrying..." : "Try again")
+            </button>
             <a class="btn btn-outline-secondary" href="/events">Back to events</a>
         </div>
     </div>
@@ -44,7 +46,7 @@ else if (!_isOwner)
 }
 else
 {
-    <div class="container page-shell">
+    <div class="container page-shell" aria-busy="@_isLoading">
         <PageHeader Title="Manage event" Description="@_event.Name">
             <Actions>
                 <div class="d-flex flex-wrap gap-2">
@@ -70,7 +72,12 @@ else
         {
             <div class="alert alert-danger" role="alert">
                 @_loadError
-                <button class="btn btn-outline-danger d-block mt-2" type="button" @onclick="RetryLoadAsync">Try again</button>
+                <button class="btn btn-outline-danger d-block mt-2"
+                        type="button"
+                        disabled="@_isLoading"
+                        @onclick="RetryLoadAsync">
+                    @(_isLoading ? "Retrying..." : "Try again")
+                </button>
             </div>
         }
 
@@ -96,7 +103,8 @@ else
                 </div>
             </div>
             <div class="col-md-4">
-                <EventInvitations EventId="@EventId"
+                <EventInvitations @key="_invitationsVersion"
+                                  EventId="@EventId"
                                   IsOwner="true"
                                   CurrentUserId="@_currentUserId"
                                   NamesDrawn="@_event.NamesDrawnOn.HasValue" />
@@ -175,7 +183,11 @@ else
     <div class="modal-body">
         <p id="remove-event-participant-description">
             Remove <strong>@ParticipantPendingRemovalName</strong> from this event?
-            They will lose access to the event and will not be included when names are drawn.
+            They will lose access to the event.
+            @if (_event?.IsGiftExchange == true)
+            {
+                <span>They will not be included when names are drawn.</span>
+            }
         </p>
         @if (!string.IsNullOrWhiteSpace(_participantRemovalError))
         {
@@ -196,7 +208,15 @@ else
                     class="btn btn-primary"
                     disabled="@_isRemovingParticipant"
                     @onclick="ReloadParticipantRemovalAsync">
-                Reload event
+                @if (_isRemovingParticipant)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>Reloading event...</span>
+                }
+                else
+                {
+                    <span>Reload event</span>
+                }
             </button>
         }
         else
@@ -208,8 +228,12 @@ else
                 @if (_isRemovingParticipant)
                 {
                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>Removing...</span>
                 }
-                <span>Remove participant</span>
+                else
+                {
+                    <span>Remove participant</span>
+                }
             </button>
         }
     </div>
@@ -289,6 +313,8 @@ else
     private EventUserModel? _participantPendingRemoval;
     private Dialog _participantRemovalDialog = default!;
     private DeleteConfirmationStep _deleteConfirmationStep = DeleteConfirmationStep.First;
+    private int _loadVersion;
+    private int _invitationsVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -298,8 +324,11 @@ else
 
     private async Task<bool> LoadEvent()
     {
-        _isLoading = _event == null;
+        var eventId = EventId;
+        var loadVersion = ++_loadVersion;
+        _isLoading = true;
         _loadError = null;
+        EventModel loadedEvent;
 
         try
         {
@@ -308,26 +337,39 @@ else
                 throw new InvalidOperationException("The current user could not be determined.");
             }
 
-            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
-            _isOwner = _event?.CreatedBy?.Id == _currentUserId;
-
-            if (!_isOwner)
-            {
-                NavigationManager.NavigateTo($"/events/{EventId}");
-            }
-
-            return _event is not null;
+            loadedEvent = await EventService.GetEventByPublicIdAsync(eventId, _currentUserId);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to load event management for {EventId}", EventId);
-            _loadError = "We couldn't load the event settings. Check your connection and try again.";
+            Logger.LogError(ex, "Failed to load event management for {EventId}", eventId);
+            if (loadVersion == _loadVersion && string.Equals(EventId, eventId, StringComparison.Ordinal))
+            {
+                _loadError = "We couldn't load the event settings. Check your connection and try again.";
+            }
             return false;
         }
         finally
         {
-            _isLoading = false;
+            if (loadVersion == _loadVersion)
+            {
+                _isLoading = false;
+            }
         }
+
+        if (loadVersion != _loadVersion || !string.Equals(EventId, eventId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _event = loadedEvent;
+        _isOwner = loadedEvent.CreatedBy?.Id == _currentUserId;
+
+        if (!_isOwner)
+        {
+            NavigationManager.NavigateTo($"/events/{eventId}");
+        }
+
+        return true;
     }
 
     private async Task HandleSubmit(EventModel updatedEvent)
@@ -362,6 +404,11 @@ else
 
     private async Task RetryLoadAsync()
     {
+        if (_isLoading)
+        {
+            return;
+        }
+
         _statusMessage = null;
         await LoadEvent();
     }
@@ -462,6 +509,7 @@ else
 
             var participantName = ParticipantPendingRemovalName;
             _event?.EventUsers?.Remove(participantToRemove);
+            _invitationsVersion++;
             _statusMessage = $"{participantName} was removed from the event.";
             await _participantRemovalDialog.CloseAsync();
         }
@@ -505,6 +553,7 @@ else
         }
 
         _statusMessage = $"{participantName} was removed from the event.";
+        _invitationsVersion++;
         await _participantRemovalDialog.CloseAsync();
     }
 

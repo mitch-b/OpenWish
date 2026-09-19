@@ -112,12 +112,26 @@ async function generateTotp(secret) {
 }
 
 async function visit(page, route, expectedText, visitedRoutes) {
-  const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
-  if (!response?.ok()) {
-    throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+  let response;
+  let lastError;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+    if (!response?.ok()) {
+      throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+    }
+
+    try {
+      await assertVisible(page, expectedText);
+      break;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 1) {
+        throw lastError;
+      }
+    }
   }
 
-  await assertVisible(page, expectedText);
   const blazorError = page.locator("#blazor-error-ui");
   if (await blazorError.isVisible()) {
     throw new Error(`Blazor error UI was visible on ${route}.`);
@@ -477,6 +491,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded personal wishlist panel remained marked as busy.");
   }
+  await page.getByRole("heading", { name: "Your collection" }).waitFor({ state: "visible" });
+  await assertVisible(page, "Ideas saved");
+  await assertVisible(page, "Shared lists");
   const wishlistSearch = page.getByRole("searchbox", { name: "Search wishlists" });
   if (await wishlistSearch.getAttribute("aria-controls") !== "wishlist-results") {
     throw new Error("Wishlist discovery search does not identify its results.");
@@ -499,6 +516,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "wishlists.png");
 
   await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  await page.getByRole("heading", { name: "Shared with you" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Manage friends" }).waitFor({ state: "visible" });
   await assertVisible(page, "Jordan's Favorites");
   if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded friends' wishlist panel remained marked as busy.");

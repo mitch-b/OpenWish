@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.20",
+    "date": "2026-09-18",
+    "title": "Clearer wishlist overview",
+    "summary": "Wishlist overview now makes saved ideas, sharing status, and the next useful action easier to see.",
+    "highlights": [
+      "The wishlist overview shows total lists, saved ideas, and shared lists at a glance.",
+      "Shared wishlists have a clear purpose and a direct route to friend management.",
+      "An empty shared-with-you tab explains what is missing and offers a Find friends action."
+    ]
+  },
+  {
     "version": "0.1.19",
     "date": "2026-09-18",
     "title": "Dependable event participation",

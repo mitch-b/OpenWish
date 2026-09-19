@@ -110,6 +110,26 @@
                 }
                 else
                 {
+                    <section class="wishlist-pulse" aria-labelledby="wishlist-pulse-title">
+                        <div class="wishlist-pulse-copy">
+                            <h2 id="wishlist-pulse-title">Your collection</h2>
+                            <p>See what is ready to share and where your ideas are growing.</p>
+                        </div>
+                        <dl class="wishlist-pulse-stats">
+                            <div>
+                                <dt>Wishlists</dt>
+                                <dd>@TotalWishlistCount</dd>
+                            </div>
+                            <div>
+                                <dt>Ideas saved</dt>
+                                <dd>@TotalWishlistItemCount</dd>
+                            </div>
+                            <div>
+                                <dt>Shared lists</dt>
+                                <dd>@SharedWishlistCount</dd>
+                            </div>
+                        </dl>
+                    </section>
                     <p class="visually-hidden" role="status" aria-live="polite">
                         @filteredWishlists.Count @(filteredWishlists.Count == 1 ? "wishlist" : "wishlists") found.
                     </p>
@@ -146,6 +166,13 @@
                 }
                 else if (friendsWishlists?.Any() == true)
                 {
+                    <div class="friends-wishlists-intro">
+                        <div>
+                            <h2>Shared with you</h2>
+                            <p>Gift ideas your friends have chosen to make available.</p>
+                        </div>
+                        <a href="/friends" class="btn btn-outline-secondary">Manage friends</a>
+                    </div>
                     <div class="row">
                         @foreach (var wishlist in friendsWishlists)
                         {
@@ -157,9 +184,11 @@
                 }
                 else
                 {
-                    <div class="alert alert-info">
-                        <OpenWishIcon Name="info-circle" Class="me-2" />
-                        No public wishlists from your friends yet. When your friends create public wishlists, they'll appear here.
+                    <div class="empty-state friends-wishlists-empty">
+                        <span class="friends-wishlists-empty-icon" aria-hidden="true"><OpenWishIcon Name="people" /></span>
+                        <h2>Nothing shared with you yet</h2>
+                        <p>Add people you trust, then their shared wishlists will appear here when they are ready.</p>
+                        <a href="/friends" class="btn btn-primary">Find friends</a>
                     </div>
                 }
             </div>
@@ -357,6 +386,13 @@
     {
         ApplyFiltersAndSort();
     }
+
+    private int TotalWishlistCount => wishlists?.Count() ?? 0;
+
+    private int TotalWishlistItemCount =>
+        wishlists?.Sum(wishlist => wishlist.Items?.Count ?? wishlist.ItemCount) ?? 0;
+
+    private int SharedWishlistCount => wishlists?.Count(wishlist => !wishlist.IsPrivate) ?? 0;
 
     private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {

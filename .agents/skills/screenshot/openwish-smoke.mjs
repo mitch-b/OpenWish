@@ -1665,10 +1665,16 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile account navigation link"
   );
   await screenshot(page, "account-settings-mobile.png");
-  await accountNavigation.getByRole("link", { name: "Two-factor authentication" }).click();
-  await assertVisible(page, "Two-factor authentication is off.");
-  await page.getByRole("link", { name: "Verify authenticator code" }).click();
-  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  const twoFactorSettingsLink = accountNavigation.getByRole("link", { name: "Two-factor authentication" });
+  if (await twoFactorSettingsLink.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Mobile account navigation did not link to two-factor settings.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
+  const verifyAuthenticatorLink = page.getByRole("link", { name: "Verify authenticator code" });
+  if (await verifyAuthenticatorLink.getAttribute("href") !== "Account/Manage/EnableAuthenticator") {
+    throw new Error("Two-factor settings did not link to authenticator verification.");
+  }
+  await visit(page, "/Account/Manage/EnableAuthenticator", "Set up authenticator app", visitedRoutes);
   await assertMinimumTouchTarget(
     page.getByRole("button", { name: "Verify and enable 2FA" }),
     "Mobile authenticator verification action"

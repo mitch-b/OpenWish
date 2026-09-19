@@ -61,7 +61,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/e85ce0a2-0263-4421-9859-173539248815/manage",
+        "/events/155cc071-95fa-470e-8594-49254ea4b815/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -125,7 +125,8 @@
         "/wishlists/demo-family-gift-ideas",
         "/wishlists/demo-family-gift-ideas/manage",
         "/events/demo-holiday-gift-exchange",
-        "/Account/Manage"
+        "/Account/Manage",
+        "/Account/Manage/PersonalData"
       ]
     }
   ]

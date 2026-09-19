@@ -1,6 +1,6 @@
 [
   {
-    "version": "0.1.20",
+    "version": "0.1.21",
     "date": "2026-09-19",
     "title": "Dependable wishlist item editing",
     "summary": "Adding, editing, and importing wishlist items now stays clear and recoverable without duplicate requests or lost details.",
@@ -10,6 +10,17 @@
       "Successful adds and edits update the visible wishlist immediately without bypassing viewer privacy rules.",
       "Product-link imports validate web addresses and prevent overlapping paste or button requests.",
       "Product imports preserve the entered link and distinguish imported details, a usable link without details, and a retryable failure."
+    ]
+  },
+  {
+    "version": "0.1.20",
+    "date": "2026-09-18",
+    "title": "Clearer wishlist overview",
+    "summary": "Wishlist overview now makes saved ideas, sharing status, and the next useful action easier to see.",
+    "highlights": [
+      "The wishlist overview shows total lists, saved ideas, and shared lists at a glance.",
+      "Shared wishlists have a clear purpose and a direct route to friend management.",
+      "An empty shared-with-you tab explains what is missing and offers a Find friends action."
     ]
   },
   {

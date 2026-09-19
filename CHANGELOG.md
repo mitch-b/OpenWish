@@ -2,7 +2,7 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
-## [0.1.20] - 2026-09-19
+## [0.1.21] - 2026-09-19
 
 ### Improved
 
@@ -16,6 +16,17 @@ All notable user-facing changes to OpenWish are documented here.
   button requests.
 - Product imports preserve the entered link and clearly distinguish imported
   details, a usable link without details, and a retryable failure.
+
+## [0.1.20] - 2026-09-18
+
+### Improved
+
+- Wishlist overview now shows the number of lists, saved ideas, and shared
+  lists at a glance before people start filtering.
+- Wishlists shared by friends now have a clear purpose, route to friend
+  management, and a guided empty state when nothing is available yet.
+- Browser verification retries one incomplete route render before reporting a
+  failure, preventing transient navigation timing from failing CI.
 
 ## [0.1.19] - 2026-09-18
 

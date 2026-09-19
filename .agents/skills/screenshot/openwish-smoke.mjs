@@ -111,6 +111,34 @@ async function generateTotp(secret) {
   return value.toString().padStart(6, "0");
 }
 
+async function enableTwoFactorAuthentication(page, authenticatorKey) {
+  const recoveryCodesHeading = page.getByRole("heading", { name: "Save your recovery codes" });
+  const invalidCodeMessage = page.getByText("Error: Verification code is invalid.", { exact: true });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const verificationCode = await generateTotp(authenticatorKey);
+    await page.getByLabel("Verification code").fill(verificationCode);
+    await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+
+    try {
+      await recoveryCodesHeading.waitFor({ state: "visible", timeout: 5000 });
+      return;
+    } catch (error) {
+      if (attempt === 1) {
+        throw error;
+      }
+
+      if (!await invalidCodeMessage.isVisible()) {
+        throw error;
+      }
+
+      // Generate a fresh TOTP when the server rejected the previous code after its 30-second window.
+    }
+  }
+
+  throw new Error("Authenticator setup did not show recovery codes.");
+}
+
 async function visit(page, route, expectedText, visitedRoutes) {
   let response;
   let lastError;
@@ -1003,10 +1031,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByLabel("Verification code").fill("abc123");
   await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
   await assertVisible(page, "The verification code must contain exactly 6 digits.");
-  const verificationCode = await generateTotp(authenticatorKey);
-  await page.getByLabel("Verification code").fill(verificationCode);
-  await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
-  await page.getByRole("heading", { name: "Save your recovery codes" }).waitFor();
+  await enableTwoFactorAuthentication(page, authenticatorKey);
   await assertVisible(page, "They will not be shown again.");
   if (await page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem").count() !== 10) {
     throw new Error("Authenticator setup did not provide ten recovery codes.");
@@ -1041,7 +1066,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");
   await assertVisible(page, "Keep 2FA on");
   await screenshot(page, "two-factor-disable.png");
-  await page.getByRole("button", { name: "Turn off 2FA" }).click();
+  await Promise.all([
+    page.waitForURL("**/Account/Manage/TwoFactorAuthentication"),
+    page.getByRole("button", { name: "Turn off 2FA" }).click()
+  ]);
   await assertVisible(page, "Two-factor authentication is off.");
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);

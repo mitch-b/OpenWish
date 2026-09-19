@@ -20,6 +20,10 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("\"wishlist\" : \"wishlists\") found.", markup, StringComparison.Ordinal);
         Assert.Contains("filteredWishlists = filtered.ToList();", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"wishlist-pulse-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Ideas saved", markup, StringComparison.Ordinal);
+        Assert.Contains("@TotalWishlistItemCount", markup, StringComparison.Ordinal);
+        Assert.Contains("@SharedWishlistCount", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -32,6 +36,17 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-label=\"Clear wishlist search\"", markup, StringComparison.Ordinal);
         Assert.Contains("<div id=\"wishlist-results\">", markup, StringComparison.Ordinal);
         Assert.Contains("No wishlists found.</p>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FriendsWishlistDiscovery_ExplainsBothSharedAndEmptyStates()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+
+        Assert.Contains("Shared with you", markup, StringComparison.Ordinal);
+        Assert.Contains("Manage friends", markup, StringComparison.Ordinal);
+        Assert.Contains("Nothing shared with you yet", markup, StringComparison.Ordinal);
+        Assert.Contains("Find friends", markup, StringComparison.Ordinal);
     }
 
     [Fact]

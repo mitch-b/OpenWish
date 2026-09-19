@@ -17,7 +17,7 @@ namespace OpenWish.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.0")
+                .HasAnnotation("ProductVersion", "10.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -1236,6 +1236,10 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("timezone('utc', now())");
 
+                    b.Property<string>("CreationRequestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<bool>("Deleted")
                         .HasColumnType("boolean");
 
@@ -1296,7 +1300,8 @@ namespace OpenWish.Data.Migrations
 
                     b.HasIndex("PublicWishlistId");
 
-                    b.HasIndex("WishlistId");
+                    b.HasIndex("WishlistId", "PublicId")
+                        .IsUnique();
 
                     b.ToTable("WishlistItems");
                 });

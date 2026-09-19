@@ -26,6 +26,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.Event, opt => opt.Ignore());
         CreateMap<WishlistItemModel, WishlistItem>()
             .ForMember(dest => dest.PublicId, opt => opt.Ignore())
+            .ForMember(dest => dest.CreationRequestHash, opt => opt.Ignore())
             .ForMember(dest => dest.Deleted, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())

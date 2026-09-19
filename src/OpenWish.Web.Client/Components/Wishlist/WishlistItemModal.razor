@@ -209,6 +209,10 @@
         _showImportMessage = false;
         _importMessage = string.Empty;
         _saveError = null;
+        if (Model.Id == 0 && string.IsNullOrWhiteSpace(Model.PublicId))
+        {
+            Model.PublicId = Guid.NewGuid().ToString();
+        }
         IsVisible = true;
         StateHasChanged();
     }
@@ -260,6 +264,7 @@
         }
 
         if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var productUri) ||
+            string.IsNullOrWhiteSpace(productUri.Host) ||
             (productUri.Scheme != Uri.UriSchemeHttp && productUri.Scheme != Uri.UriSchemeHttps))
         {
             _importMessage = "Enter a complete product link that starts with http:// or https://.";
@@ -295,6 +300,11 @@
 
             if (product != null)
             {
+                var productHasDetails =
+                    !string.IsNullOrWhiteSpace(product.Name) ||
+                    !string.IsNullOrWhiteSpace(product.Description) ||
+                    product.Price.HasValue;
+
                 if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
                 {
                     Model.Name = product.Name;
@@ -320,8 +330,10 @@
 
                 _importMessage = importedDetails
                     ? "Product details imported. Review them before saving."
-                    : "No product details were found. The product link is ready; add any details you want.";
-                _importSuccess = importedDetails;
+                    : productHasDetails
+                        ? "Product details checked. Your existing details were kept."
+                        : "No product details were found. The product link is ready; add any details you want.";
+                _importSuccess = productHasDetails;
             }
             else
             {

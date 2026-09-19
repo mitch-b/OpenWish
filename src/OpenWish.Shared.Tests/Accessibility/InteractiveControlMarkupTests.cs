@@ -280,13 +280,19 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"alert\">@_saveError", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("if (saved)", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(productUri.Host)", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("The product link is ready", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("The link is still here so you can try again.", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Your existing details were kept.", modalMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("ImportUrl = string.Empty;\n            _isImporting = false;", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("if (product != null)", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("Product import timed out", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Model.PublicId = Guid.NewGuid().ToString();", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("_items[existingItemIndex] = savedItem;", detailsMarkup, StringComparison.Ordinal);
-        Assert.Contains("_items.Add(savedItem);", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items.RemoveAt(existingItemIndex);", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (ShouldDisplayItem(savedItem))", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("else if (ShouldDisplayItem(savedItem))", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item)", detailsMarkup, StringComparison.Ordinal);
         Assert.Contains("savedItem.Comments = existingItem.Comments;", detailsMarkup, StringComparison.Ordinal);
         Assert.Contains("savedItem.Reservations = existingItem.Reservations;", detailsMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("await LoadItems();\n    }\n\n    private void HandleModalCancel", detailsMarkup, StringComparison.Ordinal);
@@ -728,6 +734,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"alert\">@_errorMessage", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("We couldn't add this item.", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);

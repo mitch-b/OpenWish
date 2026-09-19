@@ -29,7 +29,7 @@
 
 @code {
     [Parameter] public string WishlistId { get; set; } = string.Empty;
-    private readonly WishlistItemModel _item = new();
+    private readonly WishlistItemModel _item = new() { PublicId = Guid.NewGuid().ToString() };
     private bool _isSubmitting;
     private string? _errorMessage;
 

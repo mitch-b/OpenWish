@@ -782,12 +782,19 @@ else
 
         if (existingItemIndex >= 0)
         {
-            var existingItem = _items[existingItemIndex];
-            savedItem.Comments = existingItem.Comments;
-            savedItem.Reservations = existingItem.Reservations;
-            _items[existingItemIndex] = savedItem;
+            if (ShouldDisplayItem(savedItem))
+            {
+                var existingItem = _items[existingItemIndex];
+                savedItem.Comments = existingItem.Comments;
+                savedItem.Reservations = existingItem.Reservations;
+                _items[existingItemIndex] = savedItem;
+            }
+            else
+            {
+                _items.RemoveAt(existingItemIndex);
+            }
         }
-        else
+        else if (ShouldDisplayItem(savedItem))
         {
             _items.Add(savedItem);
         }

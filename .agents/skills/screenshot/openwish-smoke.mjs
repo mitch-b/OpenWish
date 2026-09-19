@@ -1015,8 +1015,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("Recovery-code replacement did not provide the expected safe destination.");
   }
   await keepRecoveryCodes.click();
-  await assertVisible(page, "Two-factor authentication is on.");
-  visitedRoutes.push("/Account/Manage/TwoFactorAuthentication");
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Reset authenticator app" }).click();
   await assertVisible(page, "Your current authenticator codes will stop working immediately.");
@@ -1026,8 +1025,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("Authenticator reset did not provide the expected safe destination.");
   }
   await keepAuthenticator.click();
-  await assertVisible(page, "Two-factor authentication is on.");
-  visitedRoutes.push("/Account/Manage/TwoFactorAuthentication");
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Turn off 2FA" }).click();
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");

@@ -589,20 +589,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await itemDialog.getByRole("button", { name: "Import" }).isDisabled())) {
     throw new Error("The item dialog allows an empty product URL import.");
   }
-  await modalProductUrl.fill("https://example.com/gift");
-  await itemDialog.getByRole("button", { name: "Import" }).click({ trial: true });
-  if (await itemDialog.getByText("Importing product details...").isVisible()) {
-    throw new Error("Typing a product URL incorrectly displayed an import-in-progress state.");
+  await modalProductUrl.fill("not-a-web-address");
+  await itemDialog.getByRole("button", { name: "Import" }).click();
+  await itemDialog.getByRole("alert")
+    .filter({ hasText: "Enter a complete product link that starts with http:// or https://." })
+    .waitFor({ state: "visible" });
+  if (await modalProductUrl.inputValue() !== "not-a-web-address") {
+    throw new Error("The item dialog discarded a product URL that needs correction.");
   }
-  await itemDialog.getByRole("button", { name: "Close" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  if (!(await itemDialog.getByRole("button", { name: "Add item", exact: true })
-    .evaluate(element => element === document.activeElement))) {
-    throw new Error("Keyboard focus did not wrap within the item dialog.");
-  }
+  await itemDialog.getByLabel("Name").fill("Handmade Tea Infuser");
+  await itemDialog.getByLabel("Description").fill("Fine mesh infuser with a resting tray");
+  await itemDialog.getByLabel("Price").fill("24.50");
+  await itemDialog.getByLabel("Product Link").fill("https://example.com/gift");
   await screenshot(page, "wishlist-item-dialog.png", false);
-  await page.keyboard.press("Escape");
+  await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
   await itemDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: "Handmade Tea Infuser added to the wishlist." })
+    .waitFor({ state: "visible" });
+  await assertVisible(page, "Handmade Tea Infuser");
+  const addedProductLink = page.getByRole("link", {
+    name: "View Handmade Tea Infuser product (opens in a new tab)"
+  });
+  if (await addedProductLink.getAttribute("href") !== "https://example.com/gift") {
+    throw new Error("The item dialog did not persist the entered product URL.");
+  }
+  await screenshot(page, "wishlist-item-added.png");
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing the item dialog did not restore focus to its opener.");
   }
@@ -1304,6 +1316,53 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const privateCollaboratorItemName = `Private collaborator item ${Date.now()}`;
+  await page.getByRole("button", { name: "Add item" }).first().click();
+  const privateItemDialog = page.getByRole("dialog", { name: "Add item" });
+  await privateItemDialog.getByLabel("Name").fill(privateCollaboratorItemName);
+  await privateItemDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await privateItemDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: `${privateCollaboratorItemName} added to the wishlist.` })
+    .waitFor({ state: "visible" });
+  await page.getByText(privateCollaboratorItemName, { exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: `Edit ${privateCollaboratorItemName}` }).click();
+  const privateItemEditDialog = page.getByRole("dialog", { name: "Edit item" });
+  await privateItemEditDialog.getByLabel("Make this item private (only you can see it)").check();
+  await privateItemEditDialog.getByRole("button", { name: "Save changes" }).click();
+  await privateItemEditDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: `Changes to ${privateCollaboratorItemName} saved.` })
+    .waitFor({ state: "visible" });
+  if (await page.getByText(privateCollaboratorItemName, { exact: true }).isVisible()) {
+    throw new Error("A collaborator's private item bypassed viewer filtering after editing.");
+  }
+  const guestItemsAfterPrivateAddResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  if (!guestItemsAfterPrivateAddResponse.ok()) {
+    throw new Error(
+      `Guest item reconciliation returned ${guestItemsAfterPrivateAddResponse.status()}.`
+    );
+  }
+  const guestItemsAfterPrivateAdd = await guestItemsAfterPrivateAddResponse.json();
+  if (guestItemsAfterPrivateAdd.some(item => item.name === privateCollaboratorItemName)) {
+    throw new Error("A collaborator's private item was disclosed by the viewer-filtered items API.");
+  }
+  const ownerVerificationContext = await browser.newContext();
+  await login(ownerVerificationContext, "owner", ownerEmail);
+  const ownerItemsResponse = await ownerVerificationContext.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  if (!ownerItemsResponse.ok()) {
+    throw new Error(`Owner item verification returned ${ownerItemsResponse.status()}.`);
+  }
+  const ownerItems = await ownerItemsResponse.json();
+  const privateCollaboratorItem = ownerItems.find(item => item.name === privateCollaboratorItemName);
+  if (!privateCollaboratorItem?.isPrivate) {
+    throw new Error("The private collaborator item was not persisted for the wishlist owner.");
+  }
+  await ownerVerificationContext.close();
   const dutchOvenRow = page.locator("tr").filter({ hasText: "Cast-Iron Dutch Oven" });
   await dutchOvenRow.getByRole("button", { name: "Show" }).click();
   const giftCoordination = page.getByRole("region", {
@@ -1413,7 +1472,12 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     loginStatus,
     seedAuthorizationStatus: forbiddenSeed.status(),
     deleteAuthorizationStatus: forbiddenDelete.status(),
-    visitedRoutes
+    visitedRoutes,
+    assertions: [
+      "items made private by collaborators disappear immediately for their creator",
+      "private collaborator items remain visible to the wishlist owner",
+      "private item persistence and viewer-filtered lookup endpoints return success"
+    ]
   });
   await context.close();
 }

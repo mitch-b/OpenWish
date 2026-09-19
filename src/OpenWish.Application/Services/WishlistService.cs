@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -244,11 +247,40 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel itemModel)
     {
         ValidateItemUrls(itemModel);
+        ValidateItemPrice(itemModel.Price);
+        var creationRequestHash = string.IsNullOrWhiteSpace(itemModel.PublicId)
+            ? null
+            : CreateItemRequestHash(itemModel);
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists.FindAsync(wishlistId)
             ?? throw new KeyNotFoundException($"Wishlist {wishlistId} not found");
 
+        if (!string.IsNullOrWhiteSpace(itemModel.PublicId))
+        {
+            var existingItem = await context.WishlistItems
+                .FirstOrDefaultAsync(item =>
+                    item.WishlistId == wishlistId &&
+                    item.PublicId == itemModel.PublicId);
+
+            if (existingItem is not null)
+            {
+                if (existingItem.Deleted ||
+                    !string.Equals(existingItem.CreationRequestHash, creationRequestHash, StringComparison.Ordinal))
+                {
+                    throw new ArgumentException("The item request key is already in use.");
+                }
+
+                return CreateItemRetryResult(existingItem, itemModel);
+            }
+        }
+
         var itemEntity = _mapper.Map<WishlistItem>(itemModel);
+        if (!string.IsNullOrWhiteSpace(itemModel.PublicId))
+        {
+            itemEntity.PublicId = itemModel.PublicId;
+            itemEntity.CreationRequestHash = creationRequestHash;
+        }
+
         itemEntity.WishlistId = wishlistId;
         itemEntity.CreatedOn = DateTimeOffset.UtcNow;
         itemEntity.UpdatedOn = DateTimeOffset.UtcNow;
@@ -259,7 +291,32 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         itemEntity.OrderIndex = (maxOrderIndex ?? -1) + 1;
 
         var entry = context.WishlistItems.Add(itemEntity);
-        await context.SaveChangesAsync();
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (!string.IsNullOrWhiteSpace(itemModel.PublicId))
+        {
+            await using var reconciliationContext = await _contextFactory.CreateDbContextAsync();
+            var existingItem = await reconciliationContext.WishlistItems
+                .FirstOrDefaultAsync(item =>
+                    item.WishlistId == wishlistId &&
+                    item.PublicId == itemModel.PublicId);
+
+            if (existingItem is not null &&
+                !existingItem.Deleted &&
+                string.Equals(existingItem.CreationRequestHash, creationRequestHash, StringComparison.Ordinal))
+            {
+                return CreateItemRetryResult(existingItem, itemModel);
+            }
+
+            if (existingItem is not null)
+            {
+                throw new ArgumentException("The item request key is already in use.");
+            }
+
+            throw;
+        }
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -271,6 +328,46 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         var resultModel = _mapper.Map<WishlistItemModel>(entry.Entity);
         return resultModel;
+    }
+
+    private static string CreateItemRequestHash(WishlistItemModel item)
+    {
+        var payload = JsonSerializer.Serialize(new
+        {
+            item.Name,
+            item.Description,
+            item.Price,
+            item.Url,
+            item.Image,
+            item.WhereToBuy,
+            item.Priority,
+            item.IsPrivate,
+            item.IsHiddenFromOwner
+        });
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+
+    private static WishlistItemModel CreateItemRetryResult(WishlistItem savedItem, WishlistItemModel submittedItem)
+    {
+        return new WishlistItemModel
+        {
+            Id = savedItem.Id,
+            PublicId = savedItem.PublicId,
+            Name = submittedItem.Name,
+            Description = submittedItem.Description,
+            Price = submittedItem.Price,
+            Url = submittedItem.Url,
+            Image = submittedItem.Image,
+            WhereToBuy = submittedItem.WhereToBuy,
+            WishlistId = savedItem.WishlistId,
+            Priority = submittedItem.Priority,
+            IsPrivate = submittedItem.IsPrivate,
+            IsHiddenFromOwner = submittedItem.IsHiddenFromOwner,
+            OrderIndex = savedItem.OrderIndex,
+            CreatedOn = savedItem.CreatedOn,
+            UpdatedOn = savedItem.CreatedOn
+        };
     }
 
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
@@ -361,6 +458,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
     {
         ValidateItemUrls(itemModel);
+        ValidateItemPrice(itemModel.Price);
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingItem = await context.WishlistItems
             .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted)
@@ -1169,6 +1267,14 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         ValidateExternalUrl(item.Url, nameof(item.Url));
         ValidateExternalUrl(item.Image, nameof(item.Image));
+    }
+
+    private static void ValidateItemPrice(decimal? price)
+    {
+        if (price.HasValue && decimal.Round(price.Value, 2) != price.Value)
+        {
+            throw new ArgumentException("Price cannot have more than two decimal places.", nameof(price));
+        }
     }
 
     private static void ValidateExternalUrl(string? value, string propertyName)

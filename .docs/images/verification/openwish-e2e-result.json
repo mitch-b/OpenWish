@@ -61,7 +61,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/f45d9a2e-fbde-42be-b7f3-26c15b1e046d/manage",
+        "/events/155cc071-95fa-470e-8594-49254ea4b815/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -102,6 +102,11 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/wishlists/demo-family-gift-ideas"
+      ],
+      "assertions": [
+        "items made private by collaborators disappear immediately for their creator",
+        "private collaborator items remain visible to the wishlist owner",
+        "private item persistence and viewer-filtered lookup endpoints return success"
       ]
     },
     {

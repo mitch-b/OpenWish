@@ -16,22 +16,35 @@
 
 <PageTitle>Resend email confirmation</PageTitle>
 
-<h1>Resend email confirmation</h1>
-<h2>Enter your email.</h2>
-<hr />
-<StatusMessage Message="@message" />
-<div class="row">
-    <div class="col-md-4">
-        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" aria-required="true" autofocus placeholder="name@example.com" />
-                <label for="Input.Email" class="form-label">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Resend</button>
-        </EditForm>
+<div class="auth-page">
+    <header class="auth-heading">
+        <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
+        <div>
+            <h1>Confirm your email</h1>
+            <p>Request a new confirmation link if the original one expired.</p>
+        </div>
+    </header>
+    <div class="row">
+        <div class="col-md-7 col-lg-6">
+            <section class="auth-card">
+                <h2>Send a new link</h2>
+                <StatusMessage Message="@message" />
+                <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger" role="alert" />
+                    <div class="form-floating mb-2">
+                        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" inputmode="email" aria-required="true" aria-describedby="confirmation-email-help" autofocus placeholder="name@example.com" />
+                        <label for="Input.Email" class="form-label">Email</label>
+                        <ValidationMessage For="() => Input.Email" class="text-danger" />
+                    </div>
+                    <div id="confirmation-email-help" class="form-text mb-3">
+                        For privacy, the result is the same whether or not an account matches.
+                    </div>
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Send confirmation email</button>
+                    <p class="mt-3 mb-0"><a href="Account/Login">Back to log in</a></p>
+                </EditForm>
+            </section>
+        </div>
     </div>
 </div>
 

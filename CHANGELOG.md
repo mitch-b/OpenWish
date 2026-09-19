@@ -2,6 +2,92 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.21] - 2026-09-19
+
+### Improved
+
+- Wishlist-item saves prevent duplicate requests and clearly show when an add
+  or edit is in progress.
+- Save failures stay in the item dialog with safe guidance, while stable
+  request keys make repeated add attempts idempotent.
+- Successful adds and edits update the visible wishlist immediately and
+  announce the saved result without bypassing viewer privacy rules.
+- Product-link imports validate web addresses and prevent overlapping paste or
+  button requests.
+- Product imports preserve the entered link and clearly distinguish imported
+  details, a usable link without details, and a retryable failure.
+
+## [0.1.20] - 2026-09-18
+
+### Improved
+
+- Wishlist overview now shows the number of lists, saved ideas, and shared
+  lists at a glance before people start filtering.
+- Wishlists shared by friends now have a clear purpose, route to friend
+  management, and a guided empty state when nothing is available yet.
+- Browser verification retries one incomplete route render before reporting a
+  failure, preventing transient navigation timing from failing CI.
+
+## [0.1.19] - 2026-09-18
+
+### Improved
+
+- Event details distinguish loading failures from loading progress and provide
+  clear, duplicate-safe retry and exit actions.
+- Event management distinguishes loading failures from loading progress without
+  implying that settings were changed, and safely redirects non-organizers.
+- Event edits prevent duplicate saves, announce completion, and keep actionable
+  failures on the form.
+- Participant removal requires confirmation, prevents duplicate requests, and
+  safely reconciles interrupted results while keeping participant views in sync.
+- Invitation declines require confirmation, explain the consequence, and never
+  expose internal failure details.
+
+## [0.1.18] - 2026-09-17
+
+### Improved
+
+- Sign-in explains when a session stays active, warns against using that option
+  on shared devices, and groups account-recovery actions.
+- Registration shows the complete password requirements before submission and
+  provides a direct route back to sign-in.
+- Password recovery explains its privacy-preserving result, uses email-friendly
+  input, and provides a safe return to sign-in.
+- Password reset shows the complete password requirements and names the action's
+  outcome clearly.
+- Confirmation-email recovery explains its privacy behavior, uses email-friendly
+  input, and provides a safe return to sign-in.
+
+## [0.1.17] - 2026-09-16
+
+### Improved
+
+- Two-factor settings show whether protection is on or off and prioritize the
+  next useful action.
+- Authenticator setup provides a truthful manual-key workflow and a
+  mobile-friendly verification-code field.
+- Recovery-code replacement explains that existing codes will stop working,
+  keeps a safe exit visible, and presents new codes as an accessible list.
+- Authenticator reset explains its immediate effect and keeps the current
+  authenticator as the first action.
+- Turning off 2FA explains the reduced protection, preserves a safe exit, and
+  confirms the resulting account state.
+
+## [0.1.16] - 2026-09-15
+
+### Improved
+
+- Account settings navigation stays labelled, reachable, and comfortably sized
+  on smaller screens.
+- Profile settings explain read-only and optional fields, support phone
+  autofill, and name the save action clearly.
+- Email settings show confirmation in text and explain when a changed address
+  takes effect.
+- Password settings connect the complete enforced length and character
+  requirements to the new-password field.
+- Personal-data actions state their outcomes, while account deletion offers a
+  clear safe exit before the irreversible action.
+
 ## [0.1.15] - 2026-09-13
 
 ### Improved

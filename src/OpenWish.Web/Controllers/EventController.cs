@@ -75,8 +75,8 @@ public class EventController(IEventService eventService, ApiUserContextService u
 
         try
         {
-            await _eventService.UpdateEventByPublicIdAsync(publicId, eventModel, userId);
-            return NoContent();
+            var updatedEvent = await _eventService.UpdateEventByPublicIdAsync(publicId, eventModel, userId);
+            return Ok(updatedEvent);
         }
         catch (KeyNotFoundException)
         {

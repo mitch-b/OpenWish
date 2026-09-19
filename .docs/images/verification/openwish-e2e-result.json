@@ -15,8 +15,19 @@
     {
       "scenario": "development-login",
       "visitedRoutes": [
-        "/Account/Register?invite=invited%40example.com%7Cinviter-id",
+        "/Account/Register?invite=invited%40example.com%7Cinviter-id&ReturnUrl=%2Fevents",
+        "/Account/Login",
+        "/Account/ForgotPassword",
+        "/Account/ResetPassword?Code=dGVzdA",
+        "/Account/ResendEmailConfirmation",
         "/Account/Login"
+      ],
+      "assertions": [
+        "login session safety and recovery navigation",
+        "registration password guidance and sign-in navigation",
+        "private password-recovery guidance",
+        "password reset requirements and outcome",
+        "confirmation-email privacy and recovery"
       ]
     },
     {
@@ -50,13 +61,17 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/demo-holiday-gift-exchange/manage",
+        "/events/f6ba91bd-7cb1-4fac-bb7c-5c93cfba7ae7/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
         "/wishlists/demo-family-gift-ideas/manage",
         "/whats-new",
         "/Account/Manage",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/TwoFactorAuthentication",
         "/events"
       ],
       "assertions": [
@@ -73,7 +88,8 @@
         "wishlist management labels and contrast",
         "theme persistence",
         "release history",
-        "account profile"
+        "account settings requirements and deletion safety",
+        "two-factor status, setup, recovery, reset, and disable safety"
       ]
     },
     {
@@ -84,7 +100,13 @@
       "visitedRoutes": [
         "/events",
         "/events/demo-holiday-gift-exchange",
+        "/events/demo-holiday-gift-exchange",
         "/wishlists/demo-family-gift-ideas"
+      ],
+      "assertions": [
+        "items made private by collaborators disappear immediately for their creator",
+        "private collaborator items remain visible to the wishlist owner",
+        "private item persistence and viewer-filtered lookup endpoints return success"
       ]
     },
     {
@@ -102,7 +124,11 @@
         "/",
         "/wishlists/demo-family-gift-ideas",
         "/wishlists/demo-family-gift-ideas/manage",
-        "/events/demo-holiday-gift-exchange"
+        "/events/demo-holiday-gift-exchange",
+        "/Account/Manage",
+        "/Account/Manage/TwoFactorAuthentication",
+        "/Account/Manage/EnableAuthenticator",
+        "/Account/Manage/PersonalData"
       ]
     }
   ]

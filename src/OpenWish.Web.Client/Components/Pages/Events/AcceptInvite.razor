@@ -3,9 +3,11 @@
 
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Shared
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
+@inject ILogger<AcceptInvite> Logger
 @rendermode InteractiveAuto
 
 <PageTitle>Accept Event Invitation</PageTitle>
@@ -121,12 +123,11 @@
                                                 }
                                                 Accept invite
                                             </button>
-                                            <button class="btn btn-outline-secondary" @onclick="RejectInviteAsync" disabled="@_isProcessing">
-                                                @if (_isProcessing && _processingAction == "reject")
-                                                {
-                                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                                }
-                                                No thanks
+                                            <button id="decline-event-invitation"
+                                                    class="btn btn-outline-secondary"
+                                                    @onclick="PromptRejectInvite"
+                                                    disabled="@_isProcessing">
+                                                Decline invite
                                             </button>
                                         </div>
                                         break;
@@ -139,6 +140,46 @@
         </div>
     </div>
 </div>
+
+<Dialog @ref="_rejectDialog"
+        Title="Decline invitation"
+        DescriptionId="decline-invitation-description"
+        ReturnFocusElementId="decline-event-invitation"
+        CanClose="@(!_isProcessing)"
+        OnClose="ClearRejectDialog">
+    <div class="modal-body">
+        <p id="decline-invitation-description">
+            Decline this invitation? The host will see that you declined, and you won't be included in the event.
+        </p>
+        @if (!string.IsNullOrWhiteSpace(_rejectErrorMessage))
+        {
+            <div class="alert alert-danger mb-0" role="alert">@_rejectErrorMessage</div>
+        }
+    </div>
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dialog-initial-focus
+                disabled="@_isProcessing"
+                @onclick="CloseRejectDialogAsync">
+            Keep invitation
+        </button>
+        <button type="button"
+                class="btn btn-danger"
+                disabled="@_isProcessing"
+                @onclick="RejectInviteAsync">
+            @if (_isProcessing && _processingAction == "reject")
+            {
+                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                <span>Declining invitation...</span>
+            }
+            else
+            {
+                <span>Decline invitation</span>
+            }
+        </button>
+    </div>
+</Dialog>
 
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;
@@ -158,6 +199,8 @@
     private string? _processingAction;
     private string? _errorMessage;
     private string? _successMessage;
+    private string? _rejectErrorMessage;
+    private Dialog _rejectDialog = default!;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -195,11 +238,13 @@
             }
             catch (InvalidOperationException ex)
             {
-                _errorMessage = ex.Message;
+                Logger.LogWarning(ex, "Unable to claim invitation for event {EventId}", EventId);
+                _errorMessage = "We couldn't match this invitation to your account. Check the invited email address or ask the host to resend it.";
             }
             catch (ArgumentException ex)
             {
-                _errorMessage = ex.Message;
+                Logger.LogWarning(ex, "Invalid invitation claim for event {EventId}", EventId);
+                _errorMessage = "This invitation link isn't valid. Open the latest link from your invitation email.";
             }
         }
 
@@ -209,7 +254,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage ??= $"Unable to load event details: {ex.Message}";
+            Logger.LogError(ex, "Unable to load invitation event details for {EventId}", EventId);
+            _errorMessage ??= "We couldn't load the event details. Check your connection and try again.";
         }
 
         _isLoading = false;
@@ -243,7 +289,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Unable to accept invitation {InvitationId} for event {EventId}", _invitation.Id, EventId);
+            _errorMessage = "We couldn't accept the invitation. Check your connection and try again.";
         }
         finally
         {
@@ -263,6 +310,7 @@
         _processingAction = "reject";
         _errorMessage = null;
         _successMessage = null;
+        _rejectErrorMessage = null;
 
         try
         {
@@ -272,15 +320,17 @@
                 _invitation.Status = "Rejected";
                 _invitation.IsAccepted = false;
                 _successMessage = "No worries, we've let the host know.";
+                await _rejectDialog.CloseAsync();
             }
             else
             {
-                _errorMessage = "We couldn't update your response. Please try again.";
+                _rejectErrorMessage = "We couldn't decline the invitation. Please try again.";
             }
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            Logger.LogError(ex, "Unable to decline invitation {InvitationId} for event {EventId}", _invitation.Id, EventId);
+            _rejectErrorMessage = "We couldn't decline the invitation. Check your connection and try again.";
         }
         finally
         {
@@ -288,6 +338,21 @@
             _processingAction = null;
         }
     }
+
+    private void PromptRejectInvite()
+    {
+        if (_invitation is null || _isProcessing)
+        {
+            return;
+        }
+
+        _rejectErrorMessage = null;
+        _rejectDialog.Show();
+    }
+
+    private Task CloseRejectDialogAsync() => _rejectDialog.CloseAsync();
+
+    private void ClearRejectDialog() => _rejectErrorMessage = null;
 
     private static string NormalizeStatus(string? status)
     {

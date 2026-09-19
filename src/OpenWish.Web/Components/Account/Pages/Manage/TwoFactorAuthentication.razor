@@ -15,58 +15,94 @@
 <h3>Two-factor authentication (2FA)</h3>
 @if (canTrack)
 {
+    <div class="alert @(is2faEnabled ? "alert-success" : "alert-info")" role="status">
+        @if (is2faEnabled)
+        {
+            <strong>Two-factor authentication is on.</strong>
+            <span>Your authenticator app adds a second check when you sign in.</span>
+        }
+        else
+        {
+            <strong>Two-factor authentication is off.</strong>
+            @if (hasAuthenticator)
+            {
+                <span>An authenticator key is available. Verify a code to turn on 2FA.</span>
+            }
+            else
+            {
+                <span>Add an authenticator app to protect your account with a verification code.</span>
+            }
+        }
+    </div>
+
     if (is2faEnabled)
     {
         if (recoveryCodesLeft == 0)
         {
             <div class="alert alert-danger">
                 <strong>You have no recovery codes left.</strong>
-                <p>You must <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a> before you can log in with a recovery code.</p>
+                <p>You must <a href="Account/Manage/GenerateRecoveryCodes">replace your recovery codes</a> before you can log in with a recovery code.</p>
             </div>
         }
         else if (recoveryCodesLeft == 1)
         {
             <div class="alert alert-danger">
                 <strong>You have 1 recovery code left.</strong>
-                <p>You can <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a>.</p>
+                <p>You can <a href="Account/Manage/GenerateRecoveryCodes">replace your recovery codes</a>.</p>
             </div>
         }
         else if (recoveryCodesLeft <= 3)
         {
             <div class="alert alert-warning">
                 <strong>You have @recoveryCodesLeft recovery codes left.</strong>
-                <p>You should <a href="Account/Manage/GenerateRecoveryCodes">generate a new set of recovery codes</a>.</p>
+                <p>You should <a href="Account/Manage/GenerateRecoveryCodes">replace your recovery codes</a>.</p>
             </div>
         }
 
         if (isMachineRemembered)
         {
-            <form style="display: inline-block" @formname="forget-browser" @onsubmit="OnSubmitForgetBrowserAsync" method="post">
+            <form class="d-inline-block mb-3" @formname="forget-browser" @onsubmit="OnSubmitForgetBrowserAsync" method="post">
                 <AntiforgeryToken />
-                <button type="submit" class="btn btn-primary">Forget this browser</button>
+                <button type="submit" class="btn btn-outline-secondary">Require a code on this browser</button>
             </form>
         }
 
-        <a href="Account/Manage/Disable2fa" class="btn btn-primary">Disable 2FA</a>
-        <a href="Account/Manage/GenerateRecoveryCodes" class="btn btn-primary">Reset recovery codes</a>
+        <div class="d-flex flex-column flex-sm-row gap-2 mb-4">
+            <a href="Account/Manage/GenerateRecoveryCodes" class="btn btn-outline-secondary">Replace recovery codes</a>
+            <a href="Account/Manage/Disable2fa" class="btn btn-outline-danger">Turn off 2FA</a>
+        </div>
     }
 
-    <h4>Authenticator app</h4>
+    <h4 class="h5">Authenticator app</h4>
     @if (!hasAuthenticator)
     {
-        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Add authenticator app</a>
+        <p>Use an app that generates time-based verification codes, even when your phone is offline.</p>
+        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Set up authenticator app</a>
     }
     else
     {
-        <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Set up authenticator app</a>
-        <a href="Account/Manage/ResetAuthenticator" class="btn btn-primary">Reset authenticator app</a>
+        @if (is2faEnabled)
+        {
+            <p>Your authenticator app is connected. Reset it only if you need to replace its key.</p>
+        }
+        else
+        {
+            <p>An authenticator key is available. Verify a code to turn on 2FA.</p>
+        }
+        <div class="d-flex flex-column flex-sm-row gap-2">
+            @if (!is2faEnabled)
+            {
+                <a href="Account/Manage/EnableAuthenticator" class="btn btn-primary">Verify authenticator code</a>
+            }
+            <a href="Account/Manage/ResetAuthenticator" class="btn btn-outline-danger">Reset authenticator app</a>
+        </div>
     }
 }
 else
 {
     <div class="alert alert-danger">
         <strong>Privacy and cookie policy have not been accepted.</strong>
-        <p>You must accept the policy before you can enable two factor authentication.</p>
+        <p>You must accept the policy before you can enable two-factor authentication.</p>
     </div>
 }
 
@@ -95,7 +131,7 @@ else
         await SignInManager.ForgetTwoFactorClientAsync();
 
         RedirectManager.RedirectToCurrentPageWithStatus(
-            "The current browser has been forgotten. When you login again from this browser you will be prompted for your 2fa code.",
+            "This browser will require a 2FA code the next time you sign in.",
             HttpContext);
     }
 }

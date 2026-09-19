@@ -2,24 +2,29 @@
 
 @inject IdentityUserAccessor UserAccessor
 
-<PageTitle>Personal Data</PageTitle>
+<PageTitle>Personal data</PageTitle>
 
 <StatusMessage />
-<h3>Personal Data</h3>
+<h3>Personal data</h3>
 
 <div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
+    <div class="col-xl-7">
+        <h4 class="h5">Download your data</h4>
+        <p>Get a JSON copy of the personal data stored with your OpenWish account.</p>
         <form action="Account/Manage/DownloadPersonalData" method="post">
             <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">Download</button>
+            <button class="btn btn-primary" type="submit">
+                <OpenWishIcon Name="download" />
+                Download personal data
+            </button>
         </form>
-        <p>
-            <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">Delete</a>
-        </p>
+        <hr class="my-4" />
+        <h4 class="h5 text-danger">Delete your account</h4>
+        <p>Deleting your account permanently removes your personal data and cannot be undone.</p>
+        <a href="Account/Manage/DeletePersonalData" class="btn btn-outline-danger">
+            <OpenWishIcon Name="trash3" />
+            Review account deletion
+        </a>
     </div>
 </div>
 

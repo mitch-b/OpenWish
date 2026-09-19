@@ -86,6 +86,14 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(wli => wli.Price)
             .HasColumnType("decimal(11,2)");
 
+        modelBuilder.Entity<WishlistItem>()
+            .Property(wli => wli.CreationRequestHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<WishlistItem>()
+            .HasIndex(wli => new { wli.WishlistId, wli.PublicId })
+            .IsUnique();
+
         modelBuilder.Entity<WishlistComment>()
             .HasOne(wc => wc.User)
             .WithMany()

@@ -72,11 +72,11 @@
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                <span>Creating your event...</span>
+                <span>@(_isEditMode ? "Saving changes..." : "Creating your event...")</span>
             }
             else if (_isEditMode)
             {
-                <span>Save Changes</span>
+                <span>Save changes</span>
             }
             else if (Model!.IsGiftExchange)
             {

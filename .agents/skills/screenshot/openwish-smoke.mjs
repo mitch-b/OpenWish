@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -78,13 +79,85 @@ async function assertVisible(page, text) {
   await page.getByText(text, { exact: false }).first().waitFor({ state: "visible" });
 }
 
-async function visit(page, route, expectedText, visitedRoutes) {
-  const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
-  if (!response?.ok()) {
-    throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+async function generateTotp(secret) {
+  if (Date.now() % 30000 > 27000) {
+    await new Promise(resolve => setTimeout(resolve, 3000));
   }
 
-  await assertVisible(page, expectedText);
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = "";
+  for (const character of secret.replace(/\s/g, "").toUpperCase()) {
+    const value = alphabet.indexOf(character);
+    if (value < 0) {
+      throw new Error("Authenticator key was not valid base32.");
+    }
+    bits += value.toString(2).padStart(5, "0");
+  }
+
+  const key = Buffer.from(
+    Array.from({ length: Math.floor(bits.length / 8) }, (_, index) =>
+      Number.parseInt(bits.slice(index * 8, (index + 1) * 8), 2))
+  );
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
+  const digest = crypto.createHmac("sha1", key).update(counter).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  const value = (
+    ((digest[offset] & 0x7f) << 24) |
+    ((digest[offset + 1] & 0xff) << 16) |
+    ((digest[offset + 2] & 0xff) << 8) |
+    (digest[offset + 3] & 0xff)
+  ) % 1000000;
+  return value.toString().padStart(6, "0");
+}
+
+async function enableTwoFactorAuthentication(page, authenticatorKey) {
+  const recoveryCodesHeading = page.getByRole("heading", { name: "Save your recovery codes" });
+  const invalidCodeMessage = page.getByText("Error: Verification code is invalid.", { exact: true });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const verificationCode = await generateTotp(authenticatorKey);
+    await page.getByLabel("Verification code").fill(verificationCode);
+    await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+
+    const verificationResult = await Promise.race([
+      recoveryCodesHeading.waitFor({ state: "visible" }).then(() => "enabled"),
+      invalidCodeMessage.waitFor({ state: "visible" }).then(() => "invalid")
+    ]);
+
+    if (verificationResult === "enabled") {
+      return;
+    }
+
+    if (attempt === 1) {
+      throw new Error("Authenticator setup rejected a fresh verification code.");
+    }
+
+    // Generate a fresh TOTP when the server rejected the previous code after its 30-second window.
+  }
+}
+
+async function visit(page, route, expectedText, visitedRoutes) {
+  let response;
+  let lastError;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+    if (!response?.ok()) {
+      throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+    }
+
+    try {
+      await assertVisible(page, expectedText);
+      break;
+    } catch (error) {
+      lastError = error;
+      if (attempt === 1) {
+        throw lastError;
+      }
+    }
+  }
+
   const blazorError = page.locator("#blazor-error-ui");
   if (await blazorError.isVisible()) {
     throw new Error(`Blazor error UI was visible on ${route}.`);
@@ -444,6 +517,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded personal wishlist panel remained marked as busy.");
   }
+  await page.getByRole("heading", { name: "Your collection" }).waitFor({ state: "visible" });
+  await assertVisible(page, "Ideas saved");
+  await assertVisible(page, "Shared lists");
   const wishlistSearch = page.getByRole("searchbox", { name: "Search wishlists" });
   if (await wishlistSearch.getAttribute("aria-controls") !== "wishlist-results") {
     throw new Error("Wishlist discovery search does not identify its results.");
@@ -466,6 +542,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "wishlists.png");
 
   await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  await page.getByRole("heading", { name: "Shared with you" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Manage friends" }).waitFor({ state: "visible" });
   await assertVisible(page, "Jordan's Favorites");
   if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded friends' wishlist panel remained marked as busy.");
@@ -537,20 +615,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await itemDialog.getByRole("button", { name: "Import" }).isDisabled())) {
     throw new Error("The item dialog allows an empty product URL import.");
   }
-  await modalProductUrl.fill("https://example.com/gift");
-  await itemDialog.getByRole("button", { name: "Import" }).click({ trial: true });
-  if (await itemDialog.getByText("Importing product details...").isVisible()) {
-    throw new Error("Typing a product URL incorrectly displayed an import-in-progress state.");
+  await modalProductUrl.fill("not-a-web-address");
+  await itemDialog.getByRole("button", { name: "Import" }).click();
+  await itemDialog.getByRole("alert")
+    .filter({ hasText: "Enter a complete product link that starts with http:// or https://." })
+    .waitFor({ state: "visible" });
+  if (await modalProductUrl.inputValue() !== "not-a-web-address") {
+    throw new Error("The item dialog discarded a product URL that needs correction.");
   }
-  await itemDialog.getByRole("button", { name: "Close" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  if (!(await itemDialog.getByRole("button", { name: "Add item", exact: true })
-    .evaluate(element => element === document.activeElement))) {
-    throw new Error("Keyboard focus did not wrap within the item dialog.");
-  }
+  await itemDialog.getByLabel("Name").fill("Handmade Tea Infuser");
+  await itemDialog.getByLabel("Description").fill("Fine mesh infuser with a resting tray");
+  await itemDialog.getByLabel("Price").fill("24.50");
+  await itemDialog.getByLabel("Product Link").fill("https://example.com/gift");
   await screenshot(page, "wishlist-item-dialog.png", false);
-  await page.keyboard.press("Escape");
+  await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
   await itemDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: "Handmade Tea Infuser added to the wishlist." })
+    .waitFor({ state: "visible" });
+  await assertVisible(page, "Handmade Tea Infuser");
+  const addedProductLink = page.getByRole("link", {
+    name: "View Handmade Tea Infuser product (opens in a new tab)"
+  });
+  if (await addedProductLink.getAttribute("href") !== "https://example.com/gift") {
+    throw new Error("The item dialog did not persist the entered product URL.");
+  }
+  await screenshot(page, "wishlist-item-added.png");
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing the item dialog did not restore focus to its opener.");
   }
@@ -662,7 +752,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.locator("#name").fill("Neighborhood Secret Santa");
   await page.getByRole("button", { name: "Create and invite people" }).click();
-  await page.waitForURL(/\/events\/[^/]+(?:#secret-santa-setup)?$/);
+  await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
+  const createdEventPublicId = new URL(page.url()).pathname.split("/").filter(Boolean).at(-1);
+  if (!createdEventPublicId) {
+    throw new Error("The created event URL did not include a public identifier.");
+  }
   await assertVisible(page, "Finish your Secret Santa setup");
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
@@ -704,7 +798,24 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "invitation-dialog.png", false);
   await page.getByRole("button", { name: "Cancel" }).click();
 
-  await visit(page, `/events/${manifest.eventPublicId}/manage`, "Manage Event", visitedRoutes);
+  const friendsResponse = await context.request.get(`${baseUrl}/api/friends`);
+  if (!friendsResponse.ok()) {
+    throw new Error(`Owner friends returned ${friendsResponse.status()}.`);
+  }
+  const friends = await friendsResponse.json();
+  const removableFriend = friends.find(friend => friend.userName === "JordanDemo") ?? friends[0];
+  if (!removableFriend?.id) {
+    throw new Error("Participant-removal verification requires a seeded friend.");
+  }
+  const participantResponse = await context.request.post(
+    `${baseUrl}/api/events/${createdEventPublicId}/users`,
+    { data: { userId: removableFriend.id, role: "Participant" } }
+  );
+  if (!participantResponse.ok()) {
+    throw new Error(`Created event participant setup returned ${participantResponse.status()}.`);
+  }
+
+  await visit(page, `/events/${createdEventPublicId}/manage`, "Manage Event", visitedRoutes);
   await assertVisible(page, "Participants");
   await page.waitForFunction(() =>
     document.querySelector(".event-invitations")?.getAttribute("aria-busy") === "false"
@@ -712,6 +823,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await page.locator(".event-invitations").getAttribute("aria-busy") !== "false") {
     throw new Error("Loaded event invitations remained marked as busy.");
   }
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await page.getByRole("status").filter({ hasText: "Event changes saved." })
+    .waitFor({ state: "visible" });
+  const removeEventParticipant = page.getByRole("button", { name: /Remove .* from event/ }).first();
+  await removeEventParticipant.click();
+  const participantRemovalDialog = page.getByRole("dialog", { name: "Remove participant" });
+  await participantRemovalDialog.getByText("They will lose access to the event").waitFor({ state: "visible" });
+  await screenshot(page, "event-participant-removal.png", false);
+  await participantRemovalDialog.getByRole("button", { name: "Remove participant" }).click();
+  await page.getByRole("status").filter({ hasText: "JordanDemo was removed from the event." })
+    .waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Remove JordanDemo from event" }).waitFor({ state: "detached" });
+  await page.locator(".event-invitations").getByText("JordanDemo", { exact: true })
+    .waitFor({ state: "detached" });
   await screenshot(page, "event-management.png");
 
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
@@ -855,13 +980,95 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Dependable wishlist management");
+  await assertVisible(page, "Safer two-factor settings");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
   if (username !== "AlexDemo") {
     throw new Error(`Profile displayed unexpected username '${username}'.`);
   }
+  if (await page.locator("#username").getAttribute("readonly") === null) {
+    throw new Error("Profile username was not exposed as a readable, immutable value.");
+  }
+  await assertVisible(page, "Your phone number is not shown on wishlists or events.");
+  await page.getByRole("navigation", { name: "Account settings" }).getByRole("link", { name: "Email" }).click();
+  await page.getByRole("heading", { name: "Email", exact: true }).waitFor();
+  await assertVisible(page, "Confirmed");
+  await assertVisible(page, "We will send a confirmation link before changing your sign-in address.");
+  await page.getByRole("link", { name: "Password", exact: true }).click();
+  const passwordGuidance = page.locator("#password-guidance");
+  await passwordGuidance.waitFor({ state: "visible" });
+  if (!(await passwordGuidance.textContent()).includes("6 to 100 characters")) {
+    throw new Error("Password settings did not expose the enforced length limits.");
+  }
+  await page.getByRole("link", { name: "Personal data", exact: true }).click();
+  await assertVisible(page, "Download personal data");
+  await assertVisible(page, "Review account deletion");
+  await screenshot(page, "account-settings.png");
+  await page.getByRole("link", { name: "Review account deletion" }).click();
+  await assertVisible(page, "This permanently removes your account and personal data.");
+  await assertVisible(page, "Keep my account");
+  await assertVisible(page, "Delete my account");
+  const keepAccount = page.getByRole("link", { name: "Keep my account" });
+  const deleteAccount = page.getByRole("button", { name: "Delete my account" });
+  if (!(await keepAccount.evaluate((safeAction, destructiveAction) =>
+    safeAction.compareDocumentPosition(destructiveAction) & Node.DOCUMENT_POSITION_FOLLOWING,
+  await deleteAccount.elementHandle()))) {
+    throw new Error("Account deletion did not keep the safe action before the destructive action.");
+  }
+  await page.getByRole("link", { name: "Keep my account" }).click();
+  await page.getByRole("heading", { name: "Personal data", exact: true }).waitFor();
+
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
+  await page.getByRole("link", { name: "Set up authenticator app" }).click();
+  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  const authenticatorKey = (await page.locator("#shared-key").textContent())?.replace(/\s/g, "");
+  if (!authenticatorKey) {
+    throw new Error("Authenticator setup did not provide a manual key.");
+  }
+  await page.getByLabel("Verification code").fill("abc123");
+  await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+  await assertVisible(page, "The verification code must contain exactly 6 digits.");
+  await enableTwoFactorAuthentication(page, authenticatorKey);
+  await assertVisible(page, "They will not be shown again.");
+  if (await page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem").count() !== 10) {
+    throw new Error("Authenticator setup did not provide ten recovery codes.");
+  }
+  const doneSavingCodes = page.getByRole("link", { name: "Done saving codes" });
+  if (await doneSavingCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Recovery-code display did not provide the expected completion destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
+  await screenshot(page, "two-factor-settings.png");
+
+  await page.getByRole("link", { name: "Replace recovery codes" }).click();
+  await assertVisible(page, "Your current recovery codes will stop working immediately.");
+  await assertVisible(page, "Keep current recovery codes");
+  await assertVisible(page, "Replace recovery codes");
+  const keepRecoveryCodes = page.getByRole("link", { name: "Keep current recovery codes" });
+  if (await keepRecoveryCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Recovery-code replacement did not provide the expected safe destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
+
+  await page.getByRole("link", { name: "Reset authenticator app" }).click();
+  await assertVisible(page, "Your current authenticator codes will stop working immediately.");
+  await assertVisible(page, "Keep current authenticator");
+  const keepAuthenticator = page.getByRole("link", { name: "Keep current authenticator" });
+  if (await keepAuthenticator.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Authenticator reset did not provide the expected safe destination.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
+
+  await page.getByRole("link", { name: "Turn off 2FA" }).click();
+  await assertVisible(page, "Your account will rely on your password alone when you sign in.");
+  await assertVisible(page, "Keep 2FA on");
+  await screenshot(page, "two-factor-disable.png");
+  await Promise.all([
+    page.waitForURL("**/Account/Manage/TwoFactorAuthentication"),
+    page.getByRole("button", { name: "Turn off 2FA" }).click()
+  ]);
+  await assertVisible(page, "Two-factor authentication is off.");
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
@@ -917,7 +1124,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "wishlist management labels and contrast",
       "theme persistence",
       "release history",
-      "account profile"
+      "account settings requirements and deletion safety",
+      "two-factor status, setup, recovery, reset, and disable safety"
     ]
   });
   await context.close();
@@ -931,7 +1139,13 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   const visitedRoutes = [];
 
   const invite = encodeURIComponent("invited@example.com|inviter-id");
-  await visit(page, `/Account/Register?invite=${invite}`, "Invitations are tied to the address", visitedRoutes);
+  const registrationReturnUrl = "/events";
+  await visit(
+    page,
+    `/Account/Register?invite=${invite}&ReturnUrl=${encodeURIComponent(registrationReturnUrl)}`,
+    "Invitations are tied to the address",
+    visitedRoutes
+  );
   await assertVisible(page, "invited@example.com");
   const invitedEmailInput = page.locator('input[name="Input.Email"]');
   if (await invitedEmailInput.getAttribute("type") !== "hidden") {
@@ -939,6 +1153,14 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   }
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Password") {
     throw new Error("Invited registration did not focus the first editable field.");
+  }
+  await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
+  await page.getByRole("button", { name: "Create account" }).waitFor({ state: "visible" });
+  const registrationLoginLink = page.getByRole("link", { name: "Log in", exact: true });
+  await registrationLoginLink.waitFor({ state: "visible" });
+  const loginDestination = new URL(await registrationLoginLink.getAttribute("href"), baseUrl);
+  if (loginDestination.searchParams.get("ReturnUrl") !== registrationReturnUrl) {
+    throw new Error("Registration login navigation did not preserve the requested destination.");
   }
   await screenshot(page, "invited-registration.png");
   await assertResponsiveWidths(page, [
@@ -954,7 +1176,34 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Email") {
     throw new Error("Login did not focus the first editable field.");
   }
+  await assertVisible(page, "Avoid this on shared devices.");
+  await assertVisible(page, "Need help signing in?");
+  await page.getByRole("link", { name: "Reset your password" }).waitFor({ state: "visible" });
   await screenshot(page, "login.png");
+
+  await visit(page, "/Account/ForgotPassword", "Request a secure link", visitedRoutes);
+  await assertVisible(page, "If an eligible account matches");
+  await page.getByRole("button", { name: "Send reset link" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Back to log in" }).waitFor({ state: "visible" });
+  await screenshot(page, "account-recovery.png");
+
+  await visit(page, "/Account/ResetPassword?Code=dGVzdA", "Choose a new password", visitedRoutes);
+  await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
+  await page.getByRole("button", { name: "Save new password" }).waitFor({ state: "visible" });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await visit(page, "/Account/ResendEmailConfirmation", "Request a new confirmation link", visitedRoutes);
+  await assertVisible(page, "For privacy, the result is the same");
+  await page.getByRole("button", { name: "Send confirmation email" }).waitFor({ state: "visible" });
+  await screenshot(page, "account-recovery-mobile.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 600 },
+    { width: 1024, height: 700 }
+  ]);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
   await page.getByRole("button", { name: "Sign in as AlexDemo (organizer)" }).click();
   await assertVisible(page, "AlexDemo");
 
@@ -967,7 +1216,14 @@ async function verifyDevelopmentLoginJourney(browser, results) {
 
   results.push({
     scenario: "development-login",
-    visitedRoutes
+    visitedRoutes,
+    assertions: [
+      "login session safety and recovery navigation",
+      "registration password guidance and sign-in navigation",
+      "private password-recovery guidance",
+      "password reset requirements and outcome",
+      "confirmation-email privacy and recovery"
+    ]
   });
   await context.close();
 }
@@ -1059,6 +1315,16 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const manageRedirectResponse = await page.goto(
+    `${baseUrl}/events/${manifest.eventPublicId}/manage`,
+    { waitUntil: "domcontentloaded" }
+  );
+  if (!manageRedirectResponse?.ok()) {
+    throw new Error(`Pending invitee event management returned ${manageRedirectResponse?.status() ?? "no response"}.`);
+  }
+  await page.waitForURL(`${baseUrl}/events/${manifest.eventPublicId}`);
+  await assertVisible(page, "Accept your invitation to join");
+  visitedRoutes.push(new URL(page.url()).pathname);
   await visit(page, `/events/${manifest.eventPublicId}`, "Accept your invitation to join", visitedRoutes);
   if (await page.getByText("You're in the Secret Santa.").isVisible()) {
     throw new Error("Pending invitee was incorrectly shown accepted-participant guidance.");
@@ -1066,11 +1332,63 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("link", { name: "Review invitation" }).click();
   await assertVisible(page, "You're almost in!");
   await assertVisible(page, "Accept invite");
+  await page.getByRole("button", { name: "Decline invite" }).click();
+  const declineInvitationDialog = page.getByRole("dialog", { name: "Decline invitation" });
+  await declineInvitationDialog.getByText("The host will see that you declined").waitFor({ state: "visible" });
+  await screenshot(page, "invitation-decline-dialog.png", false);
+  await declineInvitationDialog.getByRole("button", { name: "Keep invitation" }).click();
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const privateCollaboratorItemName = `Private collaborator item ${Date.now()}`;
+  await page.getByRole("button", { name: "Add item" }).first().click();
+  const privateItemDialog = page.getByRole("dialog", { name: "Add item" });
+  await privateItemDialog.getByLabel("Name").fill(privateCollaboratorItemName);
+  await privateItemDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await privateItemDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: `${privateCollaboratorItemName} added to the wishlist.` })
+    .waitFor({ state: "visible" });
+  await page.getByText(privateCollaboratorItemName, { exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: `Edit ${privateCollaboratorItemName}` }).click();
+  const privateItemEditDialog = page.getByRole("dialog", { name: "Edit item" });
+  await privateItemEditDialog.getByLabel("Make this item private (only you can see it)").check();
+  await privateItemEditDialog.getByRole("button", { name: "Save changes" }).click();
+  await privateItemEditDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: `Changes to ${privateCollaboratorItemName} saved.` })
+    .waitFor({ state: "visible" });
+  if (await page.getByText(privateCollaboratorItemName, { exact: true }).isVisible()) {
+    throw new Error("A collaborator's private item bypassed viewer filtering after editing.");
+  }
+  const guestItemsAfterPrivateAddResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  if (!guestItemsAfterPrivateAddResponse.ok()) {
+    throw new Error(
+      `Guest item reconciliation returned ${guestItemsAfterPrivateAddResponse.status()}.`
+    );
+  }
+  const guestItemsAfterPrivateAdd = await guestItemsAfterPrivateAddResponse.json();
+  if (guestItemsAfterPrivateAdd.some(item => item.name === privateCollaboratorItemName)) {
+    throw new Error("A collaborator's private item was disclosed by the viewer-filtered items API.");
+  }
+  const ownerVerificationContext = await browser.newContext();
+  await login(ownerVerificationContext, "owner", ownerEmail);
+  const ownerItemsResponse = await ownerVerificationContext.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  if (!ownerItemsResponse.ok()) {
+    throw new Error(`Owner item verification returned ${ownerItemsResponse.status()}.`);
+  }
+  const ownerItems = await ownerItemsResponse.json();
+  const privateCollaboratorItem = ownerItems.find(item => item.name === privateCollaboratorItemName);
+  if (!privateCollaboratorItem?.isPrivate) {
+    throw new Error("The private collaborator item was not persisted for the wishlist owner.");
+  }
+  await ownerVerificationContext.close();
   const dutchOvenRow = page.locator("tr").filter({ hasText: "Cast-Iron Dutch Oven" });
   await dutchOvenRow.getByRole("button", { name: "Show" }).click();
   const giftCoordination = page.getByRole("region", {
@@ -1180,7 +1498,12 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     loginStatus,
     seedAuthorizationStatus: forbiddenSeed.status(),
     deleteAuthorizationStatus: forbiddenDelete.status(),
-    visitedRoutes
+    visitedRoutes,
+    assertions: [
+      "items made private by collaborators disappear immediately for their creator",
+      "private collaborator items remain visible to the wishlist owner",
+      "private item persistence and viewer-filtered lookup endpoints return success"
+    ]
   });
   await context.close();
 }
@@ -1331,6 +1654,52 @@ async function verifyMobileJourney(browser, manifest, results) {
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "View JordanDemo's wishlist");
   await screenshot(page, "secret-santa-mobile.png");
+
+  await visit(page, "/Account/Manage", "Profile", visitedRoutes);
+  const accountNavigation = page.getByRole("navigation", { name: "Account settings" });
+  await accountNavigation.waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(
+    accountNavigation.getByRole("link", { name: "Profile", exact: true }),
+    "Mobile account navigation link"
+  );
+  await screenshot(page, "account-settings-mobile.png");
+  const twoFactorSettingsLink = accountNavigation.getByRole("link", { name: "Two-factor authentication" });
+  if (await twoFactorSettingsLink.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Mobile account navigation did not link to two-factor settings.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
+  const verifyAuthenticatorLink = page.getByRole("link", { name: "Verify authenticator code" });
+  if (await verifyAuthenticatorLink.getAttribute("href") !== "Account/Manage/EnableAuthenticator") {
+    throw new Error("Two-factor settings did not link to authenticator verification.");
+  }
+  await visit(page, "/Account/Manage/EnableAuthenticator", "Set up authenticator app", visitedRoutes);
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Verify and enable 2FA" }),
+    "Mobile authenticator verification action"
+  );
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 600 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#shared-key").evaluate(element => {
+    element.textContent = "key hidden in test evidence";
+  });
+  await screenshot(page, "authenticator-setup-mobile.png");
+  await page.getByRole("link", { name: "Back to two-factor settings" }).click();
+  await visit(page, "/Account/Manage/PersonalData", "Personal data", visitedRoutes);
+  await page.getByRole("link", { name: "Review account deletion" }).click();
+  const mobileKeepAccount = page.getByRole("link", { name: "Keep my account" });
+  const mobileDeleteAccount = page.getByRole("button", { name: "Delete my account" });
+  const [safeBox, destructiveBox] = await Promise.all([
+    mobileKeepAccount.boundingBox(),
+    mobileDeleteAccount.boundingBox()
+  ]);
+  if (!safeBox || !destructiveBox || safeBox.y >= destructiveBox.y) {
+    throw new Error("Mobile account deletion did not display the safe action before deletion.");
+  }
+  await screenshot(page, "account-deletion-mobile.png");
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Mobile browser errors: ${diagnostics.browserErrors.join(" | ")}`);

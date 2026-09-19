@@ -1,5 +1,81 @@
 [
   {
+    "version": "0.1.21",
+    "date": "2026-09-19",
+    "title": "Dependable wishlist item editing",
+    "summary": "Adding, editing, and importing wishlist items now stays clear and recoverable without duplicate requests or lost details.",
+    "highlights": [
+      "Wishlist-item saves prevent duplicate requests and clearly show when an add or edit is in progress.",
+      "Save failures stay in the item dialog with safe guidance, while stable request keys make repeated add attempts idempotent.",
+      "Successful adds and edits update the visible wishlist immediately without bypassing viewer privacy rules.",
+      "Product-link imports validate web addresses and prevent overlapping paste or button requests.",
+      "Product imports preserve the entered link and distinguish imported details, a usable link without details, and a retryable failure."
+    ]
+  },
+  {
+    "version": "0.1.20",
+    "date": "2026-09-18",
+    "title": "Clearer wishlist overview",
+    "summary": "Wishlist overview now makes saved ideas, sharing status, and the next useful action easier to see.",
+    "highlights": [
+      "The wishlist overview shows total lists, saved ideas, and shared lists at a glance.",
+      "Shared wishlists have a clear purpose and a direct route to friend management.",
+      "An empty shared-with-you tab explains what is missing and offers a Find friends action."
+    ]
+  },
+  {
+    "version": "0.1.19",
+    "date": "2026-09-18",
+    "title": "Dependable event participation",
+    "summary": "Event pages now recover clearly from loading and update failures while protecting edits, participant removal, and invitation decisions.",
+    "highlights": [
+      "Event details distinguish loading failures from loading progress and provide clear, duplicate-safe retry and exit actions.",
+      "Event management distinguishes loading failures from loading progress without implying that settings were changed, and safely redirects non-organizers.",
+      "Event edits prevent duplicate saves, announce completion, and keep actionable failures on the form.",
+      "Participant removal requires confirmation, prevents duplicate requests, and safely reconciles interrupted results while keeping participant views in sync.",
+      "Invitation declines require confirmation, explain the consequence, and never expose internal failure details."
+    ]
+  },
+  {
+    "version": "0.1.18",
+    "date": "2026-09-17",
+    "title": "Clearer account access",
+    "summary": "Account access now gives people clearer guidance when signing in, creating an account, or recovering access.",
+    "highlights": [
+      "Sign-in explains when a session stays active, warns against using that option on shared devices, and groups account-recovery actions.",
+      "Registration shows the complete password requirements before submission and provides a direct route back to sign-in.",
+      "Password recovery explains its privacy-preserving result, uses email-friendly input, and provides a safe return to sign-in.",
+      "Password reset shows the complete password requirements and names the action's outcome clearly.",
+      "Confirmation-email recovery explains its privacy behavior, uses email-friendly input, and provides a safe return to sign-in."
+    ]
+  },
+  {
+    "version": "0.1.17",
+    "date": "2026-09-16",
+    "title": "Safer two-factor settings",
+    "summary": "Two-factor authentication settings now make account protection, setup, recovery, and potentially disruptive actions easier to understand.",
+    "highlights": [
+      "Two-factor settings show whether protection is on or off and prioritize the next useful action.",
+      "Authenticator setup provides a truthful manual-key workflow and a mobile-friendly verification-code field.",
+      "Recovery-code replacement explains that existing codes will stop working, keeps a safe exit visible, and presents new codes as an accessible list.",
+      "Authenticator reset explains its immediate effect and keeps the current authenticator as the first action.",
+      "Turning off 2FA explains the reduced protection, preserves a safe exit, and confirms the resulting account state."
+    ]
+  },
+  {
+    "version": "0.1.16",
+    "date": "2026-09-15",
+    "title": "Clearer account settings",
+    "summary": "Account settings now make identity, sign-in, and personal-data choices easier to understand and safer to navigate on any screen.",
+    "highlights": [
+      "Account navigation remains labelled, reachable, and comfortably sized on smaller screens.",
+      "Profile settings explain read-only and optional fields, support phone autofill, and clearly name the save action.",
+      "Email settings show confirmation in text and explain when a changed address takes effect.",
+      "Password settings connect the complete enforced length and character requirements to the new-password field.",
+      "Personal-data actions name their outcomes and provide a clear safe exit before account deletion."
+    ]
+  },
+  {
     "version": "0.1.15",
     "date": "2026-09-13",
     "title": "Dependable wishlist management",

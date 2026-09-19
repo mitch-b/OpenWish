@@ -20,6 +20,10 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("\"wishlist\" : \"wishlists\") found.", markup, StringComparison.Ordinal);
         Assert.Contains("filteredWishlists = filtered.ToList();", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"wishlist-pulse-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Ideas saved", markup, StringComparison.Ordinal);
+        Assert.Contains("@TotalWishlistItemCount", markup, StringComparison.Ordinal);
+        Assert.Contains("@SharedWishlistCount", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -32,6 +36,17 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-label=\"Clear wishlist search\"", markup, StringComparison.Ordinal);
         Assert.Contains("<div id=\"wishlist-results\">", markup, StringComparison.Ordinal);
         Assert.Contains("No wishlists found.</p>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FriendsWishlistDiscovery_ExplainsBothSharedAndEmptyStates()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+
+        Assert.Contains("Shared with you", markup, StringComparison.Ordinal);
+        Assert.Contains("Manage friends", markup, StringComparison.Ordinal);
+        Assert.Contains("Nothing shared with you yet", markup, StringComparison.Ordinal);
+        Assert.Contains("Find friends", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -248,7 +263,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("@if (isLoading)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isImporting\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
@@ -264,6 +279,38 @@ public class InteractiveControlMarkupTests
         Assert.Contains("sibling.inert = true", dialogScript, StringComparison.Ordinal);
         Assert.Contains("restoreDialogBackground", dialogScript, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.isConnected", dialogScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemDialog_ProtectsSaveAndImportOperations()
+    {
+        var modalMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var detailsMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("if (_isSubmitting || _isImporting || Model is null)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isSubmitting\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@IsBusy\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Saving changes...", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Adding item...", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@_saveError", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (saved)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(productUri.Host)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("The product link is ready", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("The link is still here so you can try again.", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Your existing details were kept.", modalMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImportUrl = string.Empty;\n            _isImporting = false;", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (product != null)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Product import timed out", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Model.PublicId = Guid.NewGuid().ToString();", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items[existingItemIndex] = savedItem;", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items.RemoveAt(existingItemIndex);", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (ShouldDisplayItem(savedItem))", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("else if (ShouldDisplayItem(savedItem))", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item)", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("savedItem.Comments = existingItem.Comments;", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("savedItem.Reservations = existingItem.Reservations;", detailsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("await LoadItems();\n    }\n\n    private void HandleModalCancel", detailsMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -450,6 +497,94 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventDetails_ExposeRecoverableLoadingFailures()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("Title=\"Event unavailable\"", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load this event. Check your connection and try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@(_isLoading ? \"Retrying...\" : \"Try again\")", markup, StringComparison.Ordinal);
+        Assert.Contains("Logger.LogError(ex, \"Failed to load event {EventId}\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_ExposesRecoverableLoadingFailures()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("Title=\"Event management unavailable\"", markup, StringComparison.Ordinal);
+        Assert.Contains("The event itself has not been changed.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("var loadVersion = ++_loadVersion;", markup, StringComparison.Ordinal);
+        Assert.Contains("loadVersion != _loadVersion", markup, StringComparison.Ordinal);
+        Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("NavigationManager.NavigateTo($\"/events/{eventId}\");", StringComparison.Ordinal) >
+            markup.IndexOf("catch (Exception ex)", StringComparison.Ordinal));
+        Assert.Contains("Logger.LogError(ex, \"Failed to load event management for {EventId}\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_PreventsDuplicateSavesAndKeepsFailuresOnTheForm()
+    {
+        var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor");
+        var managementMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("IsSubmitting=\"@_isSaving\"", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (_event == null || _isSaving)", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("var reloaded = await LoadEvent();", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("Event changes saved.", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't save the event changes. Review the details and try again.", managementMarkup, StringComparison.Ordinal);
+        Assert.Contains("\"Saving changes...\"", formMarkup, StringComparison.Ordinal);
+
+        var controller = ReadComponent("OpenWish.Web", "Controllers", "EventController.cs");
+        Assert.Contains("return Ok(updatedEvent);", controller, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventManagement_ConfirmsAndReconcilesParticipantRemoval()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("Title=\"Remove participant\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"remove-event-participant-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Removing...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Reloading event...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (_event?.IsGiftExchange == true)", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't confirm whether the participant was removed.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"ReloadParticipantRemovalAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("CanClose=\"@(!_isRemovingParticipant)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<EventInvitations @key=\"_invitationsVersion\"", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.Split("_invitationsVersion++;", StringSplitOptions.None).Length >= 3,
+            "Successful direct and reconciled removals should refresh invitation state.");
+
+        var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "Dialog.razor");
+        Assert.Contains("disabled=\"@(!CanClose)\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("return CanClose ? CloseAsync() : Task.CompletedTask;", dialogMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InvitationDecline_RequiresConfirmationAndUsesSafeErrors()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "AcceptInvite.razor");
+
+        Assert.Contains("Title=\"Decline invitation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"decline-invitation-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("CanClose=\"@(!_isProcessing)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Declining invitation...</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("The host will see that you declined", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't accept the invitation. Check your connection and try again.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("_errorMessage = ex.Message", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("_rejectErrorMessage = ex.Message", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EventInvitations_ExposeRecoverableLoadingAndBusyActionStates()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
@@ -614,6 +749,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"alert\">@_errorMessage", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("We couldn't add this item.", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
@@ -786,6 +922,213 @@ public class InteractiveControlMarkupTests
         Assert.Contains("else", markup, StringComparison.Ordinal);
         Assert.Contains("finally", markup, StringComparison.Ordinal);
         Assert.Contains("_isLoading = false;", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AccountNavigation_IsLabelledAndResponsive()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");
+        var styles = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageLayout.razor.css");
+
+        Assert.Contains("<nav aria-label=\"Account settings\">", markup, StringComparison.Ordinal);
+        Assert.Contains("overflow-x: auto;", styles, StringComparison.Ordinal);
+        Assert.Contains("flex-flow: row nowrap !important;", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Profile_ExplainsReadOnlyAndOptionalFields()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Index.razor");
+
+        Assert.Contains("aria-describedby=\"username-help\" readonly", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"tel\" inputmode=\"tel\" aria-describedby=\"phone-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("cannot be edited from your profile", markup, StringComparison.Ordinal);
+        Assert.Contains("not shown on wishlists or events", markup, StringComparison.Ordinal);
+        Assert.Contains(">Save profile</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EmailSettings_ExposeConfirmationStatusAndChangeGuidance()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Email.razor");
+
+        Assert.Contains("aria-describedby=\"email-status\" readonly", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Confirmed</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("Confirmation needed", markup, StringComparison.Ordinal);
+        Assert.Contains("Send confirmation email", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"new-email-help\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordSettings_ConnectPasswordRequirements()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ChangePassword.razor");
+        var setPasswordMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "SetPassword.razor");
+
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"current-password\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"new-password\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", setPasswordMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", setPasswordMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PersonalDataActions_NameTheirOutcomeAndKeepDeletionReversible()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "PersonalData.razor");
+        var deletionMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "DeletePersonalData.razor");
+
+        Assert.Contains("Download personal data", markup, StringComparison.Ordinal);
+        Assert.Contains("Review account deletion", markup, StringComparison.Ordinal);
+        Assert.Contains("cannot be undone", markup, StringComparison.Ordinal);
+        Assert.Contains("Keep my account", deletionMarkup, StringComparison.Ordinal);
+        Assert.Contains("Delete my account", deletionMarkup, StringComparison.Ordinal);
+        Assert.Contains("d-flex flex-column flex-sm-row gap-2", deletionMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("flex-column-reverse", deletionMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TwoFactorSettings_ExposeStatusAndPrioritizeTheNextAction()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "TwoFactorAuthentication.razor");
+
+        Assert.Contains("Two-factor authentication is on.", markup, StringComparison.Ordinal);
+        Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Set up authenticator app</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("An authenticator key is available.", markup, StringComparison.Ordinal);
+        Assert.Contains(">Verify authenticator code</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("Your authenticator app is connected.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Finish authenticator setup", markup, StringComparison.Ordinal);
+        Assert.Contains(">Replace recovery codes</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Turn off 2FA</a>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("generate a new set of recovery codes", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AuthenticatorSetup_ProvidesAUsableManualKeyAndCodeInput()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "EnableAuthenticator.razor");
+
+        Assert.Contains("id=\"shared-key\"", markup, StringComparison.Ordinal);
+        Assert.Contains("supports time-based one-time passwords (TOTP)", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Scan the QR Code", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"one-time-code\" inputmode=\"numeric\" maxlength=\"11\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"verification-code-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Verify and enable 2FA</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("InputModel : IValidatableObject", markup, StringComparison.Ordinal);
+        Assert.Contains("normalizedCode.Length != 6", markup, StringComparison.Ordinal);
+        Assert.Contains("character is < '0' or > '9'", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RecoveryCodeReplacement_ExplainsInvalidationAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "GenerateRecoveryCodes.razor");
+        var codesMarkup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ShowRecoveryCodes.razor");
+
+        Assert.Contains("current recovery codes will stop working immediately", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep current recovery codes</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Replace recovery codes</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Recovery codes\"", codesMarkup, StringComparison.Ordinal);
+        Assert.Contains("They will not be shown again.", codesMarkup, StringComparison.Ordinal);
+        Assert.Contains(">Done saving codes</a>", codesMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AuthenticatorReset_ExplainsImpactAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ResetAuthenticator.razor");
+
+        Assert.Contains("current authenticator codes will stop working immediately", markup, StringComparison.Ordinal);
+        Assert.Contains("<PageTitle>Reset authenticator app</PageTitle>", markup, StringComparison.Ordinal);
+        Assert.Contains("will turn off until you connect and verify the new key", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep current authenticator</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Reset authenticator app</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DisableTwoFactor_ExplainsReducedProtectionAndOffersSafeExit()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "Disable2fa.razor");
+
+        Assert.Contains("rely on your password alone", markup, StringComparison.Ordinal);
+        Assert.Contains("existing authenticator key will remain available", markup, StringComparison.Ordinal);
+        Assert.Contains(">Keep 2FA on</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Turn off 2FA</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("Two-factor authentication is off.", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Login_ExplainsPersistentSessionsAndGroupsRecoveryActions()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Login.razor");
+
+        Assert.Contains("id=\"remember-me\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"remember-me-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Avoid this on shared devices.", markup, StringComparison.Ordinal);
+        Assert.Contains("<h3 class=\"h6\">Need help signing in?</h3>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Reset your password</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Resend your confirmation email</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Registration_ConnectsPasswordRequirementsAndSignInAction()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Register.razor");
+
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains(">Create account</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("GetUriWithQueryParameters(\"Account/Login\"", markup, StringComparison.Ordinal);
+        Assert.Contains(">Log in</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordRecovery_ExplainsPrivateOutcomeAndProvidesSafeNavigation()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ForgotPassword.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"reset-email-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("If an eligible account matches", markup, StringComparison.Ordinal);
+        Assert.Contains(">Send reset link</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PasswordReset_ConnectsRequirementsAndNamesItsOutcome()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResetPassword.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
+        Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
+        Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
+        Assert.Contains(">Save new password</button>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ConfirmationEmailRecovery_UsesEmailSemanticsAndPrivacyGuidance()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResendEmailConfirmation.razor");
+
+        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
+        Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

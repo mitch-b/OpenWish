@@ -1014,7 +1014,6 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await keepRecoveryCodes.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
     throw new Error("Recovery-code replacement did not provide the expected safe destination.");
   }
-  await keepRecoveryCodes.click();
   await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Reset authenticator app" }).click();
@@ -1024,7 +1023,6 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (await keepAuthenticator.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
     throw new Error("Authenticator reset did not provide the expected safe destination.");
   }
-  await keepAuthenticator.click();
   await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is on.", visitedRoutes);
 
   await page.getByRole("link", { name: "Turn off 2FA" }).click();

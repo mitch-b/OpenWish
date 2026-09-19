@@ -120,23 +120,21 @@ async function enableTwoFactorAuthentication(page, authenticatorKey) {
     await page.getByLabel("Verification code").fill(verificationCode);
     await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
 
-    try {
-      await recoveryCodesHeading.waitFor({ state: "visible", timeout: 5000 });
+    const verificationResult = await Promise.race([
+      recoveryCodesHeading.waitFor({ state: "visible" }).then(() => "enabled"),
+      invalidCodeMessage.waitFor({ state: "visible" }).then(() => "invalid")
+    ]);
+
+    if (verificationResult === "enabled") {
       return;
-    } catch (error) {
-      if (attempt === 1) {
-        throw error;
-      }
-
-      if (!await invalidCodeMessage.isVisible()) {
-        throw error;
-      }
-
-      // Generate a fresh TOTP when the server rejected the previous code after its 30-second window.
     }
-  }
 
-  throw new Error("Authenticator setup did not show recovery codes.");
+    if (attempt === 1) {
+      throw new Error("Authenticator setup rejected a fresh verification code.");
+    }
+
+    // Generate a fresh TOTP when the server rejected the previous code after its 30-second window.
+  }
 }
 
 async function visit(page, route, expectedText, visitedRoutes) {

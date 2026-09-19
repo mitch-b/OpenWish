@@ -111,6 +111,32 @@ async function generateTotp(secret) {
   return value.toString().padStart(6, "0");
 }
 
+async function enableTwoFactorAuthentication(page, authenticatorKey) {
+  const recoveryCodesHeading = page.getByRole("heading", { name: "Save your recovery codes" });
+  const invalidCodeMessage = page.getByText("Error: Verification code is invalid.", { exact: true });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const verificationCode = await generateTotp(authenticatorKey);
+    await page.getByLabel("Verification code").fill(verificationCode);
+    await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+
+    const verificationResult = await Promise.race([
+      recoveryCodesHeading.waitFor({ state: "visible" }).then(() => "enabled"),
+      invalidCodeMessage.waitFor({ state: "visible" }).then(() => "invalid")
+    ]);
+
+    if (verificationResult === "enabled") {
+      return;
+    }
+
+    if (attempt === 1) {
+      throw new Error("Authenticator setup rejected a fresh verification code.");
+    }
+
+    // Generate a fresh TOTP when the server rejected the previous code after its 30-second window.
+  }
+}
+
 async function visit(page, route, expectedText, visitedRoutes) {
   let response;
   let lastError;
@@ -1003,10 +1029,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByLabel("Verification code").fill("abc123");
   await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
   await assertVisible(page, "The verification code must contain exactly 6 digits.");
-  const verificationCode = await generateTotp(authenticatorKey);
-  await page.getByLabel("Verification code").fill(verificationCode);
-  await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
-  await page.getByRole("heading", { name: "Save your recovery codes" }).waitFor();
+  await enableTwoFactorAuthentication(page, authenticatorKey);
   await assertVisible(page, "They will not be shown again.");
   if (await page.getByRole("list", { name: "Recovery codes" }).getByRole("listitem").count() !== 10) {
     throw new Error("Authenticator setup did not provide ten recovery codes.");
@@ -1041,7 +1064,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Your account will rely on your password alone when you sign in.");
   await assertVisible(page, "Keep 2FA on");
   await screenshot(page, "two-factor-disable.png");
-  await page.getByRole("button", { name: "Turn off 2FA" }).click();
+  await Promise.all([
+    page.waitForURL("**/Account/Manage/TwoFactorAuthentication"),
+    page.getByRole("button", { name: "Turn off 2FA" }).click()
+  ]);
   await assertVisible(page, "Two-factor authentication is off.");
 
   await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
@@ -1637,10 +1663,16 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile account navigation link"
   );
   await screenshot(page, "account-settings-mobile.png");
-  await accountNavigation.getByRole("link", { name: "Two-factor authentication" }).click();
-  await assertVisible(page, "Two-factor authentication is off.");
-  await page.getByRole("link", { name: "Verify authenticator code" }).click();
-  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  const twoFactorSettingsLink = accountNavigation.getByRole("link", { name: "Two-factor authentication" });
+  if (await twoFactorSettingsLink.getAttribute("href") !== "Account/Manage/TwoFactorAuthentication") {
+    throw new Error("Mobile account navigation did not link to two-factor settings.");
+  }
+  await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
+  const verifyAuthenticatorLink = page.getByRole("link", { name: "Verify authenticator code" });
+  if (await verifyAuthenticatorLink.getAttribute("href") !== "Account/Manage/EnableAuthenticator") {
+    throw new Error("Two-factor settings did not link to authenticator verification.");
+  }
+  await visit(page, "/Account/Manage/EnableAuthenticator", "Set up authenticator app", visitedRoutes);
   await assertMinimumTouchTarget(
     page.getByRole("button", { name: "Verify and enable 2FA" }),
     "Mobile authenticator verification action"

@@ -1596,8 +1596,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   });
   await screenshot(page, "authenticator-setup-mobile.png");
   await page.getByRole("link", { name: "Back to two-factor settings" }).click();
-  await page.getByRole("navigation", { name: "Account settings" })
-    .getByRole("link", { name: "Personal data", exact: true }).click();
+  await visit(page, "/Account/Manage/PersonalData", "Personal data", visitedRoutes);
   await page.getByRole("link", { name: "Review account deletion" }).click();
   const mobileKeepAccount = page.getByRole("link", { name: "Keep my account" });
   const mobileDeleteAccount = page.getByRole("button", { name: "Delete my account" });

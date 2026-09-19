@@ -390,7 +390,7 @@
     private int TotalWishlistCount => wishlists?.Count() ?? 0;
 
     private int TotalWishlistItemCount =>
-        wishlists?.Sum(wishlist => wishlist.Items?.Count ?? wishlist.ItemCount) ?? 0;
+        wishlists?.Sum(wishlist => wishlist.Items.Count) ?? 0;
 
     private int SharedWishlistCount => wishlists?.Count(wishlist => !wishlist.IsPrivate) ?? 0;
 

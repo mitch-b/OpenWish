@@ -248,7 +248,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("@if (isLoading)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isImporting\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
@@ -264,6 +264,32 @@ public class InteractiveControlMarkupTests
         Assert.Contains("sibling.inert = true", dialogScript, StringComparison.Ordinal);
         Assert.Contains("restoreDialogBackground", dialogScript, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.isConnected", dialogScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemDialog_ProtectsSaveAndImportOperations()
+    {
+        var modalMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var detailsMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("if (_isSubmitting || _isImporting || Model is null)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isSubmitting\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@IsBusy\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Saving changes...", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Adding item...", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@_saveError", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (saved)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("The product link is ready", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("The link is still here so you can try again.", modalMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImportUrl = string.Empty;\n            _isImporting = false;", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (product != null)", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Product import timed out", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items[existingItemIndex] = savedItem;", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items.Add(savedItem);", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("savedItem.Comments = existingItem.Comments;", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("savedItem.Reservations = existingItem.Reservations;", detailsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("await LoadItems();\n    }\n\n    private void HandleModalCancel", detailsMarkup, StringComparison.Ordinal);
     }
 
     [Fact]

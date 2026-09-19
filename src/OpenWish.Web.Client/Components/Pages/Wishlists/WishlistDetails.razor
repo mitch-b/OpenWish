@@ -768,17 +768,35 @@ else
 
     private async Task HandleModalSubmit(WishlistItemModel item)
     {
+        WishlistItemModel savedItem;
+        var existingItemIndex = _items.FindIndex(existingItem => existingItem.Id == item.Id);
+
         if (item.Id > 0)
         {
-            // Edit existing item
-            await WishlistService.UpdateWishlistItemByPublicIdAsync(WishlistId, item.Id, item);
+            savedItem = await WishlistService.UpdateWishlistItemByPublicIdAsync(WishlistId, item.Id, item);
         }
         else
         {
-            // Add new item
-            await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
+            savedItem = await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
         }
-        await LoadItems();
+
+        if (existingItemIndex >= 0)
+        {
+            var existingItem = _items[existingItemIndex];
+            savedItem.Comments = existingItem.Comments;
+            savedItem.Reservations = existingItem.Reservations;
+            _items[existingItemIndex] = savedItem;
+        }
+        else
+        {
+            _items.Add(savedItem);
+        }
+
+        ApplyFiltersAndSort();
+        _feedbackMessage = item.Id > 0
+            ? $"Changes to {savedItem.Name} saved."
+            : $"{savedItem.Name} added to the wishlist.";
+        _feedbackIsError = false;
     }
 
     private void HandleModalCancel()

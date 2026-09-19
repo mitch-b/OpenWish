@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.20] - 2026-09-19
+
+### Improved
+
+- Wishlist-item saves prevent duplicate requests and clearly show when an add
+  or edit is in progress.
+- Save failures stay in the item dialog with safe guidance so entered details
+  can be reviewed and retried.
+- Successful adds and edits update the visible wishlist immediately and
+  announce the saved result without a second loading request.
+- Product-link imports validate web addresses and prevent overlapping paste or
+  button requests.
+- Product imports preserve the entered link and clearly distinguish imported
+  details, a usable link without details, and a retryable failure.
+
 ## [0.1.19] - 2026-09-18
 
 ### Improved

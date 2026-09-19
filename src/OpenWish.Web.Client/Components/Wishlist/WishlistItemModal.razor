@@ -3,6 +3,7 @@
 
 @inject IProductService ProductService
 @inject IJSRuntime JSRuntime
+@inject ILogger<WishlistItemModal> Logger
 
 @if (IsVisible)
 {
@@ -16,29 +17,15 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 id="wishlist-item-dialog-title" class="modal-title">@(Model?.Id > 0 ? "Edit item" : "Add item")</h5>
-                <button type="button" class="btn-close" data-dialog-close @onclick="Cancel" aria-label="Close"></button>
+                <button type="button"
+                        class="btn-close"
+                        data-dialog-close
+                        @onclick="Cancel"
+                        aria-label="Close"
+                        disabled="@IsBusy"></button>
             </div>
             <div class="modal-body">
-                @if (isLoading)
-                {
-                    <div class="alert alert-info">
-                        <div class="d-flex align-items-center">
-                            <div class="spinner-border spinner-border-sm me-2" role="status">
-                                <span class="visually-hidden">Loading item details...</span>
-                            </div>
-                            <span>Importing product details...</span>
-                        </div>
-                    </div>
-                }
-                
-                @if (_showImportMessage && !string.IsNullOrEmpty(_importMessage))
-                {
-                    <div class="alert @(_importSuccess ? "alert-success" : "alert-danger") mt-2" role="alert">
-                        @_importMessage
-                    </div>
-                }
-                
-                <div class="url-import-section mb-4">
+                <div class="url-import-section mb-4" aria-busy="@_isImporting">
                     <label for="product-url-import-modal" class="form-label">Product URL</label>
                     <div class="input-group">
                         <input id="product-url-import-modal"
@@ -51,28 +38,47 @@
                                placeholder="Paste a product URL"
                                value="@ImportUrl"
                                @oninput="UpdateImportUrl"
-                               @onopenwishpaste="HandleUrlPaste" />
+                               @onopenwishpaste="HandleUrlPaste"
+                               disabled="@IsBusy" />
                         <button class="btn btn-primary"
                                 type="button"
                                 @onclick="ImportFromUrl"
-                                disabled="@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))">
-                            @if (isLoading)
+                                disabled="@(IsBusy || string.IsNullOrWhiteSpace(ImportUrl))">
+                            @if (_isImporting)
                             {
                                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Importing...</span>
                             }
                             else
                             {
                                 <OpenWishIcon Name="download" />
+                                <span>Import</span>
                             }
-                            Import
                         </button>
                     </div>
                     <small id="product-url-import-modal-help" class="text-muted">Paste a product URL to fill in details, or enter them manually below.</small>
+                    @if (_isImporting)
+                    {
+                        <div class="alert alert-info mt-2 mb-0" role="status">Importing product details...</div>
+                    }
+                    else if (_showImportMessage && !string.IsNullOrEmpty(_importMessage))
+                    {
+                        <div class="alert @ImportMessageClass mt-2 mb-0" role="@(_importFailed ? "alert" : "status")">
+                            @_importMessage
+                        </div>
+                    }
                 </div>
 
-                <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemModal">
+                <EditForm Model="@Model"
+                          OnValidSubmit="@HandleSubmit"
+                          FormName="WishlistItemModal"
+                          aria-busy="@_isSubmitting">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
+                    @if (!string.IsNullOrWhiteSpace(_saveError))
+                    {
+                        <div class="alert alert-danger" role="alert">@_saveError</div>
+                    }
 
                     <div class="row">
                         <div class="col-md-8">
@@ -136,9 +142,22 @@
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-dialog-close @onclick="Cancel">Cancel</button>
-                        <button type="submit" class="btn btn-primary">
-                            <OpenWishIcon Name="check-lg" /> @(Model.Id > 0 ? "Save changes" : "Add item")
+                        <button type="button"
+                                class="btn btn-outline-secondary"
+                                data-dialog-close
+                                @onclick="Cancel"
+                                disabled="@IsBusy">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsBusy">
+                            @if (_isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+                            }
+                            else
+                            {
+                                <OpenWishIcon Name="check-lg" />
+                                <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
+                            }
                         </button>
                     </div>
                 </EditForm>
@@ -153,12 +172,21 @@
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsVisible { get; set; }
 
-    private bool isLoading;
+    private bool _isImporting;
+    private bool _isSubmitting;
     private string ImportUrl { get; set; } = string.Empty;
     private string _importMessage = string.Empty;
     private bool _showImportMessage;
     private bool _importSuccess;
+    private bool _importFailed;
+    private string? _saveError;
     private bool _dialogActive;
+    private bool IsBusy => _isImporting || _isSubmitting;
+    private string ImportMessageClass => _importFailed
+        ? "alert-danger"
+        : _importSuccess
+            ? "alert-success"
+            : "alert-info";
 
     private void UpdateImportUrl(ChangeEventArgs eventArgs)
     {
@@ -177,6 +205,10 @@
     public void Show(WishlistItemModel? model = null)
     {
         Model = model ?? new WishlistItemModel();
+        ImportUrl = string.Empty;
+        _showImportMessage = false;
+        _importMessage = string.Empty;
+        _saveError = null;
         IsVisible = true;
         StateHasChanged();
     }
@@ -198,14 +230,21 @@
 
     private async Task ImportFromUrl()
     {
-        if (string.IsNullOrWhiteSpace(ImportUrl))
+        if (_isImporting || _isSubmitting || string.IsNullOrWhiteSpace(ImportUrl))
+        {
             return;
+        }
 
         await ProcessUrlImport(ImportUrl);
     }
 
     private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
     {
+        if (_isImporting || _isSubmitting)
+        {
+            return;
+        }
+
         ImportUrl = e.PastedData ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(ImportUrl))
         {
@@ -215,74 +254,155 @@
 
     private async Task ProcessUrlImport(string url)
     {
+        if (_isImporting || Model is null)
+        {
+            return;
+        }
+
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var productUri) ||
+            (productUri.Scheme != Uri.UriSchemeHttp && productUri.Scheme != Uri.UriSchemeHttps))
+        {
+            _importMessage = "Enter a complete product link that starts with http:// or https://.";
+            _importSuccess = false;
+            _importFailed = true;
+            _showImportMessage = true;
+            return;
+        }
+
+        var normalizedUrl = productUri.AbsoluteUri;
+        ImportUrl = normalizedUrl;
+        _showImportMessage = false;
+        _importFailed = false;
+
         try
         {
-            isLoading = true;
+            _isImporting = true;
             StateHasChanged();
+            await Task.Yield();
 
-            var product = await ProductService.TryScrapeProductFromUrl(url);
+            var product = await ProductService.TryScrapeProductFromUrl(normalizedUrl);
+            var importedDetails = false;
+
+            if (string.IsNullOrWhiteSpace(Model.Url))
+            {
+                Model.Url = normalizedUrl;
+            }
+
+            if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
+            {
+                Model.WhereToBuy = productUri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase);
+            }
+
             if (product != null)
             {
-                // Only update empty fields
-                if (string.IsNullOrWhiteSpace(Model!.Name) && !string.IsNullOrWhiteSpace(product.Name))
+                if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
+                {
                     Model.Name = product.Name;
+                    importedDetails = true;
+                }
 
                 if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
+                {
                     Model.Description = product.Description;
+                    importedDetails = true;
+                }
 
                 if (!Model.Price.HasValue && product.Price.HasValue)
+                {
                     Model.Price = product.Price;
+                    importedDetails = true;
+                }
 
-                if (string.IsNullOrWhiteSpace(Model.Url))
-                    Model.Url = url;
-
-                if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
-                    Model.WhereToBuy = new Uri(url).Host.Replace("www.", "");
-
-                // Set default priority if not set
                 if (!Model.Priority.HasValue)
-                    Model.Priority = 2; // Medium priority by default
+                {
+                    Model.Priority = 2;
+                }
 
-                await JSRuntime.InvokeVoidAsync("console.log", "Product details imported successfully.");
-                _importMessage = "Product details imported successfully!";
-                _importSuccess = true;
-                _showImportMessage = true;
+                _importMessage = importedDetails
+                    ? "Product details imported. Review them before saving."
+                    : "No product details were found. The product link is ready; add any details you want.";
+                _importSuccess = importedDetails;
             }
             else
             {
-                _importMessage = "Could not extract product details. Please fill in the form manually.";
+                _importMessage = "We couldn't import product details. The link is still here so you can try again.";
                 _importSuccess = false;
-                _showImportMessage = true;
+                _importFailed = true;
             }
+
+            _showImportMessage = true;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
-            _importMessage = "Error processing URL. Please fill in the form manually.";
+            Logger.LogError(ex, "Failed to import product details from {ProductHost}", productUri.Host);
+            _importMessage = "We couldn't import product details. The link is still here so you can try again.";
             _importSuccess = false;
+            _importFailed = true;
+            _showImportMessage = true;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Product import timed out for {ProductHost}", productUri.Host);
+            _importMessage = "We couldn't import product details. The link is still here so you can try again.";
+            _importSuccess = false;
+            _importFailed = true;
             _showImportMessage = true;
         }
         finally
         {
-            // Clear the import URL field after processing
-            ImportUrl = string.Empty;
-            isLoading = false;
+            _isImporting = false;
             StateHasChanged();
         }
     }
 
     private async Task HandleSubmit()
     {
-        if (OnSubmit.HasDelegate)
+        if (_isSubmitting || _isImporting || Model is null)
         {
-            await OnSubmit.InvokeAsync(Model);
+            return;
         }
 
-        await HideAsync();
+        _isSubmitting = true;
+        _saveError = null;
+        StateHasChanged();
+        await Task.Yield();
+
+        var saved = false;
+        try
+        {
+            if (!OnSubmit.HasDelegate)
+            {
+                throw new InvalidOperationException("The item dialog does not have a save handler.");
+            }
+
+            await OnSubmit.InvokeAsync(Model);
+            saved = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save wishlist item {WishlistItemId}", Model.Id);
+            _saveError = Model.Id > 0
+                ? "We couldn't save these changes. Review the details and try again."
+                : "We couldn't add this item. Review the details and try again.";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+
+        if (saved)
+        {
+            await HideAsync();
+        }
     }
 
     private async Task Cancel()
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         if (OnCancel.HasDelegate)
         {
             await OnCancel.InvokeAsync();

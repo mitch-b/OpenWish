@@ -570,20 +570,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await itemDialog.getByRole("button", { name: "Import" }).isDisabled())) {
     throw new Error("The item dialog allows an empty product URL import.");
   }
-  await modalProductUrl.fill("https://example.com/gift");
-  await itemDialog.getByRole("button", { name: "Import" }).click({ trial: true });
-  if (await itemDialog.getByText("Importing product details...").isVisible()) {
-    throw new Error("Typing a product URL incorrectly displayed an import-in-progress state.");
+  await modalProductUrl.fill("not-a-web-address");
+  await itemDialog.getByRole("button", { name: "Import" }).click();
+  await itemDialog.getByRole("alert")
+    .filter({ hasText: "Enter a complete product link that starts with http:// or https://." })
+    .waitFor({ state: "visible" });
+  if (await modalProductUrl.inputValue() !== "not-a-web-address") {
+    throw new Error("The item dialog discarded a product URL that needs correction.");
   }
-  await itemDialog.getByRole("button", { name: "Close" }).focus();
-  await page.keyboard.press("Shift+Tab");
-  if (!(await itemDialog.getByRole("button", { name: "Add item", exact: true })
-    .evaluate(element => element === document.activeElement))) {
-    throw new Error("Keyboard focus did not wrap within the item dialog.");
-  }
+  await itemDialog.getByLabel("Name").fill("Handmade Tea Infuser");
+  await itemDialog.getByLabel("Description").fill("Fine mesh infuser with a resting tray");
+  await itemDialog.getByLabel("Price").fill("24.50");
+  await itemDialog.getByLabel("Product Link").fill("https://example.com/gift");
   await screenshot(page, "wishlist-item-dialog.png", false);
-  await page.keyboard.press("Escape");
+  await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
   await itemDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: "Handmade Tea Infuser added to the wishlist." })
+    .waitFor({ state: "visible" });
+  await assertVisible(page, "Handmade Tea Infuser");
+  const addedProductLink = page.getByRole("link", {
+    name: "View Handmade Tea Infuser product (opens in a new tab)"
+  });
+  if (await addedProductLink.getAttribute("href") !== "https://example.com/gift") {
+    throw new Error("The item dialog did not persist the entered product URL.");
+  }
+  await screenshot(page, "wishlist-item-added.png");
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing the item dialog did not restore focus to its opener.");
   }

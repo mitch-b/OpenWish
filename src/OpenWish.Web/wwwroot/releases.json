@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.20",
+    "date": "2026-09-19",
+    "title": "Dependable wishlist item editing",
+    "summary": "Adding, editing, and importing wishlist items now stays clear and recoverable without duplicate requests or lost details.",
+    "highlights": [
+      "Wishlist-item saves prevent duplicate requests and clearly show when an add or edit is in progress.",
+      "Save failures stay in the item dialog with safe guidance so entered details can be reviewed and retried.",
+      "Successful adds and edits update the visible wishlist immediately and announce the saved result without a second loading request.",
+      "Product-link imports validate web addresses and prevent overlapping paste or button requests.",
+      "Product imports preserve the entered link and distinguish imported details, a usable link without details, and a retryable failure."
+    ]
+  },
+  {
     "version": "0.1.19",
     "date": "2026-09-18",
     "title": "Dependable event participation",

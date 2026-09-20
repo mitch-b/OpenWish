@@ -25,10 +25,15 @@ docker_evidence_directory="$docker_repository_root/.docs/images/verification"
 docker_walkthrough_directory="$docker_repository_root/.docs/images/walkthrough"
 
 cleanup() {
+  local exit_code=$?
+  if ((exit_code != 0)); then
+    "${compose[@]}" logs web >&2 || true
+  fi
   "${compose[@]}" down --remove-orphans
   if [[ "$built_verification_image" == "true" ]]; then
     docker image rm "$verification_image" >/dev/null 2>&1 || true
   fi
+  return "$exit_code"
 }
 trap cleanup EXIT
 

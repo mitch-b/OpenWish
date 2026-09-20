@@ -644,6 +644,110 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing the item dialog did not restore focus to its opener.");
   }
+  const deleteAddedItem = page.getByRole("button", { name: "Delete Handmade Tea Infuser" });
+  await deleteAddedItem.click();
+  const itemDeleteDialog = page.getByRole("dialog", { name: "Delete item" });
+  await itemDeleteDialog.waitFor({ state: "visible" });
+  if (!(await deleteAddedItem.evaluate(element => element.closest("[inert]") !== null))) {
+    throw new Error("The item delete dialog did not make background content inert.");
+  }
+  if (!(await itemDeleteDialog.getByRole("button", { name: "Keep item" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("The item delete dialog did not focus its safe action.");
+  }
+  await screenshot(page, "wishlist-item-delete-dialog.png", false);
+  await itemDeleteDialog.getByRole("button", { name: "Keep item" }).click();
+  await itemDeleteDialog.waitFor({ state: "detached" });
+  if (!(await deleteAddedItem.evaluate(element => element === document.activeElement))) {
+    throw new Error("Cancelling item deletion did not restore focus to its opener.");
+  }
+  await deleteAddedItem.click();
+  await itemDeleteDialog.getByRole("button", { name: "Delete item" }).click();
+  await itemDeleteDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: "Handmade Tea Infuser deleted." })
+    .waitFor({ state: "visible" });
+  if (await page.getByText("Handmade Tea Infuser", { exact: true }).count() !== 0) {
+    throw new Error("The deleted item remained visible in the wishlist.");
+  }
+
+  const concurrentDeleteItemName = "Concurrent delete verification item";
+  const concurrentDeleteItemResponse = await context.request.post(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`,
+    {
+      data: {
+        publicId: "e2e-concurrent-delete-item",
+        name: concurrentDeleteItemName,
+        description: "Synthetic item for PostgreSQL deletion verification"
+      }
+    }
+  );
+  if (!concurrentDeleteItemResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete fixture creation returned ${concurrentDeleteItemResponse.status()}.`
+    );
+  }
+  const concurrentDeleteLocation = concurrentDeleteItemResponse.headers().location;
+  const concurrentDeleteItemId = Number(
+    concurrentDeleteLocation?.split("/").filter(Boolean).at(-1)
+  );
+  if (!Number.isInteger(concurrentDeleteItemId)) {
+    throw new Error("Concurrent-delete fixture creation did not return an item identifier.");
+  }
+  const concurrentDeleteItemUrl =
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/${concurrentDeleteItemId}`;
+  const commentResponse = await context.request.post(`${concurrentDeleteItemUrl}/comments`, {
+    data: { text: "Synthetic dependent comment" }
+  });
+  if (!commentResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete comment creation returned ${commentResponse.status()}: ${await commentResponse.text()}`
+    );
+  }
+  const reservationResponse = await context.request.post(`${concurrentDeleteItemUrl}/reserve`, {
+    data: { isAnonymous: false }
+  });
+  if (!reservationResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete reservation creation returned ${reservationResponse.status()}: ` +
+      `${await reservationResponse.text()}`
+    );
+  }
+  if (await reservationResponse.json() !== true) {
+    throw new Error("Concurrent-delete reservation creation did not reserve the item.");
+  }
+
+  const concurrentDeleteResponses = await Promise.all([
+    context.request.delete(concurrentDeleteItemUrl),
+    context.request.delete(concurrentDeleteItemUrl)
+  ]);
+  for (const response of concurrentDeleteResponses) {
+    if (response.status() !== 204) {
+      throw new Error(`Concurrent item deletion returned ${response.status()}, expected 204.`);
+    }
+  }
+  const retryDeleteResponse = await context.request.delete(concurrentDeleteItemUrl);
+  if (retryDeleteResponse.status() !== 204) {
+    throw new Error(`Repeated item deletion returned ${retryDeleteResponse.status()}, expected 204.`);
+  }
+  const deletedItemResponse = await context.request.get(concurrentDeleteItemUrl);
+  if (deletedItemResponse.status() !== 404) {
+    throw new Error(`Deleted item lookup returned ${deletedItemResponse.status()}, expected 404.`);
+  }
+  const activityResponse = await context.request.get(`${baseUrl}/api/activities/user?count=100`);
+  if (!activityResponse.ok()) {
+    throw new Error(`Owner activity verification returned ${activityResponse.status()}.`);
+  }
+  const activities = await activityResponse.json();
+  const itemRemovedActivities = activities.filter(activity =>
+    activity.activityType === "ItemRemoved" &&
+    activity.description.includes(concurrentDeleteItemName)
+  );
+  if (itemRemovedActivities.length !== 1) {
+    throw new Error(
+      `Concurrent item deletion recorded ${itemRemovedActivities.length} removal activities, expected 1.`
+    );
+  }
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
@@ -980,7 +1084,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Safer two-factor settings");
+  await assertVisible(page, "Safer wishlist item deletion");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -1115,6 +1219,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "owned and friend wishlists",
       "wishlist items and pricing",
       "accessible product links",
+      "focus-safe duplicate-resistant wishlist item deletion",
+      "PostgreSQL concurrent item deletion and one-winner activity logging",
       "event details and gift assignment",
       "friends and pending requests",
       "accessible notification updates and deletion",
@@ -1640,6 +1746,24 @@ async function verifyMobileJourney(browser, manifest, results) {
     page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
     "Mobile list item edit action"
   );
+  const mobileDeleteItem = page.getByRole("button", { name: "Delete Noise-Cancelling Headphones" });
+  await mobileDeleteItem.click();
+  const mobileItemDeleteDialog = page.getByRole("dialog", { name: "Delete item" });
+  await mobileItemDeleteDialog.waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(
+    mobileItemDeleteDialog.getByRole("button", { name: "Keep item" }),
+    "Mobile keep-item action"
+  );
+  await assertMinimumTouchTarget(
+    mobileItemDeleteDialog.getByRole("button", { name: "Delete item" }),
+    "Mobile delete-item action"
+  );
+  await screenshot(page, "wishlist-item-delete-dialog-mobile.png", false);
+  await mobileItemDeleteDialog.getByRole("button", { name: "Keep item" }).click();
+  await mobileItemDeleteDialog.waitFor({ state: "detached" });
+  if (!(await mobileDeleteItem.evaluate(element => element === document.activeElement))) {
+    throw new Error("Cancelling mobile item deletion did not restore focus to its opener.");
+  }
   await screenshot(page, "wishlist-mobile.png");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);

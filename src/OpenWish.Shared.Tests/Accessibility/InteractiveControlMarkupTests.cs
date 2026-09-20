@@ -249,6 +249,56 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistItemDeletion_UsesOneFocusSafeFailureAwareDialog()
+    {
+        var detailsMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistDeleteDialog.razor");
+
+        Assert.Contains("id=\"delete-wishlist-item-@item.Id\"", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"delete-wishlist-item-@item.Id\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnDelete=\"@ShowItemDeleteDialogAsync\"", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("await _deleteDialog.ShowAsync(", detailsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("InvokeAsync<bool>(\"confirm\"", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("ReturnFocusElementId=\"@_returnFocusElementId\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"@_descriptionId\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("CanClose=\"@(!IsBusy)\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\">@ErrorMessage", dialogMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemDeletion_PreventsDuplicatesAndPreservesPageState()
+    {
+        var detailsMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistDeleteDialog.razor");
+        var httpClientMarkup = ReadComponent("OpenWish.Web.Client", "Services", "WishlistHttpClientService.cs")
+            .ReplaceLineEndings("\n");
+        var serviceMarkup = ReadComponent("OpenWish.Application", "Services", "WishlistService.cs");
+
+        Assert.Contains("if (_isDeletingItem || _itemPendingDeletion is null)", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@IsBusy\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsBusy\"", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("Deleting...", dialogMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items.RemoveAll(existingItem => existingItem.Id == item.Id);", detailsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("await LoadItems();\n            _feedbackMessage", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("Check your connection and try again.", detailsMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Error: {ex.Message}", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains(
+            "var response = await _httpClient.DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}\");\n" +
+            "        response.EnsureSuccessStatusCode();\n" +
+            "        return true;",
+            httpClientMarkup,
+            StringComparison.Ordinal);
+        Assert.Contains("var deletedCount = await context.WishlistItems", serviceMarkup, StringComparison.Ordinal);
+        Assert.Contains("i.Id == itemId && !i.Deleted", serviceMarkup, StringComparison.Ordinal);
+        Assert.Contains("await context.Database.BeginTransactionAsync()", serviceMarkup, StringComparison.Ordinal);
+        Assert.Contains("GetWishlistItemForUpdateAsync(context, wishlistId, itemId)", serviceMarkup, StringComparison.Ordinal);
+        Assert.Contains("FOR UPDATE", serviceMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (deletedCount > 0 && wishlist != null)", serviceMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistItemImport_LabelsUrlFieldsAndDialog()
     {
         var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");

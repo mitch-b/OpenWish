@@ -68,11 +68,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistId}/items/{itemId}");
-        if (response.IsSuccessStatusCode)
-        {
-            return true;
-        }
-        return false;
+        response.EnsureSuccessStatusCode();
+        return true;
     }
 
     // Wishlist sharing and permissions
@@ -275,7 +272,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, int itemId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}");
-        return response.IsSuccessStatusCode;
+        response.EnsureSuccessStatusCode();
+        return true;
     }
 
     public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item)

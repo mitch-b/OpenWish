@@ -73,10 +73,11 @@
                                 @if (OnDelete.HasDelegate)
                                 {
                                     <button
+                                        id="delete-wishlist-item-@item.Id"
                                         class="btn btn-sm btn-danger"
                                         type="button"
                                         aria-label="Delete @item.Name"
-                                        @onclick="() => ShowDeleteConfirm(item)"
+                                        @onclick="() => HandleDelete(item)"
                                         title="Delete @item.Name">
                                         <OpenWishIcon Name="trash" />
                                     </button>
@@ -116,8 +117,6 @@
     </table>
 </div>
 
-<WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDelete" />
-
 @code {
     [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
@@ -127,8 +126,6 @@
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
 
-    private WishlistDeleteDialog deleteDialog = default!;
-    private WishlistItemModel? itemToDelete;
     private HashSet<int> ExpandedInteractions = new();
 
     private void ToggleInteractions(int itemId)
@@ -151,21 +148,11 @@
         }
     }
 
-    private void ShowDeleteConfirm(WishlistItemModel item)
+    private async Task HandleDelete(WishlistItemModel item)
     {
-        itemToDelete = item;
-        deleteDialog.Show(
-            "Delete Item",
-            $"Are you sure you want to delete \"{item.Name}\"? This action cannot be undone."
-        );
-    }
-
-    private async Task HandleDelete()
-    {
-        if (itemToDelete != null && OnDelete.HasDelegate)
+        if (OnDelete.HasDelegate)
         {
-            await OnDelete.InvokeAsync(itemToDelete);
-            itemToDelete = null;
+            await OnDelete.InvokeAsync(item);
         }
     }
 

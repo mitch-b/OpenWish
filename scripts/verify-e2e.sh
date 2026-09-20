@@ -25,10 +25,15 @@ docker_evidence_directory="$docker_repository_root/.docs/images/verification"
 docker_walkthrough_directory="$docker_repository_root/.docs/images/walkthrough"
 
 cleanup() {
+  local exit_code=$?
+  if ((exit_code != 0)); then
+    "${compose[@]}" logs web >&2 || true
+  fi
   "${compose[@]}" down --remove-orphans
   if [[ "$built_verification_image" == "true" ]]; then
     docker image rm "$verification_image" >/dev/null 2>&1 || true
   fi
+  return "$exit_code"
 }
 trap cleanup EXIT
 
@@ -67,6 +72,71 @@ docker run --rm \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
   openwish-playwright:1.63.0
+
+dependent_cleanup="$("${compose[@]}" exec -T db \
+  psql -U openwish -d OpenWish -Atc \
+  "SELECT CASE
+      WHEN EXISTS (
+        SELECT 1
+        FROM \"WishlistItems\" item
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND item.\"Deleted\"
+      )
+      AND EXISTS (
+        SELECT 1
+        FROM \"ItemComments\" comment
+        JOIN \"WishlistItems\" item ON item.\"Id\" = comment.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND comment.\"Deleted\"
+      )
+      AND EXISTS (
+        SELECT 1
+        FROM \"ItemReservations\" reservation
+        JOIN \"WishlistItems\" item ON item.\"Id\" = reservation.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND reservation.\"Deleted\"
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM \"ItemComments\" comment
+        JOIN \"WishlistItems\" item ON item.\"Id\" = comment.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND NOT comment.\"Deleted\"
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM \"ItemReservations\" reservation
+        JOIN \"WishlistItems\" item ON item.\"Id\" = reservation.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND NOT reservation.\"Deleted\"
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM \"ItemReactions\" reaction
+        JOIN \"WishlistItems\" item ON item.\"Id\" = reaction.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND NOT reaction.\"Deleted\"
+      )
+      AND NOT EXISTS (
+        SELECT 1
+        FROM \"WillPurchases\" purchase
+        JOIN \"WishlistItems\" item ON item.\"Id\" = purchase.\"WishlistItemId\"
+        WHERE item.\"PublicId\" = 'e2e-concurrent-delete-item'
+          AND NOT purchase.\"Deleted\"
+      )
+      THEN 'ok'
+      ELSE 'failed'
+    END;")"
+if [[ "$dependent_cleanup" != "ok" ]]; then
+  echo "Concurrent item deletion left active dependent records." >&2
+  exit 1
+fi
+
+result_file="$evidence_directory/openwish-e2e-result.json"
+jq '(.scenarios[] | select(.scenario == "owner-desktop").assertions) +=
+    ["PostgreSQL dependent soft-delete cleanup"]' \
+  "$result_file" > "$result_file.tmp"
+mv "$result_file.tmp" "$result_file"
 
 test -s "$walkthrough_directory/home-dashboard.png"
 test -s "$walkthrough_directory/home-mobile.png"

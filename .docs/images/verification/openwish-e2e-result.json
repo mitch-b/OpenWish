@@ -61,7 +61,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/f6ba91bd-7cb1-4fac-bb7c-5c93cfba7ae7/manage",
+        "/events/e750eed5-a426-43f3-aef1-d3d80f421727/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -79,6 +79,8 @@
         "owned and friend wishlists",
         "wishlist items and pricing",
         "accessible product links",
+        "focus-safe duplicate-resistant wishlist item deletion",
+        "PostgreSQL concurrent item deletion and one-winner activity logging",
         "event details and gift assignment",
         "friends and pending requests",
         "accessible notification updates and deletion",
@@ -89,7 +91,8 @@
         "theme persistence",
         "release history",
         "account settings requirements and deletion safety",
-        "two-factor status, setup, recovery, reset, and disable safety"
+        "two-factor status, setup, recovery, reset, and disable safety",
+        "PostgreSQL dependent soft-delete cleanup"
       ]
     },
     {

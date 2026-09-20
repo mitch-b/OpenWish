@@ -429,9 +429,10 @@ else
                                         <OpenWishIcon Name="pencil" />
                                     </button>
                                     <button class="btn-icon btn-danger"
+                                            id="delete-wishlist-item-@item.Id"
                                             type="button"
                                             aria-label="Delete @item.Name"
-                                            @onclick="() => HandleItemDelete(item)">
+                                            @onclick="() => ShowItemDeleteDialogAsync(item)">
                                         <OpenWishIcon Name="trash" />
                                     </button>
                                 }
@@ -490,7 +491,7 @@ else
                 {
                     <WishlistItemList Items="@_filteredItems"
                                     OnEdit="@HandleItemEditClick"
-                                    OnDelete="@HandleItemDelete"
+                                    OnDelete="@ShowItemDeleteDialogAsync"
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
@@ -521,7 +522,13 @@ else
 }
 
 <WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
-
+<WishlistDeleteDialog @ref="_deleteDialog"
+                      OnConfirm="@ConfirmItemDeleteAsync"
+                      IsBusy="@_isDeletingItem"
+                      ErrorMessage="@_deleteItemError"
+                      CancelLabel="Keep item"
+                      ConfirmLabel="Delete item"
+                      CloseOnConfirm="false" />
 
 @code {
 
@@ -533,6 +540,7 @@ else
     private List<WishlistItemModel> _filteredItems = new();
     private WishlistItemModel _modalItem = new();
     private WishlistItemModal? _itemModal;
+    private WishlistDeleteDialog _deleteDialog = default!;
     private string? _currentUserId;
     private bool _canEdit;
     private bool _isOwner;
@@ -552,6 +560,9 @@ else
     private int? _pendingCommentFocusItemId;
     private string _feedbackMessage = string.Empty;
     private bool _feedbackIsError;
+    private WishlistItemModel? _itemPendingDeletion;
+    private bool _isDeletingItem;
+    private string? _deleteItemError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -811,39 +822,64 @@ else
         _modalItem = new WishlistItemModel();
     }
 
-    private async Task HandleItemDelete(WishlistItemModel item)
+    private async Task ShowItemDeleteDialogAsync(WishlistItemModel item)
     {
-        // Prompt for confirmation before deleting
-        var name = string.IsNullOrWhiteSpace(item.Name) ? "this item" : $"'{item.Name}'";
-        bool confirmed = false;
-        try
+        if (_isDeletingItem)
         {
-            confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {name}?");
-        }
-        catch
-        {
-            // If confirm fails (e.g., JS not available), default to not deleting.
-            confirmed = false;
-        }
-
-        if (!confirmed)
             return;
+        }
 
+        _itemPendingDeletion = item;
+        _deleteItemError = null;
+        var itemName = GetItemName(item);
+        await _deleteDialog.ShowAsync(
+            "Delete item",
+            $"Delete {itemName} and its gift coordination? This cannot be undone.",
+            $"delete-wishlist-item-{item.Id}");
+    }
+
+    private async Task ConfirmItemDeleteAsync()
+    {
+        if (_isDeletingItem || _itemPendingDeletion is null)
+        {
+            return;
+        }
+
+        var item = _itemPendingDeletion;
+        var itemName = GetItemName(item);
+        _isDeletingItem = true;
+        _deleteItemError = null;
         try
         {
-            await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.Id);
-            await LoadItems();
-            _feedbackMessage = $"Item {name} deleted.";
+            var deleted = await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.Id);
+            if (!deleted)
+            {
+                throw new InvalidOperationException("The delete request was not completed.");
+            }
+
+            _items.RemoveAll(existingItem => existingItem.Id == item.Id);
+            if (_expandedItemId == item.Id)
+            {
+                _expandedItemId = null;
+            }
+            ApplyFiltersAndSort();
+            _feedbackMessage = $"{itemName} deleted.";
             _feedbackIsError = false;
-            StateHasChanged();
+            _itemPendingDeletion = null;
+            await _deleteDialog.Close();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
-            _feedbackMessage = $"Failed to delete {name}. Error: {ex.Message}";
-            _feedbackIsError = true;
-            StateHasChanged();
+            _deleteItemError = $"{itemName} could not be deleted. Check your connection and try again.";
+        }
+        finally
+        {
+            _isDeletingItem = false;
         }
     }
+
+    private static string GetItemName(WishlistItemModel item) =>
+        string.IsNullOrWhiteSpace(item.Name) ? "This item" : item.Name;
 
     private Task SetupSecurity()
     {

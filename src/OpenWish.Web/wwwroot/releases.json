@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.23",
+    "date": "2026-09-19",
+    "title": "More flexible gift exchanges",
+    "summary": "Gift Exchange is now the clearer home for private name draws, with Secret Santa available as an optional familiar style.",
+    "highlights": [
+      "Gift Exchange now describes the private assignment feature across the app, so it fits holidays, birthdays, teams, and family traditions.",
+      "Secret Santa is available as a persistent exchange style, and existing exchanges retain that familiar style after upgrading.",
+      "Style-aware setup updates name examples, date and budget guidance, readiness language, and assignment confirmations to match your group."
+    ]
+  },
+  {
     "version": "0.1.22",
     "date": "2026-09-20",
     "title": "Safer wishlist item deletion",
@@ -10,17 +21,6 @@
       "Failed deletions stay in the dialog with safe retry guidance.",
       "Successful deletion updates the current view without resetting search, filters, sorting, or layout.",
       "Repeated requests safely reconcile a completed deletion while unexpected responses surface as failures."
-    ]
-  },
-  {
-    "version": "0.1.23",
-    "date": "2026-09-19",
-    "title": "More flexible gift exchanges",
-    "summary": "Gift Exchange is now the clearer home for private name draws, with Secret Santa available as an optional familiar style.",
-    "highlights": [
-      "Gift Exchange now describes the private assignment feature across the app, so it fits holidays, birthdays, teams, and family traditions.",
-      "Secret Santa is available as a persistent exchange style, and existing exchanges retain that familiar style after upgrading.",
-      "Style-aware setup updates name examples, date and budget guidance, readiness language, and assignment confirmations to match your group."
     ]
   },
   {

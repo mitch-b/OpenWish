@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.22] - 2026-09-20
+
+### Improved
+
+- Grid and list views now use the same accessible wishlist-item deletion
+  confirmation.
+- Delete controls prevent duplicate requests and clearly show when removal is
+  in progress.
+- Failed deletions stay in the dialog with safe retry guidance.
+- Successful deletion updates the current view immediately without resetting
+  search, filters, sorting, or layout.
+- Repeated deletion requests safely reconcile a previously completed removal,
+  while unexpected server responses are reported as failures.
+
 ## [0.1.21] - 2026-09-19
 
 ### Improved

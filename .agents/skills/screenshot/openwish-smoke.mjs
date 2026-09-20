@@ -644,6 +644,32 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await addItemButton.evaluate(element => element === document.activeElement))) {
     throw new Error("Closing the item dialog did not restore focus to its opener.");
   }
+  const deleteAddedItem = page.getByRole("button", { name: "Delete Handmade Tea Infuser" });
+  await deleteAddedItem.click();
+  const itemDeleteDialog = page.getByRole("dialog", { name: "Delete item" });
+  await itemDeleteDialog.waitFor({ state: "visible" });
+  if (!(await deleteAddedItem.evaluate(element => element.closest("[inert]") !== null))) {
+    throw new Error("The item delete dialog did not make background content inert.");
+  }
+  if (!(await itemDeleteDialog.getByRole("button", { name: "Keep item" })
+    .evaluate(element => element === document.activeElement))) {
+    throw new Error("The item delete dialog did not focus its safe action.");
+  }
+  await screenshot(page, "wishlist-item-delete-dialog.png", false);
+  await itemDeleteDialog.getByRole("button", { name: "Keep item" }).click();
+  await itemDeleteDialog.waitFor({ state: "detached" });
+  if (!(await deleteAddedItem.evaluate(element => element === document.activeElement))) {
+    throw new Error("Cancelling item deletion did not restore focus to its opener.");
+  }
+  await deleteAddedItem.click();
+  await itemDeleteDialog.getByRole("button", { name: "Delete item" }).click();
+  await itemDeleteDialog.waitFor({ state: "detached" });
+  await page.getByRole("alert")
+    .filter({ hasText: "Handmade Tea Infuser deleted." })
+    .waitFor({ state: "visible" });
+  if (await page.getByText("Handmade Tea Infuser", { exact: true }).count() !== 0) {
+    throw new Error("The deleted item remained visible in the wishlist.");
+  }
 
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
@@ -980,7 +1006,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Safer two-factor settings");
+  await assertVisible(page, "Safer wishlist item deletion");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -1115,6 +1141,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "owned and friend wishlists",
       "wishlist items and pricing",
       "accessible product links",
+      "focus-safe duplicate-resistant wishlist item deletion",
       "event details and gift assignment",
       "friends and pending requests",
       "accessible notification updates and deletion",
@@ -1640,6 +1667,24 @@ async function verifyMobileJourney(browser, manifest, results) {
     page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
     "Mobile list item edit action"
   );
+  const mobileDeleteItem = page.getByRole("button", { name: "Delete Noise-Cancelling Headphones" });
+  await mobileDeleteItem.click();
+  const mobileItemDeleteDialog = page.getByRole("dialog", { name: "Delete item" });
+  await mobileItemDeleteDialog.waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(
+    mobileItemDeleteDialog.getByRole("button", { name: "Keep item" }),
+    "Mobile keep-item action"
+  );
+  await assertMinimumTouchTarget(
+    mobileItemDeleteDialog.getByRole("button", { name: "Delete item" }),
+    "Mobile delete-item action"
+  );
+  await screenshot(page, "wishlist-item-delete-dialog-mobile.png", false);
+  await mobileItemDeleteDialog.getByRole("button", { name: "Keep item" }).click();
+  await mobileItemDeleteDialog.waitFor({ state: "detached" });
+  if (!(await mobileDeleteItem.evaluate(element => element === document.activeElement))) {
+    throw new Error("Cancelling mobile item deletion did not restore focus to its opener.");
+  }
   await screenshot(page, "wishlist-mobile.png");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);

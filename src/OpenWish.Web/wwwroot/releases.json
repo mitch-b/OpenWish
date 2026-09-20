@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.22",
+    "date": "2026-09-20",
+    "title": "Safer wishlist item deletion",
+    "summary": "Removing a wishlist idea is now consistent, focus-safe, duplicate-resistant, and recoverable without losing the current view.",
+    "highlights": [
+      "Grid and list views use the same accessible wishlist-item deletion confirmation.",
+      "Delete controls prevent duplicate requests and clearly show removal progress.",
+      "Failed deletions stay in the dialog with safe retry guidance.",
+      "Successful deletion updates the current view without resetting search, filters, sorting, or layout.",
+      "Repeated requests safely reconcile a completed deletion while unexpected responses surface as failures."
+    ]
+  },
+  {
     "version": "0.1.21",
     "date": "2026-09-19",
     "title": "Dependable wishlist item editing",

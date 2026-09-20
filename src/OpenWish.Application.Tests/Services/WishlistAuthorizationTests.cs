@@ -311,6 +311,30 @@ public class WishlistAuthorizationTests
         Assert.Equal(originalPublicId, (await verificationContext.WishlistItems.SingleAsync()).PublicId);
     }
 
+    [Fact]
+    public async Task RemoveItemFromWishlistAsync_ReconcilesAlreadyDeletedItem()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var item = new WishlistItem
+        {
+            Name = "Tea infuser",
+            Wishlist = wishlist,
+            Deleted = true
+        };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            await context.SaveChangesAsync();
+        }
+
+        var result = await CreateService(factory).RemoveItemFromWishlistAsync(wishlist.Id, item.Id);
+
+        Assert.True(result);
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.True((await verificationContext.WishlistItems.SingleAsync()).Deleted);
+    }
+
     private static TestDbContextFactory CreateFactory() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

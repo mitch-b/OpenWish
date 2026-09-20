@@ -373,20 +373,30 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var item = await context.WishlistItems
-            .Include(i => i.Wishlist)
-            .FirstOrDefaultAsync(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted);
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        var item = await GetWishlistItemForUpdateAsync(context, wishlistId, itemId);
 
         if (item == null)
         {
             return false;
         }
 
-        var wishlist = item.Wishlist;
+        if (item.Deleted && !context.Database.IsRelational())
+        {
+            return true;
+        }
+
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(existingWishlist => existingWishlist.Id == wishlistId);
         var utcNow = DateTimeOffset.UtcNow;
 
-        item.Deleted = true;
-        item.UpdatedOn = utcNow;
+        var deletedCount = await context.WishlistItems
+            .Where(i => i.WishlistId == wishlistId && i.Id == itemId && !i.Deleted)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(i => i.Deleted, _ => true)
+                .SetProperty(i => i.UpdatedOn, _ => utcNow));
 
         // Cascade soft delete to dependents to keep relationships consistent
         await context.ItemReservations
@@ -413,11 +423,12 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                 .SetProperty(wp => wp.Deleted, _ => true)
                 .SetProperty(wp => wp.UpdatedOn, _ => utcNow));
 
-        await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
-        wishlist ??= await context.Wishlists.FindAsync(wishlistId);
-
-        if (wishlist != null)
+        if (deletedCount > 0 && wishlist != null)
         {
             await _activityService.LogActivityAsync(
                 wishlist.OwnerId,
@@ -764,9 +775,14 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         // Verify item exists
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var item = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
-            ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        var item = await GetWishlistItemForUpdateAsync(context, wishlistId, itemId);
+        if (item is null || item.Deleted)
+        {
+            throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+        }
 
         var comment = new ItemComment
         {
@@ -779,6 +795,10 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         context.ItemComments.Add(comment);
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -848,9 +868,14 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         // Verify item exists
         await using var context = await _contextFactory.CreateDbContextAsync();
-        var item = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.WishlistId == wishlistId && !i.Deleted)
-            ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        var item = await GetWishlistItemForUpdateAsync(context, wishlistId, itemId);
+        if (item is null || item.Deleted)
+        {
+            throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
+        }
 
         // Check if item is already reserved
         var existingReservation = await context.ItemReservations
@@ -873,6 +898,10 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         context.ItemReservations.Add(reservation);
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         // Log activity
         await _activityService.LogActivityAsync(
@@ -883,6 +912,28 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             itemId);
 
         return true;
+    }
+
+    private static Task<WishlistItem?> GetWishlistItemForUpdateAsync(
+        ApplicationDbContext context,
+        int wishlistId,
+        int itemId)
+    {
+        if (!context.Database.IsRelational())
+        {
+            return context.WishlistItems
+                .FirstOrDefaultAsync(item => item.WishlistId == wishlistId && item.Id == itemId);
+        }
+
+        return context.WishlistItems
+            .FromSqlInterpolated(
+                $"""
+                SELECT *
+                FROM "WishlistItems"
+                WHERE "WishlistId" = {wishlistId} AND "Id" = {itemId}
+                FOR UPDATE
+                """)
+            .SingleOrDefaultAsync();
     }
 
     public async Task<bool> CancelReservationAsync(int wishlistId, int itemId, string userId)

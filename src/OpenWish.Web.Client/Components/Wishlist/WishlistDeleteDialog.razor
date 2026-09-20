@@ -1,35 +1,96 @@
 @using OpenWish.Web.Client.Components.Shared
 
-<Dialog @ref="dialog" Title="@Title">
-    <div class="modal-body">
-        <p>@Message</p>
+<Dialog @ref="dialog"
+        Title="@Title"
+        DescriptionId="@_descriptionId"
+        ReturnFocusElementId="@_returnFocusElementId"
+        CanClose="@(!IsBusy)">
+    <div class="modal-body" aria-busy="@IsBusy">
+        <p id="@_descriptionId">@Message</p>
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="alert alert-danger mb-0" role="alert">@ErrorMessage</div>
+        }
     </div>
-    <div class="modal-footer">
-        <button type="button" class="btn btn-danger" @onclick="HandleConfirm">Delete</button>
-        <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="Close">Cancel</button>
+    <div class="modal-footer gap-2">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dialog-initial-focus
+                disabled="@IsBusy"
+                @onclick="Close">
+            @CancelLabel
+        </button>
+        <button type="button"
+                class="btn btn-danger"
+                disabled="@IsBusy"
+                aria-busy="@IsBusy"
+                @onclick="HandleConfirm">
+            @if (IsBusy)
+            {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Deleting...</span>
+            }
+            else
+            {
+                <span>@ConfirmLabel</span>
+            }
+        </button>
     </div>
 </Dialog>
 
 @code {
+    private readonly string _descriptionId = $"delete-dialog-description-{Guid.NewGuid():N}";
     private Dialog dialog = default!;
     private string Title { get; set; } = string.Empty;
     private string Message { get; set; } = string.Empty;
+    private string? _returnFocusElementId;
 
     [Parameter]
     public EventCallback OnConfirm { get; set; }
 
-    public void Show(string title, string message)
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public bool CloseOnConfirm { get; set; } = true;
+
+    [Parameter]
+    public string CancelLabel { get; set; } = "Cancel";
+
+    [Parameter]
+    public string ConfirmLabel { get; set; } = "Delete";
+
+    public void Show(string title, string message, string? returnFocusElementId = null)
     {
-        Title = title;
-        Message = message;
+        Configure(title, message, returnFocusElementId);
+        dialog.Show();
+    }
+
+    public async Task ShowAsync(string title, string message, string? returnFocusElementId = null)
+    {
+        Configure(title, message, returnFocusElementId);
+        await InvokeAsync(StateHasChanged);
         dialog.Show();
     }
 
     public Task Close() => dialog.CloseAsync();
 
+    private void Configure(string title, string message, string? returnFocusElementId)
+    {
+        Title = title;
+        Message = message;
+        _returnFocusElementId = returnFocusElementId;
+    }
+
     private async Task HandleConfirm()
     {
         await OnConfirm.InvokeAsync();
-        await dialog.CloseAsync();
+        if (CloseOnConfirm)
+        {
+            await dialog.CloseAsync();
+        }
     }
 }

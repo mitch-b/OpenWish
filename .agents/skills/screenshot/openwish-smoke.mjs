@@ -1136,8 +1136,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("heading", { name: "Personal data", exact: true }).waitFor();
 
   await visit(page, "/Account/Manage/TwoFactorAuthentication", "Two-factor authentication is off.", visitedRoutes);
-  await page.getByRole("link", { name: "Set up authenticator app" }).click();
-  await page.getByRole("heading", { name: "Set up authenticator app", exact: true }).waitFor();
+  const setupAuthenticatorLink = page.getByRole("link", { name: "Set up authenticator app" });
+  if (await setupAuthenticatorLink.getAttribute("href") !== "Account/Manage/EnableAuthenticator") {
+    throw new Error("Authenticator setup did not expose the expected route.");
+  }
+  await visit(page, "/Account/Manage/EnableAuthenticator", "Set up authenticator app", visitedRoutes);
   const authenticatorKey = (await page.locator("#shared-key").textContent())?.replace(/\s/g, "");
   if (!authenticatorKey) {
     throw new Error("Authenticator setup did not provide a manual key.");

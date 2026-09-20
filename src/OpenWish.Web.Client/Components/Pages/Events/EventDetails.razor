@@ -82,7 +82,7 @@ else
 
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
         {
-            <div id="secret-santa-setup">
+            <div id="gift-exchange-setup">
                 <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" />
             </div>
         }
@@ -90,7 +90,7 @@ else
         {
             <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" role="status">
                 <div>
-                    <strong>You're in the Secret Santa.</strong>
+                    <strong>You're in this gift exchange.</strong>
                     Add a few gift ideas now, then you can leave the rest to the organizer.
                 </div>
                 <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
@@ -139,7 +139,7 @@ else
                             </div>
                             <div class="event-fact">
                                 <span class="event-fact-label">Event type</span>
-                                <strong>@(_event.IsGiftExchange ? "Secret Santa" : "Celebration")</strong>
+                                <strong>@EventTypeLabel</strong>
                             </div>
                             @if (_event.IsRecurring)
                             {
@@ -289,6 +289,12 @@ else
     private string? _loadError;
     private bool _isLoading = true;
     private int _loadVersion;
+
+    private string EventTypeLabel => _event?.IsGiftExchange == true
+        ? string.Equals(_event.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal)
+            ? "Gift exchange · Secret Santa style"
+            : "Gift exchange"
+        : "Celebration";
 
     protected override async Task OnInitializedAsync()
     {

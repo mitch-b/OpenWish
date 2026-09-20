@@ -52,6 +52,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(e => e.Budget)
             .HasColumnType("decimal(11,2)");
 
+        modelBuilder.Entity<Event>()
+            .Property(e => e.GiftExchangeStyle)
+            .HasMaxLength(32)
+            .HasDefaultValue("GiftExchange");
+
         modelBuilder.Entity<CustomPairingRule>()
             .HasOne(cpr => cpr.SourceUser)
             .WithMany()

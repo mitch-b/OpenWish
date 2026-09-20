@@ -87,14 +87,14 @@
             else
             {
                 <div class="mb-4">
-                    <h5>Draw names</h5>
-                    <p class="text-muted">OpenWish privately assigns every accepted participant one person to shop for.</p>
+                    <h5>@AssignmentActionLabel</h5>
+                    <p class="text-muted">@AssignmentExplanation</p>
 
                     <div class="row g-3 mb-3">
                         <div class="col-sm-4">
                             <div class="readiness-stat">
                                 <strong>@_participantCount</strong>
-                                <span>accepted</span>
+                                <span>ready to join</span>
                             </div>
                         </div>
                         <div class="col-sm-4">
@@ -131,13 +131,13 @@
                         {
                             <button class="btn btn-success btn-lg" @onclick="() => _showDrawConfirm = true" disabled="@_eventStateChanged">
                                 <OpenWishIcon Name="shuffle" />
-                                <span>Draw names</span>
+                                <span>@AssignmentActionLabel</span>
                             </button>
                         }
                         else
                         {
                             <div class="alert alert-warning" role="alert">
-                                <p class="mb-2"><strong>Ready to draw for @_participantCount people?</strong></p>
+                                <p class="mb-2"><strong>@ConfirmationPrompt</strong></p>
                                 <p class="mb-3">
                                     Assignments are private and available immediately. To change the group later,
                                     you'll need to reset and draw again.
@@ -146,11 +146,11 @@
                                     @if (_drawing)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                        <span>Drawing Names...</span>
+                                        <span>Making assignments...</span>
                                     }
                                     else
                                     {
-                                        <span>Confirm and draw</span>
+                                        <span>@ConfirmAssignmentActionLabel</span>
                                     }
                                 </button>
                                 <button class="btn btn-secondary" @onclick="CancelDrawConfirmation" disabled="@(_drawing || _eventStateChanged)">
@@ -374,6 +374,16 @@
         string.IsNullOrEmpty(_newRuleSourceKey) ||
         string.IsNullOrEmpty(_newRuleTargetKey) ||
         string.Equals(_newRuleSourceKey, _newRuleTargetKey, StringComparison.Ordinal);
+    private bool IsSecretSantaStyle =>
+        string.Equals(Event?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal);
+    private string AssignmentActionLabel => IsSecretSantaStyle ? "Draw Secret Santa names" : "Make assignments";
+    private string ConfirmAssignmentActionLabel => IsSecretSantaStyle ? "Confirm and draw names" : "Confirm assignments";
+    private string ConfirmationPrompt => IsSecretSantaStyle
+        ? $"Ready to draw Secret Santa names for {_participantCount} people?"
+        : $"Ready to make private assignments for {_participantCount} people?";
+    private string AssignmentExplanation => IsSecretSantaStyle
+        ? "OpenWish privately draws a Secret Santa name for every accepted participant."
+        : "OpenWish privately assigns every accepted participant one person to shop for.";
 
     protected override async Task OnParametersSetAsync()
     {

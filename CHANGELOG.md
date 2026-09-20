@@ -16,6 +16,19 @@ All notable user-facing changes to OpenWish are documented here.
 - Repeated deletion requests safely reconcile a previously completed removal,
   while unexpected server responses are reported as failures.
 
+## [0.1.23] - 2026-09-19
+
+### Improved
+
+- Gift Exchange is now the feature name for private name-draw events, making
+  the workflow clearer for holidays, birthdays, teams, and family traditions.
+- Secret Santa remains available as a familiar, optional style for any gift
+  exchange; existing exchanges preserve that style after upgrading.
+- Exchange setup adapts its event-name examples, date and budget guidance, and
+  assignment language to the selected style.
+- Organizers see clearer readiness labels and can make private assignments
+  with an explicit confirmation that reflects their exchange style.
+
 ## [0.1.21] - 2026-09-19
 
 ### Improved

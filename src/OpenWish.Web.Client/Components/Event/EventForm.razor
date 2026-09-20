@@ -17,7 +17,7 @@
                         aria-pressed="@Model.IsGiftExchange"
                         @onclick="SelectGiftExchange">
                     <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
-                    <strong>Secret Santa</strong>
+                    <strong>Gift exchange</strong>
                     <small>Invite people, collect wishlists, and draw names privately.</small>
                 </button>
             </div>
@@ -38,30 +38,54 @@
         </div>
     </fieldset>
 
+    @if (Model!.IsGiftExchange)
+    {
+        <fieldset class="mb-4">
+            <legend class="form-label fw-bold">Choose an exchange style</legend>
+            <p class="form-text mt-0">Both styles keep assignments private. Choose the language your group will recognize.</p>
+            <div class="exchange-style-options" role="group" aria-label="Gift exchange style">
+                <button type="button"
+                        class="exchange-style-option @(IsSecretSantaStyle ? "exchange-style-option-selected" : string.Empty)"
+                        aria-pressed="@IsSecretSantaStyle"
+                        @onclick="SelectSecretSantaStyle">
+                    <OpenWishIcon Name="stars" />
+                    <span><strong>Secret Santa</strong><small>A familiar holiday name for a private name draw.</small></span>
+                </button>
+                <button type="button"
+                        class="exchange-style-option @(!IsSecretSantaStyle ? "exchange-style-option-selected" : string.Empty)"
+                        aria-pressed="@(!IsSecretSantaStyle)"
+                        @onclick="SelectGiftExchangeStyle">
+                    <OpenWishIcon Name="gift" />
+                    <span><strong>Gift exchange</strong><small>Flexible for birthdays, teams, families, and any occasion.</small></span>
+                </button>
+            </div>
+        </fieldset>
+    }
+
     <div class="mb-4">
         <label for="name" class="form-label fw-bold">Event Name</label>
         <InputText id="name" class="form-control form-control-lg"
                    autofocus="@AutoFocusName"
-                   placeholder="e.g. Family Secret Santa 2026" @bind-Value="@Model!.Name" />
+                   placeholder="@EventNamePlaceholder" @bind-Value="@Model!.Name" />
         <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
     </div>
 
     <div class="mb-4">
         <label for="description" class="form-label fw-bold">Note for your group <span class="text-muted fw-normal">(optional)</span></label>
         <InputTextArea id="description" class="form-control" rows="3" 
-            placeholder="Where you're celebrating, gift ideas, or anything people should know" @bind-Value="@Model!.Description" />
+            placeholder="@DescriptionPlaceholder" @bind-Value="@Model!.Description" />
         <ValidationMessage For="@(() => Model.Description)" class="text-danger" />
     </div>
 
     <div class="row mb-4">
         <div class="col-md-6">
-            <label for="date" class="form-label fw-bold">Exchange date</label>
+            <label for="date" class="form-label fw-bold">@DateLabel</label>
             <InputDate id="date" class="form-control" @bind-Value="@Model!.Date" />
-            <div class="form-text">Shown in each participant's local time.</div>
+            <div class="form-text">@DateHelpText</div>
             <ValidationMessage For="@(() => Model.Date)" class="text-danger" />
         </div>
         <div class="col-md-6">
-            <label for="budget" class="form-label fw-bold">Budget per gift <span class="text-muted fw-normal">(optional)</span></label>
+            <label for="budget" class="form-label fw-bold">@BudgetLabel <span class="text-muted fw-normal">(optional)</span></label>
             <InputNumber id="budget" class="form-control" placeholder="$0.00" @bind-Value="@Model!.Budget" />
             <ValidationMessage For="@(() => Model.Budget)" class="text-danger" />
         </div>
@@ -100,10 +124,28 @@
     [Parameter] public bool AutoFocusName { get; set; }
 
     private bool _isEditMode => Model?.Id > 0;
+    private bool IsSecretSantaStyle => string.Equals(Model?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal);
+    private string EventNamePlaceholder => IsSecretSantaStyle
+        ? "e.g. Family Secret Santa 2026"
+        : "e.g. Summer cabin gift swap";
+    private string DescriptionPlaceholder => IsSecretSantaStyle
+        ? "Gift guidelines, gathering details, or anything your group should know"
+        : "What you are celebrating, gift guidelines, or anything your group should know";
+    private string DateLabel => Model?.IsGiftExchange == true ? "Gift exchange date" : "Celebration date";
+    private string DateHelpText => Model?.IsGiftExchange == true
+        ? "When gifts will be exchanged. Shown in each participant's local time."
+        : "Shown in each participant's local time.";
+    private string BudgetLabel => Model?.IsGiftExchange == true ? "Suggested budget per gift" : "Suggested budget";
 
-    private void SelectGiftExchange() => Model!.IsGiftExchange = true;
+    private void SelectGiftExchange()
+    {
+        Model!.IsGiftExchange = true;
+        Model.GiftExchangeStyle = "GiftExchange";
+    }
 
     private void SelectCelebration() => Model!.IsGiftExchange = false;
+    private void SelectSecretSantaStyle() => Model!.GiftExchangeStyle = "SecretSanta";
+    private void SelectGiftExchangeStyle() => Model!.GiftExchangeStyle = "GiftExchange";
 
     private async Task HandleSubmit()
     {

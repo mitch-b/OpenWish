@@ -60,8 +60,15 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Unauthorized();
         }
-        var createdEvent = await _eventService.CreateEventAsync(eventModel, userId);
-        return CreatedAtAction(nameof(GetEvent), new { publicId = createdEvent.PublicId }, createdEvent);
+        try
+        {
+            var createdEvent = await _eventService.CreateEventAsync(eventModel, userId);
+            return CreatedAtAction(nameof(GetEvent), new { publicId = createdEvent.PublicId }, createdEvent);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{publicId}")]
@@ -87,6 +94,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
             return Forbid();
         }
         catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
         }

@@ -217,6 +217,6 @@ Development-only stack the login page offers passwordless synthetic personas:
 | TaylorDemo | Pending invitee | `playwright-guest@openwish.local` |
 
 The fixtures include wishlists with gift ideas, two confirmed friends, a
-pending friend request, a completed Secret Santa, a pending event invitation,
+pending friend request, a completed gift exchange, a pending event invitation,
 reservations, notifications, and activity. The persistent review database
 keeps manual changes across verified deployments.

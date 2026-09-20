@@ -9,6 +9,8 @@ public class EventModel : BaseEntityModel
     public bool IsRecurring { get; set; } // Indicates if the event is recurring
     public decimal? Budget { get; set; } // Budget for the event
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange
+    // Null means an older client omitted the optional field during an update.
+    public string? GiftExchangeStyle { get; set; }
     public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
     public IEnumerable<string> Tags { get; set; } = [];
     public DateTimeOffset CreatedOn { get; set; }

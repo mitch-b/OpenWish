@@ -20,6 +20,7 @@ public class Event : BaseEntity
     public bool IsRecurring { get; set; } // Indicates if the event is recurring
     public decimal? Budget { get; set; } // Budget for the event
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange
+    public string GiftExchangeStyle { get; set; } = "GiftExchange";
     public ICollection<GiftExchange> GiftExchanges { get; set; } // Gift Exchange pairings for the event
     public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
     public string? Tags { get; set; } // Event-specific tags

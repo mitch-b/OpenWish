@@ -31,7 +31,7 @@ OpenWish is a private coordination space for thoughtful giving. It should feel:
 - **Warm but capable.** It handles emotionally meaningful moments and private
   data, so pair friendly language with visibly dependable controls.
 - **Fast to understand.** The primary action and current status must be obvious
-  within seconds, especially for Secret Santa organizers and invitees.
+  within seconds, especially for gift-exchange organizers and invitees.
 - **Calm under complexity.** Progressive disclosure should keep rules,
   invitations, reservations, and destructive actions from competing with the
   user's next step.
@@ -86,7 +86,7 @@ OpenWish is a private coordination space for thoughtful giving. It should feel:
 
 ## OpenWish UX priorities
 
-1. A Secret Santa organizer should understand the next step immediately.
+1. A gift-exchange organizer should understand the next step immediately.
 2. An invitee should accept and contribute ideas with minimal navigation.
 3. A shopper should see their match, budget, wishlist, and privacy promise
    before administrative information.

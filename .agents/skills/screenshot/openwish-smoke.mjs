@@ -671,6 +671,84 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The deleted item remained visible in the wishlist.");
   }
 
+  const concurrentDeleteItemName = "Concurrent delete verification item";
+  const concurrentDeleteItemResponse = await context.request.post(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`,
+    {
+      data: {
+        publicId: "e2e-concurrent-delete-item",
+        name: concurrentDeleteItemName,
+        description: "Synthetic item for PostgreSQL deletion verification"
+      }
+    }
+  );
+  if (!concurrentDeleteItemResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete fixture creation returned ${concurrentDeleteItemResponse.status()}.`
+    );
+  }
+  const concurrentDeleteLocation = concurrentDeleteItemResponse.headers().location;
+  const concurrentDeleteItemId = Number(
+    concurrentDeleteLocation?.split("/").filter(Boolean).at(-1)
+  );
+  if (!Number.isInteger(concurrentDeleteItemId)) {
+    throw new Error("Concurrent-delete fixture creation did not return an item identifier.");
+  }
+  const concurrentDeleteItemUrl =
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/${concurrentDeleteItemId}`;
+  const commentResponse = await context.request.post(`${concurrentDeleteItemUrl}/comments`, {
+    data: { text: "Synthetic dependent comment" }
+  });
+  if (!commentResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete comment creation returned ${commentResponse.status()}: ${await commentResponse.text()}`
+    );
+  }
+  const reservationResponse = await context.request.post(`${concurrentDeleteItemUrl}/reserve`, {
+    data: { isAnonymous: false }
+  });
+  if (!reservationResponse.ok()) {
+    throw new Error(
+      `Concurrent-delete reservation creation returned ${reservationResponse.status()}: ` +
+      `${await reservationResponse.text()}`
+    );
+  }
+  if (await reservationResponse.json() !== true) {
+    throw new Error("Concurrent-delete reservation creation did not reserve the item.");
+  }
+
+  const concurrentDeleteResponses = await Promise.all([
+    context.request.delete(concurrentDeleteItemUrl),
+    context.request.delete(concurrentDeleteItemUrl)
+  ]);
+  for (const response of concurrentDeleteResponses) {
+    if (response.status() !== 204) {
+      throw new Error(`Concurrent item deletion returned ${response.status()}, expected 204.`);
+    }
+  }
+  const retryDeleteResponse = await context.request.delete(concurrentDeleteItemUrl);
+  if (retryDeleteResponse.status() !== 204) {
+    throw new Error(`Repeated item deletion returned ${retryDeleteResponse.status()}, expected 204.`);
+  }
+  const deletedItemResponse = await context.request.get(concurrentDeleteItemUrl);
+  if (deletedItemResponse.status() !== 404) {
+    throw new Error(`Deleted item lookup returned ${deletedItemResponse.status()}, expected 404.`);
+  }
+  const activityResponse = await context.request.get(`${baseUrl}/api/activities/user?count=100`);
+  if (!activityResponse.ok()) {
+    throw new Error(`Owner activity verification returned ${activityResponse.status()}.`);
+  }
+  const activities = await activityResponse.json();
+  const itemRemovedActivities = activities.filter(activity =>
+    activity.activityType === "ItemRemoved" &&
+    activity.description.includes(concurrentDeleteItemName)
+  );
+  if (itemRemovedActivities.length !== 1) {
+    throw new Error(
+      `Concurrent item deletion recorded ${itemRemovedActivities.length} removal activities, expected 1.`
+    );
+  }
+
   await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
@@ -1142,6 +1220,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "wishlist items and pricing",
       "accessible product links",
       "focus-safe duplicate-resistant wishlist item deletion",
+      "PostgreSQL concurrent item deletion and one-winner activity logging",
       "event details and gift assignment",
       "friends and pending requests",
       "accessible notification updates and deletion",

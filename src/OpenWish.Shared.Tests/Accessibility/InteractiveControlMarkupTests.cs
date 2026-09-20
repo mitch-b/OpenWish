@@ -195,6 +195,22 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void GiftExchangeForm_OffersAStyleChoiceAndContextualGuidance()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor.css");
+
+        Assert.Contains("Choose an exchange style", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Gift exchange style\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Secret Santa", markup, StringComparison.Ordinal);
+        Assert.Contains("Gift exchange", markup, StringComparison.Ordinal);
+        Assert.Contains("placeholder=\"@EventNamePlaceholder\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Suggested budget per gift", markup, StringComparison.Ordinal);
+        Assert.Contains(".exchange-style-options", styles, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: 1fr;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistItemSearch_HasALabelClearNameAndLiveResultCount()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
@@ -813,7 +829,7 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("aria-busy=\"@_loading\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
-        Assert.Contains("We couldn't load your Secret Santa match. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load your gift exchange match. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadGiftExchange\"", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
     }

@@ -28,22 +28,23 @@ surprise.
 
 ![A detailed wishlist with prioritized items, prices, comments, and an attached event](.docs/images/walkthrough/wishlist-details.png)
 
-### Plan birthdays, holidays, and Secret Santa
+### Plan birthdays, holidays, and gift exchanges
 
-Start a Secret Santa with useful holiday defaults, then follow the five-step
+Start a gift exchange for birthdays, holidays, teams, or family traditions.
+Choose the familiar Secret Santa style when it fits, then follow the five-step
 organizer checklist to invite your group, collect wishlists, review responses,
-and draw names. Bulk email entry and shareable invitation links keep setup
-quick even for larger groups.
+and make private assignments. Bulk email entry and shareable invitation links
+keep setup quick even for larger groups.
 
 ![Upcoming events and gift exchanges](.docs/images/walkthrough/events.png)
 
-![Guided Secret Santa setup with readiness checks](.docs/images/walkthrough/secret-santa-setup.png)
+![Guided gift exchange setup with readiness checks](.docs/images/walkthrough/secret-santa-setup.png)
 
 Invite an entire group at once by pasting email addresses, or choose from
 existing friends. OpenWish keeps accepted and pending participants distinct so
 organizers always know who will be included in the draw.
 
-![Bulk invitation dialog for a Secret Santa event](.docs/images/walkthrough/invitation-dialog.png)
+![Bulk invitation dialog for a gift exchange](.docs/images/walkthrough/invitation-dialog.png)
 
 OpenWish draws only from people who accepted, clearly identifies pending
 responses, and reveals each assignment privately. Participants can attach a
@@ -57,7 +58,7 @@ status, and connect wishlists from one workspace.
 
 ![Event management workspace with participants and wishlists](.docs/images/walkthrough/event-management.png)
 
-![Mobile Secret Santa assignment and shopping actions](.docs/images/walkthrough/secret-santa-mobile.png)
+![Mobile gift exchange assignment and shopping actions](.docs/images/walkthrough/secret-santa-mobile.png)
 
 ### Coordinate with people you trust
 
@@ -82,7 +83,7 @@ manual toggle.
 Dark mode keeps the same clear hierarchy and status visibility in lower-light
 environments.
 
-![OpenWish Secret Santa event in dark mode](.docs/images/walkthrough/event-details-dark.png)
+![OpenWish gift exchange event in dark mode](.docs/images/walkthrough/event-details-dark.png)
 
 Account settings, release highlights on the **What's new** page, and
 authenticated access controls round out the hosted experience.

@@ -26,7 +26,7 @@ else if (_giftExchange != null)
 {
     <div class="card gift-match-card mb-4">
         <div class="card-header gift-match-header">
-            <h3 class="mb-0"><OpenWishIcon Name="gift" Class="me-2" />Your Secret Santa match</h3>
+            <h3 class="mb-0"><OpenWishIcon Name="gift" Class="me-2" />Your gift exchange match</h3>
         </div>
         <div class="card-body">
             <div class="recipient-reveal" role="status">
@@ -114,7 +114,7 @@ else if (_giftExchange != null)
             Logger.LogError(ex, "Failed to load the gift exchange assignment for event {EventPublicId}", EventId);
             _giftExchange = null;
             _recipientWishlist = null;
-            _errorMessage = "We couldn't load your Secret Santa match. Try again.";
+            _errorMessage = "We couldn't load your gift exchange match. Try again.";
         }
         finally
         {

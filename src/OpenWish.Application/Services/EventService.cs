@@ -52,6 +52,20 @@ public class EventService(
             eu.Status == "Pending" &&
             string.Equals(eu.UserId, userId, StringComparison.Ordinal));
 
+    private static string NormalizeGiftExchangeStyle(string? giftExchangeStyle)
+    {
+        if (string.IsNullOrWhiteSpace(giftExchangeStyle))
+        {
+            return "GiftExchange";
+        }
+
+        return giftExchangeStyle switch
+        {
+            "GiftExchange" or "SecretSanta" => giftExchangeStyle,
+            _ => throw new ArgumentException("Gift exchange style must be GiftExchange or SecretSanta.", nameof(giftExchangeStyle))
+        };
+    }
+
     private static void FilterGiftExchangeVisibility(EventModel eventModel, string? requestingUserId)
     {
         if (!eventModel.IsGiftExchange || eventModel.GiftExchanges is null || eventModel.GiftExchanges.Count == 0)
@@ -118,6 +132,7 @@ public class EventService(
         var creator = await context.Users.FindAsync(creatorId)
                 ?? throw new KeyNotFoundException($"User with id {creatorId} not found");
 
+        eventModel.GiftExchangeStyle = NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
         var eventEntity = _mapper.Map<Event>(eventModel);
         eventEntity.CreatedBy = creator;
         eventEntity.CreatedOn = DateTimeOffset.UtcNow;
@@ -364,6 +379,9 @@ public class EventService(
             throw new InvalidOperationException("Reset the gift exchange before changing the event type.");
         }
 
+        eventModel.GiftExchangeStyle = eventModel.GiftExchangeStyle is null
+            ? existingEvent.GiftExchangeStyle
+            : NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
         _mapper.Map(eventModel, existingEvent);
         existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
 

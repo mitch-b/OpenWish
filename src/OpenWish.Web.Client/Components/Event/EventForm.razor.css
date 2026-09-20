@@ -42,3 +42,51 @@
 .event-type-option small {
     color: var(--bs-secondary-color);
 }
+
+.exchange-style-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.exchange-style-option {
+    display: flex;
+    min-height: 5.75rem;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    text-align: left;
+}
+
+.exchange-style-option:hover,
+.exchange-style-option:focus-visible,
+.exchange-style-option-selected {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-soft);
+}
+
+.exchange-style-option > svg {
+    flex: 0 0 auto;
+    margin-top: 0.1rem;
+    color: var(--color-primary-bg);
+    font-size: 1.25rem;
+}
+
+.exchange-style-option span {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.exchange-style-option small {
+    color: var(--color-text-muted);
+}
+
+@media (max-width: 575.98px) {
+    .exchange-style-options {
+        grid-template-columns: 1fr;
+    }
+}

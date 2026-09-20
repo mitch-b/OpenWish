@@ -41,7 +41,7 @@ the app is in Development and `OpenWishSettings__EnableDevelopmentLogin=true`.
 
 The initial fixture includes public and private wishlists, several gift ideas,
 a confirmed friend, a pending friend request, an accepted and a pending event
-participant, a completed Secret Santa draw, reservations, notifications, and
+participant, a completed gift-exchange draw, reservations, notifications, and
 activity. Use AlexDemo to create another event, invite JordanDemo, paste product
 URLs into a wishlist, and exercise the organizer flow.
 

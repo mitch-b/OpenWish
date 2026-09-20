@@ -194,6 +194,7 @@ public sealed class DevelopmentDataSeeder(
             Date = now.AddDays(21),
             Budget = 75m,
             IsGiftExchange = true,
+            GiftExchangeStyle = "GiftExchange",
             NamesDrawnOn = now,
             Tags = "Family,Holiday",
             CreatedBy = owner

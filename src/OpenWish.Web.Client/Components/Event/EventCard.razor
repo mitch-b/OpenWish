@@ -24,7 +24,7 @@ else
                 <span><OpenWishIcon Name="calendar-event" /> @Event.Date.ToString("MMM d, yyyy")</span>
                 @if (Event.IsGiftExchange)
                 {
-                    <span><OpenWishIcon Name="gift" /> Secret Santa</span>
+                    <span><OpenWishIcon Name="gift" /> @GiftExchangeStyleLabel</span>
                 }
             </div>
             @if (Event.IsGiftExchange)
@@ -184,6 +184,11 @@ else
         Event?.EventUsers?.Count(participant =>
             !participant.Deleted &&
             string.Equals(participant.Status, "Pending", StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+    private string GiftExchangeStyleLabel =>
+        string.Equals(Event?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal)
+            ? "Gift exchange · Secret Santa style"
+            : "Gift exchange";
 
     private void ShowDeleteDialog()
     {

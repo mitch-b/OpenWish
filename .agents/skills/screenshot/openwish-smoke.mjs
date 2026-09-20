@@ -835,7 +835,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "events.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
-  await assertVisible(page, "Your Secret Santa match");
+  await assertVisible(page, "Your gift exchange match");
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "Suggested Budget");
   await assertVisible(page, "TaylorDemo");
@@ -845,26 +845,38 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "attached" });
   await screenshot(page, "event-details.png");
 
-  await visit(page, "/events/new", "Create a Secret Santa", visitedRoutes);
+  await visit(page, "/events/new", "Create a gift exchange", visitedRoutes);
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The event name field did not retain focus after interactivity started.");
   }
-  const secretSantaOption = page.getByRole("button", { name: /Secret Santa/ });
-  if (!(await secretSantaOption.getAttribute("class"))?.includes("event-type-option-selected")) {
-    throw new Error("Secret Santa was not the default event type.");
+  const giftExchangeOption = page.getByRole("button", { name: /^Gift exchange/ }).first();
+  if (!(await giftExchangeOption.getAttribute("class"))?.includes("event-type-option-selected")) {
+    throw new Error("Gift exchange was not the default event type.");
   }
-  await page.locator("#name").fill("Neighborhood Secret Santa");
+  const secretSantaStyle = page.getByRole("button", { name: /Secret Santa.*familiar holiday/i });
+  await secretSantaStyle.click();
+  await page.locator("#name").waitFor({
+    state: "visible"
+  });
+  await page.waitForFunction(() =>
+    document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Family Secret Santa 2026"
+  );
+  await page.getByRole("button", { name: /Gift exchange.*Flexible/i }).click();
+  await page.waitForFunction(() =>
+    document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Summer cabin gift swap"
+  );
+  await page.locator("#name").fill("Neighborhood Gift Exchange");
   await page.getByRole("button", { name: "Create and invite people" }).click();
   await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
   const createdEventPublicId = new URL(page.url()).pathname.split("/").filter(Boolean).at(-1);
   if (!createdEventPublicId) {
     throw new Error("The created event URL did not include a public identifier.");
   }
-  await assertVisible(page, "Finish your Secret Santa setup");
+  await assertVisible(page, "Finish your gift exchange setup");
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
-  await assertVisible(page, "Draw names");
+  await assertVisible(page, "Make assignments");
   const pairingRules = page.locator(".pairing-rules");
   await page.waitForFunction(() =>
     document.querySelector(".pairing-rules")?.getAttribute("aria-busy") === "false"
@@ -880,14 +892,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
     { width: 1024, height: 600 }
   ]);
   await page.setViewportSize({ width: 390, height: 700 });
-  const setupSteps = page.locator(".secret-santa-setup");
+  const setupSteps = page.locator(".gift-exchange-setup");
   await assertMinimumTouchTarget(
     setupSteps.getByRole("link", { name: "Edit" }),
-    "Mobile Secret Santa edit action"
+    "Mobile gift exchange edit action"
   );
   await assertMinimumTouchTarget(
     setupSteps.getByRole("link", { name: "Invite people" }),
-    "Mobile Secret Santa invitation action"
+    "Mobile gift exchange invitation action"
   );
   await screenshot(page, "secret-santa-setup-mobile.png");
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -1062,7 +1074,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error(`Theme did not persist after reload; found '${persistedTheme}'.`);
   }
 
-  await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
+  await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "Assignments are ready");
   await screenshot(page, "event-details-dark.png");
 
@@ -1084,7 +1096,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Safer wishlist item deletion");
+  await assertVisible(page, "More flexible gift exchanges");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -1174,9 +1186,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   ]);
   await assertVisible(page, "Two-factor authentication is off.");
 
-  await visit(page, "/events", "Neighborhood Secret Santa", visitedRoutes);
-  const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Secret Santa" });
-  const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Secret Santa" });
+  await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
+  const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
+  const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Gift Exchange" });
   await createdEventActions.click();
   await createdEventCard.getByRole("button", { name: "Delete" }).click();
   const eventDeleteDialog = page.getByRole("dialog", { name: "Delete event" });
@@ -1432,7 +1444,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await assertVisible(page, "Accept your invitation to join");
   visitedRoutes.push(new URL(page.url()).pathname);
   await visit(page, `/events/${manifest.eventPublicId}`, "Accept your invitation to join", visitedRoutes);
-  if (await page.getByText("You're in the Secret Santa.").isVisible()) {
+  if (await page.getByText("You're in this gift exchange.").isVisible()) {
     throw new Error("Pending invitee was incorrectly shown accepted-participant guidance.");
   }
   await page.getByRole("link", { name: "Review invitation" }).click();
@@ -1774,7 +1786,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   );
   await screenshot(page, "wishlist-management-mobile.png");
 
-  await visit(page, `/events/${manifest.eventPublicId}`, "Your Secret Santa match", visitedRoutes);
+  await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "JordanDemo");
   await assertVisible(page, "View JordanDemo's wishlist");
   await screenshot(page, "secret-santa-mobile.png");

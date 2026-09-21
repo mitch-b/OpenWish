@@ -19,7 +19,10 @@
     {
         <div class="alert alert-danger" role="alert">
             <p class="mb-2">@_loadErrorMessage</p>
-            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryLoadComments">
+            <button class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled="@_loading"
+                    @onclick="RetryLoadComments">
                 Try again
             </button>
         </div>
@@ -225,6 +228,11 @@
 
     private async Task RetryLoadComments()
     {
+        if (_loading)
+        {
+            return;
+        }
+
         await LoadComments();
     }
 

@@ -199,6 +199,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage)", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load event wishlists. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("BuildParticipantGroups() is not { Count: > 0 } participantGroups", markup, StringComparison.Ordinal);
+        Assert.Contains("@foreach (var participant in participantGroups)", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -714,6 +716,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
         Assert.Contains("Friend requests could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadRequests\"", markup, StringComparison.Ordinal);
+        Assert.Contains("private async Task RetryLoadRequests()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
         Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any()", markup, StringComparison.Ordinal);
         Assert.True(
             markup.IndexOf("var sentRequests = await", StringComparison.Ordinal) <
@@ -741,6 +745,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Comments could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadComments\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task<bool> LoadComments()", markup, StringComparison.Ordinal);
+        Assert.Contains("private async Task RetryLoadComments()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -763,6 +769,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Reservation status could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryReservation\"", markup, StringComparison.Ordinal);
         Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
+        Assert.Contains("private async Task RetryReservation()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
         Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
         Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
         var reservationMethods = client[

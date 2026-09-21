@@ -15,7 +15,10 @@
     {
         <div class="alert alert-danger" role="alert">
             <p class="mb-2">@_loadErrorMessage</p>
-            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryReservation">
+            <button class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled="@_loading"
+                    @onclick="RetryReservation">
                 Try again
             </button>
         </div>
@@ -243,6 +246,11 @@
 
     private async Task RetryReservation()
     {
+        if (_loading)
+        {
+            return;
+        }
+
         await CheckReservation();
     }
 

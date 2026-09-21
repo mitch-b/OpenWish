@@ -24,7 +24,10 @@
     {
         <div class="alert alert-danger" role="alert">
             <p class="mb-2">@_loadErrorMessage</p>
-            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryLoadRequests">
+            <button class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled="@_loading"
+                    @onclick="RetryLoadRequests">
                 Try again
             </button>
         </div>
@@ -182,6 +185,11 @@
 
     private async Task RetryLoadRequests()
     {
+        if (_loading)
+        {
+            return;
+        }
+
         await LoadRequests();
     }
 

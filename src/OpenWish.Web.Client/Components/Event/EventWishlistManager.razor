@@ -173,14 +173,14 @@ else
             <section>
                 <h4 class="h5 mb-3">Participant wishlists</h4>
 
-                @if (!BuildParticipantGroups().Any())
+                @if (BuildParticipantGroups() is not { Count: > 0 } participantGroups)
                 {
                     <p class="text-muted small mb-0">We do not have participant details yet.</p>
                 }
                 else
                 {
                     <div class="list-group">
-                        @foreach (var participant in BuildParticipantGroups())
+                        @foreach (var participant in participantGroups)
                         {
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-start">

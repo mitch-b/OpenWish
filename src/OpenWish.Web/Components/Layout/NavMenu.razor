@@ -19,9 +19,13 @@
   </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox"
+       class="navbar-toggler"
+       aria-label="Navigation menu"
+       aria-controls="primary-navigation"
+       aria-expanded="false" />
 
-<div class="nav-scrollable">
+<div id="primary-navigation" class="nav-scrollable">
   <nav class="nav flex-column">
     <div class="nav-item">
       <NavLink class="nav-link" href="" Match="NavLinkMatch.All">

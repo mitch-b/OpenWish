@@ -140,6 +140,7 @@ mv "$result_file.tmp" "$result_file"
 
 test -s "$walkthrough_directory/home-dashboard.png"
 test -s "$walkthrough_directory/home-mobile.png"
+test -s "$walkthrough_directory/navigation-mobile.png"
 test -s "$walkthrough_directory/wishlists.png"
 test -s "$walkthrough_directory/wishlist-details.png"
 test -s "$walkthrough_directory/wishlist-item-added.png"

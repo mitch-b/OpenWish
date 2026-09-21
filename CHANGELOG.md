@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.24] - 2026-09-21
+
+### Improved
+
+- Friend requests now distinguish a loading failure from an empty inbox and
+  provide a duplicate-safe retry.
+- Comments stay unavailable when their current state cannot be loaded, avoiding
+  a misleading empty thread and offering a duplicate-safe retry.
+- Reservation controls stay hidden until reservation status is known, preventing
+  shoppers from acting on stale availability or starting overlapping retries.
+- Event wishlists distinguish initial and refresh failures from empty data while
+  preserving previously loaded details.
+- The mobile navigation toggle now reports whether its controlled menu is open
+  or closed to assistive technology.
+
 ## [0.1.22] - 2026-09-20
 
 ### Improved

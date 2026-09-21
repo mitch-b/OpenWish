@@ -11,6 +11,18 @@
             <span class="visually-hidden">Loading reservation...</span>
         </div>
     }
+    else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <p class="mb-2">@_loadErrorMessage</p>
+            <button class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    disabled="@_loading"
+                    @onclick="RetryReservation">
+                Try again
+            </button>
+        </div>
+    }
     else
     {
         @if (_isReserved)
@@ -123,6 +135,7 @@
     private bool _loading = true;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
+    private string? _loadErrorMessage;
     private bool _isReserved = false;
     private bool _myReservation = false;
     private bool _anonymous = false;
@@ -171,7 +184,7 @@
             await _errorAlert.FocusAsync();
         }
 
-        if (firstRender && _error && _currentUserId == null)
+        if (firstRender && _loadErrorMessage is not null && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
             await CheckReservation();
@@ -186,6 +199,7 @@
         {
             _loading = true;
             _error = false;
+            _loadErrorMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId == null)
@@ -219,8 +233,7 @@
         }
         catch (Exception ex)
         {
-            _error = true;
-            _errorMessage = "Failed to check reservation status. This may be resolved when the page becomes interactive.";
+            _loadErrorMessage = "Reservation status could not be loaded. Try again.";
             Logger.LogError(ex, "Failed to check reservation for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
             return false;
         }
@@ -229,6 +242,16 @@
             _loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task RetryReservation()
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        await CheckReservation();
     }
 
     private async Task ReserveItem()

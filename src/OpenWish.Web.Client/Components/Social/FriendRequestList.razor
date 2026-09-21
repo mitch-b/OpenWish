@@ -20,6 +20,15 @@
             <span class="visually-hidden">Loading friend requests...</span>
         </div>
     }
+    else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <p class="mb-2">@_loadErrorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryLoadRequests">
+                Try again
+            </button>
+        </div>
+    }
     else if (!_receivedRequests.Any())
     {
         <div class="alert alert-info">
@@ -58,7 +67,7 @@
         </div>
     }
 
-    @if (_sentRequests.Any())
+    @if (string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any())
     {
         <h5 class="mt-4 mb-3">Sent requests</h5>
         <div class="list-group">
@@ -121,6 +130,7 @@
     private int? _processingRequestId;
     private string? _statusMessage;
     private string? _errorMessage;
+    private string? _loadErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -129,7 +139,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && _errorMessage is not null && _currentUserId == null)
+        if (firstRender && _loadErrorMessage is not null && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
             await LoadRequests();
@@ -141,6 +151,7 @@
         try
         {
             _loading = true;
+            _loadErrorMessage = null;
             if (clearFeedback)
             {
                 _statusMessage = null;
@@ -151,22 +162,27 @@
             if (_currentUserId != null)
             {
                 var receivedRequests = await FriendService.GetReceivedFriendRequestsAsync(_currentUserId);
-                _receivedRequests = receivedRequests.ToList();
-
                 var sentRequests = await FriendService.GetSentFriendRequestsAsync(_currentUserId);
+
+                _receivedRequests = receivedRequests.ToList();
                 _sentRequests = sentRequests.ToList();
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load friend requests");
-            _errorMessage = "Friend requests could not be loaded. Try again.";
+            _loadErrorMessage = "Friend requests could not be loaded. Try again.";
         }
         finally
         {
             _loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task RetryLoadRequests()
+    {
+        await LoadRequests();
     }
 
     private async Task AcceptRequest(FriendRequestModel request)

@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.24",
+    "date": "2026-09-21",
+    "title": "Clearer recovery and navigation",
+    "summary": "Coordination surfaces now distinguish unavailable data from empty results, with safer retries and truthful mobile navigation state.",
+    "highlights": [
+      "Friend requests and event wishlists show recoverable loading failures instead of misleading empty content.",
+      "Comment and reservation actions stay hidden until their current state is known, with a direct retry when loading fails.",
+      "The mobile navigation toggle reports its open or closed state to assistive technology."
+    ]
+  },
+  {
     "version": "0.1.23",
     "date": "2026-09-19",
     "title": "More flexible gift exchanges",

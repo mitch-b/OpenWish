@@ -19,6 +19,19 @@
         </div>
     </div>
 }
+else if (!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage))
+{
+    <div class="card shadow-sm event-wishlist-manager">
+        <div class="card-body">
+            <div class="alert alert-danger mb-0" role="alert">
+                <p class="mb-2">@_loadErrorMessage</p>
+                <button type="button" class="btn btn-outline-danger" @onclick="LoadWishlistsAsync">
+                    Try again
+                </button>
+            </div>
+        </div>
+    </div>
+}
 else
 {
     <div class="card shadow-sm event-wishlist-manager">
@@ -39,6 +52,16 @@ else
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
                 <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    <p class="mb-2">@_loadErrorMessage</p>
+                    <button type="button" class="btn btn-outline-danger" @onclick="LoadWishlistsAsync">
+                        Try again
+                    </button>
+                </div>
             }
 
             <section class="mb-4">
@@ -147,18 +170,17 @@ else
 
             <hr />
 
-            @{ var participantGroups = BuildParticipantGroups().ToList(); }
             <section>
                 <h4 class="h5 mb-3">Participant wishlists</h4>
 
-                @if (!participantGroups.Any())
+                @if (!BuildParticipantGroups().Any())
                 {
                     <p class="text-muted small mb-0">We do not have participant details yet.</p>
                 }
                 else
                 {
                     <div class="list-group">
-                        @foreach (var participant in participantGroups)
+                        @foreach (var participant in BuildParticipantGroups())
                         {
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-start">
@@ -271,6 +293,7 @@ else
     private int? _selectedWishlistId;
     private string? _statusMessage;
     private string? _errorMessage;
+    private string? _loadErrorMessage;
     private string? _currentUserId;
     private bool _showCreateForm;
     private bool _isLoading;
@@ -336,7 +359,7 @@ else
         }
 
         _isLoading = true;
-        _errorMessage = null;
+        _loadErrorMessage = null;
 
         try
         {
@@ -375,7 +398,7 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load wishlists for event {EventId}", EventId);
-            _errorMessage ??= "We couldn't load event wishlists. Please try again.";
+            _loadErrorMessage = "We couldn't load event wishlists. Try again.";
         }
         finally
         {

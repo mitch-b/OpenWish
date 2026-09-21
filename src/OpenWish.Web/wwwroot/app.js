@@ -194,6 +194,17 @@ window.openWishDeactivateDialog = function (id) {
     setTimeout(() => openerObserver.disconnect(), 2000);
 };
 
+const syncNavigationDisclosure = navigationToggle => {
+    navigationToggle.setAttribute("aria-expanded", navigationToggle.checked ? "true" : "false");
+};
+
+document.addEventListener("change", event => {
+    if (event.target instanceof HTMLInputElement &&
+        event.target.matches(".navbar-toggler")) {
+        syncNavigationDisclosure(event.target);
+    }
+});
+
 document.addEventListener("click", event => {
     if (!(event.target instanceof Element) ||
         !event.target.closest(".nav-scrollable a, .nav-scrollable button")) {
@@ -203,5 +214,6 @@ document.addEventListener("click", event => {
     const navigationToggle = document.querySelector(".navbar-toggler");
     if (navigationToggle instanceof HTMLInputElement) {
         navigationToggle.checked = false;
+        syncNavigationDisclosure(navigationToggle);
     }
 });

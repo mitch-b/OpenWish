@@ -1699,10 +1699,20 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, "/", "Welcome Back!", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await screenshot(page, "home-mobile.png");
-  await page.locator(".navbar-toggler").check({ force: true });
+  const navigationToggle = page.locator(".navbar-toggler");
+  if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
+    throw new Error("The closed mobile navigation did not expose its collapsed state.");
+  }
+  await navigationToggle.check({ force: true });
+  if (await navigationToggle.getAttribute("aria-expanded") !== "true") {
+    throw new Error("Opening mobile navigation did not expose its expanded state.");
+  }
   await page.getByRole("link", { name: "Wishlists", exact: true }).waitFor({ state: "visible" });
   await screenshot(page, "navigation-mobile.png");
-  await page.locator(".navbar-toggler").uncheck({ force: true });
+  await navigationToggle.uncheck({ force: true });
+  if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
+    throw new Error("Closing mobile navigation did not expose its collapsed state.");
+  }
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");

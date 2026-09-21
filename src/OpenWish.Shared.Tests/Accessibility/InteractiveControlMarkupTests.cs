@@ -5,6 +5,21 @@ namespace OpenWish.Shared.Tests.Accessibility;
 public class InteractiveControlMarkupTests
 {
     [Fact]
+    public void MobileNavigation_ExposesAndSynchronizesItsDisclosureState()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Layout", "NavMenu.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+
+        Assert.Contains("aria-label=\"Navigation menu\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"primary-navigation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"false\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"primary-navigation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("document.addEventListener(\"change\"", script, StringComparison.Ordinal);
+        Assert.Contains("event.target.matches(\".navbar-toggler\")", script, StringComparison.Ordinal);
+        Assert.Contains("syncNavigationDisclosure(navigationToggle);", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistIndex_ConnectsTabsAndDiscoveryControlsToTheirContent()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
@@ -174,13 +189,16 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
-    public void EventWishlistRemoval_ConnectsItsLabelAndDialogDescription()
+    public void EventWishlists_ExposeRecoverableLoadingAndRemovalStates()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
 
         Assert.Contains("for=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"remove-wishlist-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage)", markup, StringComparison.Ordinal);
+        Assert.Contains("We couldn't load event wishlists. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -693,6 +711,13 @@ public class InteractiveControlMarkupTests
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("await OnFriendshipsChanged.InvokeAsync();", markup, StringComparison.Ordinal);
+        Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
+        Assert.Contains("Friend requests could not be loaded. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadRequests\"", markup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any()", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("var sentRequests = await", StringComparison.Ordinal) <
+            markup.IndexOf("_receivedRequests = receivedRequests.ToList();", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -713,6 +738,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("id=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
         Assert.Contains("for=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("id=\"commentText\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Comments could not be loaded. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadComments\"", markup, StringComparison.Ordinal);
+        Assert.Contains("private async Task<bool> LoadComments()", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -732,6 +760,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("Reservation released.", markup, StringComparison.Ordinal);
         Assert.Contains("Sign in again to release this reservation.", markup, StringComparison.Ordinal);
+        Assert.Contains("Reservation status could not be loaded. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryReservation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
         Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
         Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
         var reservationMethods = client[

@@ -15,6 +15,15 @@
             <span class="visually-hidden">Loading comments...</span>
         </div>
     }
+    else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <p class="mb-2">@_loadErrorMessage</p>
+            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryLoadComments">
+                Try again
+            </button>
+        </div>
+    }
     else
     {
         @if (!_comments.Any())
@@ -134,6 +143,7 @@
     private bool _loading = true;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
+    private string? _loadErrorMessage;
     private string? _statusMessage;
     private string? _currentUserId;
     private bool _isWishlistOwner => IsWishlistOwner;
@@ -180,35 +190,42 @@
             await _errorAlert.FocusAsync();
         }
 
-        if (firstRender && _error && _currentUserId == null)
+        if (firstRender && _loadErrorMessage is not null && _currentUserId == null)
         {
             // If we had an error during SSR and no user ID, try again after first render
             await LoadComments();
         }
     }
 
-    private async Task LoadComments()
+    private async Task<bool> LoadComments()
     {
         try
         {
             _loading = true;
             _error = false;
+            _loadErrorMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             var comments = await WishlistService.GetItemCommentsByPublicIdAsync(WishlistId, ItemId);
             _comments = comments.ToList();
+            return true;
         }
         catch (Exception ex)
         {
-            _error = true;
-            _errorMessage = "Failed to load comments. This may be resolved when the page becomes interactive.";
+            _loadErrorMessage = "Comments could not be loaded. Try again.";
             Logger.LogError(ex, "Failed to load comments for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
+            return false;
         }
         finally
         {
             _loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task RetryLoadComments()
+    {
+        await LoadComments();
     }
 
     private async Task AddComment()
@@ -227,8 +244,10 @@
             {
                 await WishlistService.AddCommentToItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, commentText);
                 commentText = "";
-                await LoadComments();
-                _statusMessage = "Comment added.";
+                if (await LoadComments())
+                {
+                    _statusMessage = "Comment added.";
+                }
             }
             else
             {
@@ -281,13 +300,13 @@
             {
                 var removed = await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
                 _pendingDeleteComment = null;
-                await LoadComments();
-                if (removed)
+                var refreshed = await LoadComments();
+                if (removed && refreshed)
                 {
                     _statusMessage = "Comment deleted.";
                     _focusCommentComposer = true;
                 }
-                else
+                else if (!removed)
                 {
                     _error = true;
                     _errorMessage = "The comment could not be deleted. It may have already been removed.";

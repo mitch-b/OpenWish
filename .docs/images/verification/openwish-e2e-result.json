@@ -61,7 +61,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/28b14f0f-1211-4130-8409-b27401232249/manage",
+        "/events/5161db98-5a59-4146-bec1-5594b534a011/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -108,6 +108,7 @@
         "/wishlists/demo-family-gift-ideas"
       ],
       "assertions": [
+        "invitation acceptance retries reconcile an already committed decision",
         "items made private by collaborators disappear immediately for their creator",
         "private collaborator items remain visible to the wishlist owner",
         "private item persistence and viewer-filtered lookup endpoints return success"
@@ -128,6 +129,7 @@
         "/",
         "/wishlists/demo-family-gift-ideas",
         "/wishlists/demo-family-gift-ideas/manage",
+        "/events",
         "/events/demo-holiday-gift-exchange",
         "/Account/Manage",
         "/Account/Manage/TwoFactorAuthentication",

@@ -86,4 +86,29 @@ public class EventServiceGiftExchangeTests
 
         Assert.False(EventService.PairingRulesMatch(existingRule, requestedRule));
     }
+
+    [Theory]
+    [InlineData("Accepted", true, "Accepted", true, true)]
+    [InlineData("Accepted", false, "Accepted", true, false)]
+    [InlineData("Pending", false, "Accepted", true, false)]
+    [InlineData("Rejected", false, "Rejected", false, true)]
+    [InlineData("Rejected", true, "Rejected", false, false)]
+    public void IsInvitationInState_RequiresMatchingStatusAndAcceptance(
+        string currentStatus,
+        bool currentAcceptance,
+        string expectedStatus,
+        bool expectedAcceptance,
+        bool expected)
+    {
+        var invitation = new EventUser
+        {
+            Event = null!,
+            Status = currentStatus,
+            IsAccepted = currentAcceptance
+        };
+
+        Assert.Equal(
+            expected,
+            EventService.IsInvitationInState(invitation, expectedStatus, expectedAcceptance));
+    }
 }

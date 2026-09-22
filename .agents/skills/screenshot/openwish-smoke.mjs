@@ -828,6 +828,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  if (await page.getByRole("region", { name: "Your events" }).getAttribute("aria-busy") !== "false") {
+    throw new Error("The populated event list did not finish loading.");
+  }
   await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
   await page.getByRole("link", { name: /Open event.*Holiday Gift Exchange/ })
@@ -1436,6 +1439,25 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const pendingInvitations = page.locator(".pending-invitations-card");
+  if (await pendingInvitations.getAttribute("aria-busy") !== "false") {
+    throw new Error("Pending invitations did not finish loading.");
+  }
+  await pendingInvitations.getByRole("button", { name: "Accept" }).waitFor({ state: "visible" });
+  await pendingInvitations.getByRole("button", { name: "Decline" }).waitFor({ state: "visible" });
+  await screenshot(page, "pending-invitations.png");
+  const pendingInvitationResponse = await context.request.get(
+    `${baseUrl}/api/events/invitations/pending`
+  );
+  if (!pendingInvitationResponse.ok()) {
+    throw new Error(`Pending invitation lookup returned ${pendingInvitationResponse.status()}.`);
+  }
+  const pendingInvitationData = await pendingInvitationResponse.json();
+  if (pendingInvitationData.length !== 1 || !pendingInvitationData[0]?.publicId) {
+    throw new Error(`Expected one seeded pending invitation, received ${JSON.stringify(pendingInvitationData)}.`);
+  }
+  const invitationPublicId = pendingInvitationData[0].publicId;
+
   const manageRedirectResponse = await page.goto(
     `${baseUrl}/events/${manifest.eventPublicId}/manage`,
     { waitUntil: "domcontentloaded" }
@@ -1460,6 +1482,23 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await declineInvitationDialog.getByRole("button", { name: "Keep invitation" }).click();
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
+
+  const repeatedAcceptance = await context.request.post(
+    `${baseUrl}/api/events/invitations/by-public-id/${invitationPublicId}/accept`
+  );
+  if (!repeatedAcceptance.ok()) {
+    throw new Error(`Repeated invitation acceptance returned ${repeatedAcceptance.status()}.`);
+  }
+  const refreshedInvitations = await context.request.get(
+    `${baseUrl}/api/events/invitations/pending`
+  );
+  if (!refreshedInvitations.ok()) {
+    throw new Error(`Refreshed pending invitation lookup returned ${refreshedInvitations.status()}.`);
+  }
+  if ((await refreshedInvitations.json())
+    .some(invitation => invitation.publicId === invitationPublicId)) {
+    throw new Error("An accepted invitation remained in the pending invitation response.");
+  }
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
@@ -1621,6 +1660,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     deleteAuthorizationStatus: forbiddenDelete.status(),
     visitedRoutes,
     assertions: [
+      "invitation acceptance retries reconcile an already committed decision",
       "items made private by collaborators disappear immediately for their creator",
       "private collaborator items remain visible to the wishlist owner",
       "private item persistence and viewer-filtered lookup endpoints return success"
@@ -1798,6 +1838,9 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile event connection link"
   );
   await screenshot(page, "wishlist-management-mobile.png");
+
+  await visit(page, "/events", "Holiday Gift Exchange", visitedRoutes);
+  await screenshot(page, "events-mobile.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "JordanDemo");

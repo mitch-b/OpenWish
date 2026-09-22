@@ -138,9 +138,25 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> AcceptEventInvitationByPublicIdAsync(string eventUserPublicId, string userId)
+    {
+        var response = await httpClient.PostAsync(
+            $"api/events/invitations/by-public-id/{eventUserPublicId}/accept",
+            null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> RejectEventInvitationAsync(int eventUserId, string userId)
     {
         var response = await httpClient.PostAsync($"api/events/invitations/{eventUserId}/reject", null);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RejectEventInvitationByPublicIdAsync(string eventUserPublicId, string userId)
+    {
+        var response = await httpClient.PostAsync(
+            $"api/events/invitations/by-public-id/{eventUserPublicId}/reject",
+            null);
         return response.IsSuccessStatusCode;
     }
 

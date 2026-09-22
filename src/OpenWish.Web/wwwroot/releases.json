@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.25",
+    "date": "2026-09-22",
+    "title": "Dependable event overview",
+    "summary": "Event and invitation lists now stay clear and recoverable when requests are interrupted.",
+    "highlights": [
+      "Event loading failures are distinct from an empty list and provide a direct retry.",
+      "Event refresh failures preserve previously loaded event cards while reporting that newer data is unavailable.",
+      "Pending invitation loading failures remain visible instead of disappearing as an empty list.",
+      "Interrupted invitation acceptance safely reconciles on retry while keeping the invitation available until acceptance is confirmed.",
+      "Interrupted invitation decline safely reconciles on retry while keeping the confirmation controls available until decline is confirmed."
+    ]
+  },
+  {
     "version": "0.1.24",
     "date": "2026-09-21",
     "title": "Clearer recovery and navigation",

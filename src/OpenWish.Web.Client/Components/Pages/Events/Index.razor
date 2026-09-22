@@ -7,7 +7,7 @@
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
-@inject NavigationManager NavigationManager
+@inject ILogger<Index> Logger
 
 @rendermode InteractiveAuto
 
@@ -25,71 +25,132 @@
 
     <PendingInvitations OnInvitationChanged="HandleInvitationChanged" />
 
-    @if (_events == null)
-    {
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading events...</span>
+    <section aria-labelledby="events-list-title" aria-busy="@(_isLoading ? "true" : "false")">
+        <h2 id="events-list-title" class="visually-hidden">Your events</h2>
+
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <div class="alert alert-danger" role="alert">
+                <p class="mb-2">@_loadError</p>
+                <button class="btn btn-outline-danger btn-sm"
+                        type="button"
+                        disabled="@_isLoading"
+                        @onclick="RetryLoadAsync">
+                    Try again
+                </button>
             </div>
-        </div>
-    }
-    else if (!_events.Any())
-    {
-        <div class="empty-state text-center">
-            <OpenWishIcon Name="calendar-event" Class="empty-state-icon" />
-            <h2>No events yet</h2>
-            <p class="lead">Invite your group and make private gift assignments in minutes.</p>
-            <a href="/events/new" class="btn btn-primary btn-lg mt-3">
-                Start your first gift exchange
-            </a>
-        </div>
-    }
-    else
-    {
-        <div class="row g-3 event-grid">
-            @foreach (var evt in _events)
-            {
-                <div class="col-md-6 col-lg-4" @key="evt.PublicId">
-                    <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
-                </div>
-            }
-        </div>
-    }
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <p class="visually-hidden" role="status" aria-live="polite">@_statusMessage</p>
+        }
+
+        @if (_events == null && _isLoading)
+        {
+            <div class="text-center" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <div class="mt-2">Loading events...</div>
+            </div>
+        }
+        else if (_events?.Any() == false)
+        {
+            <div class="empty-state text-center">
+                <OpenWishIcon Name="calendar-event" Class="empty-state-icon" />
+                <h2>No events yet</h2>
+                <p class="lead">Invite your group and make private gift assignments in minutes.</p>
+                <a href="/events/new" class="btn btn-primary btn-lg mt-3">
+                    Start your first gift exchange
+                </a>
+            </div>
+        }
+        else if (_events?.Any() == true)
+        {
+            <div class="row g-3 event-grid">
+                @foreach (var evt in _events)
+                {
+                    <div class="col-md-6 col-lg-4" @key="evt.PublicId">
+                        <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                    </div>
+                }
+            </div>
+        }
+    </section>
 </div>
 
 
 @code {
     private List<EventModel>? _events;
-    
+    private bool _isLoading = true;
+    private string? _loadError;
+    private string? _statusMessage;
+    private string? _userId;
+    private int _loadVersion;
+
     protected override async Task OnInitializedAsync()
     {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (userId is not null)
+        await LoadEventsAsync();
+    }
+
+    private async Task LoadEventsAsync(bool announceRefresh = false)
+    {
+        var loadVersion = ++_loadVersion;
+        _isLoading = true;
+        _loadError = null;
+        _statusMessage = null;
+
+        try
         {
-            await LoadEvents(userId);
+            _userId ??= await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(_userId))
+            {
+                if (loadVersion == _loadVersion)
+                {
+                    _loadError = "Sign in again to load your events.";
+                }
+                return;
+            }
+
+            var events = (await EventService.GetUserEventsAsync(_userId)).ToList();
+            if (loadVersion != _loadVersion)
+            {
+                return;
+            }
+
+            _events = events;
+            if (announceRefresh)
+            {
+                _statusMessage = $"{events.Count} {(events.Count == 1 ? "event" : "events")} refreshed.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load events.");
+            if (loadVersion == _loadVersion)
+            {
+                _loadError = _events is null
+                    ? "Your events could not be loaded. Try again."
+                    : "Your events could not be refreshed. The events already shown are still available.";
+            }
+        }
+        finally
+        {
+            if (loadVersion == _loadVersion)
+            {
+                _isLoading = false;
+            }
         }
     }
 
-    private async Task LoadEvents(string userId)
+    private Task RetryLoadAsync() => LoadEventsAsync(announceRefresh: _events is not null);
+
+    private Task HandleEventDeleted(EventModel evt)
     {
-        _events = (await EventService.GetUserEventsAsync(userId)).ToList();
+        return LoadEventsAsync(announceRefresh: true);
     }
 
-    private async Task HandleEventDeleted(EventModel evt)
+    private Task HandleInvitationChanged()
     {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (userId is not null)
-        {
-            await LoadEvents(userId);
-        }
-    }
-
-    private async Task HandleInvitationChanged()
-    {
-        var userId = await UserContextService.GetUserIdAsync();
-        if (userId is not null)
-        {
-            await LoadEvents(userId);
-        }
+        return LoadEventsAsync(announceRefresh: true);
     }
 }

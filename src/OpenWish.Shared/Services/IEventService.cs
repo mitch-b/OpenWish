@@ -35,7 +35,9 @@ public interface IEventService
     Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId, string requestorId);
     Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email);
     Task<bool> AcceptEventInvitationAsync(int eventUserId, string userId);
+    Task<bool> AcceptEventInvitationByPublicIdAsync(string eventUserPublicId, string userId);
     Task<bool> RejectEventInvitationAsync(int eventUserId, string userId);
+    Task<bool> RejectEventInvitationByPublicIdAsync(string eventUserPublicId, string userId);
     Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId);
     Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId);
     Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId);

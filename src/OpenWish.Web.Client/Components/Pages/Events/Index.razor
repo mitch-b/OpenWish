@@ -85,6 +85,7 @@
     private string? _loadError;
     private string? _statusMessage;
     private string? _userId;
+    private int _loadVersion;
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,6 +94,7 @@
 
     private async Task LoadEventsAsync(bool announceRefresh = false)
     {
+        var loadVersion = ++_loadVersion;
         _isLoading = true;
         _loadError = null;
         _statusMessage = null;
@@ -102,11 +104,19 @@
             _userId ??= await UserContextService.GetUserIdAsync();
             if (string.IsNullOrWhiteSpace(_userId))
             {
-                _loadError = "Sign in again to load your events.";
+                if (loadVersion == _loadVersion)
+                {
+                    _loadError = "Sign in again to load your events.";
+                }
                 return;
             }
 
             var events = (await EventService.GetUserEventsAsync(_userId)).ToList();
+            if (loadVersion != _loadVersion)
+            {
+                return;
+            }
+
             _events = events;
             if (announceRefresh)
             {
@@ -116,13 +126,19 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to load events.");
-            _loadError = _events is null
-                ? "Your events could not be loaded. Try again."
-                : "Your events could not be refreshed. The events already shown are still available.";
+            if (loadVersion == _loadVersion)
+            {
+                _loadError = _events is null
+                    ? "Your events could not be loaded. Try again."
+                    : "Your events could not be refreshed. The events already shown are still available.";
+            }
         }
         finally
         {
-            _isLoading = false;
+            if (loadVersion == _loadVersion)
+            {
+                _isLoading = false;
+            }
         }
     }
 

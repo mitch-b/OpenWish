@@ -181,7 +181,7 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
 
-        Assert.Contains("aria-controls=\"decline-invitation-@invitation.Id\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"decline-invitation-@invitation.PublicId\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Confirm declining @(invitation.Event?.Name ?? \"this event\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-expanded=\"true\"", markup, StringComparison.Ordinal);
         Assert.Contains("Keep invitation", markup, StringComparison.Ordinal);
@@ -208,6 +208,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("_events = events;", markup, StringComparison.Ordinal);
         Assert.Contains("The events already shown are still available.", markup, StringComparison.Ordinal);
         Assert.Contains("LoadEventsAsync(announceRefresh: true)", markup, StringComparison.Ordinal);
+        Assert.Contains("var loadVersion = ++_loadVersion;", markup, StringComparison.Ordinal);
+        Assert.Contains("if (loadVersion != _loadVersion)", markup, StringComparison.Ordinal);
+        Assert.Contains("if (loadVersion == _loadVersion)", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -228,7 +231,10 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("if (!success)", markup, StringComparison.Ordinal);
         Assert.Contains("could not be accepted. Try again.", markup, StringComparison.Ordinal);
-        Assert.Contains("_invitations?.RemoveAll(i => i.Id == invitation.Id);", markup, StringComparison.Ordinal);
+        Assert.Contains("AcceptEventInvitationByPublicIdAsync(invitation.PublicId", markup, StringComparison.Ordinal);
+        Assert.Contains("_invitations?.RemoveAll(i => i.PublicId == invitation.PublicId);", markup, StringComparison.Ordinal);
+        Assert.Contains("IsProcessing(invitation.PublicId)", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("IsProcessing(invitation.Id)", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Accepting...</span>", markup, StringComparison.Ordinal);
     }
 
@@ -238,9 +244,10 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
 
         Assert.Contains("could not be declined. Try again.", markup, StringComparison.Ordinal);
-        Assert.Contains("_pendingDeclineId = null;", markup, StringComparison.Ordinal);
+        Assert.Contains("RejectEventInvitationByPublicIdAsync(invitation.PublicId", markup, StringComparison.Ordinal);
+        Assert.Contains("_pendingDeclinePublicId = null;", markup, StringComparison.Ordinal);
         Assert.Contains("_statusMessage = $\"{GetEventName(invitation)} declined.\"", markup, StringComparison.Ordinal);
-        Assert.Contains("Logger.LogError(ex, \"Failed to decline event invitation {InvitationId}.\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Logger.LogError(ex, \"Failed to decline event invitation {InvitationPublicId}.\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

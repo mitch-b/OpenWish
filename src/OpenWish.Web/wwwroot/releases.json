@@ -8,8 +8,8 @@
       "Event loading failures are distinct from an empty list and provide a direct retry.",
       "Event refresh failures preserve previously loaded event cards while reporting that newer data is unavailable.",
       "Pending invitation loading failures remain visible instead of disappearing as an empty list.",
-      "Failed invitation acceptance keeps the invitation available and reports a retryable error.",
-      "Failed invitation decline keeps the invitation and confirmation controls available for another attempt."
+      "Interrupted invitation acceptance safely reconciles on retry while keeping the invitation available until acceptance is confirmed.",
+      "Interrupted invitation decline safely reconciles on retry while keeping the confirmation controls available until decline is confirmed."
     ]
   },
   {

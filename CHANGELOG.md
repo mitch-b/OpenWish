@@ -12,10 +12,10 @@ All notable user-facing changes to OpenWish are documented here.
   explaining that the latest update could not be retrieved.
 - Pending invitation loading failures remain visible instead of disappearing
   as though no invitations exist.
-- Failed invitation acceptance keeps the invitation available and reports what
-  can be tried again.
-- Failed invitation decline keeps the invitation and its confirmation controls
-  available for another attempt.
+- Interrupted invitation acceptance safely reconciles on retry while keeping
+  the invitation available until acceptance is confirmed.
+- Interrupted invitation decline safely reconciles on retry while keeping the
+  confirmation controls available until decline is confirmed.
 
 ## [0.1.24] - 2026-09-21
 

@@ -440,6 +440,22 @@ public class EventController(IEventService eventService, ApiUserContextService u
         return NoContent();
     }
 
+    [HttpPost("invitations/by-public-id/{eventUserPublicId}/accept")]
+    public async Task<IActionResult> AcceptEventInvitationByPublicId(string eventUserPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var result = await _eventService.AcceptEventInvitationByPublicIdAsync(eventUserPublicId, userId);
+        if (!result)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
     [HttpPost("invitations/{eventUserId}/reject")]
     public async Task<IActionResult> RejectEventInvitation(int eventUserId)
     {
@@ -449,6 +465,22 @@ public class EventController(IEventService eventService, ApiUserContextService u
             return Unauthorized();
         }
         var result = await _eventService.RejectEventInvitationAsync(eventUserId, userId);
+        if (!result)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
+    [HttpPost("invitations/by-public-id/{eventUserPublicId}/reject")]
+    public async Task<IActionResult> RejectEventInvitationByPublicId(string eventUserPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        var result = await _eventService.RejectEventInvitationByPublicIdAsync(eventUserPublicId, userId);
         if (!result)
         {
             return NotFound();

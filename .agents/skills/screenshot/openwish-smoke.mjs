@@ -828,6 +828,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  if (await page.getByRole("region", { name: "Your events" }).getAttribute("aria-busy") !== "false") {
+    throw new Error("The populated event list did not finish loading.");
+  }
   await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
   await page.getByRole("link", { name: /Open event.*Holiday Gift Exchange/ })
@@ -1436,6 +1439,13 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const pendingInvitations = page.locator(".pending-invitations-card");
+  if (await pendingInvitations.getAttribute("aria-busy") !== "false") {
+    throw new Error("Pending invitations did not finish loading.");
+  }
+  await pendingInvitations.getByRole("button", { name: "Accept" }).waitFor({ state: "visible" });
+  await pendingInvitations.getByRole("button", { name: "Decline" }).waitFor({ state: "visible" });
+  await screenshot(page, "pending-invitations.png");
   const manageRedirectResponse = await page.goto(
     `${baseUrl}/events/${manifest.eventPublicId}/manage`,
     { waitUntil: "domcontentloaded" }
@@ -1798,6 +1808,9 @@ async function verifyMobileJourney(browser, manifest, results) {
     "Mobile event connection link"
   );
   await screenshot(page, "wishlist-management-mobile.png");
+
+  await visit(page, "/events", "Holiday Gift Exchange", visitedRoutes);
+  await screenshot(page, "events-mobile.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "JordanDemo");

@@ -4,13 +4,21 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject NavigationManager NavigationManager
+@inject ILogger<PendingInvitations> Logger
+
+@if (!string.IsNullOrWhiteSpace(_statusMessage))
+{
+    <p class="visually-hidden" role="status" aria-live="polite">@_statusMessage</p>
+}
 
 @if (ShouldShowCard)
 {
-    <div class="card shadow-sm mb-4 pending-invitations-card">
+    <div class="card shadow-sm mb-4 pending-invitations-card"
+         aria-busy="@(_isLoading ? "true" : "false")"
+         aria-labelledby="pending-invitations-title">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="card-title mb-0">
+                <h5 class="card-title mb-0" id="pending-invitations-title">
                     <OpenWishIcon Name="envelope" Class="me-2" /> Pending invitations
                     @if (_invitations?.Any() == true)
                     {
@@ -21,14 +29,26 @@
 
             @if (_isLoading)
             {
-                <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                        <span class="visually-hidden">Loading invitations...</span>
-                    </div>
+                <div class="text-center py-3" role="status">
+                    <div class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></div>
+                    <div class="mt-2">Loading invitations...</div>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_loadError))
+            {
+                <div class="alert alert-danger mb-0" role="alert">
+                    <p class="mb-2">@_loadError</p>
+                    <button class="btn btn-outline-danger btn-sm" type="button" @onclick="LoadInvitations">
+                        Try again
+                    </button>
                 </div>
             }
             else if (_invitations?.Any() == true)
             {
+                @if (!string.IsNullOrWhiteSpace(_actionError))
+                {
+                    <div class="alert alert-danger" role="alert">@_actionError</div>
+                }
                 <div class="list-group list-group-flush">
                     @foreach (var invitation in _invitations)
                     {
@@ -49,11 +69,13 @@
                                 </div>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-success"
+                                            type="button"
                                             @onclick="() => AcceptInvitation(invitation)"
                                             disabled="@IsProcessing(invitation.Id)">
                                         @if (IsProcessing(invitation.Id) && _processingAction == "accept")
                                         {
                                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                            <span>Accepting...</span>
                                         }
                                         else
                                         {
@@ -65,6 +87,7 @@
                                         <div id="decline-invitation-@invitation.Id" role="group"
                                              aria-label="Confirm declining @(invitation.Event?.Name ?? "this event")">
                                             <button class="btn btn-outline-secondary"
+                                                    type="button"
                                                     aria-expanded="true"
                                                     aria-controls="decline-invitation-@invitation.Id"
                                                     @onclick="CancelDecline"
@@ -72,6 +95,7 @@
                                                 Keep invitation
                                             </button>
                                             <button class="btn btn-danger"
+                                                    type="button"
                                                     @onclick="() => DeclineInvitation(invitation)"
                                                     disabled="@IsProcessing(invitation.Id)">
                                                 @if (IsProcessing(invitation.Id) && _processingAction == "decline")
@@ -89,6 +113,7 @@
                                     else
                                     {
                                         <button class="btn btn-outline-secondary"
+                                                type="button"
                                                 aria-expanded="false"
                                                 aria-controls="decline-invitation-@invitation.Id"
                                                 @onclick="() => ConfirmDecline(invitation.Id)"
@@ -116,35 +141,41 @@
     private int? _processingInvitationId;
     private int? _pendingDeclineId;
     private string? _processingAction;
+    private string? _loadError;
+    private string? _actionError;
+    private string? _statusMessage;
 
-    private bool ShouldShowCard => _isLoading || _invitations?.Any() == true;
+    private bool ShouldShowCard =>
+        _isLoading ||
+        !string.IsNullOrWhiteSpace(_loadError) ||
+        _invitations?.Any() == true;
 
     protected override async Task OnInitializedAsync()
     {
-        _userId = await UserContextService.GetUserIdAsync();
-        if (_userId != null)
-        {
-            await LoadInvitations();
-        }
-        else
-        {
-            _isLoading = false;
-        }
+        await LoadInvitations();
     }
 
     private async Task LoadInvitations()
     {
-        if (_userId == null) return;
-
         _isLoading = true;
+        _loadError = null;
+        _actionError = null;
         try
         {
+            _userId ??= await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(_userId))
+            {
+                _loadError = "Sign in again to load pending invitations.";
+                return;
+            }
+
             var invitations = await EventService.GetPendingInvitationsForUserAsync(_userId);
             _invitations = invitations.ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            _invitations = new List<EventUserModel>();
+            Logger.LogError(ex, "Failed to load pending event invitations.");
+            _loadError = "Pending invitations could not be loaded. Try again.";
         }
         finally
         {
@@ -160,24 +191,34 @@
 
         _processingInvitationId = invitation.Id;
         _processingAction = "accept";
+        _actionError = null;
+        _statusMessage = null;
 
         try
         {
             var success = await EventService.AcceptEventInvitationAsync(invitation.Id, _userId);
-            if (success)
+            if (!success)
             {
-                _invitations?.RemoveAll(i => i.Id == invitation.Id);
-                if (OnInvitationChanged.HasDelegate)
-                {
-                    await OnInvitationChanged.InvokeAsync();
-                }
-
-                // Navigate to the event
-                if (!string.IsNullOrEmpty(invitation.Event?.PublicId))
-                {
-                    NavigationManager.NavigateTo($"/events/{invitation.Event.PublicId}");
-                }
+                _actionError = $"{GetEventName(invitation)} could not be accepted. Try again.";
+                return;
             }
+
+            _invitations?.RemoveAll(i => i.Id == invitation.Id);
+            _statusMessage = $"{GetEventName(invitation)} accepted.";
+            if (OnInvitationChanged.HasDelegate)
+            {
+                await OnInvitationChanged.InvokeAsync();
+            }
+
+            if (!string.IsNullOrEmpty(invitation.Event?.PublicId))
+            {
+                NavigationManager.NavigateTo($"/events/{invitation.Event.PublicId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to accept event invitation {InvitationId}.", invitation.Id);
+            _actionError = $"{GetEventName(invitation)} could not be accepted. Try again.";
         }
         finally
         {
@@ -192,19 +233,30 @@
 
         _processingInvitationId = invitation.Id;
         _processingAction = "decline";
+        _actionError = null;
+        _statusMessage = null;
 
         try
         {
             var success = await EventService.RejectEventInvitationAsync(invitation.Id, _userId);
-            if (success)
+            if (!success)
             {
-                _pendingDeclineId = null;
-                _invitations?.RemoveAll(i => i.Id == invitation.Id);
-                if (OnInvitationChanged.HasDelegate)
-                {
-                    await OnInvitationChanged.InvokeAsync();
-                }
+                _actionError = $"{GetEventName(invitation)} could not be declined. Try again.";
+                return;
             }
+
+            _pendingDeclineId = null;
+            _invitations?.RemoveAll(i => i.Id == invitation.Id);
+            _statusMessage = $"{GetEventName(invitation)} declined.";
+            if (OnInvitationChanged.HasDelegate)
+            {
+                await OnInvitationChanged.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to decline event invitation {InvitationId}.", invitation.Id);
+            _actionError = $"{GetEventName(invitation)} could not be declined. Try again.";
         }
         finally
         {
@@ -216,4 +268,7 @@
     private void ConfirmDecline(int invitationId) => _pendingDeclineId = invitationId;
 
     private void CancelDecline() => _pendingDeclineId = null;
+
+    private static string GetEventName(EventUserModel invitation) =>
+        invitation.Event?.Name ?? "This invitation";
 }

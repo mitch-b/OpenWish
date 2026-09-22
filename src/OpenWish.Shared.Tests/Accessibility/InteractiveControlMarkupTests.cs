@@ -189,6 +189,61 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventList_LoadFailureIsDistinctFromAnEmptyList()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "Index.razor");
+
+        Assert.Contains("_events == null && _isLoading", markup, StringComparison.Ordinal);
+        Assert.Contains("Your events could not be loaded. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventList_RefreshFailurePreservesLoadedEvents()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "Index.razor");
+
+        Assert.Contains("var events = (await EventService.GetUserEventsAsync(_userId)).ToList();", markup, StringComparison.Ordinal);
+        Assert.Contains("_events = events;", markup, StringComparison.Ordinal);
+        Assert.Contains("The events already shown are still available.", markup, StringComparison.Ordinal);
+        Assert.Contains("LoadEventsAsync(announceRefresh: true)", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PendingInvitations_LoadFailureIsVisibleAndRetryable()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
+
+        Assert.Contains("!string.IsNullOrWhiteSpace(_loadError)", markup, StringComparison.Ordinal);
+        Assert.Contains("Pending invitations could not be loaded. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"LoadInvitations\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PendingInvitationAcceptance_RetainsFailedInvitations()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
+
+        Assert.Contains("if (!success)", markup, StringComparison.Ordinal);
+        Assert.Contains("could not be accepted. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("_invitations?.RemoveAll(i => i.Id == invitation.Id);", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>Accepting...</span>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PendingInvitationDecline_RetainsFailedInvitations()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "PendingInvitations.razor");
+
+        Assert.Contains("could not be declined. Try again.", markup, StringComparison.Ordinal);
+        Assert.Contains("_pendingDeclineId = null;", markup, StringComparison.Ordinal);
+        Assert.Contains("_statusMessage = $\"{GetEventName(invitation)} declined.\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Logger.LogError(ex, \"Failed to decline event invitation {InvitationId}.\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EventWishlists_ExposeRecoverableLoadingAndRemovalStates()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");

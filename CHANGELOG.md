@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.25] - 2026-09-22
+
+### Improved
+
+- Event loading failures are distinct from an empty event list and offer a
+  direct retry.
+- Event refresh failures keep previously loaded event cards available while
+  explaining that the latest update could not be retrieved.
+- Pending invitation loading failures remain visible instead of disappearing
+  as though no invitations exist.
+- Failed invitation acceptance keeps the invitation available and reports what
+  can be tried again.
+- Failed invitation decline keeps the invitation and its confirmation controls
+  available for another attempt.
+
 ## [0.1.24] - 2026-09-21
 
 ### Improved

@@ -918,6 +918,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        var cancelHandler = pageMarkup[pageMarkup.IndexOf("private void HandleCancel()", StringComparison.Ordinal)..];
+        Assert.Contains("if (_isSubmitting)", cancelHandler, StringComparison.Ordinal);
+        Assert.True(
+            cancelHandler.IndexOf("if (_isSubmitting)", StringComparison.Ordinal) <
+            cancelHandler.IndexOf("NavigationManager.NavigateTo", StringComparison.Ordinal));
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
@@ -1296,6 +1302,64 @@ public class InteractiveControlMarkupTests
         Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
         Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
         Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseNotes_LoadFailuresOfferADuplicateSafeRetry()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "WhatsNew.razor");
+
+        Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"LoadReleaseNotesAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@(_isLoading ? \"Trying again...\" : \"Try again\")", markup, StringComparison.Ordinal);
+        Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("_releases = (await", StringComparison.Ordinal) <
+            markup.IndexOf("_loadError = null;", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ThemeToggle_NamesTheThemeThatWillBeApplied()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "ThemeToggle.razor");
+
+        Assert.Contains("aria-label=\"@ToggleLabel\"", markup, StringComparison.Ordinal);
+        Assert.Contains("\"Use light theme\" : \"Use dark theme\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Toggle dark or light theme", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventCreation_NamesBothSupportedPlanningWorkflows()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "NewEvent.razor");
+
+        Assert.Contains("<PageTitle>Create an event</PageTitle>", markup, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Create an event\"", markup, StringComparison.Ordinal);
+        Assert.Contains("gift exchange or coordinate wishlists for a celebration", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" type=\"button\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StandaloneItemCreation_ProvidesContextAndSafeNavigation()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
+
+        Assert.Contains("<PageTitle>Add an item</PageTitle>", markup, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Add an item\"", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"/wishlists/@WishlistId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnCancel=\"@HandleCancel\"", markup, StringComparison.Ordinal);
+        Assert.Contains("NavigationManager.NavigateTo($\"/wishlists/{WishlistId}\")", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistCreation_UsesTheStandardPageContext()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "NewWishlist.razor");
+
+        Assert.Contains("<PageTitle>Create a wishlist</PageTitle>", markup, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Create a wishlist\"", markup, StringComparison.Ordinal);
+        Assert.Contains("choose who can see your gift ideas", markup, StringComparison.Ordinal);
+        Assert.Contains("Back to wishlists", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

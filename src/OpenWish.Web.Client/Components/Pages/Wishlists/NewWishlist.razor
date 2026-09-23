@@ -10,17 +10,19 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>Create a Wishlist</PageTitle>
+<PageTitle>Create a wishlist</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Create a Wishlist</h3>
-    <a href="/wishlists" class="btn btn-outline-secondary">
-        <OpenWishIcon Name="arrow-left" /> Back to Wishlists
-    </a>
-</div>
-
-<div class="card">
-    <div class="card-body">
+<div class="container page-shell">
+    <PageHeader Title="Create a wishlist"
+                Description="Start with a name and choose who can see your gift ideas.">
+        <Actions>
+            <a href="/wishlists" class="btn btn-outline-secondary">
+                <OpenWishIcon Name="arrow-left" /> Back to wishlists
+            </a>
+        </Actions>
+    </PageHeader>
+    <div class="row">
+        <div class="col-lg-8">
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -30,6 +32,7 @@
                       OnCancel="@HandleCancel"
                       AutoFocusName="true"
                       IsSubmitting="@_isSubmitting" />
+        </div>
     </div>
 </div>
 

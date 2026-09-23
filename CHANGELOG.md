@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.26] - 2026-09-23
+
+### Improved
+
+- Release notes now offer a duplicate-safe retry that keeps the failure and
+  retry progress visible until refreshed updates arrive.
+- The theme control names the theme it will apply and updates that name when
+  the current theme changes.
+- Event creation now clearly supports both gift exchanges and celebrations.
+- Standalone wishlist-item creation now provides page context, a return route,
+  and a safe cancel action that cannot interrupt an in-progress save.
+- Wishlist creation now uses the standard page header with concise sharing
+  guidance and a consistent return route.
+
 ## [0.1.25] - 2026-09-22
 
 ### Improved

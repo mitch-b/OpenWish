@@ -749,7 +749,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
     );
   }
 
-  await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
+  await visit(page, "/wishlists/new", "Create a wishlist", visitedRoutes);
+  await assertVisible(page, "Start with a name and choose who can see your gift ideas.");
+  await page.getByRole("link", { name: "Back to wishlists" }).waitFor({ state: "visible" });
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The wishlist title field did not retain focus after interactivity started.");
@@ -806,7 +808,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
     manifest,
     "wishlist-management.png"
   );
-  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add an item", visitedRoutes);
+  await assertVisible(page, "Save the details you know now. You can refine this gift idea later.");
+  await page.getByRole("link", { name: "Back to wishlist" }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.waitForURL(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add an item", visitedRoutes);
   await page.waitForTimeout(2000);
   const productUrl = page.getByLabel("Product URL");
   if (await page.evaluate(() => document.activeElement?.id) !== "product-url-import") {
@@ -818,6 +825,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await page.getByRole("button", { name: "Import" }).isDisabled())) {
     throw new Error("The item form allows an empty product URL import.");
   }
+  await screenshot(page, "add-wishlist-item.png");
   await productUrl.fill("https://example.com/gift");
   await page.getByRole("button", { name: "Import" }).click({ trial: true });
   await page.getByLabel("Name").fill("Travel Mug");
@@ -848,7 +856,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "attached" });
   await screenshot(page, "event-details.png");
 
-  await visit(page, "/events/new", "Create a gift exchange", visitedRoutes);
+  await visit(page, "/events/new", "Create an event", visitedRoutes);
+  await assertVisible(page, "Plan a private gift exchange or coordinate wishlists for a celebration.");
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The event name field did not retain focus after interactivity started.");
@@ -869,6 +878,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.waitForFunction(() =>
     document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Summer cabin gift swap"
   );
+  await screenshot(page, "create-event.png");
   await page.locator("#name").fill("Neighborhood Gift Exchange");
   await page.getByRole("button", { name: "Create and invite people" }).click();
   await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
@@ -1062,11 +1072,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("Closing notifications left background content inert.");
   }
 
-  await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {
+  await page.getByRole("checkbox", { name: "Use dark theme" }).evaluate(element => {
     element.checked = true;
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await page.waitForFunction(() => localStorage.getItem("theme") === "dark");
+  await page.getByRole("checkbox", { name: "Use light theme" }).waitFor({ state: "attached" });
   const selectedTheme = await page.evaluate(() => localStorage.getItem("theme"));
   if (selectedTheme !== "dark") {
     throw new Error(`Theme toggle stored '${selectedTheme}' instead of 'dark'.`);
@@ -1099,7 +1110,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "More flexible gift exchanges");
+  await assertVisible(page, "Clearer creation and release controls");
+  await screenshot(page, "whats-new.png");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -1246,8 +1258,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "friend invitation validation",
       "accessible loading updates",
       "wishlist management labels and contrast",
-      "theme persistence",
-      "release history",
+      "contextual wishlist and item creation navigation",
+      "inclusive event creation context",
+      "state-aware theme persistence",
+      "current release history",
       "account settings requirements and deletion safety",
       "two-factor status, setup, recovery, reset, and disable safety"
     ]

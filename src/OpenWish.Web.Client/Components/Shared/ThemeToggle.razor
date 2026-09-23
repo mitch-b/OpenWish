@@ -1,8 +1,8 @@
 @implements IAsyncDisposable
 @rendermode InteractiveAuto
 
-<div class="theme-toggle-switch" title="Toggle dark/light theme">
-    <input id="themeToggleSwitch" type="checkbox" class="theme-toggle-input" @onchange="ToggleAsync" aria-label="Toggle dark or light theme" @attributes="GetCheckedAttr()" />
+<div class="theme-toggle-switch" title="@ToggleLabel">
+    <input id="themeToggleSwitch" type="checkbox" class="theme-toggle-input" @onchange="ToggleAsync" aria-label="@ToggleLabel" @attributes="GetCheckedAttr()" />
     <label for="themeToggleSwitch" class="theme-toggle-track">
         <OpenWishIcon Name="sun" Class="toggle-icon sun" />
         <OpenWishIcon Name="moon-stars" Class="toggle-icon moon" />
@@ -14,6 +14,7 @@
     private string _currentTheme = "light";
     private DotNetObjectReference<ThemeToggle>? _dotNetRef;
     private bool _registered;
+    private string ToggleLabel => _currentTheme == "dark" ? "Use light theme" : "Use dark theme";
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 

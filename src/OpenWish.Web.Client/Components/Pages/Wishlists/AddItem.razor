@@ -9,20 +9,29 @@
 
 @rendermode InteractiveAuto
 
-<h3>Add Item to Wishlist</h3>
+<PageTitle>Add an item</PageTitle>
 
-<div class="row">
-    <div class="col-md-6">
+<div class="container page-shell">
+    <PageHeader Title="Add an item"
+                Description="Save the details you know now. You can refine this gift idea later.">
+        <Actions>
+            <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
+                <OpenWishIcon Name="arrow-left" /> Back to wishlist
+            </a>
+        </Actions>
+    </PageHeader>
+    <div class="row">
+        <div class="col-lg-8">
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger" role="alert">@_errorMessage</div>
         }
-        @* <FormMappingScope Name="new-wishlist-item"> *@
-            <WishlistItemForm Model="@_item"
-                              OnSubmit="@HandleSubmit"
-                              AutoFocusImport="true"
-                              IsSubmitting="@_isSubmitting" />
-        @* </FormMappingScope> *@
+        <WishlistItemForm Model="@_item"
+                          OnSubmit="@HandleSubmit"
+                          OnCancel="@HandleCancel"
+                          AutoFocusImport="true"
+                          IsSubmitting="@_isSubmitting" />
+        </div>
     </div>
 </div>
 
@@ -59,5 +68,10 @@
         {
             _isSubmitting = false;
         }
+    }
+
+    private void HandleCancel()
+    {
+        NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
     }
 }

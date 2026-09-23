@@ -110,7 +110,7 @@
         </button>
         @if (OnCancel.HasDelegate)
         {
-            <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
+            <button type="button" class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="HandleCancel">Cancel</button>
         }
     </div>
 </EditForm>

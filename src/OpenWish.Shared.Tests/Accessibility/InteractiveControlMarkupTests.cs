@@ -918,6 +918,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        var cancelHandler = pageMarkup[pageMarkup.IndexOf("private void HandleCancel()", StringComparison.Ordinal)..];
+        Assert.Contains("if (_isSubmitting)", cancelHandler, StringComparison.Ordinal);
+        Assert.True(
+            cancelHandler.IndexOf("if (_isSubmitting)", StringComparison.Ordinal) <
+            cancelHandler.IndexOf("NavigationManager.NavigateTo", StringComparison.Ordinal));
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
@@ -1307,7 +1313,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"LoadReleaseNotesAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("@(_isLoading ? \"Trying again...\" : \"Try again\")", markup, StringComparison.Ordinal);
         Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);
-        Assert.Contains("_loadError = null;", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.IndexOf("_releases = (await", StringComparison.Ordinal) <
+            markup.IndexOf("_loadError = null;", StringComparison.Ordinal));
     }
 
     [Fact]

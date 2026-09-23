@@ -72,6 +72,11 @@
 
     private void HandleCancel()
     {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
         NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
     }
 }

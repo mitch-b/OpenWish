@@ -212,13 +212,13 @@
         }
 
         _isLoading = true;
-        _loadError = null;
 
         try
         {
             _releases = (await ReleaseNotesService.GetReleaseNotesAsync())
                 .OrderByDescending(release => TryGetReleaseDate(release.Date) ?? DateOnly.MinValue)
                 .ToList();
+            _loadError = null;
         }
         catch (Exception ex)
         {

@@ -248,7 +248,7 @@ async function assertMinimumTouchTarget(locator, description) {
 }
 
 async function assertTextContrast(locator, description) {
-  const contrast = await locator.evaluate(element => {
+  const calculateContrast = element => {
     const parseColor = value => {
       const channels = value.match(/[\d.]+/g)?.map(Number) ?? [];
       return {
@@ -280,7 +280,13 @@ async function assertTextContrast(locator, description) {
     const backgroundLuminance = luminance(background);
     return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
       (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
-  });
+  };
+
+  let contrast = await locator.evaluate(calculateContrast);
+  for (let attempt = 0; contrast < 4.5 && attempt < 10; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    contrast = await locator.evaluate(calculateContrast);
+  }
 
   if (contrast < 4.5) {
     throw new Error(`${description} contrast was ${contrast.toFixed(2)}:1; expected at least 4.5:1.`);

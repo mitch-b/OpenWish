@@ -990,10 +990,39 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
 
         Assert.Contains("aria-busy=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"gift-match-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Loading your match...", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load your gift exchange match. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadGiftExchange\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Your assignment isn't available yet.", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GiftExchangeDisplay_ShowsTheNextStepAndDistinguishesMissingIdeas()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor.css");
+        var page = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("You're shopping for", markup, StringComparison.Ordinal);
+        Assert.Contains("<dt>Suggested budget</dt>", markup, StringComparison.Ordinal);
+        Assert.Contains("<dt>Exchange date</dt>", markup, StringComparison.Ordinal);
+        Assert.Contains("?? \"Not set\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Checking shared gift ideas...", markup, StringComparison.Ordinal);
+        Assert.Contains("!WishlistsLoaded", markup, StringComparison.Ordinal);
+        Assert.Contains("_recipientWishlist != null && RecipientItemCount > 0", markup, StringComparison.Ordinal);
+        Assert.Contains("View @RecipientDisplayName's wishlist", markup, StringComparison.Ordinal);
+        Assert.Contains("hasn't added gift ideas to their wishlist yet.", markup, StringComparison.Ordinal);
+        Assert.Contains("hasn't shared a wishlist for this exchange yet.", markup, StringComparison.Ordinal);
+        Assert.Contains("OrderByDescending(GetItemCount)", markup, StringComparison.Ordinal);
+        Assert.Contains("Your match stays private.", markup, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 44px;", styles, StringComparison.Ordinal);
+        Assert.Contains("ExchangeDate=\"@_event.Date\"", page, StringComparison.Ordinal);
+        Assert.Contains("WishlistsLoaded=\"@_wishlistsLoaded\"", page, StringComparison.Ordinal);
+        Assert.Contains("event-header-match", page, StringComparison.Ordinal);
     }
 
     [Fact]

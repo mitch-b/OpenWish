@@ -40,7 +40,7 @@ else if (_event == null)
 }
 else
 {
-    <div class="event-header">
+    <div class="@(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "event-header event-header-match" : "event-header")">
         <div class="container">
             <div class="event-header-content">
                 <div class="event-header-copy">
@@ -58,8 +58,8 @@ else
                 </div>
                 @if (_isOwner)
                 {
-                    <a href="/events/@EventId/manage" class="btn btn-light event-manage-action">
-                        <OpenWishIcon Name="gear" Class="me-2" /> Manage Event
+                    <a href="/events/@EventId/manage" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-light") event-manage-action">
+                        <OpenWishIcon Name="gear" Class="me-2" /> Manage event
                     </a>
                 }
             </div>
@@ -118,6 +118,8 @@ else
                 {
                     <GiftExchangeDisplay EventId="@EventId"
                                          CurrentUserId="@_currentUserId"
+                                         ExchangeDate="@_event.Date"
+                                         WishlistsLoaded="@_wishlistsLoaded"
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
@@ -284,6 +286,7 @@ else
     private bool _isOwner;
     private bool _isAcceptedParticipant;
     private bool _isPendingInvitee;
+    private bool _wishlistsLoaded;
     private EventUserModel? _pendingInvitation;
     private string? _loadedEventId;
     private string? _loadError;
@@ -310,6 +313,7 @@ else
 
         _loadedEventId = EventId;
         _event = null;
+        _wishlistsLoaded = false;
         _loadError = null;
         _isLoading = true;
         await LoadEvent();
@@ -478,6 +482,7 @@ else
         if (_event != null)
         {
             _event.EventWishlists = wishlists.ToList();
+            _wishlistsLoaded = true;
         }
 
         return Task.CompletedTask;

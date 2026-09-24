@@ -1,7 +1,6 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId}"
 
-@using Microsoft.AspNetCore.Components.Web
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Wishlist
 
@@ -34,23 +33,39 @@ else
                 }
                 <h1>@_wishlist.Name</h1>
             </div>
-            @if (_wishlist.IsCollaborative)
-            {
-                <span class="badge badge-collaborative">
-                    <OpenWishIcon Name="people-fill" /> Collaborative
-                </span>
-            }
+            <div class="hero-context">
+                @if (_wishlist.IsCollaborative)
+                {
+                    <span class="badge badge-collaborative">
+                        <OpenWishIcon Name="people-fill" /> Collaborative
+                    </span>
+                }
+                @if (_wishlist.IsPrivate)
+                {
+                    <span class="badge badge-private"><OpenWishIcon Name="lock" /> Only you can see this list</span>
+                }
+            </div>
         </div>
         <div class="hero-actions">
-            <button class="btn btn-secondary" @onclick="ShareWishlist">
+            @if (_canEdit)
+            {
+                <button id="add-wishlist-item"
+                        class="fab"
+                        type="button"
+                        @onclick="ShowAddItemModal">
+                    <OpenWishIcon Name="plus-lg" />
+                    <span class="fab-label">Add item</span>
+                </button>
+            }
+            <button class="btn btn-outline-secondary" type="button" @onclick="ShareWishlist">
                 <OpenWishIcon Name="share" />
-                <span class="btn-text">Share</span>
+                <span class="btn-text">Copy link</span>
             </button>
             @if (_isOwner)
             {
-                <a href="/wishlists/@WishlistId/manage" class="btn btn-secondary">
+                <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary">
                     <OpenWishIcon Name="gear" />
-                    <span class="btn-text">Manage</span>
+                    <span class="btn-text">Manage list</span>
                 </a>
             }
         </div>
@@ -96,18 +111,16 @@ else
                 </div>
             </div>
         }
-           <div class="stat-card"
-             role="button"
-             tabindex="0"
-               title="Show items with comments"
-             @onclick="FocusCommentsAsync"
-             @onkeydown="HandleCommentsStatKeyDown">
+        <button class="stat-card stat-action"
+                type="button"
+                aria-label="Show items with comments"
+                @onclick="FocusCommentsAsync">
             <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
             <div class="stat-content">
                 <div class="stat-value">@GetCommentCount()</div>
                 <div class="stat-label">Comments</div>
             </div>
-        </div>
+        </button>
     </div>
 
     <div class="search-filter-bar">
@@ -177,19 +190,19 @@ else
                             class="filter-chip @(PriorityFilters.Contains("1") ? "active" : "")"
                             aria-pressed="@(PriorityFilters.Contains("1") ? "true" : "false")"
                             @onclick='() => ToggleFilter(PriorityFilters, "1")'>
-                        <span class="priority-dot high"></span> High
+                        <span class="priority-dot high" aria-hidden="true"></span> High
                     </button>
                     <button type="button"
                             class="filter-chip @(PriorityFilters.Contains("2") ? "active" : "")"
                             aria-pressed="@(PriorityFilters.Contains("2") ? "true" : "false")"
                             @onclick='() => ToggleFilter(PriorityFilters, "2")'>
-                        <span class="priority-dot medium"></span> Medium
+                        <span class="priority-dot medium" aria-hidden="true"></span> Medium
                     </button>
                     <button type="button"
                             class="filter-chip @(PriorityFilters.Contains("3") ? "active" : "")"
                             aria-pressed="@(PriorityFilters.Contains("3") ? "true" : "false")"
                             @onclick='() => ToggleFilter(PriorityFilters, "3")'>
-                        <span class="priority-dot low"></span> Low
+                        <span class="priority-dot low" aria-hidden="true"></span> Low
                     </button>
                 </div>
             </div>
@@ -216,7 +229,7 @@ else
                             class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")"
                             aria-pressed="@(StatusFilters.Contains("commented") ? "true" : "false")"
                             @onclick='() => ToggleFilter(StatusFilters, "commented")'>
-                        <OpenWishIcon Name="chat" /> Has Comments
+                        <OpenWishIcon Name="chat" /> Has comments
                     </button>
                 </div>
             </div>
@@ -228,20 +241,20 @@ else
                            class="form-range"
                            aria-label="Minimum price"
                            min="0"
-                           max="@GetMaxPrice()"
+                           max="@PriceCeiling"
                            step="10"
                            @bind="MinPrice"
                            @bind:event="oninput"
-                           @onchange="ApplyFiltersAndSort" />
+                           @bind:after="ApplyMinimumPrice" />
                     <input type="range"
                            class="form-range"
                            aria-label="Maximum price"
                            min="0"
-                           max="@GetMaxPrice()"
+                           max="@PriceCeiling"
                            step="10"
                            @bind="MaxPrice"
                            @bind:event="oninput"
-                           @onchange="ApplyFiltersAndSort" />
+                           @bind:after="ApplyMaximumPrice" />
                 </div>
             </div>
 
@@ -298,18 +311,6 @@ else
         </div>
     }
 
-    @if (_canEdit)
-    {
-        <button id="add-wishlist-item"
-                class="fab"
-                type="button"
-                aria-label="Add item"
-                @onclick="ShowAddItemModal">
-            <OpenWishIcon Name="plus-lg" />
-            <span class="fab-label">Add item</span>
-        </button>
-    }
-
     <div id="wishlist-items" class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
@@ -319,20 +320,25 @@ else
                     @if (_items.Count == 0)
                     {
                         <div class="empty-icon"><OpenWishIcon Name="gift" /></div>
-                        <h3>Your wishlist is empty</h3>
-                        <p>Start adding items you'd love to receive!</p>
                         @if (_canEdit)
                         {
+                            <h2>No ideas in this wishlist yet</h2>
+                            <p>Add a name now; you can fill in the details later.</p>
                             <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
-                                <OpenWishIcon Name="plus-lg" /> Add Your First Item
+                                <OpenWishIcon Name="plus-lg" /> Add item
                             </button>
+                        }
+                        else
+                        {
+                            <h2>No ideas shared yet</h2>
+                            <p>Check back when the owner adds something to this list.</p>
                         }
                     }
                     else
                     {
                         <div class="empty-icon"><OpenWishIcon Name="search" /></div>
-                        <h3>No items match your filters</h3>
-                        <p>Try adjusting your search or filter criteria</p>
+                        <h2>No matching ideas</h2>
+                        <p>Try a different search or clear your filters.</p>
                         <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
                             <OpenWishIcon Name="x-circle" /> Clear filters
                         </button>
@@ -376,7 +382,7 @@ else
                                     @if (item.Priority.HasValue)
                                     {
                                         <span class="priority-indicator priority-@item.Priority.Value">
-                                            @GetPriorityIcon(item.Priority.Value)
+                                            @GetPriorityText(item.Priority.Value)
                                         </span>
                                     }
                                 </div>
@@ -413,13 +419,21 @@ else
                                            rel="noopener noreferrer"
                                            class="interaction-badge"
                                            aria-label="View @item.Name product (opens in a new tab)">
-                                            <OpenWishIcon Name="link-45deg" />
+                                           <OpenWishIcon Name="box-arrow-up-right" /> View product
                                         </a>
                                     }
                                 </div>
                             </div>
 
-                            <div class="item-actions">
+                            <div class="item-actions @(!_isOwner ? "has-coordination" : "")">
+                                @if (!_isOwner)
+                                {
+                                    <button class="btn-icon coordination-action"
+                                            type="button"
+                                            @onclick="() => OpenItemCoordination(item.Id)">
+                                        <OpenWishIcon Name="gift" /> Coordinate gift
+                                    </button>
+                                }
                                 @if (_canEdit)
                                 {
                                     <button class="btn-icon"
@@ -555,9 +569,10 @@ else
     private HashSet<string> StatusFilters = new();
     private decimal MinPrice { get; set; } = 0;
     private decimal MaxPrice { get; set; } = 10000;
+    private decimal PriceCeiling => Math.Max(10000, GetMaxPrice());
     private int? _expandedItemId = null;
     private WishlistItemList? _itemListRef;
-    private int? _pendingCommentFocusItemId;
+    private int? _pendingInteractionItemId;
     private string _feedbackMessage = string.Empty;
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
@@ -597,6 +612,7 @@ else
         _items = items
             .Where(ShouldDisplayItem)
             .ToList();
+        MaxPrice = PriceCeiling;
         ApplyFiltersAndSort();
     }
 
@@ -621,22 +637,18 @@ else
         }
 
         // Apply status filters
-        if (StatusFilters.Any())
+        if (StatusFilters.Contains("reserved") != StatusFilters.Contains("unreserved"))
         {
-            foreach (var status in StatusFilters)
-            {
-                filtered = status switch
-                {
-                    "reserved" => filtered.Where(i => i.Reservations.Any()),
-                    "unreserved" => filtered.Where(i => !i.Reservations.Any()),
-                    "commented" => filtered.Where(i => i.Comments.Any()),
-                    _ => filtered
-                };
-            }
+            var showReserved = StatusFilters.Contains("reserved");
+            filtered = filtered.Where(i => i.Reservations.Any() == showReserved);
+        }
+        if (StatusFilters.Contains("commented"))
+        {
+            filtered = filtered.Where(i => i.Comments.Any());
         }
 
         // Apply price range filter
-        if (MinPrice > 0 || MaxPrice < 10000)
+        if (MinPrice > 0 || MaxPrice < PriceCeiling)
         {
             filtered = filtered.Where(i => i.Price.HasValue && i.Price >= MinPrice && i.Price <= MaxPrice);
         }
@@ -700,13 +712,24 @@ else
         ApplyFiltersAndSort();
     }
 
+    private void ApplyMinimumPrice()
+    {
+        MaxPrice = Math.Max(MinPrice, MaxPrice);
+        ApplyFiltersAndSort();
+    }
+
+    private void ApplyMaximumPrice()
+    {
+        MinPrice = Math.Min(MinPrice, MaxPrice);
+        ApplyFiltersAndSort();
+    }
+
     private int GetActiveFilterCount()
     {
         int count = 0;
         count += PriorityFilters.Count;
         count += StatusFilters.Count;
-        if (MinPrice > 0 || MaxPrice < 10000) count++;
-        if (!string.IsNullOrWhiteSpace(SearchQuery)) count++;
+        if (MinPrice > 0 || MaxPrice < PriceCeiling) count++;
         return count;
     }
 
@@ -716,7 +739,7 @@ else
         PriorityFilters.Clear();
         StatusFilters.Clear();
         MinPrice = 0;
-        MaxPrice = 10000;
+        MaxPrice = PriceCeiling;
         ApplyFiltersAndSort();
     }
 
@@ -729,9 +752,9 @@ else
 
     private string GetPriceRangeLabel()
     {
-        if (MinPrice == 0 && MaxPrice >= GetMaxPrice())
+        if (MinPrice == 0 && MaxPrice >= PriceCeiling)
         {
-            return "All Prices";
+            return "All prices";
         }
         return $"{MinPrice:C} - {MaxPrice:C}";
     }
@@ -945,7 +968,7 @@ else
             StatusFilters.Clear();
             StatusFilters.Add("commented");
             MinPrice = 0;
-            MaxPrice = GetMaxPrice();
+            MaxPrice = PriceCeiling;
             ApplyFiltersAndSort();
         }
 
@@ -960,7 +983,7 @@ else
 
         ViewMode = "list";
         _showFilters = false;
-        _pendingCommentFocusItemId = targetItem.Id;
+        _pendingInteractionItemId = targetItem.Id;
 
         await InvokeAsync(StateHasChanged);
     }
@@ -972,39 +995,29 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task HandleCommentsStatKeyDown(KeyboardEventArgs args)
+    private void OpenItemCoordination(int itemId)
     {
-        if (args.Key == "Enter" || args.Key == " " || args.Key == "Space")
-        {
-            await FocusCommentsAsync();
-        }
+        ViewMode = "list";
+        _pendingInteractionItemId = itemId;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
 
-        if (_pendingCommentFocusItemId.HasValue && ViewMode == "list" && _itemListRef is not null)
+        if (_pendingInteractionItemId.HasValue && ViewMode == "list" && _itemListRef is not null)
         {
-            var targetId = _pendingCommentFocusItemId.Value;
-            _pendingCommentFocusItemId = null;
+            var targetId = _pendingInteractionItemId.Value;
+            _pendingInteractionItemId = null;
             await _itemListRef.ExpandItemAsync(targetId);
         }
     }
 
-    private string GetPriorityIcon(int priority) => priority switch
-    {
-        1 => "⭐⭐⭐",
-        2 => "⭐⭐",
-        3 => "⭐",
-        _ => ""
-    };
-
     private string GetPriorityText(int priority) => priority switch
     {
-        1 => "High Priority",
-        2 => "Medium Priority",
-        3 => "Low Priority",
-        _ => "No Priority"
+        1 => "High priority",
+        2 => "Medium priority",
+        3 => "Low priority",
+        _ => "No priority"
     };
 }

@@ -517,7 +517,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await screenshot(page, "home-dashboard.png");
 
-  await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
+  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Private Ideas");
   if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
@@ -534,6 +534,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("status").filter({ hasText: "1 wishlist found." }).waitFor({ state: "attached" });
   const clearWishlistSearch = page.getByRole("button", { name: "Clear wishlist search" });
   await clearWishlistSearch.click();
+  await assertVisible(page, "Family Gift Ideas");
+  await wishlistSearch.fill("No such wishlist");
+  await page.getByRole("heading", { name: "No matching wishlists" }).waitFor({ state: "visible" });
+  await screenshot(page, "wishlist-no-matches.png");
+  await page.getByRole("button", { name: "Clear search and filters" }).click();
   await assertVisible(page, "Family Gift Ideas");
   const familyWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await familyWishlistLink.waitFor({ state: "visible" });
@@ -603,7 +608,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await gridView.click();
   await page.getByRole("button", { name: "Grid view", pressed: true })
     .waitFor({ state: "visible" });
+  await filtersButton.click();
+  await page.getByRole("button", { name: "Filters", expanded: false })
+    .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
+  await page.setViewportSize({ width: 900, height: 1000 });
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error("Tablet wishlist has horizontal overflow.");
+  }
+  await screenshot(page, "wishlist-tablet.png");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const addItemButton = page.getByRole("button", { name: "Add item" }).first();
   await addItemButton.click();
   const itemDialog = page.getByRole("dialog", { name: "Add item" });
@@ -631,7 +645,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await itemDialog.getByLabel("Name").fill("Handmade Tea Infuser");
   await itemDialog.getByLabel("Description").fill("Fine mesh infuser with a resting tray");
-  await itemDialog.getByLabel("Price").fill("24.50");
+  await itemDialog.getByLabel("Estimated price").fill("24.50");
   await itemDialog.getByLabel("Product Link").fill("https://example.com/gift");
   await screenshot(page, "wishlist-item-dialog.png", false);
   await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
@@ -832,6 +846,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The item form allows an empty product URL import.");
   }
   await screenshot(page, "add-wishlist-item.png");
+  await productUrl.fill("not-a-web-address");
+  await page.getByRole("button", { name: "Import" }).click();
+  await page.getByRole("alert")
+    .filter({ hasText: "Enter a complete product link that starts with http:// or https://." })
+    .waitFor({ state: "visible" });
+  if (await productUrl.inputValue() !== "not-a-web-address") {
+    throw new Error("The item form discarded an invalid product link before it could be corrected.");
+  }
   await productUrl.fill("https://example.com/gift");
   await page.getByRole("button", { name: "Import" }).click({ trial: true });
   await page.getByLabel("Name").fill("Travel Mug");
@@ -1098,7 +1120,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Assignments are ready");
   await screenshot(page, "event-details-dark.png");
 
-  await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
+  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
@@ -1261,10 +1283,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "friends and pending requests",
       "accessible notification updates and deletion",
       "immediate wishlist discovery",
+      "filtered wishlist recovery, collapsed item filters, and tablet layout",
       "friend invitation validation",
       "accessible loading updates",
       "wishlist management labels and contrast",
       "contextual wishlist and item creation navigation",
+      "standalone product-link validation and retry",
       "inclusive event creation context",
       "state-aware theme persistence",
       "current release history",
@@ -1522,6 +1546,27 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const guestVisibleCount = Number(await page.locator(".stats-dashboard .stat-value").first().textContent());
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Reserved", exact: true }).click();
+  await page.getByRole("button", { name: "Available", exact: true }).click();
+  await page.getByRole("status").filter({
+    hasText: `${guestVisibleCount} of ${guestVisibleCount} wishlist items shown.`
+  })
+    .waitFor({ state: "attached" });
+  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Grid view" }).click();
+  const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
+  await screenshot(page, "wishlist-shopper-grid.png");
+  await guestGridCard.getByRole("button", { name: "Coordinate gift" }).click();
+  await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
+  await page.getByRole("region", {
+    name: "Gift coordination for Cast-Iron Dutch Oven"
+  }).waitFor({ state: "visible" });
+  await page.getByRole("button", {
+    name: "Hide gift options for Cast-Iron Dutch Oven"
+  }).click();
   const privateCollaboratorItemName = `Private collaborator item ${Date.now()}`;
   await page.getByRole("button", { name: "Add item" }).first().click();
   const privateItemDialog = page.getByRole("dialog", { name: "Add item" });
@@ -1534,7 +1579,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByText(privateCollaboratorItemName, { exact: true }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: `Edit ${privateCollaboratorItemName}` }).click();
   const privateItemEditDialog = page.getByRole("dialog", { name: "Edit item" });
-  await privateItemEditDialog.getByLabel("Make this item private (only you can see it)").check();
+  await privateItemEditDialog.getByLabel("Keep this idea private").check();
   await privateItemEditDialog.getByRole("button", { name: "Save changes" }).click();
   await privateItemEditDialog.waitFor({ state: "detached" });
   await page.getByRole("alert")
@@ -1570,14 +1615,14 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   await ownerVerificationContext.close();
   const dutchOvenRow = page.locator("tr").filter({ hasText: "Cast-Iron Dutch Oven" });
-  await dutchOvenRow.getByRole("button", { name: "Show" }).click();
+  await dutchOvenRow.getByRole("button", { name: "Show gift options for Cast-Iron Dutch Oven" }).click();
   const giftCoordination = page.getByRole("region", {
     name: "Gift coordination for Cast-Iron Dutch Oven"
   });
   const dutchOvenComposer = giftCoordination.getByLabel("Add a comment");
   const dutchOvenComposerId = await dutchOvenComposer.getAttribute("id");
   const parkPassRow = page.locator("tr").filter({ hasText: "National Park Pass" });
-  await parkPassRow.getByRole("button", { name: "Show" }).click();
+  await parkPassRow.getByRole("button", { name: "Show gift options for National Park Pass" }).click();
   const parkPassCoordination = page.getByRole("region", {
     name: "Gift coordination for National Park Pass"
   });
@@ -1681,6 +1726,8 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     visitedRoutes,
     assertions: [
       "invitation acceptance retries reconcile an already committed decision",
+      "combined availability filters retain all items",
+      "grid gift coordination opens the matching list row",
       "items made private by collaborators disappear immediately for their creator",
       "private collaborator items remain visible to the wishlist owner",
       "private item persistence and viewer-filtered lookup endpoints return success"

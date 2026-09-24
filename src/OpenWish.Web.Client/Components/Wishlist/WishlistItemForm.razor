@@ -1,13 +1,12 @@
 @using OpenWish.Web.Client.CustomEvents
 
 @inject IProductService ProductService
-@inject IJSRuntime JSRuntime
+@inject ILogger<WishlistItemForm> Logger
 
 <FocusOnFirstRender ElementId="product-url-import" Enabled="@AutoFocusImport" />
-<div class="url-import-section mb-4">
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">Import from URL</h5>
+<div class="url-import-section mb-4" aria-busy="@isLoading">
+    <h2 class="h5">Have a product link?</h2>
+    <p class="text-muted mb-3">Optional shortcut: we'll fill in details we can find. You can also enter an idea below.</p>
             <label for="product-url-import" class="form-label">Product URL</label>
             <div class="input-group">
                 <input id="product-url-import"
@@ -17,14 +16,15 @@
                        autocomplete="url"
                        aria-describedby="product-url-import-help"
                        autofocus="@AutoFocusImport"
-                       placeholder="Paste a product URL"
+                       placeholder="https://example.com/gift"
                        value="@ImportUrl"
                        @oninput="UpdateImportUrl"
-                       @onopenwishpaste="HandleUrlPaste" />
-                <button class="btn btn-primary"
+                       @onopenwishpaste="HandleUrlPaste"
+                       disabled="@(isLoading || IsSubmitting)" />
+                <button class="btn btn-outline-secondary"
                         type="button"
                         @onclick="ImportFromUrl"
-                        disabled="@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))">
+                        disabled="@(isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))">
                     @if (isLoading)
                     {
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -36,12 +36,14 @@
                     }
                 </button>
             </div>
-            <small id="product-url-import-help" class="text-muted">Paste a product URL to fill in any details OpenWish can find.</small>
-        </div>
-    </div>
+            <small id="product-url-import-help" class="text-muted">Use a full http:// or https:// link. Existing details won't be replaced.</small>
+    @if (isLoading)
+    {
+        <p class="import-feedback" role="status">Looking for product details...</p>
+    }
     @if (showImportMessage && !string.IsNullOrEmpty(importMessage))
     {
-        <div class="alert @(importSuccess ? "alert-success" : "alert-danger") mt-2" role="alert">
+        <div class="alert @ImportMessageClass mt-2 mb-0" role="@(importFailed ? "alert" : "status")">
             @importMessage
         </div>
     }
@@ -53,37 +55,41 @@
 
     <div class="mb-3">
         <label for="name" class="form-label">Name</label>
-        <InputText id="name" class="form-control" @bind-Value="@Model!.Name" />
+        <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
+                   aria-describedby="item-name-help" placeholder="e.g., A travel mug" />
+        <div id="item-name-help" class="form-text">A name is enough to save an idea. Add other details whenever you like.</div>
         <ValidationMessage For="@(() => Model.Name)" />
     </div>
 
     <div class="mb-3">
         <label for="description" class="form-label">Description</label>
-        <InputTextArea id="description" class="form-control" @bind-Value="@Model!.Description" />
+        <InputTextArea id="description" class="form-control" rows="3" @bind-Value="@Model!.Description"
+                       placeholder="Color, size, or anything that would help a gift giver" />
         <ValidationMessage For="@(() => Model.Description)" />
     </div>
 
     <div class="mb-3">
-        <label for="price" class="form-label">Price</label>
-        <InputNumber id="price" class="form-control" @bind-Value="@Model!.Price" />
+        <label for="price" class="form-label">Estimated price <span class="text-muted fw-normal">(optional)</span></label>
+        <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" />
         <ValidationMessage For="@(() => Model.Price)" />
     </div>
 
     <div class="mb-3">
-        <label for="url" class="form-label">URL</label>
+        <label for="url" class="form-label">Product link <span class="text-muted fw-normal">(optional)</span></label>
         <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" />
         <ValidationMessage For="@(() => Model.Url)" />
     </div>
 
     <div class="mb-3">
-        <label for="whereToBuy" class="form-label">Where to Buy</label>
+        <label for="whereToBuy" class="form-label">Where to buy <span class="text-muted fw-normal">(optional)</span></label>
         <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" />
         <ValidationMessage For="@(() => Model.WhereToBuy)" />
     </div>
 
     <div class="mb-3">
         <label for="priority" class="form-label">Priority</label>
-        <InputSelect id="priority" class="form-control" @bind-Value="@Model!.Priority">
+        <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
+            <option value="">No priority</option>
             <option value="1">High</option>
             <option value="2">Medium</option>
             <option value="3">Low</option>
@@ -92,11 +98,12 @@
 
     <div class="mb-3 form-check">
         <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
-        <label class="form-check-label" for="isPrivate">Private Item?</label>
+        <label class="form-check-label" for="isPrivate">Keep this idea private</label>
+        <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
         <ValidationMessage For="@(() => Model.IsPrivate)" />
     </div>
 
-    <div class="d-flex justify-content-between">
+    <div class="form-actions">
         <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
             @if (IsSubmitting)
             {
@@ -127,6 +134,10 @@
     private string importMessage = string.Empty;
     private bool showImportMessage;
     private bool importSuccess;
+    private bool importFailed;
+    private string ImportMessageClass => importFailed
+        ? "alert-danger"
+        : importSuccess ? "alert-success" : "alert-info";
 
     private void UpdateImportUrl(ChangeEventArgs eventArgs)
     {
@@ -135,7 +146,7 @@
 
     private async Task ImportFromUrl()
     {
-        if (string.IsNullOrWhiteSpace(ImportUrl))
+        if (isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))
             return;
 
         await ProcessUrlImport(ImportUrl);
@@ -143,6 +154,9 @@
 
     private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
     {
+        if (isLoading || IsSubmitting)
+            return;
+
         ImportUrl = e.PastedData ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(ImportUrl))
         {
@@ -152,57 +166,93 @@
 
     private async Task ProcessUrlImport(string url)
     {
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var productUri) ||
+            string.IsNullOrWhiteSpace(productUri.Host) ||
+            (productUri.Scheme != Uri.UriSchemeHttp && productUri.Scheme != Uri.UriSchemeHttps))
+        {
+            importMessage = "Enter a complete product link that starts with http:// or https://.";
+            importSuccess = false;
+            importFailed = true;
+            showImportMessage = true;
+            return;
+        }
+
+        var normalizedUrl = productUri.AbsoluteUri;
+        ImportUrl = normalizedUrl;
+        showImportMessage = false;
+        importFailed = false;
         try
         {
             isLoading = true;
             StateHasChanged();
+            await Task.Yield();
 
-            var product = await ProductService.TryScrapeProductFromUrl(url);
+            var product = await ProductService.TryScrapeProductFromUrl(normalizedUrl);
+            if (string.IsNullOrWhiteSpace(Model.Url))
+                Model.Url = normalizedUrl;
+
+            if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
+                Model.WhereToBuy = productUri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase);
+
             if (product != null)
             {
-                // Only update empty fields
+                var hasDetails =
+                    !string.IsNullOrWhiteSpace(product.Name) ||
+                    !string.IsNullOrWhiteSpace(product.Description) ||
+                    product.Price.HasValue;
+                var importedDetails = false;
+
                 if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
+                {
                     Model.Name = product.Name;
+                    importedDetails = true;
+                }
 
                 if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
+                {
                     Model.Description = product.Description;
+                    importedDetails = true;
+                }
 
                 if (!Model.Price.HasValue && product.Price.HasValue)
+                {
                     Model.Price = product.Price;
+                    importedDetails = true;
+                }
 
-                if (string.IsNullOrWhiteSpace(Model.Url))
-                    Model.Url = url;
-
-                if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
-                    Model.WhereToBuy = new Uri(url).Host.Replace("www.", "");
-
-                // Set default priority if not set
-                if (!Model.Priority.HasValue)
-                    Model.Priority = 2; // Medium priority by default
-
-                await JSRuntime.InvokeVoidAsync("console.log", "Product details imported successfully.");
-                importMessage = "Product details imported successfully!";
-                importSuccess = true;
-                showImportMessage = true;
+                importMessage = importedDetails
+                    ? "Product details imported. Review them before saving."
+                    : hasDetails
+                        ? "Product details checked. Your existing details were kept."
+                        : "No product details were found. The link is ready; add any details you want.";
+                importSuccess = hasDetails;
             }
             else
             {
-                importMessage = "Could not extract product details. Please fill in the form manually.";
+                importMessage = "We couldn't import product details. The link is still here; add the details you know.";
                 importSuccess = false;
-                showImportMessage = true;
+                importFailed = true;
             }
+            showImportMessage = true;
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            await JSRuntime.InvokeVoidAsync("console.error", $"Error scraping URL: {ex.Message}");
-            importMessage = "Error processing URL. Please fill in the form manually.";
+            Logger.LogError(ex, "Failed to import product details from {ProductHost}", productUri.Host);
+            importMessage = "We couldn't import product details. Check the link or enter the details yourself.";
             importSuccess = false;
+            importFailed = true;
+            showImportMessage = true;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Logger.LogError(ex, "Product import timed out for {ProductHost}", productUri.Host);
+            importMessage = "Product lookup timed out. Try again or enter the details yourself.";
+            importSuccess = false;
+            importFailed = true;
             showImportMessage = true;
         }
         finally
         {
-            // Clear the import URL field after processing
-            ImportUrl = string.Empty;
             isLoading = false;
             StateHasChanged();
         }

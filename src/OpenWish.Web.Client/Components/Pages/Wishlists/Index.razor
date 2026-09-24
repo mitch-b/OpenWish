@@ -14,9 +14,11 @@
 
 <div class="container page-shell">
     <PageHeader Title="Wishlists"
-                Description="Manage your wishlists and explore wishlists shared by friends.">
+                Description="Save gift ideas and see what friends have shared.">
         <Actions>
-            <a href="/wishlists/new" class="btn btn-light btn-lg">Create wishlist</a>
+            <a href="/wishlists/new" class="btn btn-primary">
+                <OpenWishIcon Name="plus-lg" /> Create wishlist
+            </a>
         </Actions>
     </PageHeader>
 
@@ -103,9 +105,18 @@
                 {
                     <p class="visually-hidden" role="status" aria-live="polite">No wishlists found.</p>
                     <div class="empty-state">
-                        <h2>No wishlists found</h2>
-                        <p>Create a wishlist or change the current search and filters.</p>
-                        <a href="/wishlists/new" class="btn btn-primary">Create your first wishlist</a>
+                        @if (TotalWishlistCount == 0)
+                        {
+                            <h2>Start your first wishlist</h2>
+                            <p>Keep gift ideas together, even if you only have a name for now.</p>
+                            <a href="/wishlists/new" class="btn btn-primary">Create wishlist</a>
+                        }
+                        else
+                        {
+                            <h2>No matching wishlists</h2>
+                            <p>Try another name or show all your wishlists.</p>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearDiscovery">Clear search and filters</button>
+                        }
                     </div>
                 }
                 else
@@ -137,7 +148,7 @@
                         @foreach (var wishlist in filteredWishlists)
                         {
                             <div class="col-md-6 col-xl-4">
-                                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+                                <WishlistCard Wishlist="@wishlist" ShowOwner="false" OnDelete="@HandleWishlistDeleted" />
                             </div>
                         }
                     </div>
@@ -379,6 +390,13 @@
     private void ClearSearch()
     {
         searchTerm = string.Empty;
+        ApplyFiltersAndSort();
+    }
+
+    private void ClearDiscovery()
+    {
+        searchTerm = string.Empty;
+        filterBy = "all";
         ApplyFiltersAndSort();
     }
 

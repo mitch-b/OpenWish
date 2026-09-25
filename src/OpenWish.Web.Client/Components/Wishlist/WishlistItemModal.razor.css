@@ -18,7 +18,7 @@
     z-index: 1050;
     width: 90%;
     max-width: 700px;
-    max-height: 90vh;
+    max-height: 95vh;
     overflow: hidden;
     animation: slideIn 0.3s ease;
 }
@@ -30,7 +30,7 @@
     box-shadow: var(--shadow-lg);
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: 95vh;
     color: var(--color-text);
 }
 
@@ -81,6 +81,7 @@
     padding: 1.5rem;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
 }
 
 .modal-footer {

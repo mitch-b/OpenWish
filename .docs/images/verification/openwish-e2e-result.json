@@ -62,7 +62,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/41e49aaa-2773-4018-ada7-f006c5544696/manage",
+        "/events/bd519a3e-a1c2-4270-a397-6e6f2809d9e4/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -83,14 +83,16 @@
         "accessible product links",
         "focus-safe duplicate-resistant wishlist item deletion",
         "PostgreSQL concurrent item deletion and one-winner activity logging",
-        "event details and gift assignment",
+        "gift match next step, privacy, and responsive layout",
         "friends and pending requests",
         "accessible notification updates and deletion",
         "immediate wishlist discovery",
+        "filtered wishlist recovery, collapsed item filters, and tablet layout",
         "friend invitation validation",
         "accessible loading updates",
         "wishlist management labels and contrast",
         "contextual wishlist and item creation navigation",
+        "standalone product-link validation and retry",
         "inclusive event creation context",
         "state-aware theme persistence",
         "current release history",
@@ -112,6 +114,8 @@
       ],
       "assertions": [
         "invitation acceptance retries reconcile an already committed decision",
+        "combined availability filters retain all items",
+        "grid gift coordination opens the matching list row",
         "items made private by collaborators disappear immediately for their creator",
         "private collaborator items remain visible to the wishlist owner",
         "private item persistence and viewer-filtered lookup endpoints return success"
@@ -138,6 +142,13 @@
         "/Account/Manage/TwoFactorAuthentication",
         "/Account/Manage/EnableAuthenticator",
         "/Account/Manage/PersonalData"
+      ]
+    },
+    {
+      "scenario": "match-without-wishlist",
+      "loginStatus": 200,
+      "assertions": [
+        "recipient without an attached wishlist has no dead-end shopping action"
       ]
     }
   ]

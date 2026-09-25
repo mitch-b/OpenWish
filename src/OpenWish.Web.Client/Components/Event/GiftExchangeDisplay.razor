@@ -4,76 +4,91 @@
 @inject IEventService EventService
 @inject ILogger<GiftExchangeDisplay> Logger
 
-<div aria-busy="@_loading">
-@if (_loading)
-{
-    <div class="text-center py-3">
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading gift exchange...</span>
+<section class="gift-match" aria-labelledby="gift-match-title" aria-busy="@_loading">
+    <h2 id="gift-match-title">Your gift exchange match</h2>
+
+    @if (_loading)
+    {
+        <div class="gift-match-loading" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Loading your match...</span>
         </div>
-    </div>
-}
-else if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <div class="alert alert-danger" role="alert">
-        <p class="mb-2">@_errorMessage</p>
-        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadGiftExchange">
-            Try again
-        </button>
-    </div>
-}
-else if (_giftExchange != null)
-{
-    <div class="card gift-match-card mb-4">
-        <div class="card-header gift-match-header">
-            <h3 class="mb-0"><OpenWishIcon Name="gift" Class="me-2" />Your gift exchange match</h3>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger mb-0" role="alert">
+            <p>@_errorMessage</p>
+            <button type="button" class="btn btn-outline-danger" disabled="@_loading" @onclick="LoadGiftExchange">
+                Try again
+            </button>
         </div>
-        <div class="card-body">
-            <div class="recipient-reveal" role="status">
-                <h4 class="alert-heading">You're shopping for</h4>
-                <h2>@RecipientDisplayName</h2>
+    }
+    else if (_giftExchange == null)
+    {
+        <div class="alert alert-info mb-0" role="status">
+            Your assignment isn't available yet. Ask the organizer to check the draw.
+        </div>
+    }
+    else
+    {
+        <div class="gift-match-content">
+            <div class="gift-match-introduction">
+                <p class="gift-match-label">You're shopping for</p>
+                <h3 class="gift-match-name">@RecipientDisplayName</h3>
             </div>
 
-            @if (_recipientWishlist != null)
-            {
-                <div class="mt-4">
-                    <p class="mb-2"><strong>Their gift ideas are ready.</strong></p>
-                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary btn-lg w-100">
-                        <OpenWishIcon Name="list-check" Class="me-2" />View @RecipientDisplayName's wishlist
+            <dl class="gift-match-facts">
+                <div>
+                    <dt>Suggested budget</dt>
+                    <dd>@(_giftExchange.Budget?.ToString("C") ?? "Not set")</dd>
+                </div>
+                <div>
+                    <dt>Exchange date</dt>
+                    <dd>@ExchangeDate.ToString("ddd, MMM d, yyyy")</dd>
+                </div>
+            </dl>
+
+            <div class="gift-match-next-step">
+                @if (!WishlistsLoaded)
+                {
+                    <p role="status">Checking shared gift ideas...</p>
+                    <a class="btn btn-outline-primary gift-match-action" href="#event-wishlists">See event wishlists</a>
+                }
+                else if (_recipientWishlist != null && RecipientItemCount > 0)
+                {
+                    <p>@($"{RecipientDisplayName} has {RecipientItemCount} gift {(RecipientItemCount == 1 ? "idea" : "ideas")} to explore.")</p>
+                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary gift-match-action">
+                        <OpenWishIcon Name="list-check" />
+                        <span>View @RecipientDisplayName's wishlist</span>
                     </a>
-                    <p class="small text-muted mt-2 mb-0">
-                        Reserve an item on the wishlist so other shoppers avoid buying the same gift.
-                        @RecipientDisplayName won't see your reservation.
-                    </p>
-                </div>
-            }
-            else
-            {
-                <div class="alert alert-info mt-4">
-                    <OpenWishIcon Name="info-circle" Class="me-1" />
-                    @RecipientDisplayName hasn't attached a wishlist yet. Check back after they add gift ideas.
-                </div>
-            }
-
-            @if (_giftExchange.Budget.HasValue)
-            {
-                <div class="mt-3 text-muted">
-                    <OpenWishIcon Name="cash" Class="me-1" /> Suggested budget: <strong>@_giftExchange.Budget.Value.ToString("C")</strong>
-                </div>
-            }
-
-            <div class="small text-muted mt-3">
-                <OpenWishIcon Name="eye-slash" Class="me-1" />
-                Your match is private. Only you can see who you're shopping for.
+                    <p class="gift-match-guidance">Reserve an idea to avoid buying the same gift as someone else.</p>
+                }
+                else if (_recipientWishlist != null)
+                {
+                    <p>@($"{RecipientDisplayName} hasn't added gift ideas to their wishlist yet.")</p>
+                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-outline-primary gift-match-action">
+                        View @RecipientDisplayName's wishlist
+                    </a>
+                }
+                else
+                {
+                    <p>@($"{RecipientDisplayName} hasn't shared a wishlist for this exchange yet. Check back for gift ideas.")</p>
+                }
             </div>
+
+            <p class="gift-match-privacy">
+                <OpenWishIcon Name="eye-slash" />
+                <span>@($"Your match stays private. {RecipientDisplayName} won't see your reservations.")</span>
+            </p>
         </div>
-    </div>
-}
-</div>
+    }
+</section>
 
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;
     [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public DateTimeOffset ExchangeDate { get; set; }
+    [Parameter] public bool WishlistsLoaded { get; set; }
     [Parameter] public ICollection<WishlistModel>? EventWishlists { get; set; }
 
     private GiftExchangeModel? _giftExchange;
@@ -85,6 +100,11 @@ else if (_giftExchange != null)
         ?? _giftExchange?.Receiver?.Email
         ?? _giftExchange?.ReceiverEmail
         ?? "your match";
+
+    private int RecipientItemCount => _recipientWishlist is null ? 0 : GetItemCount(_recipientWishlist);
+
+    private static int GetItemCount(WishlistModel wishlist) =>
+        wishlist.ItemCount > 0 ? wishlist.ItemCount : wishlist.Items?.Count ?? 0;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -102,7 +122,9 @@ else if (_giftExchange != null)
             if (_giftExchange?.ReceiverId != null && EventWishlists != null)
             {
                 _recipientWishlist = EventWishlists
-                    .FirstOrDefault(w => w.OwnerId == _giftExchange.ReceiverId);
+                    .Where(wishlist => wishlist.OwnerId == _giftExchange.ReceiverId)
+                    .OrderByDescending(GetItemCount)
+                    .FirstOrDefault();
             }
             else
             {

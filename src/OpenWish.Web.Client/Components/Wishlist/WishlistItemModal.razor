@@ -40,7 +40,7 @@
                                @oninput="UpdateImportUrl"
                                @onopenwishpaste="HandleUrlPaste"
                                disabled="@IsBusy" />
-                        <button class="btn btn-primary"
+                        <button class="btn btn-outline-secondary"
                                 type="button"
                                 @onclick="ImportFromUrl"
                                 disabled="@(IsBusy || string.IsNullOrWhiteSpace(ImportUrl))">
@@ -56,7 +56,7 @@
                             }
                         </button>
                     </div>
-                    <small id="product-url-import-modal-help" class="text-muted">Paste a product URL to fill in details, or enter them manually below.</small>
+                    <small id="product-url-import-modal-help" class="text-muted">Optional: import what we can find, or enter an idea below. Existing details won't be replaced.</small>
                     @if (_isImporting)
                     {
                         <div class="alert alert-info mt-2 mb-0" role="status">Importing product details...</div>
@@ -72,6 +72,7 @@
                 <EditForm Model="@Model"
                           OnValidSubmit="@HandleSubmit"
                           FormName="WishlistItemModal"
+                          id="wishlist-item-form"
                           aria-busy="@_isSubmitting">
                     <DataAnnotationsValidator />
                     <ValidationSummary />
@@ -84,7 +85,9 @@
                         <div class="col-md-8">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                                <InputText id="name" class="form-control" @bind-Value="@Model!.Name" placeholder="e.g., Wireless Headphones" />
+                                <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
+                                           aria-describedby="modal-item-name-help" placeholder="e.g., A travel mug" />
+                                <div id="modal-item-name-help" class="form-text">A name is enough to save an idea.</div>
                                 <ValidationMessage For="@(() => Model.Name)" />
                             </div>
                         </div>
@@ -103,24 +106,24 @@
 
                     <div class="mb-3">
                         <label for="description" class="form-label">Description</label>
-                        <InputTextArea id="description" class="form-control" rows="3" @bind-Value="@Model!.Description" placeholder="Add any details, preferences, or specifications..." />
+                        <InputTextArea id="description" class="form-control" rows="2" @bind-Value="@Model!.Description" placeholder="Color, size, or anything that would help a gift giver" />
                         <ValidationMessage For="@(() => Model.Description)" />
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="price" class="form-label">Price</label>
+                                <label for="price" class="form-label">Estimated price</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <InputNumber id="price" class="form-control" @bind-Value="@Model!.Price" placeholder="0.00" />
+                                    <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" placeholder="0.00" />
                                 </div>
                                 <ValidationMessage For="@(() => Model.Price)" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="whereToBuy" class="form-label">Where to Buy</label>
+                                <label for="whereToBuy" class="form-label">Where to buy</label>
                                 <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" placeholder="e.g., Amazon, Target" />
                                 <ValidationMessage For="@(() => Model.WhereToBuy)" />
                             </div>
@@ -135,32 +138,30 @@
 
                     <div class="mb-3 form-check">
                         <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
-                        <label class="form-check-label" for="isPrivate">
-                            Make this item private (only you can see it)
-                        </label>
+                        <label class="form-check-label" for="isPrivate">Keep this idea private</label>
+                        <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
                         <ValidationMessage For="@(() => Model.IsPrivate)" />
                     </div>
-
-                    <div class="modal-footer">
-                        <button type="button"
-                                class="btn btn-outline-secondary"
-                                data-dialog-close
-                                @onclick="Cancel"
-                                disabled="@IsBusy">Cancel</button>
-                        <button type="submit" class="btn btn-primary" disabled="@IsBusy">
-                            @if (_isSubmitting)
-                            {
-                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
-                            }
-                            else
-                            {
-                                <OpenWishIcon Name="check-lg" />
-                                <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
-                            }
-                        </button>
-                    </div>
                 </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-dialog-close
+                        @onclick="Cancel"
+                        disabled="@IsBusy">Cancel</button>
+                <button type="submit" form="wishlist-item-form" class="btn btn-primary" disabled="@IsBusy">
+                    @if (_isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+                    }
+                    else
+                    {
+                        <OpenWishIcon Name="check-lg" />
+                        <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
+                    }
+                </button>
             </div>
         </div>
     </div>

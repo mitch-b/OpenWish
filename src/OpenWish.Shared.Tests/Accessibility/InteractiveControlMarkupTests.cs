@@ -54,6 +54,61 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistDiscovery_DistinguishesNoListsFromNoMatches()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+        var cardMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor");
+
+        Assert.Contains("TotalWishlistCount == 0", markup, StringComparison.Ordinal);
+        Assert.Contains("Start your first wishlist", markup, StringComparison.Ordinal);
+        Assert.Contains("No matching wishlists", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"ClearDiscovery\"", markup, StringComparison.Ordinal);
+        Assert.Contains("filterBy = \"all\";", markup, StringComparison.Ordinal);
+        Assert.Contains("ShowOwner=\"false\"", markup, StringComparison.Ordinal);
+        Assert.Contains("ShowOwner &&", cardMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistDetails_PrioritizesAddAndExplainsPrivacy()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+
+        Assert.Contains("Only you can see this list", markup, StringComparison.Ordinal);
+        Assert.Contains("Copy link", markup, StringComparison.Ordinal);
+        Assert.Contains("<button class=\"stat-card stat-action\"", markup, StringComparison.Ordinal);
+        Assert.Contains("No ideas shared yet", markup, StringComparison.Ordinal);
+        Assert.Contains("Coordinate gift", markup, StringComparison.Ordinal);
+        Assert.Contains("OpenItemCoordination(item.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("MaxPrice = PriceCeiling;", markup, StringComparison.Ordinal);
+        Assert.Contains("StatusFilters.Contains(\"reserved\") != StatusFilters.Contains(\"unreserved\")", markup, StringComparison.Ordinal);
+        Assert.Contains("Math.Max(MinPrice, MaxPrice)", markup, StringComparison.Ordinal);
+        Assert.Contains("Math.Min(MinPrice, MaxPrice)", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"fab\"", markup, StringComparison.Ordinal);
+        Assert.Contains("position: static;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistItemEntry_OffersOptionalImportAndClearPrivacyGuidance()
+    {
+        var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
+        var modal = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var list = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+
+        Assert.Contains("Have a product link?", form, StringComparison.Ordinal);
+        Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", form, StringComparison.Ordinal);
+        Assert.Contains("The link is still here", form, StringComparison.Ordinal);
+        Assert.Contains("No product details were found. The link is ready", form, StringComparison.Ordinal);
+        Assert.Contains("<option value=\"\">No priority</option>", form, StringComparison.Ordinal);
+        Assert.Contains("Only you can see private ideas", form, StringComparison.Ordinal);
+        Assert.Contains("Only you can see private ideas", modal, StringComparison.Ordinal);
+        Assert.Contains("id=\"wishlist-item-form\"", modal, StringComparison.Ordinal);
+        Assert.Contains("type=\"submit\" form=\"wishlist-item-form\"", modal, StringComparison.Ordinal);
+        Assert.Contains("data-label=\"Description\"", list, StringComparison.Ordinal);
+        Assert.Contains("gift options for @item.Name", list, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FriendsWishlistDiscovery_ExplainsBothSharedAndEmptyStates()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
@@ -407,7 +462,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-describedby=\"product-url-import-help\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("@oninput=\"UpdateImportUrl\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("type=\"url\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@(isLoading || string.IsNullOrWhiteSpace(ImportUrl))\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
@@ -935,10 +990,39 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
 
         Assert.Contains("aria-busy=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"gift-match-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Loading your match...", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load your gift exchange match. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadGiftExchange\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Your assignment isn't available yet.", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GiftExchangeDisplay_ShowsTheNextStepAndDistinguishesMissingIdeas()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor.css");
+        var page = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("You're shopping for", markup, StringComparison.Ordinal);
+        Assert.Contains("<dt>Suggested budget</dt>", markup, StringComparison.Ordinal);
+        Assert.Contains("<dt>Exchange date</dt>", markup, StringComparison.Ordinal);
+        Assert.Contains("?? \"Not set\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Checking shared gift ideas...", markup, StringComparison.Ordinal);
+        Assert.Contains("!WishlistsLoaded", markup, StringComparison.Ordinal);
+        Assert.Contains("_recipientWishlist != null && RecipientItemCount > 0", markup, StringComparison.Ordinal);
+        Assert.Contains("View @RecipientDisplayName's wishlist", markup, StringComparison.Ordinal);
+        Assert.Contains("hasn't added gift ideas to their wishlist yet.", markup, StringComparison.Ordinal);
+        Assert.Contains("hasn't shared a wishlist for this exchange yet.", markup, StringComparison.Ordinal);
+        Assert.Contains("OrderByDescending(GetItemCount)", markup, StringComparison.Ordinal);
+        Assert.Contains("Your match stays private.", markup, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 44px;", styles, StringComparison.Ordinal);
+        Assert.Contains("ExchangeDate=\"@_event.Date\"", page, StringComparison.Ordinal);
+        Assert.Contains("WishlistsLoaded=\"@_wishlistsLoaded\"", page, StringComparison.Ordinal);
+        Assert.Contains("event-header-match", page, StringComparison.Ordinal);
     }
 
     [Fact]

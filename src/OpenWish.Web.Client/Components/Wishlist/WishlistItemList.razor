@@ -17,7 +17,7 @@
             {
                 <tr @key="item.Id"
                     tabindex="-1">
-                    <td>
+                    <td data-label="Name">
                         <span class="item-name">@item.Name</span>
                         @if (!string.IsNullOrEmpty(item.Url))
                         {
@@ -30,20 +30,20 @@
                             </a>
                         }
                     </td>
-                    <td>@(string.IsNullOrWhiteSpace(item.Description) ? "-" : item.Description)</td>
-                    <td>@(item.Price?.ToString("C") ?? "-")</td>
-                    <td>
+                    <td data-label="Description">@(string.IsNullOrWhiteSpace(item.Description) ? "Not added" : item.Description)</td>
+                    <td data-label="Price">@(item.Price?.ToString("C") ?? "Not added")</td>
+                    <td data-label="Priority">
                         <span class="priority-badge @GetPriorityClass(item.Priority)">
                             @GetPriorityText(item.Priority)
                         </span>
                     </td>
-                    <td>
+                    <td data-label="Added">
                         <span class="tooltip-container">
                             @item.CreatedOn.ToLocalHumanizedString()
                             <span class="tooltip-text">@item.CreatedOn.ToLocalTime()</span>
                         </span>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                         <div class="action-buttons">
                             @if (ShowInteractions)
                             {
@@ -53,9 +53,9 @@
                                     @onclick="() => ToggleInteractions(item.Id)"
                                     aria-expanded="@ExpandedInteractions.Contains(item.Id)"
                                     aria-controls="item-interactions-@item.Id"
-                                    title="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") comments and interactions">
+                                    aria-label="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") gift options for @item.Name">
                                     <OpenWishIcon Name="chat-dots" />
-                                    @(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show")
+                                    @(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")
                                 </button>
                             }
                             <div class="edit-actions">
@@ -97,7 +97,7 @@
                                 @if (ExpandedInteractions.Contains(item.Id) && !IsOwner)
                                 {
                                     <div class="interaction-section">
-                                        <h6><OpenWishIcon Name="gift" /> Reserve Item</h6>
+                                        <h6><OpenWishIcon Name="gift" /> Reservation</h6>
                                         <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" />
                                     </div>
                                 }

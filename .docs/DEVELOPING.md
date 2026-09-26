@@ -155,9 +155,11 @@ Every user-visible change also needs three consistent, dated artifacts:
   perspective (see existing files in that folder for the expected tone and
   format).
 * A matching entry in `CHANGELOG.md` under the new version heading.
-* A matching entry appended to `src/OpenWish.Web/wwwroot/releases.json`,
-  which powers the in-app release notes surfaced by `IReleaseNotesService`
-  and is covered by `ReleaseMetadataTests` in `OpenWish.Shared.Tests`.
+* A matching entry inserted at the top of the array in
+  `src/OpenWish.Web/wwwroot/releases.json` (newest first), which powers the
+  in-app release notes surfaced by `IReleaseNotesService` and is verified by
+  `ReleaseMetadataTests` in `OpenWish.Shared.Tests`, which requires the
+  current version to be `releases[0]`.
 
 Keep the version number identical across `version.txt`, the changelog
 heading, and the `releases.json` entry so `ReleaseMetadataTests` continues to

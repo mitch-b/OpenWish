@@ -10,7 +10,8 @@ All notable user-facing changes to OpenWish are documented here.
   already has a pending request from you, now returns a clear conflict
   response instead of an unhandled server error.
 - "Mark all as read" no longer shows a false error when there is nothing
-  left to mark as read; it now quietly confirms everything is already read.
+  left to mark as read; it now quietly confirms everything is already read
+  and keeps the notification list and unread badge in sync with that state.
 - A genuine network failure while marking all notifications as read is now
   caught and reported instead of surfacing as an unhandled error.
 - Wishlist item images without a name now get a descriptive fallback `alt`

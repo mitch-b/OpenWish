@@ -389,28 +389,31 @@
             try
             {
                 var success = await NotificationService.MarkAllNotificationsAsReadAsync(_userId);
+                if (_notifications != null)
+                {
+                    foreach (var notification in _notifications)
+                    {
+                        notification.IsRead = true;
+                    }
+                }
+                await LoadNotificationCount();
+
                 if (success)
                 {
-                    if (_notifications != null)
-                    {
-                        foreach (var notification in _notifications)
-                        {
-                            notification.IsRead = true;
-                        }
-                    }
-                    await LoadNotificationCount();
                     _statusMessage = "All notifications marked as read.";
-                    _focusFlyoutCloseAfterRender = true;
-                    StateHasChanged();
                 }
                 else
                 {
                     // The server reports false only when there was nothing unread to
                     // mark (for example, a concurrent update from another tab already
                     // caught this user up). That is not a failure, so avoid alarming
-                    // the user with an error message.
+                    // the user with an error message. Local state is still reconciled
+                    // above so the flyout and its "Mark all as read" button do not keep
+                    // showing stale unread notifications.
                     _statusMessage = "All notifications are already read.";
                 }
+                _focusFlyoutCloseAfterRender = true;
+                StateHasChanged();
             }
             catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException or HttpRequestException)
             {

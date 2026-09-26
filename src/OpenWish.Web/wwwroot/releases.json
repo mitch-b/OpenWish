@@ -6,7 +6,7 @@
     "summary": "Friend requests and notification actions now report clear, accurate outcomes instead of misleading errors.",
     "highlights": [
       "Sending a friend request to an existing friend or a duplicate pending request now returns a clear conflict response instead of a server error.",
-      "Marking all notifications as read no longer shows a false error when there is nothing left to mark; it quietly confirms everything is already read.",
+      "Marking all notifications as read no longer shows a false error when there is nothing left to mark; it quietly confirms everything is already read and keeps the notification list and unread badge in sync.",
       "A genuine network failure while marking all notifications as read is now caught and reported instead of surfacing as an unhandled error.",
       "Wishlist item images without a name now get a descriptive fallback alt attribute for screen readers."
     ]

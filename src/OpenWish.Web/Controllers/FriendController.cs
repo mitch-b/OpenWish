@@ -69,8 +69,15 @@ public class FriendController : ControllerBase
             return Unauthorized();
         }
 
-        var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
-        return Ok(request);
+        try
+        {
+            var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
+            return Ok(request);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpGet("requests/received")]

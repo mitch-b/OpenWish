@@ -141,6 +141,28 @@ docker run --rm \
   openwishlocal:$TAG_NAME
 ```
 
+## Releasing
+
+`version.txt` holds the current semantic version and is the single source of
+truth; `src/Directory.Build.props` mirrors it into the build. Bump it with
+`scripts/bump-version.sh major|minor|patch`, which updates both files
+together and refuses to run without a valid `version.txt`.
+
+Every user-visible change also needs three consistent, dated artifacts:
+
+* A release note under `.docs/releases/`, named
+  `YYYY-MM-DD-<version>-<slug>.md`, describing the change from a user's
+  perspective (see existing files in that folder for the expected tone and
+  format).
+* A matching entry in `CHANGELOG.md` under the new version heading.
+* A matching entry appended to `src/OpenWish.Web/wwwroot/releases.json`,
+  which powers the in-app release notes surfaced by `IReleaseNotesService`
+  and is covered by `ReleaseMetadataTests` in `OpenWish.Shared.Tests`.
+
+Keep the version number identical across `version.txt`, the changelog
+heading, and the `releases.json` entry so `ReleaseMetadataTests` continues to
+verify they stay in sync.
+
 ## Automated verification
 
 Run the complete local gate from the repository root:

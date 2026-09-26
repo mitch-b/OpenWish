@@ -354,7 +354,7 @@ else
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
-                                    <img src="@item.Image" alt="@item.Name" />
+                                    <img src="@item.Image" alt="@(string.IsNullOrWhiteSpace(item.Name) ? "Wishlist item image" : item.Name)" />
                                     @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">

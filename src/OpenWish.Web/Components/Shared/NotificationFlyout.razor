@@ -405,10 +405,14 @@
                 }
                 else
                 {
-                    _errorMessage = "Notifications could not be marked as read. Try again.";
+                    // The server reports false only when there was nothing unread to
+                    // mark (for example, a concurrent update from another tab already
+                    // caught this user up). That is not a failure, so avoid alarming
+                    // the user with an error message.
+                    _statusMessage = "All notifications are already read.";
                 }
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException)
+            catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or DbException or HttpRequestException)
             {
                 Logger.LogError(ex, "Unable to mark all notifications as read for user {UserId}.", _userId);
                 _errorMessage = "Notifications could not be marked as read. Try again.";

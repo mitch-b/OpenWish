@@ -131,7 +131,13 @@ public class FriendServiceRequestTests
         {
             context.Users.AddRange(
                 new ApplicationUser { Id = "sender", UserName = "sender" },
-                new ApplicationUser { Id = "receiver", UserName = "receiver", Email = "Receiver@Example.com" });
+                new ApplicationUser
+                {
+                    Id = "receiver",
+                    UserName = "receiver",
+                    Email = "Receiver@Example.com",
+                    NormalizedEmail = "RECEIVER@EXAMPLE.COM"
+                });
             await context.SaveChangesAsync();
         }
 

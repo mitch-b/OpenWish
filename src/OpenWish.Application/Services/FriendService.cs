@@ -317,7 +317,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var normalizedEmail = NormalizeEmailForComparison(emailAddress);
         var existingUser = await context.Users
-                .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToUpper() == normalizedEmail);
+                .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
 
         if (existingUser != null)
         {

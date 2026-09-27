@@ -17,6 +17,46 @@ namespace OpenWish.Application.Tests.Services;
 public class FriendServiceRequestTests
 {
     [Fact]
+    public async Task SendFriendRequestAsync_RejectsRequestToSelf()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "requester", UserName = "requester" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SendFriendRequestAsync("requester", "requester"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Empty(verificationContext.FriendRequests);
+    }
+
+    [Fact]
+    public async Task SendFriendRequestAsync_RejectsUnknownReceiver()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "requester", UserName = "requester" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.SendFriendRequestAsync("requester", "missing"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Empty(verificationContext.FriendRequests);
+    }
+
+    [Fact]
     public async Task SendFriendRequestAsync_ThrowsWhenUsersAreAlreadyFriends()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -83,6 +123,90 @@ public class FriendServiceRequestTests
         Assert.Equal("Pending", request.Status);
     }
 
+    [Fact]
+    public async Task SendFriendInviteByEmailAsync_MatchesExistingUserIgnoringEmailCase()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser
+                {
+                    Id = "receiver",
+                    UserName = "receiver",
+                    Email = "Receiver@Example.com",
+                    NormalizedEmail = "RECEIVER@EXAMPLE.COM"
+                });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        Assert.True(await service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal("receiver", (await verificationContext.FriendRequests.SingleAsync()).ReceiverId);
+        Assert.Empty(verificationContext.PendingFriendInvites);
+        Assert.Equal(0, emailSender.InviteCount);
+    }
+
+    [Fact]
+    public async Task SendFriendInviteByEmailAsync_ReusesPendingInviteIgnoringEmailCase()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "Receiver@Example.com"
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        Assert.True(await service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Single(await verificationContext.PendingFriendInvites.ToListAsync());
+        Assert.Equal(1, emailSender.InviteCount);
+    }
+
+    [Fact]
+    public async Task CreateFriendshipFromInviteAsync_ConsumesInviteWhenAlreadyFriends()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "new-user", UserName = "new-user", Email = "Receiver@Example.com" });
+            context.Friends.Add(new Friend { UserId = "sender", FriendUserId = "new-user" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "receiver@example.com"
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+
+        Assert.True(await service.CreateFriendshipFromInviteAsync("new-user", "sender"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal("Accepted", (await verificationContext.PendingFriendInvites.SingleAsync()).Status);
+        Assert.Single(await verificationContext.Friends.ToListAsync());
+    }
+
     private static ApplicationDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName)
@@ -95,7 +219,7 @@ public class FriendServiceRequestTests
         return services.BuildServiceProvider();
     }
 
-    private static FriendService CreateFriendService(ServiceProvider provider)
+    private static FriendService CreateFriendService(ServiceProvider provider, IAppEmailSender? emailSender = null)
     {
         var mapper = new MapperConfiguration(
             configuration => configuration.AddProfile<OpenWishProfile>(),
@@ -106,7 +230,7 @@ public class FriendServiceRequestTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             mapper,
             new NoOpNotificationService(),
-            new NoOpAppEmailSender(),
+            emailSender ?? new NoOpAppEmailSender(),
             options,
             NullLogger<FriendService>.Instance);
     }
@@ -141,10 +265,16 @@ public class FriendServiceRequestTests
 
     private sealed class NoOpAppEmailSender : IAppEmailSender
     {
+        public int InviteCount { get; private set; }
+
         public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) => Task.CompletedTask;
         public Task SendPasswordResetCodeAsync(string toEmail, string resetCode) => Task.CompletedTask;
         public Task SendPasswordResetLinkAsync(string toEmail, string resetLink) => Task.CompletedTask;
-        public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink) => Task.CompletedTask;
+        public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
+        {
+            InviteCount++;
+            return Task.CompletedTask;
+        }
         public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink) => Task.CompletedTask;
         public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink) => Task.CompletedTask;
         public Task SendGiftExchangeResetEmailAsync(string toEmail, string eventName, string eventLink) => Task.CompletedTask;

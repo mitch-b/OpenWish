@@ -13,6 +13,11 @@
 * `OpenWish.Application` - Contains the application services and business logic for the application.
 * `OpenWish.ServiceDefaults` - supports the .NET Aspire Host bootstrapping.
 
+Friend invitations to an existing account create a friend request, matching
+email addresses without regard to casing. Pending email invitations are reused
+for the same sender and address (also case-insensitively), and an accepted
+invitation is cleared even when a friendship was established earlier.
+
 ## Aspire Secrets
 
 To run a local PostgreSQL instance, you must give a username & password. Use dotnet user secrets for this.

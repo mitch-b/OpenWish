@@ -78,6 +78,10 @@ public class FriendController : ControllerBase
         {
             return Conflict(ex.Message);
         }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("requests/received")]

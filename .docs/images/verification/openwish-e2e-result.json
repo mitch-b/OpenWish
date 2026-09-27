@@ -62,7 +62,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/45f45d89-44b8-4fea-93b2-8b4eb6d92de8/manage",
+        "/events/abd88bce-59e6-4a51-b2ec-8f743e44bdc1/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -127,6 +127,9 @@
       "visitedRoutes": [
         "/events",
         "/events/demo-holiday-gift-exchange"
+      ],
+      "assertions": [
+        "case-insensitive existing-user invitation creates a sent friend request"
       ]
     },
     {

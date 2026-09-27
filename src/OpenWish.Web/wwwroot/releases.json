@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.28",
+    "date": "2026-09-27",
+    "title": "More dependable friend invitations",
+    "summary": "Friend requests and email invitations now handle invalid recipients, address casing, and already-established friendships more reliably.",
+    "highlights": [
+      "Sending a friend request to yourself returns a clear conflict without creating a self-friendship.",
+      "Requests to unknown users return not found instead of storing an invalid request.",
+      "Email invitations find existing accounts even when the address casing differs and send a friend request instead of a registration email.",
+      "Repeated email invitations with different address casing reuse the pending invitation.",
+      "An invitation accepted after the users have already become friends is marked complete."
+    ]
+  },
+  {
     "version": "0.1.27",
     "date": "2026-09-26",
     "title": "Notification and friend-request reliability",

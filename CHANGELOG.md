@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.28] - 2026-09-27
+
+### Improved
+
+- Friend requests to yourself now receive a clear conflict instead of creating a self-friendship.
+- Requests to an unknown user now return not found without storing an invalid request.
+- Email invitations recognize existing accounts regardless of address casing, sending a friend request instead of an unnecessary registration invitation.
+- Repeat email invitations with different address casing reuse the pending invitation instead of creating duplicates.
+- Accepting an invitation when the users are already friends now closes the pending invitation.
+
 ## [0.1.27] - 2026-09-26
 
 ### Improved

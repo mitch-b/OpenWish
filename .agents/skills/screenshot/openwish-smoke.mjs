@@ -1829,6 +1829,22 @@ async function verifyFriendJourney(browser, manifest, results) {
   await assertVisible(page, "My Reserved Items");
   await assertVisible(page, "Noise-Cancelling Headphones");
 
+  const inviteResponse = await context.request.post(
+    `${baseUrl}/api/friends/invite?email=${encodeURIComponent(guestEmail.toUpperCase())}`
+  );
+  if (!inviteResponse.ok()) {
+    throw new Error(`Existing-user email invitation returned ${inviteResponse.status()}.`);
+  }
+  const sentRequestsResponse = await context.request.get(`${baseUrl}/api/friends/requests/sent`);
+  if (!sentRequestsResponse.ok()) {
+    throw new Error(`Sent friend requests returned ${sentRequestsResponse.status()}.`);
+  }
+  const sentRequests = await sentRequestsResponse.json();
+  if (!sentRequests.some(request => request.receiver?.email?.toLowerCase() === guestEmail ||
+    request.receiver?.userName === "TaylorDemo")) {
+    throw new Error("Case-insensitive existing-user invitation did not create a friend request.");
+  }
+
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Friend browser errors: ${diagnostics.browserErrors.join(" | ")}`);
   }
@@ -1836,7 +1852,12 @@ async function verifyFriendJourney(browser, manifest, results) {
     throw new Error(`Friend failed responses: ${diagnostics.failedResponses.join(" | ")}`);
   }
 
-  results.push({ scenario: "friend-gift-exchange", loginStatus, visitedRoutes });
+  results.push({
+    scenario: "friend-gift-exchange",
+    loginStatus,
+    visitedRoutes,
+    assertions: ["case-insensitive existing-user invitation creates a sent friend request"]
+  });
   await context.close();
 }
 

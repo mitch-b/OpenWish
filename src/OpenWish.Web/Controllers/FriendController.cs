@@ -188,16 +188,25 @@ public class FriendController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpPost("invite/batch")]
     [EnableRateLimiting("invitations")]
-    public async Task<IActionResult> SendFriendInvitesByEmail([FromBody] List<string> emails)
+    public async Task<IActionResult> SendFriendInvitesByEmail([FromBody] List<string>? emails)
     {
         var senderUserId = await _userContextService.GetUserIdAsync();
         if (senderUserId is null)
         {
             return Unauthorized();
+        }
+
+        if (emails is null)
+        {
+            return BadRequest("Please provide a list of email addresses.");
         }
 
         if (emails.Count > 20)

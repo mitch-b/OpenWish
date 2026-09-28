@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.29] - 2026-09-28
+
+### Improved
+
+- Inviting an existing friend by email now returns a clear conflict instead of a server error.
+- Batch invitations skip duplicate email addresses regardless of casing and continue after invalid entries.
+- A deleted notification cannot be deleted again or marked as read.
+- Removed activity records no longer appear in your personal activity feed.
+- Friends' activity no longer shows entries tied to removed wishlists or gift ideas.
+
 ## [0.1.28] - 2026-09-27
 
 ### Improved

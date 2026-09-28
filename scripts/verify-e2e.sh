@@ -73,6 +73,17 @@ docker run --rm \
   --volume "$docker_walkthrough_directory:/walkthrough" \
   openwish-playwright:1.63.0
 
+if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
+  docker run --rm --entrypoint tar \
+    --volume "$docker_evidence_directory:/evidence:ro" \
+    openwish-playwright:1.63.0 -C /evidence -cf - . |
+    tar -C "$evidence_directory" -xf -
+  docker run --rm --entrypoint tar \
+    --volume "$docker_walkthrough_directory:/walkthrough:ro" \
+    openwish-playwright:1.63.0 -C /walkthrough -cf - . |
+    tar -C "$walkthrough_directory" -xf -
+fi
+
 dependent_cleanup="$("${compose[@]}" exec -T db \
   psql -U openwish -d OpenWish -Atc \
   "SELECT CASE

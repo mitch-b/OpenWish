@@ -139,6 +139,27 @@ public class NotificationServiceSecurityTests
         Assert.True((await context.Notifications.SingleAsync()).Deleted);
     }
 
+    [Fact]
+    public async Task DeleteNotificationAsync_DoesNotDeleteAlreadyDeletedNotificationAgain()
+    {
+        await using var context = CreateContext();
+        var notification = new Notification
+        {
+            UserId = "owner",
+            Message = "Removed",
+            Date = DateTimeOffset.UtcNow
+        };
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
+        var service = new NotificationService(context, _mapper);
+
+        Assert.True(await service.DeleteNotificationAsync(notification.PublicId, "owner"));
+        var deletedAt = notification.UpdatedOn;
+        Assert.False(await service.DeleteNotificationAsync(notification.PublicId, "owner"));
+        Assert.Equal(deletedAt, notification.UpdatedOn);
+        Assert.False(await service.MarkNotificationAsReadAsync(notification.PublicId, "owner"));
+    }
+
     private static ApplicationDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

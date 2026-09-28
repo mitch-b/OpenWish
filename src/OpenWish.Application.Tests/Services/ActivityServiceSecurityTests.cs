@@ -72,6 +72,62 @@ public class ActivityServiceSecurityTests
         Assert.Empty(activities);
     }
 
+    [Fact]
+    public async Task GetUserActivityFeedAsync_ExcludesSoftDeletedActivity()
+    {
+        var factory = CreateFactory();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "owner", UserName = "owner" },
+                new ApplicationUser { Id = "other", UserName = "other" });
+            context.ActivityLogs.AddRange(
+                new ActivityLog { UserId = "owner", ActivityType = "ItemAdded", Description = "Visible" },
+                new ActivityLog { UserId = "owner", ActivityType = "ItemAdded", Description = "Removed", Deleted = true },
+                new ActivityLog { UserId = "other", ActivityType = "ItemAdded", Description = "Other" });
+            await context.SaveChangesAsync();
+        }
+
+        var activities = await new ActivityService(factory, _mapper).GetUserActivityFeedAsync("owner");
+
+        Assert.Equal("Visible", Assert.Single(activities).Description);
+    }
+
+    [Theory]
+    [InlineData(false, false, 2)]
+    [InlineData(true, false, 0)]
+    [InlineData(false, true, 0)]
+    public async Task GetFriendsActivityFeedAsync_ExcludesRemovedWishlistOrItem(
+        bool wishlistDeleted, bool itemDeleted, int expectedCount)
+    {
+        var factory = CreateFactory();
+        await SeedActivityDataAsync(factory);
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Friends.Add(new Friend { UserId = "viewer", FriendUserId = "actor" });
+            var wishlist = await context.Wishlists.SingleAsync();
+            context.WishlistPermissions.Add(new WishlistPermission
+            {
+                WishlistId = wishlist.Id,
+                UserId = "viewer",
+                PermissionType = "View"
+            });
+            wishlist.Deleted = wishlistDeleted;
+            if (itemDeleted)
+            {
+                foreach (var item in context.WishlistItems)
+                {
+                    item.Deleted = true;
+                }
+            }
+            await context.SaveChangesAsync();
+        }
+
+        var activities = await new ActivityService(factory, _mapper).GetFriendsActivityFeedAsync("viewer");
+
+        Assert.Equal(expectedCount, activities.Count());
+    }
+
     private static async Task<(int WishlistId, string ActorId)> SeedActivityDataAsync(TestDbContextFactory factory)
     {
         const string actorId = "actor";

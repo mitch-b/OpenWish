@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.1.31",
+    "date": "2026-10-03",
+    "title": "More reliable product link imports",
+    "summary": "Product details and images are captured more reliably when adding a gift idea from a link.",
+    "highlights": [
+      "Product metadata and image links are read correctly from product pages.",
+      "Relative images on redirected product links resolve against the final page."
+    ]
+  },
+  {
     "version": "0.1.30",
     "date": "2026-10-03",
     "title": "Cleaner wishlist activity",

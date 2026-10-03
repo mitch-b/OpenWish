@@ -1205,8 +1205,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!releaseVersion) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
+  const releasesResponse = await context.request.get(`${baseUrl}/releases.json`);
+  if (!releasesResponse.ok()) {
+    throw new Error(`Release metadata returned ${releasesResponse.status()}.`);
+  }
+  const [latestRelease] = await releasesResponse.json();
+  if (latestRelease?.version !== releaseVersion || !latestRelease.title) {
+    throw new Error("Latest release metadata does not match the build version.");
+  }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "Clearer creation and release controls");
+  await assertVisible(page, latestRelease.title);
   await screenshot(page, "whats-new.png");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);

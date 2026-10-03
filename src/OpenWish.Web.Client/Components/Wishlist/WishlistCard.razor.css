@@ -12,8 +12,12 @@
 
 .card-title-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.85rem;
+}
+
+.wishlist-card-heading {
+    min-width: 0;
 }
 
 .wishlist-card-icon {
@@ -32,11 +36,13 @@
     margin: 0;
     color: var(--color-text);
     font-size: 1.05rem;
+    overflow-wrap: anywhere;
 }
 
 .card-owner {
     color: var(--color-text-muted);
-    font-size: 0.78rem;
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
 }
 
 .wishlist-meta {
@@ -54,7 +60,7 @@
     border-radius: 999px;
     background: var(--color-surface-alt);
     color: var(--color-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 700;
 }
 
@@ -90,8 +96,7 @@
 
 .kebab-menu {
     display: grid;
-    min-width: 2.2rem;
-    width: 2.2rem;
+    min-width: 2.75rem;
     min-height: 2.75rem;
     height: 2.75rem;
     width: 2.75rem;
@@ -100,4 +105,14 @@
     border: 0;
     background: transparent;
     color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wishlist-card {
+        transition: none;
+    }
+
+    .wishlist-card:hover {
+        transform: none;
+    }
 }

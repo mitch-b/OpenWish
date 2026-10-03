@@ -73,6 +73,17 @@ docker run --rm \
   --volume "$docker_walkthrough_directory:/walkthrough" \
   openwish-playwright:1.63.0
 
+if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
+  docker run --rm --entrypoint tar \
+    --volume "$docker_evidence_directory:/evidence:ro" \
+    openwish-playwright:1.63.0 -C /evidence -cf - . |
+    tar -C "$evidence_directory" -xf -
+  docker run --rm --entrypoint tar \
+    --volume "$docker_walkthrough_directory:/walkthrough:ro" \
+    openwish-playwright:1.63.0 -C /walkthrough -cf - . |
+    tar -C "$walkthrough_directory" -xf -
+fi
+
 dependent_cleanup="$("${compose[@]}" exec -T db \
   psql -U openwish -d OpenWish -Atc \
   "SELECT CASE
@@ -145,7 +156,9 @@ test -s "$walkthrough_directory/wishlists.png"
 test -s "$walkthrough_directory/wishlist-details.png"
 test -s "$walkthrough_directory/wishlist-item-added.png"
 test -s "$walkthrough_directory/added-wishlist-item.png"
+test -s "$walkthrough_directory/add-wishlist-item.png"
 test -s "$walkthrough_directory/events.png"
+test -s "$walkthrough_directory/create-event.png"
 test -s "$walkthrough_directory/event-details.png"
 test -s "$walkthrough_directory/event-management.png"
 test -s "$walkthrough_directory/event-participant-removal.png"
@@ -166,9 +179,12 @@ test -s "$walkthrough_directory/two-factor-disable.png"
 test -s "$walkthrough_directory/authenticator-setup-mobile.png"
 test -s "$walkthrough_directory/account-recovery.png"
 test -s "$walkthrough_directory/account-recovery-mobile.png"
+test -s "$walkthrough_directory/whats-new.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
-if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then
+web_log="$evidence_directory/openwish-e2e-web.log"
+"${compose[@]}" logs web > "$web_log"
+if grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict|warn: Microsoft.EntityFrameworkCore.*[Cc]oncurren' "$web_log"; then
   echo "Server logs contain a failed request, exception, or concurrency conflict." >&2
   exit 1
 fi

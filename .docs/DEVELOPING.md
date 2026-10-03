@@ -13,6 +13,11 @@
 * `OpenWish.Application` - Contains the application services and business logic for the application.
 * `OpenWish.ServiceDefaults` - supports the .NET Aspire Host bootstrapping.
 
+Friend invitations to an existing account create a friend request, matching
+email addresses without regard to casing. Pending email invitations are reused
+for the same sender and address (also case-insensitively), and an accepted
+invitation is cleared even when a friendship was established earlier.
+
 ## Aspire Secrets
 
 To run a local PostgreSQL instance, you must give a username & password. Use dotnet user secrets for this.
@@ -140,6 +145,30 @@ docker run --rm \
   -p 8080:80 \
   openwishlocal:$TAG_NAME
 ```
+
+## Releasing
+
+`version.txt` holds the current semantic version and is the single source of
+truth; `src/Directory.Build.props` mirrors it into the build. Bump it with
+`scripts/bump-version.sh major|minor|patch`, which updates both files
+together and refuses to run without a valid `version.txt`.
+
+Every user-visible change also needs three consistent, dated artifacts:
+
+* A release note under `.docs/releases/`, named
+  `YYYY-MM-DD-<version>-<slug>.md`, describing the change from a user's
+  perspective (see existing files in that folder for the expected tone and
+  format).
+* A matching entry in `CHANGELOG.md` under the new version heading.
+* A matching entry inserted at the top of the array in
+  `src/OpenWish.Web/wwwroot/releases.json` (newest first), which powers the
+  in-app release notes surfaced by `IReleaseNotesService` and is verified by
+  `ReleaseMetadataTests` in `OpenWish.Shared.Tests`, which requires the
+  current version to be `releases[0]`.
+
+Keep the version number identical across `version.txt`, the changelog
+heading, and the `releases.json` entry so `ReleaseMetadataTests` continues to
+verify they stay in sync.
 
 ## Automated verification
 

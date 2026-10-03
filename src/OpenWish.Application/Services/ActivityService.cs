@@ -41,7 +41,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var activities = await context.ActivityLogs
-            .Where(a => a.UserId == userId)
+            .Where(a => a.UserId == userId && !a.Deleted)
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)
@@ -85,6 +85,8 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(a =>
                 !a.Deleted &&
                 friendIds.Contains(a.UserId) &&
+                (!a.WishlistId.HasValue || (a.Wishlist != null && !a.Wishlist.Deleted)) &&
+                (!a.WishlistItemId.HasValue || (a.WishlistItem != null && !a.WishlistItem.Deleted)) &&
                 (!a.WishlistId.HasValue || accessibleWishlistIds.Contains(a.WishlistId.Value)) &&
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
@@ -120,6 +122,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(a =>
                 !a.Deleted &&
                 a.WishlistId == wishlistId &&
+                (!a.WishlistItemId.HasValue || (a.WishlistItem != null && !a.WishlistItem.Deleted)) &&
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&

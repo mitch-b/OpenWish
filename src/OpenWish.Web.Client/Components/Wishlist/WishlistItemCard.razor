@@ -5,7 +5,7 @@
         @if (!string.IsNullOrEmpty(Item.Image))
         {
             <div class="col-md-4">
-                <img src="@Item.Image" class="img-fluid rounded-start" alt="@Item.Name">
+                <img src="@Item.Image" class="img-fluid rounded-start" alt="@(string.IsNullOrWhiteSpace(Item.Name) ? "Wishlist item image" : Item.Name)">
             </div>
             <div class="col-md-8">
                 <div class="card-body">

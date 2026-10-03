@@ -2,6 +2,7 @@
 @page "/wishlists"
 
 @using Microsoft.Extensions.Logging
+@using Microsoft.AspNetCore.Components.Web
 @using OpenWish.Web.Client.Components.Shared
 @using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Shared.Services
@@ -14,25 +15,33 @@
 
 <div class="container page-shell">
     <PageHeader Title="Wishlists"
-                Description="Manage your wishlists and explore wishlists shared by friends.">
+                Description="Save gift ideas and see what friends have shared.">
         <Actions>
-            <a href="/wishlists/new" class="btn btn-light btn-lg">Create wishlist</a>
+            <a href="/wishlists/new" class="btn btn-primary">
+                <OpenWishIcon Name="plus-lg" /> Create wishlist
+            </a>
         </Actions>
     </PageHeader>
 
     <ul class="nav nav-tabs mb-3" id="wishlistTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link @(activeTab == "my-wishlists" ? "active" : "")" id="my-wishlists-tab" 
+            <button class="nav-link @(activeTab == "my-wishlists" ? "active" : "")" id="my-wishlists-tab"
+                    @ref="_myWishlistsTab"
                     @onclick='() => SetActiveTab("my-wishlists")' type="button" role="tab"
-                    aria-selected="@(activeTab == "my-wishlists")"
+                    @onkeydown="HandleTabKeyDown"
+                    tabindex="@(activeTab == "my-wishlists" ? 0 : -1)"
+                    aria-selected="@(activeTab == "my-wishlists" ? "true" : "false")"
                     aria-controls="my-wishlists-panel">
                 <OpenWishIcon Name="list-ul" Class="me-2" />My Wishlists
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link @(activeTab == "friends-wishlists" ? "active" : "")" id="friends-wishlists-tab" 
+            <button class="nav-link @(activeTab == "friends-wishlists" ? "active" : "")" id="friends-wishlists-tab"
+                    @ref="_friendsWishlistsTab"
                     @onclick='() => SetActiveTab("friends-wishlists")' type="button" role="tab"
-                    aria-selected="@(activeTab == "friends-wishlists")"
+                    @onkeydown="HandleTabKeyDown"
+                    tabindex="@(activeTab == "friends-wishlists" ? 0 : -1)"
+                    aria-selected="@(activeTab == "friends-wishlists" ? "true" : "false")"
                     aria-controls="friends-wishlists-panel">
                 <OpenWishIcon Name="people" Class="me-2" />Friends' Wishlists
             </button>
@@ -44,6 +53,7 @@
                  id="my-wishlists-panel"
                  role="tabpanel"
                  aria-labelledby="my-wishlists-tab"
+                 tabindex="0"
                  aria-busy="@(_loadingWishlists ? "true" : "false")"
                  hidden="@(activeTab != "my-wishlists")">
                 <div class="wishlist-toolbar">
@@ -103,9 +113,18 @@
                 {
                     <p class="visually-hidden" role="status" aria-live="polite">No wishlists found.</p>
                     <div class="empty-state">
-                        <h2>No wishlists found</h2>
-                        <p>Create a wishlist or change the current search and filters.</p>
-                        <a href="/wishlists/new" class="btn btn-primary">Create your first wishlist</a>
+                        @if (TotalWishlistCount == 0)
+                        {
+                            <h2>Start your first wishlist</h2>
+                            <p>Keep gift ideas together, even if you only have a name for now.</p>
+                            <a href="/wishlists/new" class="btn btn-primary">Create wishlist</a>
+                        }
+                        else
+                        {
+                            <h2>No matching wishlists</h2>
+                            <p>Try another name or show all your wishlists.</p>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ClearDiscovery">Clear search and filters</button>
+                        }
                     </div>
                 }
                 else
@@ -137,7 +156,7 @@
                         @foreach (var wishlist in filteredWishlists)
                         {
                             <div class="col-md-6 col-xl-4">
-                                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+                                <WishlistCard Wishlist="@wishlist" ShowOwner="false" OnDelete="@HandleWishlistDeleted" />
                             </div>
                         }
                     </div>
@@ -148,6 +167,7 @@
                  id="friends-wishlists-panel"
                  role="tabpanel"
                  aria-labelledby="friends-wishlists-tab"
+                 tabindex="0"
                  aria-busy="@(loadingFriendsWishlists ? "true" : "false")"
                  hidden="@(activeTab != "friends-wishlists")">
                 @if (loadingFriendsWishlists)
@@ -206,6 +226,9 @@
     private bool loadingFriendsWishlists = false;
     private string? _wishlistLoadError;
     private string? _friendsWishlistLoadError;
+    private ElementReference _myWishlistsTab;
+    private ElementReference _friendsWishlistsTab;
+    private string? _pendingTabFocus;
     
     // Filter and sort properties
     private string searchTerm = "";
@@ -268,6 +291,12 @@
                 StateHasChanged();
             }
         }
+
+        if (_pendingTabFocus is { } tab)
+        {
+            _pendingTabFocus = null;
+            await (tab == "my-wishlists" ? _myWishlistsTab : _friendsWishlistsTab).FocusAsync();
+        }
     }
 
     private async Task SetActiveTab(string tab)
@@ -280,6 +309,25 @@
         }
         
         StateHasChanged();
+    }
+
+    private async Task HandleTabKeyDown(KeyboardEventArgs args)
+    {
+        var target = args.Key switch
+        {
+            "ArrowRight" or "ArrowLeft" => activeTab == "my-wishlists" ? "friends-wishlists" : "my-wishlists",
+            "Home" => "my-wishlists",
+            "End" => "friends-wishlists",
+            _ => null
+        };
+
+        if (target is null)
+        {
+            return;
+        }
+
+        _pendingTabFocus = target;
+        await SetActiveTab(target);
     }
 
     private async Task LoadWishlists()
@@ -379,6 +427,13 @@
     private void ClearSearch()
     {
         searchTerm = string.Empty;
+        ApplyFiltersAndSort();
+    }
+
+    private void ClearDiscovery()
+    {
+        searchTerm = string.Empty;
+        filterBy = "all";
         ApplyFiltersAndSort();
     }
 

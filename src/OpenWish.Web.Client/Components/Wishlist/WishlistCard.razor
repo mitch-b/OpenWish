@@ -13,7 +13,7 @@ else
     <div class="card h-100 wishlist-card">
         <div class="card-body">
             <div class="card-title-row">
-                <span class="wishlist-card-icon">
+                <span class="wishlist-card-icon" aria-hidden="true">
                     @if (string.IsNullOrEmpty(Wishlist.Icon))
                     {
                         <OpenWishIcon Name="gift" />
@@ -23,9 +23,12 @@ else
                         @Wishlist.Icon
                     }
                 </span>
-                <div>
+                <div class="wishlist-card-heading">
                     <h5 class="card-title">@Wishlist.Name</h5>
-                    <span class="card-owner">Created by @Wishlist.Owner?.UserName</span>
+                    @if (ShowOwner && !string.IsNullOrWhiteSpace(Wishlist.Owner?.UserName))
+                    {
+                        <span class="card-owner">By @Wishlist.Owner.UserName</span>
+                    }
                 </div>
             </div>
             <div class="wishlist-meta">
@@ -84,6 +87,8 @@ else
     public WishlistModel? Wishlist { get; set; }
     [Parameter]
     public EventCallback<WishlistModel> OnDelete { get; set; }
+    [Parameter]
+    public bool ShowOwner { get; set; } = true;
 
     private WishlistDeleteDialog deleteDialog = default!;
     private bool isCurrentUserOwner = false;

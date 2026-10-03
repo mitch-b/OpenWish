@@ -9,7 +9,8 @@
     "privateWishlistPublicId": "demo-private-ideas",
     "friendWishlistPublicId": "demo-jordan-favorites",
     "eventPublicId": "demo-holiday-gift-exchange",
-    "reservedItemId": 2
+    "reservedItemId": 2,
+    "wishlistId": 2
   },
   "scenarios": [
     {
@@ -58,10 +59,11 @@
         "/wishlists/new",
         "/wishlists/demo-family-gift-ideas/manage",
         "/wishlists/demo-family-gift-ideas/items/new",
+        "/wishlists/demo-family-gift-ideas/items/new",
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/28b14f0f-1211-4130-8409-b27401232249/manage",
+        "/events/8f0cba58-bdfc-453d-a0ca-28c019d4b5e4/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -82,15 +84,19 @@
         "accessible product links",
         "focus-safe duplicate-resistant wishlist item deletion",
         "PostgreSQL concurrent item deletion and one-winner activity logging",
-        "event details and gift assignment",
+        "gift match next step, privacy, and responsive layout",
         "friends and pending requests",
         "accessible notification updates and deletion",
         "immediate wishlist discovery",
+        "filtered wishlist recovery, collapsed item filters, and tablet layout",
         "friend invitation validation",
         "accessible loading updates",
         "wishlist management labels and contrast",
-        "theme persistence",
-        "release history",
+        "contextual wishlist and item creation navigation",
+        "standalone product-link validation and retry",
+        "inclusive event creation context",
+        "state-aware theme persistence",
+        "current release history",
         "account settings requirements and deletion safety",
         "two-factor status, setup, recovery, reset, and disable safety",
         "PostgreSQL dependent soft-delete cleanup"
@@ -108,6 +114,9 @@
         "/wishlists/demo-family-gift-ideas"
       ],
       "assertions": [
+        "invitation acceptance retries reconcile an already committed decision",
+        "combined availability filters retain all items",
+        "grid gift coordination opens the matching list row",
         "items made private by collaborators disappear immediately for their creator",
         "private collaborator items remain visible to the wishlist owner",
         "private item persistence and viewer-filtered lookup endpoints return success"
@@ -119,6 +128,9 @@
       "visitedRoutes": [
         "/events",
         "/events/demo-holiday-gift-exchange"
+      ],
+      "assertions": [
+        "case-insensitive existing-user invitation creates a sent friend request"
       ]
     },
     {
@@ -128,11 +140,19 @@
         "/",
         "/wishlists/demo-family-gift-ideas",
         "/wishlists/demo-family-gift-ideas/manage",
+        "/events",
         "/events/demo-holiday-gift-exchange",
         "/Account/Manage",
         "/Account/Manage/TwoFactorAuthentication",
         "/Account/Manage/EnableAuthenticator",
         "/Account/Manage/PersonalData"
+      ]
+    },
+    {
+      "scenario": "match-without-wishlist",
+      "loginStatus": 200,
+      "assertions": [
+        "recipient without an attached wishlist has no dead-end shopping action"
       ]
     }
   ]

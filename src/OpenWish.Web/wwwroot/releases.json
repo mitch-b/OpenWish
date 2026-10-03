@@ -1,5 +1,99 @@
 [
   {
+    "version": "0.1.32",
+    "date": "2026-10-03",
+    "title": "Easier keyboard wishlist browsing",
+    "summary": "Move between your wishlists and friends' shared lists without leaving the keyboard.",
+    "highlights": [
+      "Arrow, Home, and End keys switch wishlist tabs without scrolling the page and move focus to the selected tab.",
+      "Only the selected tab stays in the normal tab order, and each panel can receive keyboard focus."
+    ]
+  },
+  {
+    "version": "0.1.31",
+    "date": "2026-10-03",
+    "title": "More reliable product link imports",
+    "summary": "Product details and images are captured more reliably when adding a gift idea from a link.",
+    "highlights": [
+      "Product metadata and image links are read correctly from product pages.",
+      "Blank metadata no longer hides available product details or images.",
+      "Relative images on redirected product links resolve against the final page."
+    ]
+  },
+  {
+    "version": "0.1.30",
+    "date": "2026-10-03",
+    "title": "Cleaner wishlist activity",
+    "summary": "Wishlist activity now stays focused on gift ideas that are still available.",
+    "highlights": [
+      "Activity for removed gift ideas no longer appears in a wishlist's activity feed."
+    ]
+  },
+  {
+    "version": "0.1.29",
+    "date": "2026-09-28",
+    "title": "Cleaner coordination history",
+    "summary": "Friend invitations, notification actions, and activity feeds now handle stale or invalid data more predictably.",
+    "highlights": [
+      "Inviting someone who is already your friend by email returns a clear conflict instead of a server error.",
+      "Batch invitations avoid duplicate emails, even when capitalization differs, and continue after invalid entries.",
+      "Already-deleted notifications cannot be deleted again or marked as read.",
+      "Removed activity records no longer appear in your personal activity feed.",
+      "Friends' activity no longer displays entries for removed wishlists or gift ideas."
+    ]
+  },
+  {
+    "version": "0.1.28",
+    "date": "2026-09-27",
+    "title": "More dependable friend invitations",
+    "summary": "Friend requests and email invitations now handle invalid recipients, address casing, and already-established friendships more reliably.",
+    "highlights": [
+      "Sending a friend request to yourself returns a clear conflict without creating a self-friendship.",
+      "Requests to unknown users return not found instead of storing an invalid request.",
+      "Email invitations find existing accounts even when the address casing differs and send a friend request instead of a registration email.",
+      "Repeated email invitations with different address casing reuse the pending invitation.",
+      "An invitation accepted after the users have already become friends is marked complete."
+    ]
+  },
+  {
+    "version": "0.1.27",
+    "date": "2026-09-26",
+    "title": "Notification and friend-request reliability",
+    "summary": "Friend requests and notification actions now report clear, accurate outcomes instead of misleading errors.",
+    "highlights": [
+      "Sending a friend request to an existing friend or a duplicate pending request now returns a clear conflict response instead of a server error.",
+      "Marking all notifications as read no longer shows a false error when there is nothing left to mark; it quietly confirms everything is already read and keeps the notification list and unread badge in sync.",
+      "A genuine network failure while marking all notifications as read is now caught and reported instead of surfacing as an unhandled error.",
+      "Wishlist item images without a name now get a descriptive fallback alt attribute for screen readers."
+    ]
+  },
+  {
+    "version": "0.1.26",
+    "date": "2026-09-23",
+    "title": "Clearer creation and release controls",
+    "summary": "Creation and release controls now provide clearer context, safer navigation, and more useful recovery.",
+    "highlights": [
+      "Release notes offer a duplicate-safe retry that keeps the failure and retry progress visible until refreshed updates arrive.",
+      "The theme control names the theme it will apply and updates that name when the current theme changes.",
+      "Event creation clearly supports both gift exchanges and celebrations.",
+      "Standalone wishlist-item creation provides page context, a return route, and a safe cancel action that cannot interrupt an in-progress save.",
+      "Wishlist creation uses the standard page header with concise sharing guidance and a consistent return route."
+    ]
+  },
+  {
+    "version": "0.1.25",
+    "date": "2026-09-22",
+    "title": "Dependable event overview",
+    "summary": "Event and invitation lists now stay clear and recoverable when requests are interrupted.",
+    "highlights": [
+      "Event loading failures are distinct from an empty list and provide a direct retry.",
+      "Event refresh failures preserve previously loaded event cards while reporting that newer data is unavailable.",
+      "Pending invitation loading failures remain visible instead of disappearing as an empty list.",
+      "Interrupted invitation acceptance safely reconciles on retry while keeping the invitation available until acceptance is confirmed.",
+      "Interrupted invitation decline safely reconciles on retry while keeping the confirmation controls available until decline is confirmed."
+    ]
+  },
+  {
     "version": "0.1.24",
     "date": "2026-09-21",
     "title": "Clearer recovery and navigation",

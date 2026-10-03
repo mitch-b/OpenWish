@@ -69,8 +69,19 @@ public class FriendController : ControllerBase
             return Unauthorized();
         }
 
-        var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
-        return Ok(request);
+        try
+        {
+            var request = await _friendService.SendFriendRequestAsync(requesterId, receiverId);
+            return Ok(request);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
 
     [HttpGet("requests/received")]
@@ -177,16 +188,25 @@ public class FriendController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
     }
 
     [HttpPost("invite/batch")]
     [EnableRateLimiting("invitations")]
-    public async Task<IActionResult> SendFriendInvitesByEmail([FromBody] List<string> emails)
+    public async Task<IActionResult> SendFriendInvitesByEmail([FromBody] List<string>? emails)
     {
         var senderUserId = await _userContextService.GetUserIdAsync();
         if (senderUserId is null)
         {
             return Unauthorized();
+        }
+
+        if (emails is null)
+        {
+            return BadRequest("Please provide a list of email addresses.");
         }
 
         if (emails.Count > 20)

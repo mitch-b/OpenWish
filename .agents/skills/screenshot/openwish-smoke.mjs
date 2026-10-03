@@ -516,6 +516,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The loaded dashboard remained marked as busy.");
   }
   await screenshot(page, "home-dashboard.png");
+  await screenshot(page, "readme-home.png", false);
 
   await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
   const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
@@ -683,6 +684,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Filters", expanded: false })
     .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
+  await screenshot(page, "readme-wishlist.png", false);
   await page.setViewportSize({ width: 900, height: 1000 });
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
     throw new Error("Tablet wishlist has horizontal overflow.");
@@ -1053,6 +1055,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.getByRole("button", { name: "Add exclusion rule" }).waitFor({ state: "visible" });
   await screenshot(page, "secret-santa-setup.png");
+  await screenshot(page, "readme-exchange.png", false);
   await assertResponsiveWidths(page, [
     { width: 320, height: 568 },
     { width: 768, height: 500 },
@@ -1708,6 +1711,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("button", { name: "Grid view" }).click();
   const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
   await screenshot(page, "wishlist-shopper-grid.png");
+  await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Coordinate gift" }).click();
   await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
   await page.getByRole("region", {
@@ -1978,6 +1982,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, "/", "Welcome Back!", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await screenshot(page, "home-mobile.png");
+  await screenshot(page, "readme-mobile.png", false);
   const navigationToggle = page.locator(".navbar-toggler");
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("The closed mobile navigation did not expose its collapsed state.");

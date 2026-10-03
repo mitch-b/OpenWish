@@ -518,6 +518,19 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "home-dashboard.png");
 
   await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
+  const friendWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists/friends`);
+  if (!ownedWishlistsResponse.ok() || !friendWishlistsResponse.ok()) {
+    throw new Error(`Wishlist API returned ${ownedWishlistsResponse.status()} / ${friendWishlistsResponse.status()}.`);
+  }
+  const ownedWishlists = await ownedWishlistsResponse.json();
+  const friendWishlists = await friendWishlistsResponse.json();
+  if (!Array.isArray(ownedWishlists) ||
+      !ownedWishlists.some(wishlist => wishlist.publicId === manifest.wishlistPublicId) ||
+      !Array.isArray(friendWishlists) ||
+      !friendWishlists.some(wishlist => wishlist.publicId === manifest.friendWishlistPublicId)) {
+    throw new Error("Authenticated wishlist API did not return the expected owned and shared lists.");
+  }
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Private Ideas");
   if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
@@ -552,13 +565,71 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertTextContrast(familyWishlistLink, "Wishlist card navigation link");
   await screenshot(page, "wishlists.png");
 
-  await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  const ownTab = page.getByRole("tab", { name: "My Wishlists" });
+  const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
+  if (await ownTab.getAttribute("tabindex") !== "0" ||
+      await friendsTab.getAttribute("tabindex") !== "-1") {
+    throw new Error("Only the selected wishlist tab should be in the tab order.");
+  }
+  await ownTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" &&
+      tab.getAttribute("tabindex") === "0" && document.activeElement === tab;
+  });
   await page.getByRole("heading", { name: "Shared with you" }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Manage friends" }).waitFor({ state: "visible" });
   await assertVisible(page, "Jordan's Favorites");
   if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded friends' wishlist panel remained marked as busy.");
   }
+  if (!(await friendsTab.evaluate(element => element === document.activeElement))) {
+    throw new Error(`Friends' tab lost focus after loading: ${await page.evaluate(() => document.activeElement?.id)}.`);
+  }
+  await page.setViewportSize({ width: 1440, height: 400 });
+  await page.evaluate(() => window.scrollTo(0, 120));
+  await friendsTab.focus();
+  const tabScrollPosition = await page.evaluate(() => window.scrollY);
+  if (tabScrollPosition === 0) {
+    throw new Error("Wishlist tab scroll test needs a scrolled page.");
+  }
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("Home scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("End");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("End scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("ArrowLeft scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => document.activeElement?.id === "friends-wishlists-tab");
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("ArrowRight scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => document.activeElement?.id === "my-wishlists-tab");
+  await page.keyboard.press("Tab");
+  if (!(await page.locator("#my-wishlists-panel").evaluate(element => element === document.activeElement))) {
+    throw new Error("Tab did not move focus from the selected wishlist tab into its panel.");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");
@@ -1351,6 +1422,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
     assertions: [
       "dashboard data",
       "owned and friend wishlists",
+      "authenticated owned and friend wishlist API data",
+      "wishlist tab navigation preserves scroll and Tab enters the selected panel",
       "wishlist items and pricing",
       "accessible product links",
       "focus-safe duplicate-resistant wishlist item deletion",

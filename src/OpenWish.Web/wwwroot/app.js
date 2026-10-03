@@ -205,6 +205,14 @@ document.addEventListener("change", event => {
     }
 });
 
+document.addEventListener("keydown", event => {
+    if (event.target instanceof Element &&
+        event.target.closest("#wishlistTabs [role='tab']") &&
+        ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+    }
+});
+
 document.addEventListener("click", event => {
     if (!(event.target instanceof Element) ||
         !event.target.closest(".nav-scrollable a, .nav-scrollable button")) {

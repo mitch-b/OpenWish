@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.1.32",
+    "date": "2026-10-03",
+    "title": "Easier keyboard wishlist browsing",
+    "summary": "Move between your wishlists and friends' shared lists without leaving the keyboard.",
+    "highlights": [
+      "Arrow, Home, and End keys switch wishlist tabs without scrolling the page and move focus to the selected tab.",
+      "Only the selected tab stays in the normal tab order, and each panel can receive keyboard focus."
+    ]
+  },
+  {
     "version": "0.1.31",
     "date": "2026-10-03",
     "title": "More reliable product link imports",

@@ -63,7 +63,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/8f0cba58-bdfc-453d-a0ca-28c019d4b5e4/manage",
+        "/events/4ac2a4fd-37a6-405d-aa68-b4b595d36143/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -80,6 +80,8 @@
       "assertions": [
         "dashboard data",
         "owned and friend wishlists",
+        "authenticated owned and friend wishlist API data",
+        "wishlist tab navigation preserves scroll and Tab enters the selected panel",
         "wishlist items and pricing",
         "accessible product links",
         "focus-safe duplicate-resistant wishlist item deletion",

@@ -182,7 +182,7 @@ async function assertNoEmptySpinnerStatuses(page, route) {
   }
 }
 
-async function screenshot(page, fileName, fullPage = true) {
+async function screenshot(page, fileName, fullPage = false) {
   await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.waitForTimeout(500);
   await assertDesktopSidebarContinuity(page);
@@ -516,8 +516,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The loaded dashboard remained marked as busy.");
   }
   await screenshot(page, "home-dashboard.png");
+  await screenshot(page, "readme-home.png", false);
 
-  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
   const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
   const friendWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists/friends`);
   if (!ownedWishlistsResponse.ok() || !friendWishlistsResponse.ok()) {
@@ -683,6 +684,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Filters", expanded: false })
     .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
+  await screenshot(page, "readme-wishlist.png", false);
   await page.setViewportSize({ width: 900, height: 1000 });
   if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
     throw new Error("Tablet wishlist has horizontal overflow.");
@@ -944,7 +946,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Travel Mug");
   await screenshot(page, "added-wishlist-item.png");
 
-  await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
+  await visit(page, "/events", "Plan an exchange or a shared occasion.", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
   if (await page.getByRole("region", { name: "Your events" }).getAttribute("aria-busy") !== "false") {
     throw new Error("The populated event list did not finish loading.");
@@ -1040,7 +1042,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!createdEventPublicId) {
     throw new Error("The created event URL did not include a public identifier.");
   }
-  await assertVisible(page, "Finish your gift exchange setup");
+  await assertVisible(page, "Ready the exchange");
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
   await assertVisible(page, "Make assignments");
@@ -1053,6 +1055,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.getByRole("button", { name: "Add exclusion rule" }).waitFor({ state: "visible" });
   await screenshot(page, "secret-santa-setup.png");
+  await screenshot(page, "readme-exchange.png", false);
   await assertResponsiveWidths(page, [
     { width: 320, height: 568 },
     { width: 768, height: 500 },
@@ -1259,7 +1262,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertTextContrast(page.locator(".gift-match-name"), "Dark gift recipient name");
   await screenshot(page, "event-details-dark.png");
 
-  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
@@ -1708,6 +1711,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("button", { name: "Grid view" }).click();
   const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
   await screenshot(page, "wishlist-shopper-grid.png");
+  await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Coordinate gift" }).click();
   await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
   await page.getByRole("region", {
@@ -1978,6 +1982,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, "/", "Welcome Back!", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
   await screenshot(page, "home-mobile.png");
+  await screenshot(page, "readme-mobile.png", false);
   const navigationToggle = page.locator(".navbar-toggler");
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("The closed mobile navigation did not expose its collapsed state.");

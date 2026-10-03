@@ -17,7 +17,15 @@
 
     @if (_loadError is not null)
     {
-        <div class="alert alert-danger" role="alert">@_loadError</div>
+        <div class="alert alert-danger" role="alert">
+            <p class="mb-2">@_loadError</p>
+            <button class="btn btn-outline-danger"
+                    type="button"
+                    disabled="@_isLoading"
+                    @onclick="LoadReleaseNotesAsync">
+                @(_isLoading ? "Trying again..." : "Try again")
+            </button>
+        </div>
     }
     else if (_releases is null)
     {
@@ -156,6 +164,7 @@
 
     private IReadOnlyList<ReleaseEntryModel>? _releases;
     private string? _loadError;
+    private bool _isLoading;
     private string _searchText = string.Empty;
     private string _selectedYear = string.Empty;
     private int _currentPage = 1;
@@ -193,18 +202,32 @@
             ? "1 release"
             : $"{FilteredReleases.Count} releases";
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadReleaseNotesAsync();
+
+    private async Task LoadReleaseNotesAsync()
     {
+        if (_isLoading)
+        {
+            return;
+        }
+
+        _isLoading = true;
+
         try
         {
             _releases = (await ReleaseNotesService.GetReleaseNotesAsync())
                 .OrderByDescending(release => TryGetReleaseDate(release.Date) ?? DateOnly.MinValue)
                 .ToList();
+            _loadError = null;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unable to load release notes.");
             _loadError = "Release notes are temporarily unavailable.";
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 

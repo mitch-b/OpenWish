@@ -248,7 +248,7 @@ async function assertMinimumTouchTarget(locator, description) {
 }
 
 async function assertTextContrast(locator, description) {
-  const contrast = await locator.evaluate(element => {
+  const calculateContrast = element => {
     const parseColor = value => {
       const channels = value.match(/[\d.]+/g)?.map(Number) ?? [];
       return {
@@ -280,7 +280,13 @@ async function assertTextContrast(locator, description) {
     const backgroundLuminance = luminance(background);
     return (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
       (Math.min(foregroundLuminance, backgroundLuminance) + 0.05);
-  });
+  };
+
+  let contrast = await locator.evaluate(calculateContrast);
+  for (let attempt = 0; contrast < 4.5 && attempt < 10; attempt += 1) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    contrast = await locator.evaluate(calculateContrast);
+  }
 
   if (contrast < 4.5) {
     throw new Error(`${description} contrast was ${contrast.toFixed(2)}:1; expected at least 4.5:1.`);
@@ -511,7 +517,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await screenshot(page, "home-dashboard.png");
 
-  await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
+  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
+  const friendWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists/friends`);
+  if (!ownedWishlistsResponse.ok() || !friendWishlistsResponse.ok()) {
+    throw new Error(`Wishlist API returned ${ownedWishlistsResponse.status()} / ${friendWishlistsResponse.status()}.`);
+  }
+  const ownedWishlists = await ownedWishlistsResponse.json();
+  const friendWishlists = await friendWishlistsResponse.json();
+  if (!Array.isArray(ownedWishlists) ||
+      !ownedWishlists.some(wishlist => wishlist.publicId === manifest.wishlistPublicId) ||
+      !Array.isArray(friendWishlists) ||
+      !friendWishlists.some(wishlist => wishlist.publicId === manifest.friendWishlistPublicId)) {
+    throw new Error("Authenticated wishlist API did not return the expected owned and shared lists.");
+  }
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Private Ideas");
   if (await page.locator("#my-wishlists-panel").getAttribute("aria-busy") !== "false") {
@@ -529,6 +548,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const clearWishlistSearch = page.getByRole("button", { name: "Clear wishlist search" });
   await clearWishlistSearch.click();
   await assertVisible(page, "Family Gift Ideas");
+  await wishlistSearch.fill("No such wishlist");
+  await page.getByRole("heading", { name: "No matching wishlists" }).waitFor({ state: "visible" });
+  await screenshot(page, "wishlist-no-matches.png");
+  await page.getByRole("button", { name: "Clear search and filters" }).click();
+  await assertVisible(page, "Family Gift Ideas");
   const familyWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await familyWishlistLink.waitFor({ state: "visible" });
   if (await familyWishlistLink.getAttribute("href") !== `/wishlists/${manifest.wishlistPublicId}`) {
@@ -541,13 +565,71 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertTextContrast(familyWishlistLink, "Wishlist card navigation link");
   await screenshot(page, "wishlists.png");
 
-  await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  const ownTab = page.getByRole("tab", { name: "My Wishlists" });
+  const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
+  if (await ownTab.getAttribute("tabindex") !== "0" ||
+      await friendsTab.getAttribute("tabindex") !== "-1") {
+    throw new Error("Only the selected wishlist tab should be in the tab order.");
+  }
+  await ownTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" &&
+      tab.getAttribute("tabindex") === "0" && document.activeElement === tab;
+  });
   await page.getByRole("heading", { name: "Shared with you" }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Manage friends" }).waitFor({ state: "visible" });
   await assertVisible(page, "Jordan's Favorites");
   if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded friends' wishlist panel remained marked as busy.");
   }
+  if (!(await friendsTab.evaluate(element => element === document.activeElement))) {
+    throw new Error(`Friends' tab lost focus after loading: ${await page.evaluate(() => document.activeElement?.id)}.`);
+  }
+  await page.setViewportSize({ width: 1440, height: 400 });
+  await page.evaluate(() => window.scrollTo(0, 120));
+  await friendsTab.focus();
+  const tabScrollPosition = await page.evaluate(() => window.scrollY);
+  if (tabScrollPosition === 0) {
+    throw new Error("Wishlist tab scroll test needs a scrolled page.");
+  }
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("Home scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("End");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("End scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("ArrowLeft scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => document.activeElement?.id === "friends-wishlists-tab");
+  if (await page.evaluate(() => window.scrollY) !== tabScrollPosition) {
+    throw new Error("ArrowRight scrolled the page while switching wishlist tabs.");
+  }
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => document.activeElement?.id === "my-wishlists-tab");
+  await page.keyboard.press("Tab");
+  if (!(await page.locator("#my-wishlists-panel").evaluate(element => element === document.activeElement))) {
+    throw new Error("Tab did not move focus from the selected wishlist tab into its panel.");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");
@@ -597,7 +679,16 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await gridView.click();
   await page.getByRole("button", { name: "Grid view", pressed: true })
     .waitFor({ state: "visible" });
+  await filtersButton.click();
+  await page.getByRole("button", { name: "Filters", expanded: false })
+    .waitFor({ state: "visible" });
   await screenshot(page, "wishlist-details.png");
+  await page.setViewportSize({ width: 900, height: 1000 });
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error("Tablet wishlist has horizontal overflow.");
+  }
+  await screenshot(page, "wishlist-tablet.png");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const addItemButton = page.getByRole("button", { name: "Add item" }).first();
   await addItemButton.click();
   const itemDialog = page.getByRole("dialog", { name: "Add item" });
@@ -625,7 +716,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await itemDialog.getByLabel("Name").fill("Handmade Tea Infuser");
   await itemDialog.getByLabel("Description").fill("Fine mesh infuser with a resting tray");
-  await itemDialog.getByLabel("Price").fill("24.50");
+  await itemDialog.getByLabel("Estimated price").fill("24.50");
   await itemDialog.getByLabel("Product Link").fill("https://example.com/gift");
   await screenshot(page, "wishlist-item-dialog.png", false);
   await itemDialog.getByRole("button", { name: "Add item", exact: true }).click();
@@ -748,8 +839,21 @@ async function verifyOwnerJourney(browser, manifest, results) {
       `Concurrent item deletion recorded ${itemRemovedActivities.length} removal activities, expected 1.`
     );
   }
+  const wishlistActivityResponse = await context.request.get(
+    `${baseUrl}/api/activities/wishlist/${manifest.wishlistId}?count=100`
+  );
+  if (!wishlistActivityResponse.ok()) {
+    throw new Error(`Wishlist activity verification returned ${wishlistActivityResponse.status()}.`);
+  }
+  const wishlistActivities = await wishlistActivityResponse.json();
+  if (!wishlistActivities.some(activity => activity.publicId === "demo-wishlist-activity") ||
+      wishlistActivities.some(activity => activity.description.includes(concurrentDeleteItemName))) {
+    throw new Error("Wishlist activity did not retain active entries or exposed a removed gift idea.");
+  }
 
-  await visit(page, "/wishlists/new", "Create a Wishlist", visitedRoutes);
+  await visit(page, "/wishlists/new", "Create a wishlist", visitedRoutes);
+  await assertVisible(page, "Start with a name and choose who can see your gift ideas.");
+  await page.getByRole("link", { name: "Back to wishlists" }).waitFor({ state: "visible" });
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The wishlist title field did not retain focus after interactivity started.");
@@ -806,7 +910,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
     manifest,
     "wishlist-management.png"
   );
-  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add Item to Wishlist", visitedRoutes);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add an item", visitedRoutes);
+  await assertVisible(page, "Save the details you know now. You can refine this gift idea later.");
+  await page.getByRole("link", { name: "Back to wishlist" }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.waitForURL(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`);
+  await visit(page, `/wishlists/${manifest.wishlistPublicId}/items/new`, "Add an item", visitedRoutes);
   await page.waitForTimeout(2000);
   const productUrl = page.getByLabel("Product URL");
   if (await page.evaluate(() => document.activeElement?.id) !== "product-url-import") {
@@ -818,6 +927,15 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await page.getByRole("button", { name: "Import" }).isDisabled())) {
     throw new Error("The item form allows an empty product URL import.");
   }
+  await screenshot(page, "add-wishlist-item.png");
+  await productUrl.fill("not-a-web-address");
+  await page.getByRole("button", { name: "Import" }).click();
+  await page.getByRole("alert")
+    .filter({ hasText: "Enter a complete product link that starts with http:// or https://." })
+    .waitFor({ state: "visible" });
+  if (await productUrl.inputValue() !== "not-a-web-address") {
+    throw new Error("The item form discarded an invalid product link before it could be corrected.");
+  }
   await productUrl.fill("https://example.com/gift");
   await page.getByRole("button", { name: "Import" }).click({ trial: true });
   await page.getByLabel("Name").fill("Travel Mug");
@@ -828,6 +946,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  if (await page.getByRole("region", { name: "Your events" }).getAttribute("aria-busy") !== "false") {
+    throw new Error("The populated event list did not finish loading.");
+  }
   await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
   await page.getByRole("link", { name: /Open event.*Holiday Gift Exchange/ })
@@ -835,17 +956,62 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "events.png");
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
-  await assertVisible(page, "Your gift exchange match");
-  await assertVisible(page, "JordanDemo");
-  await assertVisible(page, "Suggested Budget");
+  const match = page.locator(".gift-match");
+  await match.getByRole("heading", { name: "Your gift exchange match" }).waitFor({ state: "visible" });
+  await match.getByRole("heading", { name: "JordanDemo" }).waitFor({ state: "visible" });
+  await match.getByText("Suggested budget").waitFor({ state: "visible" });
+  await match.getByText("Exchange date").waitFor({ state: "visible" });
+  await match.getByText("JordanDemo has 1 gift idea to explore.", { exact: true })
+    .waitFor({ state: "visible" });
+  await match.getByText("Your match stays private.").waitFor({ state: "visible" });
+  const recipientWishlistLink = match.getByRole("link", { name: "View JordanDemo's wishlist" });
+  if (await recipientWishlistLink.getAttribute("href") !==
+      `/wishlists/${manifest.friendWishlistPublicId}`) {
+    throw new Error("The gift match action did not link to the recipient's wishlist.");
+  }
+  await assertTextContrast(match.locator(".gift-match-name"), "Gift recipient name");
   await assertVisible(page, "TaylorDemo");
   const refreshReservedItems = page.getByRole("button", { name: "Refresh" });
   await refreshReservedItems.click();
   await page.getByRole("status").filter({ hasText: "Reserved items refreshed. 0 items found." })
     .waitFor({ state: "attached" });
   await screenshot(page, "event-details.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 600 },
+    { width: 1024, height: 768 }
+  ]);
+  await page.setViewportSize({ width: 900, height: 900 });
+  await screenshot(page, "event-match-tablet.png");
+  const recipientName = match.locator(".gift-match-name");
+  const wishlistActionText = match.locator(".gift-match-action span");
+  const nextStepCopy = match.locator(".gift-match-next-step p").first();
+  const privacyCopy = match.locator(".gift-match-privacy span");
+  const originalName = await recipientName.textContent();
+  const originalActionText = await wishlistActionText.textContent();
+  const originalNextStepCopy = await nextStepCopy.textContent();
+  const originalPrivacyCopy = await privacyCopy.textContent();
+  await recipientName.evaluate(element => {
+    element.textContent = "AReallyLongGiftRecipientNameWithoutSpacesThatMustWrapOnSmallScreens";
+  });
+  await wishlistActionText.evaluate(element => {
+    element.textContent = "View AReallyLongGiftRecipientNameWithoutSpacesThatMustWrapOnSmallScreens' wishlist";
+  });
+  await nextStepCopy.evaluate(element => {
+    element.textContent = "AReallyLongGiftRecipientNameWithoutSpacesThatMustWrapOnSmallScreens has gift ideas.";
+  });
+  await privacyCopy.evaluate(element => {
+    element.textContent = "AReallyLongGiftRecipientNameWithoutSpacesThatMustWrapOnSmallScreens won't see reservations.";
+  });
+  await assertResponsiveWidths(page, [{ width: 320, height: 568 }, { width: 768, height: 600 }]);
+  await recipientName.evaluate((element, text) => { element.textContent = text; }, originalName);
+  await wishlistActionText.evaluate((element, text) => { element.textContent = text; }, originalActionText);
+  await nextStepCopy.evaluate((element, text) => { element.textContent = text; }, originalNextStepCopy);
+  await privacyCopy.evaluate((element, text) => { element.textContent = text; }, originalPrivacyCopy);
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await visit(page, "/events/new", "Create a gift exchange", visitedRoutes);
+  await visit(page, "/events/new", "Create an event", visitedRoutes);
+  await assertVisible(page, "Plan a private gift exchange or coordinate wishlists for a celebration.");
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
     throw new Error("The event name field did not retain focus after interactivity started.");
@@ -866,6 +1032,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.waitForFunction(() =>
     document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Summer cabin gift swap"
   );
+  await screenshot(page, "create-event.png");
   await page.locator("#name").fill("Neighborhood Gift Exchange");
   await page.getByRole("button", { name: "Create and invite people" }).click();
   await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
@@ -922,6 +1089,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const removableFriend = friends.find(friend => friend.userName === "JordanDemo") ?? friends[0];
   if (!removableFriend?.id) {
     throw new Error("Participant-removal verification requires a seeded friend.");
+  }
+  const existingFriendInvite = await context.request.post(
+    `${baseUrl}/api/friends/invite?email=${encodeURIComponent("playwright-friend@openwish.local")}`
+  );
+  if (existingFriendInvite.status() !== 409) {
+    throw new Error(`Inviting an existing friend returned ${existingFriendInvite.status()}, expected 409.`);
   }
   const participantResponse = await context.request.post(
     `${baseUrl}/api/events/${createdEventPublicId}/users`,
@@ -1048,6 +1221,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
       notificationsAfterDelete.some(notification => notification.publicId === notificationPublicId)) {
     throw new Error("Deleted notification remained available from the API.");
   }
+  const repeatedNotificationDelete = await context.request.delete(
+    `${baseUrl}/api/notifications/${notificationPublicId}`
+  );
+  if (repeatedNotificationDelete.status() !== 404) {
+    throw new Error(`Repeated notification deletion returned ${repeatedNotificationDelete.status()}, expected 404.`);
+  }
   await page.keyboard.press("Escape");
   await notificationDialog.waitFor({ state: "detached" });
   if (await notificationBell.getAttribute("aria-expanded") !== "false" ||
@@ -1059,11 +1238,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("Closing notifications left background content inert.");
   }
 
-  await page.getByRole("checkbox", { name: "Toggle dark or light theme" }).evaluate(element => {
+  await page.getByRole("checkbox", { name: "Use dark theme" }).evaluate(element => {
     element.checked = true;
     element.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await page.waitForFunction(() => localStorage.getItem("theme") === "dark");
+  await page.getByRole("checkbox", { name: "Use light theme" }).waitFor({ state: "attached" });
   const selectedTheme = await page.evaluate(() => localStorage.getItem("theme"));
   if (selectedTheme !== "dark") {
     throw new Error(`Theme toggle stored '${selectedTheme}' instead of 'dark'.`);
@@ -1076,9 +1256,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "Assignments are ready");
+  await assertTextContrast(page.locator(".gift-match-name"), "Dark gift recipient name");
   await screenshot(page, "event-details-dark.png");
 
-  await visit(page, "/wishlists", "Manage your wishlists", visitedRoutes);
+  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
@@ -1095,8 +1276,17 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!releaseVersion) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
+  const releasesResponse = await context.request.get(`${baseUrl}/releases.json`);
+  if (!releasesResponse.ok()) {
+    throw new Error(`Release metadata returned ${releasesResponse.status()}.`);
+  }
+  const [latestRelease] = await releasesResponse.json();
+  if (latestRelease?.version !== releaseVersion || !latestRelease.title) {
+    throw new Error("Latest release metadata does not match the build version.");
+  }
   await assertVisible(page, `Version ${releaseVersion}`);
-  await assertVisible(page, "More flexible gift exchanges");
+  await assertVisible(page, latestRelease.title);
+  await screenshot(page, "whats-new.png");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
   const username = await page.locator("#username").inputValue();
@@ -1232,19 +1422,25 @@ async function verifyOwnerJourney(browser, manifest, results) {
     assertions: [
       "dashboard data",
       "owned and friend wishlists",
+      "authenticated owned and friend wishlist API data",
+      "wishlist tab navigation preserves scroll and Tab enters the selected panel",
       "wishlist items and pricing",
       "accessible product links",
       "focus-safe duplicate-resistant wishlist item deletion",
       "PostgreSQL concurrent item deletion and one-winner activity logging",
-      "event details and gift assignment",
+      "gift match next step, privacy, and responsive layout",
       "friends and pending requests",
       "accessible notification updates and deletion",
       "immediate wishlist discovery",
+      "filtered wishlist recovery, collapsed item filters, and tablet layout",
       "friend invitation validation",
       "accessible loading updates",
       "wishlist management labels and contrast",
-      "theme persistence",
-      "release history",
+      "contextual wishlist and item creation navigation",
+      "standalone product-link validation and retry",
+      "inclusive event creation context",
+      "state-aware theme persistence",
+      "current release history",
       "account settings requirements and deletion safety",
       "two-factor status, setup, recovery, reset, and disable safety"
     ]
@@ -1436,6 +1632,25 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, "/events", "Pending Invitations", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
+  const pendingInvitations = page.locator(".pending-invitations-card");
+  if (await pendingInvitations.getAttribute("aria-busy") !== "false") {
+    throw new Error("Pending invitations did not finish loading.");
+  }
+  await pendingInvitations.getByRole("button", { name: "Accept" }).waitFor({ state: "visible" });
+  await pendingInvitations.getByRole("button", { name: "Decline" }).waitFor({ state: "visible" });
+  await screenshot(page, "pending-invitations.png");
+  const pendingInvitationResponse = await context.request.get(
+    `${baseUrl}/api/events/invitations/pending`
+  );
+  if (!pendingInvitationResponse.ok()) {
+    throw new Error(`Pending invitation lookup returned ${pendingInvitationResponse.status()}.`);
+  }
+  const pendingInvitationData = await pendingInvitationResponse.json();
+  if (pendingInvitationData.length !== 1 || !pendingInvitationData[0]?.publicId) {
+    throw new Error(`Expected one seeded pending invitation, received ${JSON.stringify(pendingInvitationData)}.`);
+  }
+  const invitationPublicId = pendingInvitationData[0].publicId;
+
   const manageRedirectResponse = await page.goto(
     `${baseUrl}/events/${manifest.eventPublicId}/manage`,
     { waitUntil: "domcontentloaded" }
@@ -1461,8 +1676,46 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
 
+  const repeatedAcceptance = await context.request.post(
+    `${baseUrl}/api/events/invitations/by-public-id/${invitationPublicId}/accept`
+  );
+  if (!repeatedAcceptance.ok()) {
+    throw new Error(`Repeated invitation acceptance returned ${repeatedAcceptance.status()}.`);
+  }
+  const refreshedInvitations = await context.request.get(
+    `${baseUrl}/api/events/invitations/pending`
+  );
+  if (!refreshedInvitations.ok()) {
+    throw new Error(`Refreshed pending invitation lookup returned ${refreshedInvitations.status()}.`);
+  }
+  if ((await refreshedInvitations.json())
+    .some(invitation => invitation.publicId === invitationPublicId)) {
+    throw new Error("An accepted invitation remained in the pending invitation response.");
+  }
+
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const guestVisibleCount = Number(await page.locator(".stats-dashboard .stat-value").first().textContent());
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Reserved", exact: true }).click();
+  await page.getByRole("button", { name: "Available", exact: true }).click();
+  await page.getByRole("status").filter({
+    hasText: `${guestVisibleCount} of ${guestVisibleCount} wishlist items shown.`
+  })
+    .waitFor({ state: "attached" });
+  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Grid view" }).click();
+  const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
+  await screenshot(page, "wishlist-shopper-grid.png");
+  await guestGridCard.getByRole("button", { name: "Coordinate gift" }).click();
+  await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
+  await page.getByRole("region", {
+    name: "Gift coordination for Cast-Iron Dutch Oven"
+  }).waitFor({ state: "visible" });
+  await page.getByRole("button", {
+    name: "Hide gift options for Cast-Iron Dutch Oven"
+  }).click();
   const privateCollaboratorItemName = `Private collaborator item ${Date.now()}`;
   await page.getByRole("button", { name: "Add item" }).first().click();
   const privateItemDialog = page.getByRole("dialog", { name: "Add item" });
@@ -1475,7 +1728,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByText(privateCollaboratorItemName, { exact: true }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: `Edit ${privateCollaboratorItemName}` }).click();
   const privateItemEditDialog = page.getByRole("dialog", { name: "Edit item" });
-  await privateItemEditDialog.getByLabel("Make this item private (only you can see it)").check();
+  await privateItemEditDialog.getByLabel("Keep this idea private").check();
   await privateItemEditDialog.getByRole("button", { name: "Save changes" }).click();
   await privateItemEditDialog.waitFor({ state: "detached" });
   await page.getByRole("alert")
@@ -1511,14 +1764,14 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   await ownerVerificationContext.close();
   const dutchOvenRow = page.locator("tr").filter({ hasText: "Cast-Iron Dutch Oven" });
-  await dutchOvenRow.getByRole("button", { name: "Show" }).click();
+  await dutchOvenRow.getByRole("button", { name: "Show gift options for Cast-Iron Dutch Oven" }).click();
   const giftCoordination = page.getByRole("region", {
     name: "Gift coordination for Cast-Iron Dutch Oven"
   });
   const dutchOvenComposer = giftCoordination.getByLabel("Add a comment");
   const dutchOvenComposerId = await dutchOvenComposer.getAttribute("id");
   const parkPassRow = page.locator("tr").filter({ hasText: "National Park Pass" });
-  await parkPassRow.getByRole("button", { name: "Show" }).click();
+  await parkPassRow.getByRole("button", { name: "Show gift options for National Park Pass" }).click();
   const parkPassCoordination = page.getByRole("region", {
     name: "Gift coordination for National Park Pass"
   });
@@ -1621,6 +1874,9 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     deleteAuthorizationStatus: forbiddenDelete.status(),
     visitedRoutes,
     assertions: [
+      "invitation acceptance retries reconcile an already committed decision",
+      "combined availability filters retain all items",
+      "grid gift coordination opens the matching list row",
       "items made private by collaborators disappear immediately for their creator",
       "private collaborator items remain visible to the wishlist owner",
       "private item persistence and viewer-filtered lookup endpoints return success"
@@ -1670,10 +1926,28 @@ async function verifyFriendJourney(browser, manifest, results) {
   }
 
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
-  await assertVisible(page, "You're shopping for");
-  await assertVisible(page, "AlexDemo");
+  const friendMatch = page.locator(".gift-match");
+  await friendMatch.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
+  await friendMatch.getByRole("link", { name: "View AlexDemo's wishlist" }).waitFor({ state: "visible" });
+  await friendMatch.getByText("Your match stays private.").waitFor({ state: "visible" });
   await assertVisible(page, "My Reserved Items");
   await assertVisible(page, "Noise-Cancelling Headphones");
+
+  const inviteResponse = await context.request.post(
+    `${baseUrl}/api/friends/invite?email=${encodeURIComponent(guestEmail.toUpperCase())}`
+  );
+  if (!inviteResponse.ok()) {
+    throw new Error(`Existing-user email invitation returned ${inviteResponse.status()}.`);
+  }
+  const sentRequestsResponse = await context.request.get(`${baseUrl}/api/friends/requests/sent`);
+  if (!sentRequestsResponse.ok()) {
+    throw new Error(`Sent friend requests returned ${sentRequestsResponse.status()}.`);
+  }
+  const sentRequests = await sentRequestsResponse.json();
+  if (!sentRequests.some(request => request.receiver?.email?.toLowerCase() === guestEmail ||
+    request.receiver?.userName === "TaylorDemo")) {
+    throw new Error("Case-insensitive existing-user invitation did not create a friend request.");
+  }
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Friend browser errors: ${diagnostics.browserErrors.join(" | ")}`);
@@ -1682,7 +1956,12 @@ async function verifyFriendJourney(browser, manifest, results) {
     throw new Error(`Friend failed responses: ${diagnostics.failedResponses.join(" | ")}`);
   }
 
-  results.push({ scenario: "friend-gift-exchange", loginStatus, visitedRoutes });
+  results.push({
+    scenario: "friend-gift-exchange",
+    loginStatus,
+    visitedRoutes,
+    assertions: ["case-insensitive existing-user invitation creates a sent friend request"]
+  });
   await context.close();
 }
 
@@ -1799,9 +2078,20 @@ async function verifyMobileJourney(browser, manifest, results) {
   );
   await screenshot(page, "wishlist-management-mobile.png");
 
+  await visit(page, "/events", "Holiday Gift Exchange", visitedRoutes);
+  await screenshot(page, "events-mobile.png");
+
   await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "JordanDemo");
-  await assertVisible(page, "View JordanDemo's wishlist");
+  const mobileMatchAction = page.locator(".gift-match")
+    .getByRole("link", { name: "View JordanDemo's wishlist" });
+  await assertMinimumTouchTarget(mobileMatchAction, "Mobile gift match wishlist action");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 390, height: 844 },
+    { width: 768, height: 600 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
   await screenshot(page, "secret-santa-mobile.png");
 
   await visit(page, "/Account/Manage", "Profile", visitedRoutes);
@@ -1861,6 +2151,46 @@ async function verifyMobileJourney(browser, manifest, results) {
   await context.close();
 }
 
+async function verifyUnsharedMatchWishlist(browser, manifest, results) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const loginStatus = await login(context, "owner", ownerEmail);
+  const detachResponse = await context.request.delete(
+    `${baseUrl}/api/events/${manifest.eventPublicId}/wishlists/${manifest.friendWishlistPublicId}`
+  );
+  if (!detachResponse.ok()) {
+    throw new Error(`Detaching the synthetic recipient wishlist returned ${detachResponse.status()}.`);
+  }
+
+  await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", []);
+  const match = page.locator(".gift-match");
+  await match.getByText(
+    "JordanDemo hasn't shared a wishlist for this exchange yet. Check back for gift ideas.",
+    { exact: true }
+  )
+    .waitFor({ state: "visible" });
+  if (await match.getByRole("link", { name: /View JordanDemo's wishlist/ }).count() !== 0) {
+    throw new Error("The gift match offered an unattached wishlist as a shopping action.");
+  }
+  await match.getByText("Your match stays private.").waitFor({ state: "visible" });
+  await screenshot(page, "event-match-no-wishlist.png");
+
+  if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Unshared match browser errors: ${diagnostics.browserErrors.join(" | ")} ` +
+      `${diagnostics.failedResponses.join(" | ")}`
+    );
+  }
+
+  results.push({
+    scenario: "match-without-wishlist",
+    loginStatus,
+    assertions: ["recipient without an attached wishlist has no dead-end shopping action"]
+  });
+  await context.close();
+}
+
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
@@ -1893,6 +2223,7 @@ try {
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
+  await verifyUnsharedMatchWishlist(browser, manifest, results);
 
   await fs.writeFile(
     path.join(evidenceDirectory, "openwish-e2e-result.json"),

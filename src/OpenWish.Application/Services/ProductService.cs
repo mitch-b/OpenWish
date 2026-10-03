@@ -121,7 +121,8 @@ public partial class ProductService : IProductService
                 return null;
             }
 
-            using var response = await GetFollowingSafeRedirectsAsync(uri);
+            var (pageResponse, pageUri) = await GetFollowingSafeRedirectsAsync(uri);
+            using var response = pageResponse;
 
             await response.Content.LoadIntoBufferAsync(MaxResponseBytes);
             var html = await response.Content.ReadAsStringAsync();
@@ -135,7 +136,7 @@ public partial class ProductService : IProductService
 
             if (!string.IsNullOrEmpty(imageUrl) && !imageUrl.StartsWith("http"))
             {
-                imageUrl = new Uri(uri, imageUrl).AbsoluteUri;
+                imageUrl = new Uri(pageUri, imageUrl).AbsoluteUri;
             }
 
             if (!string.IsNullOrEmpty(imageUrl) &&
@@ -176,7 +177,7 @@ public partial class ProductService : IProductService
         }
     }
 
-    private async Task<HttpResponseMessage> GetFollowingSafeRedirectsAsync(Uri initialUri)
+    private async Task<(HttpResponseMessage Response, Uri PageUri)> GetFollowingSafeRedirectsAsync(Uri initialUri)
     {
         var currentUri = initialUri;
         for (var redirect = 0; redirect <= MaxRedirects; redirect++)
@@ -190,7 +191,7 @@ public partial class ProductService : IProductService
             if (!IsRedirect(response.StatusCode))
             {
                 response.EnsureSuccessStatusCode();
-                return response;
+                return (response, currentUri);
             }
 
             if (redirect == MaxRedirects)
@@ -226,7 +227,16 @@ public partial class ProductService : IProductService
             var node = doc.DocumentNode.SelectSingleNode(selector);
             if (node != null)
             {
-                return node.Name == "meta" ? node.GetAttributeValue("content", null) : node.InnerText.Trim();
+                var value = node.Name switch
+                {
+                    "meta" => node.GetAttributeValue("content", null),
+                    "img" => node.GetAttributeValue("src", null),
+                    _ => node.InnerText.Trim()
+                };
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
             }
         }
         return null;

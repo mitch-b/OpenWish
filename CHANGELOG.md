@@ -2,6 +2,88 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.32] - 2026-10-03
+
+### Improved
+
+- Wishlist tabs now support arrow, Home, and End keys, keeping keyboard focus and the selected panel together without scrolling the page.
+
+## [0.1.31] - 2026-10-03
+
+### Improved
+
+- Product link imports now read page metadata and image links reliably, fall back to product details when metadata is blank, and resolve relative images on redirected product pages.
+
+## [0.1.30] - 2026-10-03
+
+### Improved
+
+- Wishlist activity no longer shows entries for removed gift ideas, even when viewing later pages of the feed.
+
+## [0.1.29] - 2026-09-28
+
+### Improved
+
+- Inviting an existing friend by email now returns a clear conflict instead of a server error.
+- Batch invitations skip duplicate email addresses regardless of casing and continue after invalid entries.
+- A deleted notification cannot be deleted again or marked as read.
+- Removed activity records no longer appear in your personal activity feed.
+- Friends' activity no longer shows entries tied to removed wishlists or gift ideas.
+
+## [0.1.28] - 2026-09-27
+
+### Improved
+
+- Friend requests to yourself now receive a clear conflict instead of creating a self-friendship.
+- Requests to an unknown user now return not found without storing an invalid request.
+- Email invitations recognize existing accounts regardless of address casing, sending a friend request instead of an unnecessary registration invitation.
+- Repeat email invitations with different address casing reuse the pending invitation instead of creating duplicates.
+- Accepting an invitation when the users are already friends now closes the pending invitation.
+
+## [0.1.27] - 2026-09-26
+
+### Improved
+
+- Sending a friend request to someone you're already friends with, or who
+  already has a pending request from you, now returns a clear conflict
+  response instead of an unhandled server error.
+- "Mark all as read" no longer shows a false error when there is nothing
+  left to mark as read; it now quietly confirms everything is already read
+  and keeps the notification list and unread badge in sync with that state.
+- A genuine network failure while marking all notifications as read is now
+  caught and reported instead of surfacing as an unhandled error.
+- Wishlist item images without a name now get a descriptive fallback `alt`
+  attribute so screen readers always announce something meaningful.
+
+## [0.1.26] - 2026-09-23
+
+### Improved
+
+- Release notes now offer a duplicate-safe retry that keeps the failure and
+  retry progress visible until refreshed updates arrive.
+- The theme control names the theme it will apply and updates that name when
+  the current theme changes.
+- Event creation now clearly supports both gift exchanges and celebrations.
+- Standalone wishlist-item creation now provides page context, a return route,
+  and a safe cancel action that cannot interrupt an in-progress save.
+- Wishlist creation now uses the standard page header with concise sharing
+  guidance and a consistent return route.
+
+## [0.1.25] - 2026-09-22
+
+### Improved
+
+- Event loading failures are distinct from an empty event list and offer a
+  direct retry.
+- Event refresh failures keep previously loaded event cards available while
+  explaining that the latest update could not be retrieved.
+- Pending invitation loading failures remain visible instead of disappearing
+  as though no invitations exist.
+- Interrupted invitation acceptance safely reconciles on retry while keeping
+  the invitation available until acceptance is confirmed.
+- Interrupted invitation decline safely reconciles on retry while keeping the
+  confirmation controls available until decline is confirmed.
+
 ## [0.1.24] - 2026-09-21
 
 ### Improved

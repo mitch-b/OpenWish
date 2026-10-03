@@ -1,84 +1,83 @@
-.form-control {
-    border: 2px solid var(--color-border-muted);
-    border-radius: 6px;
-    padding: 0.75rem;
-    transition: border-color 0.2s, background-color .25s ease, color .25s ease;
+.url-import-section {
+    padding: 1.25rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface-alt);
+}
+
+.url-import-section h2 {
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+}
+
+.url-import-section p {
+    max-width: 38rem;
+}
+
+.url-import-section .input-group {
+    margin-bottom: 0.5rem;
+}
+
+.url-import-section .btn {
+    min-height: 2.75rem;
+}
+
+.import-feedback {
+    margin: 0.75rem 0 0;
+    color: var(--color-text-muted);
+}
+
+.form-control,
+.form-select {
+    min-height: 2.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
     background: var(--color-surface);
     color: var(--color-text);
 }
 
-.form-control:focus {
-    border-color: var(--color-link-hover);
-    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.25);
-    background: var(--color-surface-alt);
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--color-primary-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-bg) 18%, transparent);
 }
 
 .form-label {
-    font-weight: 600;
-    color: var(--bs-secondary-color);
-    margin-bottom: 0.5rem;
-    transition: color .25s ease;
-}
-
-.btn-primary {
-    background: var(--color-primary-bg);
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 6px;
-    font-weight: 600;
-    transition: background-color 0.2s;
     color: var(--color-text);
+    font-weight: 700;
 }
 
-.btn-primary:hover {
-    background: var(--color-link-hover);
+.form-text {
+    color: var(--color-text-muted);
 }
 
-.url-import-section {
-    transition: all 0.3s ease;
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
 }
 
-.url-import-section .card {
-    border-left: 4px solid var(--color-primary-bg);
-    background: var(--color-surface-alt);
-    transition: background-color .25s ease, border-color .25s ease;
+.form-actions .btn {
+    min-height: 2.75rem;
 }
 
-.form-check-input {
-    margin-top: 0.25rem;
-}
-
-.input-group .btn {
-    padding: 0.375rem 0.75rem;
-}
-
-.spinner-border-sm {
-    margin-right: 0.25rem;
-}
-
-/* Mobile responsive improvements */
 @media (max-width: 767.98px) {
-    .form-control {
-        padding: 0.5rem;
-        font-size: 1rem;
+    .url-import-section {
+        padding: 1rem;
     }
 
-    .btn-primary {
+    .url-import-section .input-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .url-import-section .input-group > * {
         width: 100%;
-        margin-top: 0.5rem;
+        border-radius: 0.75rem !important;
     }
 
-    .url-import-section .card {
-        padding: 0.75rem;
-    }
-
-    .input-group {
-        flex-wrap: wrap;
-    }
-
-    .input-group .btn {
-        width: 100%;
-        margin-top: 0.5rem;
-        border-radius: 0.375rem !important;
+    .form-actions .btn {
+        flex: 1 1 100%;
     }
 }

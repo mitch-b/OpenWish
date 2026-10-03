@@ -1,38 +1,157 @@
-.gift-match-card {
-    overflow: hidden;
-    border-color: var(--color-success-border);
+.gift-match {
+    margin-bottom: 1.5rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
 }
 
-.gift-match-header {
-    border: 0;
-    background: var(--color-success-bg);
-    color: var(--color-success-text);
+.gift-match h2 {
+    margin: 0 0 1.25rem;
+    color: var(--color-text);
+    font-size: 1.2rem;
+    font-weight: 700;
 }
 
-.gift-match-header h3 {
-    color: inherit;
-    font-size: 1.1rem;
+.gift-match-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 8rem;
+    color: var(--color-text-muted);
 }
 
-.recipient-reveal {
-    padding: clamp(1.25rem, 4vw, 2.25rem);
-    border: 1px solid var(--color-success-border);
-    border-radius: 0.9rem;
-    background:
-        radial-gradient(circle at 88% 16%, color-mix(in srgb, var(--color-success-text) 12%, transparent), transparent 10rem),
-        var(--color-success-bg);
-    color: var(--color-success-text);
+.gift-match-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(11rem, auto);
+    gap: 1.5rem;
 }
 
-.recipient-reveal h4 {
+.gift-match-introduction {
+    min-width: 0;
+    padding-left: 1rem;
+    border-left: 4px solid var(--color-primary-bg);
+}
+
+.gift-match-label {
+    margin: 0 0 0.4rem;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.gift-match-name {
     margin: 0;
-    color: inherit;
-    font-size: 0.86rem;
-    font-weight: 650;
+    color: var(--color-text);
+    font-size: clamp(1.8rem, 3.5vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
 }
 
-.recipient-reveal h2 {
-    margin: 1.2rem 0 0;
-    color: inherit;
-    font-size: clamp(2rem, 5vw, 3.25rem);
+.gift-match-facts {
+    display: grid;
+    align-content: start;
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.gift-match-facts div {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.gift-match-facts dt {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.gift-match-facts dd {
+    margin: 0.2rem 0 0;
+    color: var(--color-text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.gift-match-next-step {
+    grid-column: 1 / -1;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.gift-match-next-step p {
+    margin: 0 0 0.75rem;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.gift-match-next-step p:last-child {
+    margin-bottom: 0;
+}
+
+.gift-match-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    min-height: 44px;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.gift-match-guidance {
+    margin-top: 0.75rem !important;
+    color: var(--color-text-muted) !important;
+    font-size: 0.88rem;
+}
+
+.gift-match-privacy {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.gift-match-privacy svg {
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+}
+
+.gift-match-privacy span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+    .gift-match-content {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.25rem;
+    }
+
+    .gift-match-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .gift-match-next-step,
+    .gift-match-privacy {
+        grid-column: 1;
+    }
+
+    .gift-match-action {
+        width: 100%;
+    }
+}
+
+@media (max-width: 380px) {
+    .gift-match-facts {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }

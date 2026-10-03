@@ -664,7 +664,12 @@ public class EventService(
             return false;
         }
 
-        if (eventUser.Status != "Pending")
+        if (IsInvitationInState(eventUser, "Accepted", isAccepted: true))
+        {
+            return true;
+        }
+
+        if (!string.Equals(eventUser.Status, "Pending", StringComparison.Ordinal))
         {
             return false;
         }
@@ -702,6 +707,22 @@ public class EventService(
         return true;
     }
 
+    public async Task<bool> AcceptEventInvitationByPublicIdAsync(string eventUserPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventUserId = await context.EventUsers
+            .Where(eventUser =>
+                eventUser.PublicId == eventUserPublicId &&
+                eventUser.UserId == userId &&
+                !eventUser.Deleted)
+            .Select(eventUser => (int?)eventUser.Id)
+            .SingleOrDefaultAsync();
+
+        return eventUserId.HasValue &&
+            await AcceptEventInvitationAsync(eventUserId.Value, userId);
+    }
+
     public async Task<bool> RejectEventInvitationAsync(int eventUserId, string userId)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -715,7 +736,12 @@ public class EventService(
             return false;
         }
 
-        if (eventUser.Status != "Pending")
+        if (IsInvitationInState(eventUser, "Rejected", isAccepted: false))
+        {
+            return true;
+        }
+
+        if (!string.Equals(eventUser.Status, "Pending", StringComparison.Ordinal))
         {
             return false;
         }
@@ -728,6 +754,26 @@ public class EventService(
 
         return true;
     }
+
+    public async Task<bool> RejectEventInvitationByPublicIdAsync(string eventUserPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventUserId = await context.EventUsers
+            .Where(eventUser =>
+                eventUser.PublicId == eventUserPublicId &&
+                eventUser.UserId == userId &&
+                !eventUser.Deleted)
+            .Select(eventUser => (int?)eventUser.Id)
+            .SingleOrDefaultAsync();
+
+        return eventUserId.HasValue &&
+            await RejectEventInvitationAsync(eventUserId.Value, userId);
+    }
+
+    internal static bool IsInvitationInState(EventUser eventUser, string status, bool isAccepted) =>
+        string.Equals(eventUser.Status, status, StringComparison.Ordinal) &&
+        eventUser.IsAccepted == isAccepted;
 
     public async Task<bool> CancelEventInvitationAsync(int eventUserId, string inviterId)
     {

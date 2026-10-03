@@ -6,6 +6,7 @@
     "summary": "Product details and images are captured more reliably when adding a gift idea from a link.",
     "highlights": [
       "Product metadata and image links are read correctly from product pages.",
+      "Blank metadata no longer hides available product details or images.",
       "Relative images on redirected product links resolve against the final page."
     ]
   },

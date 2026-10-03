@@ -6,7 +6,7 @@ All notable user-facing changes to OpenWish are documented here.
 
 ### Improved
 
-- Product link imports now read page metadata and image links reliably, including relative images on redirected product pages.
+- Product link imports now read page metadata and image links reliably, fall back to product details when metadata is blank, and resolve relative images on redirected product pages.
 
 ## [0.1.30] - 2026-10-03
 

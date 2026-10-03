@@ -227,12 +227,16 @@ public partial class ProductService : IProductService
             var node = doc.DocumentNode.SelectSingleNode(selector);
             if (node != null)
             {
-                return node.Name switch
+                var value = node.Name switch
                 {
                     "meta" => node.GetAttributeValue("content", null),
                     "img" => node.GetAttributeValue("src", null),
                     _ => node.InnerText.Trim()
                 };
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
             }
         }
         return null;

@@ -182,7 +182,7 @@ async function assertNoEmptySpinnerStatuses(page, route) {
   }
 }
 
-async function screenshot(page, fileName, fullPage = true) {
+async function screenshot(page, fileName, fullPage = false) {
   await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await page.waitForTimeout(500);
   await assertDesktopSidebarContinuity(page);
@@ -518,7 +518,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "home-dashboard.png");
   await screenshot(page, "readme-home.png", false);
 
-  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
   const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
   const friendWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists/friends`);
   if (!ownedWishlistsResponse.ok() || !friendWishlistsResponse.ok()) {
@@ -946,7 +946,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Travel Mug");
   await screenshot(page, "added-wishlist-item.png");
 
-  await visit(page, "/events", "Plan gift exchanges", visitedRoutes);
+  await visit(page, "/events", "Plan an exchange or a shared occasion.", visitedRoutes);
   await assertVisible(page, "Holiday Gift Exchange");
   if (await page.getByRole("region", { name: "Your events" }).getAttribute("aria-busy") !== "false") {
     throw new Error("The populated event list did not finish loading.");
@@ -1042,7 +1042,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!createdEventPublicId) {
     throw new Error("The created event URL did not include a public identifier.");
   }
-  await assertVisible(page, "Finish your gift exchange setup");
+  await assertVisible(page, "Ready the exchange");
   await assertVisible(page, "Invite your group");
   await assertVisible(page, "Add your wishlist");
   await assertVisible(page, "Make assignments");
@@ -1262,7 +1262,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertTextContrast(page.locator(".gift-match-name"), "Dark gift recipient name");
   await screenshot(page, "event-details-dark.png");
 
-  await visit(page, "/wishlists", "Save gift ideas and see what friends have shared.", visitedRoutes);
+  await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");

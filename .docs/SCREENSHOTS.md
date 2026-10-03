@@ -8,10 +8,11 @@ only proof that a change works.
 Commit only screenshots that explain the current product in `README.md` or
 long-lived documentation. Store them under `.docs/images/`, use descriptive
 kebab-case names, remove superseded images, and optimize them before commit.
-The README uses the compact `readme-*.png` captures in
-`.docs/images/walkthrough/`; they are viewport-bound views of the synthetic
-multi-user scenario, not full-page captures. Keep those images concise so the
-README reads as a product story rather than an evidence archive.
+The walkthrough captures in `.docs/images/walkthrough/`, including the
+README's compact `readme-*.png` views, are viewport-bound views of the
+synthetic multi-user scenario, not full-page captures. Keep them concise and
+focused on one useful state so the README reads as a product story rather than
+an evidence archive.
 
 ## Pull requests
 

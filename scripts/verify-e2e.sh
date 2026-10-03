@@ -182,7 +182,9 @@ test -s "$walkthrough_directory/account-recovery-mobile.png"
 test -s "$walkthrough_directory/whats-new.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
-if "${compose[@]}" logs web | grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict'; then
+web_log="$evidence_directory/openwish-e2e-web.log"
+"${compose[@]}" logs web > "$web_log"
+if grep -Eiq 'Unhandled exception|Request finished HTTP/[0-9.]+ 5[0-9]{2}|Database migration failed|DbUpdateConcurrencyException|concurrency conflict|warn: Microsoft.EntityFrameworkCore.*[Cc]oncurren' "$web_log"; then
   echo "Server logs contain a failed request, exception, or concurrency conflict." >&2
   exit 1
 fi

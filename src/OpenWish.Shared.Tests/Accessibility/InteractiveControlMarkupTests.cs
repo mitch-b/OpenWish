@@ -57,6 +57,7 @@ public class InteractiveControlMarkupTests
     public void WishlistTabs_KeepOneTabInTheTabOrderAndSupportArrowHomeEndKeys()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
 
         Assert.Contains("tabindex=\"@(activeTab == \"my-wishlists\" ? 0 : -1)\"", markup, StringComparison.Ordinal);
         Assert.Contains("tabindex=\"@(activeTab == \"friends-wishlists\" ? 0 : -1)\"", markup, StringComparison.Ordinal);
@@ -68,6 +69,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("\"End\" => \"friends-wishlists\"", markup, StringComparison.Ordinal);
         Assert.Contains("_pendingTabFocus = target;", markup, StringComparison.Ordinal);
         Assert.Contains("_friendsWishlistsTab).FocusAsync()", markup, StringComparison.Ordinal);
+        Assert.Contains("event.target.closest(\"#wishlistTabs [role='tab']\")", script, StringComparison.Ordinal);
+        Assert.Contains("[\"ArrowLeft\", \"ArrowRight\", \"Home\", \"End\"].includes(event.key)", script, StringComparison.Ordinal);
+        Assert.Contains("event.preventDefault();", script, StringComparison.Ordinal);
     }
 
     [Fact]

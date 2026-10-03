@@ -5,7 +5,7 @@
     "title": "Easier keyboard wishlist browsing",
     "summary": "Move between your wishlists and friends' shared lists without leaving the keyboard.",
     "highlights": [
-      "Arrow, Home, and End keys switch wishlist tabs while moving focus to the selected tab.",
+      "Arrow, Home, and End keys switch wishlist tabs without scrolling the page and move focus to the selected tab.",
       "Only the selected tab stays in the normal tab order, and each panel can receive keyboard focus."
     ]
   },

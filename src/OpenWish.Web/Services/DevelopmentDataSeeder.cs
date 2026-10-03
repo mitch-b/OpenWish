@@ -509,7 +509,8 @@ public sealed class DevelopmentDataSeeder(
             PrivateWishlistPublicId,
             FriendWishlistPublicId,
             EventPublicId,
-            headphones.Id);
+            headphones.Id,
+            wishlist.Id);
     }
 
     private sealed record DevelopmentUser(string Email, string UserName);
@@ -523,4 +524,5 @@ public sealed record DevelopmentSeedResult(
     string PrivateWishlistPublicId,
     string FriendWishlistPublicId,
     string EventPublicId,
-    int ReservedItemId);
+    int ReservedItemId,
+    int WishlistId);

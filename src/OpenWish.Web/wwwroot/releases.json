@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.1.30",
+    "date": "2026-10-03",
+    "title": "Cleaner wishlist activity",
+    "summary": "Wishlist activity now stays focused on gift ideas that are still available.",
+    "highlights": [
+      "Activity for removed gift ideas no longer appears in a wishlist's activity feed."
+    ]
+  },
+  {
     "version": "0.1.29",
     "date": "2026-09-28",
     "title": "Cleaner coordination history",

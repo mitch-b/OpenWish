@@ -768,6 +768,17 @@ async function verifyOwnerJourney(browser, manifest, results) {
       `Concurrent item deletion recorded ${itemRemovedActivities.length} removal activities, expected 1.`
     );
   }
+  const wishlistActivityResponse = await context.request.get(
+    `${baseUrl}/api/activities/wishlist/${manifest.wishlistId}?count=100`
+  );
+  if (!wishlistActivityResponse.ok()) {
+    throw new Error(`Wishlist activity verification returned ${wishlistActivityResponse.status()}.`);
+  }
+  const wishlistActivities = await wishlistActivityResponse.json();
+  if (!wishlistActivities.some(activity => activity.publicId === "demo-wishlist-activity") ||
+      wishlistActivities.some(activity => activity.description.includes(concurrentDeleteItemName))) {
+    throw new Error("Wishlist activity did not retain active entries or exposed a removed gift idea.");
+  }
 
   await visit(page, "/wishlists/new", "Create a wishlist", visitedRoutes);
   await assertVisible(page, "Start with a name and choose who can see your gift ideas.");

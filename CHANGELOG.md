@@ -2,6 +2,12 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.30] - 2026-10-03
+
+### Improved
+
+- Wishlist activity no longer shows entries for removed gift ideas, even when viewing later pages of the feed.
+
 ## [0.1.29] - 2026-09-28
 
 ### Improved

@@ -122,6 +122,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(a =>
                 !a.Deleted &&
                 a.WishlistId == wishlistId &&
+                (!a.WishlistItemId.HasValue || (a.WishlistItem != null && !a.WishlistItem.Deleted)) &&
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&

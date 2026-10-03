@@ -9,7 +9,8 @@
     "privateWishlistPublicId": "demo-private-ideas",
     "friendWishlistPublicId": "demo-jordan-favorites",
     "eventPublicId": "demo-holiday-gift-exchange",
-    "reservedItemId": 2
+    "reservedItemId": 2,
+    "wishlistId": 2
   },
   "scenarios": [
     {
@@ -62,7 +63,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/80a3983f-b34d-4d3f-8a80-a9d05d8414cd/manage",
+        "/events/2dc4648d-e689-4130-89bf-7d0b4e0a0721/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",

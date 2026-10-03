@@ -30,6 +30,26 @@ public class ActivityServiceSecurityTests
     }
 
     [Fact]
+    public async Task GetWishlistActivityAsync_ExcludesRemovedItemsBeforePagination()
+    {
+        var factory = CreateFactory();
+        var (wishlistId, actorId) = await SeedActivityDataAsync(factory);
+        await using (var context = factory.CreateDbContext())
+        {
+            var removedItem = await context.WishlistItems.SingleAsync(item => item.Name == "Surprise");
+            removedItem.Deleted = true;
+            await context.SaveChangesAsync();
+        }
+
+        var service = new ActivityService(factory, _mapper);
+        var activities = await service.GetWishlistActivityAsync(wishlistId, actorId, count: 2);
+
+        Assert.Equal(2, activities.Count());
+        Assert.DoesNotContain(activities, activity => activity.Description == "Added surprise");
+        Assert.Empty(await service.GetWishlistActivityAsync(wishlistId, "owner"));
+    }
+
+    [Fact]
     public async Task GetFriendsActivityFeedAsync_HidesAnonymousReservationActor()
     {
         var factory = CreateFactory();

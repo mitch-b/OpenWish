@@ -230,6 +230,7 @@
     private bool _activateFlyoutAfterRender;
     private bool _activateDeleteDialogAfterRender;
     private bool _focusFlyoutCloseAfterRender;
+    private bool _hasRenderedInteractively;
 
     protected override async Task OnInitializedAsync()
     {
@@ -242,6 +243,8 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        _hasRenderedInteractively = true;
+
         if (_activateFlyoutAfterRender)
         {
             _activateFlyoutAfterRender = false;
@@ -652,6 +655,11 @@
 
     public async ValueTask DisposeAsync()
     {
+        if (!_hasRenderedInteractively)
+        {
+            return;
+        }
+
         try
         {
             await JSRuntime.InvokeVoidAsync("openWishDeactivateDialog", "notification-delete-dialog");

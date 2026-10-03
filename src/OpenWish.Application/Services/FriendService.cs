@@ -399,12 +399,21 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses)
     {
+        ArgumentNullException.ThrowIfNull(emailAddresses);
+
         bool allSucceeded = true;
+        var processedAddresses = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var email in emailAddresses)
         {
+            var address = email?.Trim() ?? "";
+            if (!processedAddresses.Add(address))
+            {
+                continue;
+            }
+
             try
             {
-                var success = await SendFriendInviteByEmailAsync(senderUserId, email.Trim());
+                var success = await SendFriendInviteByEmailAsync(senderUserId, address);
                 if (!success)
                 {
                     allSucceeded = false;

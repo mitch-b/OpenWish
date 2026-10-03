@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.29",
+    "date": "2026-09-28",
+    "title": "Cleaner coordination history",
+    "summary": "Friend invitations, notification actions, and activity feeds now handle stale or invalid data more predictably.",
+    "highlights": [
+      "Inviting someone who is already your friend by email returns a clear conflict instead of a server error.",
+      "Batch invitations avoid duplicate emails, even when capitalization differs, and continue after invalid entries.",
+      "Already-deleted notifications cannot be deleted again or marked as read.",
+      "Removed activity records no longer appear in your personal activity feed.",
+      "Friends' activity no longer displays entries for removed wishlists or gift ideas."
+    ]
+  },
+  {
     "version": "0.1.28",
     "date": "2026-09-27",
     "title": "More dependable friend invitations",

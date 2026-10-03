@@ -1008,6 +1008,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!removableFriend?.id) {
     throw new Error("Participant-removal verification requires a seeded friend.");
   }
+  const existingFriendInvite = await context.request.post(
+    `${baseUrl}/api/friends/invite?email=${encodeURIComponent("playwright-friend@openwish.local")}`
+  );
+  if (existingFriendInvite.status() !== 409) {
+    throw new Error(`Inviting an existing friend returned ${existingFriendInvite.status()}, expected 409.`);
+  }
   const participantResponse = await context.request.post(
     `${baseUrl}/api/events/${createdEventPublicId}/users`,
     { data: { userId: removableFriend.id, role: "Participant" } }
@@ -1132,6 +1138,12 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (notificationsAfterDelete.length !== notifications.length - 1 ||
       notificationsAfterDelete.some(notification => notification.publicId === notificationPublicId)) {
     throw new Error("Deleted notification remained available from the API.");
+  }
+  const repeatedNotificationDelete = await context.request.delete(
+    `${baseUrl}/api/notifications/${notificationPublicId}`
+  );
+  if (repeatedNotificationDelete.status() !== 404) {
+    throw new Error(`Repeated notification deletion returned ${repeatedNotificationDelete.status()}, expected 404.`);
   }
   await page.keyboard.press("Escape");
   await notificationDialog.waitFor({ state: "detached" });

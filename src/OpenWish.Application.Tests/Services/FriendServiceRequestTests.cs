@@ -154,6 +154,55 @@ public class FriendServiceRequestTests
     }
 
     [Fact]
+    public async Task SendFriendInviteByEmailAsync_RejectsExistingFriendWithoutSendingEmail()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "receiver", UserName = "receiver", Email = "receiver@example.com", NormalizedEmail = "RECEIVER@EXAMPLE.COM" });
+            context.Friends.Add(new Friend { UserId = "sender", FriendUserId = "receiver" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Empty(verificationContext.PendingFriendInvites);
+        Assert.Empty(verificationContext.FriendRequests);
+        Assert.Equal(0, emailSender.InviteCount);
+    }
+
+    [Fact]
+    public async Task SendFriendInvitesByEmailAsync_HandlesNullEntriesAndContinuesWithValidAddresses()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        var succeeded = await service.SendFriendInvitesByEmailAsync(
+            "sender", [" Valid@Example.com ", null!, "valid@example.com", "next@example.com"]);
+
+        Assert.False(succeeded);
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal(2, await verificationContext.PendingFriendInvites.CountAsync());
+        Assert.Equal(2, emailSender.InviteCount);
+    }
+
+    [Fact]
     public async Task SendFriendInviteByEmailAsync_ReusesPendingInviteIgnoringEmailCase()
     {
         var databaseName = Guid.NewGuid().ToString();

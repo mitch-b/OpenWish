@@ -38,6 +38,8 @@ public class ActivityServiceSecurityTests
         {
             var removedItem = await context.WishlistItems.SingleAsync(item => item.Name == "Surprise");
             removedItem.Deleted = true;
+            var removedActivity = await context.ActivityLogs.SingleAsync(activity => activity.WishlistItemId == removedItem.Id);
+            removedActivity.CreatedOn = DateTimeOffset.UtcNow.AddMinutes(1);
             await context.SaveChangesAsync();
         }
 

@@ -54,6 +54,23 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistTabs_KeepOneTabInTheTabOrderAndSupportArrowHomeEndKeys()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+
+        Assert.Contains("tabindex=\"@(activeTab == \"my-wishlists\" ? 0 : -1)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("tabindex=\"@(activeTab == \"friends-wishlists\" ? 0 : -1)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-selected=\"@(activeTab == \"my-wishlists\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-selected=\"@(activeTab == \"friends-wishlists\" ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@onkeydown=\"HandleTabKeyDown\"", markup, StringComparison.Ordinal);
+        Assert.Contains("\"ArrowRight\" or \"ArrowLeft\"", markup, StringComparison.Ordinal);
+        Assert.Contains("\"Home\" => \"my-wishlists\"", markup, StringComparison.Ordinal);
+        Assert.Contains("\"End\" => \"friends-wishlists\"", markup, StringComparison.Ordinal);
+        Assert.Contains("_pendingTabFocus = target;", markup, StringComparison.Ordinal);
+        Assert.Contains("_friendsWishlistsTab).FocusAsync()", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistDiscovery_DistinguishesNoListsFromNoMatches()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");

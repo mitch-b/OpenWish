@@ -2,6 +2,12 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.32] - 2026-10-03
+
+### Improved
+
+- Wishlist tabs now support arrow, Home, and End keys, keeping keyboard focus and the selected panel together.
+
 ## [0.1.31] - 2026-10-03
 
 ### Improved

@@ -552,13 +552,43 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertTextContrast(familyWishlistLink, "Wishlist card navigation link");
   await screenshot(page, "wishlists.png");
 
-  await page.getByRole("tab", { name: "Friends' Wishlists" }).click();
+  const ownTab = page.getByRole("tab", { name: "My Wishlists" });
+  const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
+  if (await ownTab.getAttribute("tabindex") !== "0" ||
+      await friendsTab.getAttribute("tabindex") !== "-1") {
+    throw new Error("Only the selected wishlist tab should be in the tab order.");
+  }
+  await ownTab.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" &&
+      tab.getAttribute("tabindex") === "0" && document.activeElement === tab;
+  });
   await page.getByRole("heading", { name: "Shared with you" }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Manage friends" }).waitFor({ state: "visible" });
   await assertVisible(page, "Jordan's Favorites");
   if (await page.locator("#friends-wishlists-panel").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded friends' wishlist panel remained marked as busy.");
   }
+  if (!(await friendsTab.evaluate(element => element === document.activeElement))) {
+    throw new Error(`Friends' tab lost focus after loading: ${await page.evaluate(() => document.activeElement?.id)}.`);
+  }
+  await page.keyboard.press("Home");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  await page.keyboard.press("End");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#friends-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForFunction(() => {
+    const tab = document.querySelector("#my-wishlists-tab");
+    return tab?.getAttribute("aria-selected") === "true" && document.activeElement === tab;
+  });
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Noise-Cancelling Headphones");

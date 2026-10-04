@@ -115,6 +115,54 @@ public class ActivityServiceSecurityTests
         Assert.Equal("Visible", Assert.Single(activities).Description);
     }
 
+    [Fact]
+    public async Task GetUserActivityFeedAsync_HidesRemovedWishlistHistoryButKeepsDeletion()
+    {
+        var factory = CreateFactory();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(new ApplicationUser { Id = "owner", UserName = "owner" });
+            var wishlist = new Wishlist { Name = "Old list", OwnerId = "owner", Deleted = true };
+            context.Wishlists.Add(wishlist);
+            context.ActivityLogs.AddRange(
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistCreated", Description = "Created" },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistDeleted", Description = "Deleted" },
+                new ActivityLog { UserId = "owner", ActivityType = "FriendAdded", Description = "Friend added" });
+            await context.SaveChangesAsync();
+        }
+
+        var activities = await new ActivityService(factory, _mapper).GetUserActivityFeedAsync("owner", count: 2);
+
+        Assert.Equal(2, activities.Count());
+        Assert.Contains(activities, activity => activity.Description == "Deleted");
+        Assert.Contains(activities, activity => activity.Description == "Friend added");
+    }
+
+    [Fact]
+    public async Task GetUserActivityFeedAsync_HidesRemovedItemHistoryButKeepsRemoval()
+    {
+        var factory = CreateFactory();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(new ApplicationUser { Id = "owner", UserName = "owner" });
+            var wishlist = new Wishlist { Name = "List", OwnerId = "owner" };
+            var item = new WishlistItem { Name = "Removed gift", Wishlist = wishlist, Deleted = true };
+            var other = new WishlistItem { Name = "Current gift", Wishlist = wishlist };
+            context.ActivityLogs.AddRange(
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemAdded", Description = "Added removed gift" },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemRemoved", Description = "Removed gift" },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = other, ActivityType = "ItemAdded", Description = "Added current gift" });
+            await context.SaveChangesAsync();
+        }
+
+        var activities = await new ActivityService(factory, _mapper).GetUserActivityFeedAsync("owner", count: 2);
+
+        Assert.Equal(2, activities.Count());
+        Assert.Contains(activities, activity => activity.Description == "Removed gift");
+        Assert.Contains(activities, activity => activity.Description == "Added current gift");
+        Assert.DoesNotContain(activities, activity => activity.Description == "Added removed gift");
+    }
+
     [Theory]
     [InlineData(false, false, 2)]
     [InlineData(true, false, 0)]

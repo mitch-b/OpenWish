@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.33] - 2026-10-04
+
+### Improved
+
+- Single friend invitations accept addresses with surrounding spaces and use the trimmed address in the email and invite link.
+- Completed friend invitations cannot be cancelled after they have been accepted or cancelled.
+- Personal activity hides earlier history for removed wishlists while keeping the deletion record.
+- Personal activity hides earlier history for removed gift ideas while keeping the removal record.
+- Product links with malformed or unsafe image addresses still import available name, description, and price.
+
 ## [0.1.32] - 2026-10-03
 
 ### Improved

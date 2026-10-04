@@ -53,6 +53,26 @@ public class ProductServiceRedirectTests
         Assert.Equal(2, handler.RequestCount);
     }
 
+    [Theory]
+    [InlineData("http://[broken")]
+    [InlineData("javascript:alert(1)")]
+    public async Task TryScrapeProductFromUrl_IgnoresInvalidImagesWithoutLosingDetails(string imagePath)
+    {
+        const string originalUrl = "https://1.1.1.1/old/gift";
+        const string destinationUrl = "https://8.8.8.8/products/gift";
+        var handler = new RedirectHandler(originalUrl, destinationUrl, imagePath, useOpenGraph: true);
+        using var client = new HttpClient(handler);
+        var service = new ProductService(new TestHttpClientFactory(client), NullLogger<ProductService>.Instance);
+
+        var product = await service.TryScrapeProductFromUrl(originalUrl);
+
+        Assert.NotNull(product);
+        Assert.Equal("Gift", product.Name);
+        Assert.Equal("A thoughtful gift", product.Description);
+        Assert.Equal(12m, product.Price);
+        Assert.Null(product.ImageUrl);
+    }
+
     private sealed class TestHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;

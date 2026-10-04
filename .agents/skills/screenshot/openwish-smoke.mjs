@@ -841,6 +841,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
       `Concurrent item deletion recorded ${itemRemovedActivities.length} removal activities, expected 1.`
     );
   }
+  if (activities.some(activity =>
+    activity.activityType === "ItemAdded" &&
+    activity.description.includes(concurrentDeleteItemName))) {
+    throw new Error("Personal activity still shows an added entry for a removed gift idea.");
+  }
   const wishlistActivityResponse = await context.request.get(
     `${baseUrl}/api/activities/wishlist/${manifest.wishlistId}?count=100`
   );
@@ -1431,6 +1436,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "accessible product links",
       "focus-safe duplicate-resistant wishlist item deletion",
       "PostgreSQL concurrent item deletion and one-winner activity logging",
+      "personal activity keeps removal but hides earlier history for removed items",
       "gift match next step, privacy, and responsive layout",
       "friends and pending requests",
       "accessible notification updates and deletion",
@@ -1938,7 +1944,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   await assertVisible(page, "Noise-Cancelling Headphones");
 
   const inviteResponse = await context.request.post(
-    `${baseUrl}/api/friends/invite?email=${encodeURIComponent(guestEmail.toUpperCase())}`
+    `${baseUrl}/api/friends/invite?email=${encodeURIComponent(`  ${guestEmail.toUpperCase()}  `)}`
   );
   if (!inviteResponse.ok()) {
     throw new Error(`Existing-user email invitation returned ${inviteResponse.status()}.`);
@@ -1964,7 +1970,7 @@ async function verifyFriendJourney(browser, manifest, results) {
     scenario: "friend-gift-exchange",
     loginStatus,
     visitedRoutes,
-    assertions: ["case-insensitive existing-user invitation creates a sent friend request"]
+    assertions: ["case-insensitive, whitespace-trimmed existing-user invitation creates a sent friend request"]
   });
   await context.close();
 }

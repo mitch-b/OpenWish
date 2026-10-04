@@ -41,7 +41,13 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var activities = await context.ActivityLogs
-            .Where(a => a.UserId == userId && !a.Deleted)
+            .Where(a => a.UserId == userId && !a.Deleted &&
+                (!a.WishlistId.HasValue ||
+                 (a.Wishlist != null && !a.Wishlist.Deleted) ||
+                 a.ActivityType == "WishlistDeleted") &&
+                (!a.WishlistItemId.HasValue ||
+                 (a.WishlistItem != null && !a.WishlistItem.Deleted) ||
+                 a.ActivityType == "ItemRemoved"))
             .OrderByDescending(a => a.CreatedOn)
             .Skip(skip)
             .Take(count)

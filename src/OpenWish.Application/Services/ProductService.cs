@@ -134,14 +134,13 @@ public partial class ProductService : IProductService
             string? price = TrySelectors(doc, ProductSelectors.PriceSelectors);
             string? imageUrl = TrySelectors(doc, ProductSelectors.ImageSelectors);
 
-            if (!string.IsNullOrEmpty(imageUrl) && !imageUrl.StartsWith("http"))
-            {
-                imageUrl = new Uri(pageUri, imageUrl).AbsoluteUri;
-            }
-
             if (!string.IsNullOrEmpty(imageUrl) &&
-                (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var imageUri) ||
-                 !await IsSafeUrlAsync(imageUri)))
+                Uri.TryCreate(pageUri, imageUrl, out var imageUri) &&
+                await IsSafeUrlAsync(imageUri))
+            {
+                imageUrl = imageUri.AbsoluteUri;
+            }
+            else
             {
                 imageUrl = null;
             }

@@ -63,7 +63,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/4ac2a4fd-37a6-405d-aa68-b4b595d36143/manage",
+        "/events/c60bd8fa-0caf-412a-8c63-5f3cca0b1f34/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -86,6 +86,7 @@
         "accessible product links",
         "focus-safe duplicate-resistant wishlist item deletion",
         "PostgreSQL concurrent item deletion and one-winner activity logging",
+        "personal activity keeps removal but hides earlier history for removed items",
         "gift match next step, privacy, and responsive layout",
         "friends and pending requests",
         "accessible notification updates and deletion",
@@ -132,7 +133,7 @@
         "/events/demo-holiday-gift-exchange"
       ],
       "assertions": [
-        "case-insensitive existing-user invitation creates a sent friend request"
+        "case-insensitive, whitespace-trimmed existing-user invitation creates a sent friend request"
       ]
     },
     {

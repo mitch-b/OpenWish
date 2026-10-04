@@ -306,6 +306,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
     {
+        emailAddress = emailAddress?.Trim() ?? "";
         // Validate email format
         if (string.IsNullOrWhiteSpace(emailAddress) || !IsValidEmail(emailAddress))
         {
@@ -566,7 +567,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         var invite = await context.PendingFriendInvites
-            .FirstOrDefaultAsync(pfi => pfi.Id == inviteId && pfi.SenderUserId == userId && !pfi.Deleted);
+            .FirstOrDefaultAsync(pfi => pfi.Id == inviteId && pfi.SenderUserId == userId &&
+                pfi.Status == "Pending" && !pfi.Deleted);
 
         if (invite == null)
         {

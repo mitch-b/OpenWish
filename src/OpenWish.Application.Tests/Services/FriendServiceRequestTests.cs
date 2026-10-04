@@ -229,6 +229,57 @@ public class FriendServiceRequestTests
     }
 
     [Fact]
+    public async Task SendFriendInviteByEmailAsync_TrimsAddressBeforeSavingAndSending()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        Assert.True(await service.SendFriendInviteByEmailAsync("sender", "  receiver@example.com  "));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal("receiver@example.com", (await verificationContext.PendingFriendInvites.SingleAsync()).Email);
+        Assert.Equal("receiver@example.com", emailSender.LastInviteAddress);
+        Assert.Contains("receiver%40example.com", emailSender.LastInviteLink);
+    }
+
+    [Theory]
+    [InlineData("Accepted")]
+    [InlineData("Cancelled")]
+    public async Task CancelPendingFriendInviteAsync_DoesNotChangeCompletedInvite(string status)
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "receiver@example.com",
+                Status = status
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+        await using var verificationContext = CreateContext(databaseName);
+        var inviteId = (await verificationContext.PendingFriendInvites.SingleAsync()).Id;
+
+        Assert.False(await service.CancelPendingFriendInviteAsync(inviteId, "sender"));
+        var invite = await verificationContext.PendingFriendInvites.SingleAsync();
+        Assert.Equal(status, invite.Status);
+        Assert.False(invite.Deleted);
+    }
+
+    [Fact]
     public async Task CreateFriendshipFromInviteAsync_ConsumesInviteWhenAlreadyFriends()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -315,6 +366,8 @@ public class FriendServiceRequestTests
     private sealed class NoOpAppEmailSender : IAppEmailSender
     {
         public int InviteCount { get; private set; }
+        public string? LastInviteAddress { get; private set; }
+        public string? LastInviteLink { get; private set; }
 
         public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) => Task.CompletedTask;
         public Task SendPasswordResetCodeAsync(string toEmail, string resetCode) => Task.CompletedTask;
@@ -322,6 +375,8 @@ public class FriendServiceRequestTests
         public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
         {
             InviteCount++;
+            LastInviteAddress = toEmail;
+            LastInviteLink = inviteLink;
             return Task.CompletedTask;
         }
         public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink) => Task.CompletedTask;

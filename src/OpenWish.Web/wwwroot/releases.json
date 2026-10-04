@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.1.33",
+    "date": "2026-10-04",
+    "title": "Cleaner gift coordination history",
+    "summary": "Friend invitations, activity history, and product link imports handle stale or imperfect details more reliably.",
+    "highlights": [
+      "Friend invitations accept trimmed email addresses and completed invitations cannot be cancelled again.",
+      "Personal activity keeps deletion records but no longer shows earlier entries for removed lists or gift ideas.",
+      "Invalid product image links no longer prevent other available gift details from importing."
+    ]
+  },
+  {
     "version": "0.1.32",
     "date": "2026-10-03",
     "title": "Easier keyboard wishlist browsing",

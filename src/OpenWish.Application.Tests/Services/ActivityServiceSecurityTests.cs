@@ -119,15 +119,16 @@ public class ActivityServiceSecurityTests
     public async Task GetUserActivityFeedAsync_HidesRemovedWishlistHistoryButKeepsDeletion()
     {
         var factory = CreateFactory();
+        var now = new DateTimeOffset(2026, 10, 4, 0, 0, 0, TimeSpan.Zero);
         await using (var context = factory.CreateDbContext())
         {
             context.Users.Add(new ApplicationUser { Id = "owner", UserName = "owner" });
             var wishlist = new Wishlist { Name = "Old list", OwnerId = "owner", Deleted = true };
             context.Wishlists.Add(wishlist);
             context.ActivityLogs.AddRange(
-                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistCreated", Description = "Created" },
-                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistDeleted", Description = "Deleted" },
-                new ActivityLog { UserId = "owner", ActivityType = "FriendAdded", Description = "Friend added" });
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistCreated", Description = "Created", CreatedOn = now.AddMinutes(2) },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, ActivityType = "WishlistDeleted", Description = "Deleted", CreatedOn = now.AddMinutes(1) },
+                new ActivityLog { UserId = "owner", ActivityType = "FriendAdded", Description = "Friend added", CreatedOn = now });
             await context.SaveChangesAsync();
         }
 
@@ -142,6 +143,7 @@ public class ActivityServiceSecurityTests
     public async Task GetUserActivityFeedAsync_HidesRemovedItemHistoryButKeepsRemoval()
     {
         var factory = CreateFactory();
+        var now = new DateTimeOffset(2026, 10, 4, 0, 0, 0, TimeSpan.Zero);
         await using (var context = factory.CreateDbContext())
         {
             context.Users.Add(new ApplicationUser { Id = "owner", UserName = "owner" });
@@ -149,9 +151,9 @@ public class ActivityServiceSecurityTests
             var item = new WishlistItem { Name = "Removed gift", Wishlist = wishlist, Deleted = true };
             var other = new WishlistItem { Name = "Current gift", Wishlist = wishlist };
             context.ActivityLogs.AddRange(
-                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemAdded", Description = "Added removed gift" },
-                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemRemoved", Description = "Removed gift" },
-                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = other, ActivityType = "ItemAdded", Description = "Added current gift" });
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemAdded", Description = "Added removed gift", CreatedOn = now.AddMinutes(2) },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = item, ActivityType = "ItemRemoved", Description = "Removed gift", CreatedOn = now.AddMinutes(1) },
+                new ActivityLog { UserId = "owner", Wishlist = wishlist, WishlistItem = other, ActivityType = "ItemAdded", Description = "Added current gift", CreatedOn = now });
             await context.SaveChangesAsync();
         }
 

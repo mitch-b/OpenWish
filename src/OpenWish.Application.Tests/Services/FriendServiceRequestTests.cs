@@ -260,6 +260,43 @@ public class FriendServiceRequestTests
     }
 
     [Fact]
+    public async Task SendFriendInviteByEmailAsync_ConcurrentPostgresRequestsDeliverOnce()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("OPENWISH_TEST_POSTGRES");
+        if (connectionString is null)
+        {
+            return;
+        }
+
+        var senderId = $"invite-test-{Guid.NewGuid():N}";
+        var email = $"{senderId}@openwish.local";
+        await using (var context = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(connectionString).Options))
+        {
+            context.Users.Add(new ApplicationUser { Id = senderId, UserName = senderId });
+            await context.SaveChangesAsync();
+        }
+
+        var services = new ServiceCollection();
+        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+        using var provider = services.BuildServiceProvider();
+        var emailSender = new NoOpAppEmailSender { InviteDelay = TimeSpan.FromMilliseconds(250) };
+        var service = CreateFriendService(provider, emailSender);
+
+        var outcomes = await Task.WhenAll(
+            service.SendFriendInviteByEmailAsync(senderId, email),
+            service.SendFriendInviteByEmailAsync(senderId, email));
+
+        Assert.All(outcomes, Assert.True);
+        Assert.Equal(1, emailSender.InviteCount);
+        await using var verificationContext = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(connectionString).Options);
+        Assert.Equal(1, await verificationContext.PendingFriendInvites.CountAsync(
+            invite => invite.SenderUserId == senderId && invite.Email == email &&
+                invite.Status == "Pending" && !invite.Deleted));
+    }
+
+    [Fact]
     public async Task SendFriendInviteByEmailAsync_DoesNotRecordInviteWhenDeliveryFails()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -550,23 +587,28 @@ public class FriendServiceRequestTests
     private sealed class NoOpAppEmailSender : IAppEmailSender
     {
         public bool FailInvites { get; init; }
-        public int InviteCount { get; private set; }
+        public TimeSpan InviteDelay { get; init; }
+        private int _inviteCount;
+        public int InviteCount => Volatile.Read(ref _inviteCount);
         public string? LastInviteAddress { get; private set; }
         public string? LastInviteLink { get; private set; }
 
         public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) => Task.CompletedTask;
         public Task SendPasswordResetCodeAsync(string toEmail, string resetCode) => Task.CompletedTask;
         public Task SendPasswordResetLinkAsync(string toEmail, string resetLink) => Task.CompletedTask;
-        public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
+        public async Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
         {
             if (FailInvites)
             {
                 throw new HttpRequestException("Email unavailable");
             }
-            InviteCount++;
+            if (InviteDelay != TimeSpan.Zero)
+            {
+                await Task.Delay(InviteDelay);
+            }
+            Interlocked.Increment(ref _inviteCount);
             LastInviteAddress = toEmail;
             LastInviteLink = inviteLink;
-            return Task.CompletedTask;
         }
         public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink) => Task.CompletedTask;
         public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink) => Task.CompletedTask;

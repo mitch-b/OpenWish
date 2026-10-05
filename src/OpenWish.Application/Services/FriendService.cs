@@ -317,7 +317,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var normalizedEmail = NormalizeEmailForComparison(emailAddress);
-        var requestedAt = DateTimeOffset.UtcNow;
         var existingUser = await context.Users
                 .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
 
@@ -345,6 +344,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         await using var transaction = context.Database.IsRelational()
             ? await context.Database.BeginTransactionAsync()
             : null;
+        var requestedAt = transaction == null
+            ? DateTimeOffset.UtcNow
+            : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
         if (transaction != null)
         {
             var lockKey = $"{senderUserId}|{normalizedEmail}";
@@ -376,7 +378,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             }
 
             // Update existing invite instead of creating new one
-            existingInvite.InviteDate = DateTimeOffset.UtcNow;
+            existingInvite.InviteDate = transaction == null
+                ? DateTimeOffset.UtcNow
+                : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
             existingInvite.UpdatedOn = DateTimeOffset.UtcNow;
         }
         else
@@ -391,7 +395,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 // Reactivate the previous invite
                 previousInvite.Deleted = false;
                 previousInvite.Status = "Pending";
-                previousInvite.InviteDate = DateTimeOffset.UtcNow;
+                previousInvite.InviteDate = transaction == null
+                    ? DateTimeOffset.UtcNow
+                    : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
                 previousInvite.UpdatedOn = DateTimeOffset.UtcNow;
             }
             else
@@ -401,7 +407,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 {
                     SenderUserId = senderUserId,
                     Email = emailAddress,
-                    InviteDate = DateTimeOffset.UtcNow,
+                    InviteDate = transaction == null
+                        ? DateTimeOffset.UtcNow
+                        : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync(),
                     Status = "Pending",
                     CreatedOn = DateTimeOffset.UtcNow,
                     UpdatedOn = DateTimeOffset.UtcNow

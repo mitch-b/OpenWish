@@ -7,9 +7,11 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
+invite_test_image="openwish-invite-tests:${run_id}"
 release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
+built_invite_test_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
 evidence_directory="$repository_root/.docs/images/verification"
 walkthrough_directory="$repository_root/.docs/images/walkthrough"
@@ -32,6 +34,9 @@ cleanup() {
   "${compose[@]}" down --remove-orphans
   if [[ "$built_verification_image" == "true" ]]; then
     docker image rm "$verification_image" >/dev/null 2>&1 || true
+  fi
+  if [[ "$built_invite_test_image" == "true" ]]; then
+    docker image rm "$invite_test_image" >/dev/null 2>&1 || true
   fi
   return "$exit_code"
 }
@@ -57,6 +62,12 @@ if [[ -z "${OPENWISH_PREBUILT_VERIFICATION_IMAGE:-}" ]]; then
   built_verification_image=true
 fi
 
+docker build \
+  --tag "$invite_test_image" \
+  --file .agents/skills/screenshot/Dockerfile.tests \
+  src
+built_invite_test_image=true
+
 "${compose[@]}" up --detach --wait
 
 web_container="$("${compose[@]}" ps -q web)"
@@ -72,6 +83,11 @@ docker run --rm \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
   openwish-playwright:1.63.0
+
+docker run --rm \
+  --network "$network_name" \
+  --env "OPENWISH_TEST_POSTGRES=Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification" \
+  "$invite_test_image" | tee "$evidence_directory/openwish-invite-concurrency-test.log"
 
 if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
   docker run --rm --entrypoint tar \

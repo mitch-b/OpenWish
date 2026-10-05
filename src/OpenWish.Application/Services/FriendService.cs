@@ -317,13 +317,12 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var normalizedEmail = NormalizeEmailForComparison(emailAddress);
+        var requestedAt = DateTimeOffset.UtcNow;
         var existingUser = await context.Users
                 .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
 
         if (existingUser != null)
         {
-            // If user exists, send a friend request instead
-            await SendFriendRequestAsync(senderUserId, existingUser.Id);
             var obsoleteInvites = await context.PendingFriendInvites
                 .Where(pfi => pfi.SenderUserId == senderUserId &&
                     pfi.Email.ToUpper() == normalizedEmail && pfi.Status == "Pending" && !pfi.Deleted)
@@ -335,7 +334,22 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 invite.UpdatedOn = DateTimeOffset.UtcNow;
             }
             await context.SaveChangesAsync();
+
+            // A registered recipient needs a request, even if their old registration link is still pending.
+            await SendFriendRequestAsync(senderUserId, existingUser.Id);
             return true;
+        }
+
+        // Serialize sends across web instances before looking up or reserving an invite.
+        // Holding the transaction through delivery keeps a failed send out of the pending list.
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        if (transaction != null)
+        {
+            var lockKey = $"{senderUserId}|{normalizedEmail}";
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))");
         }
 
         // Send invitation email using the application email sender
@@ -352,6 +366,15 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         if (existingInvite != null)
         {
+            if (existingInvite.InviteDate >= requestedAt)
+            {
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+                return true;
+            }
+
             // Update existing invite instead of creating new one
             existingInvite.InviteDate = DateTimeOffset.UtcNow;
             existingInvite.UpdatedOn = DateTimeOffset.UtcNow;
@@ -395,8 +418,19 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
         var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
 
+        if (transaction != null)
+        {
+            await context.SaveChangesAsync();
+        }
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
-        await context.SaveChangesAsync();
+        if (transaction == null)
+        {
+            await context.SaveChangesAsync();
+        }
+        if (transaction != null)
+        {
+            await transaction.CommitAsync();
+        }
 
         await _notificationService.CreateNotificationAsync(
             senderUserId,

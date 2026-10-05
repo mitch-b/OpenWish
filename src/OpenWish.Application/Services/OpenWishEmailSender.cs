@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using System.Text.Encodings.Web;
 using FluentEmail.Core;
 using FluentEmail.Core.Interfaces;
@@ -39,9 +40,16 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         var subject = $"{SanitizeSubject(inviterName)} invited you to join OpenWish!";
         var body = WrapInHtmlFormattedEmail($"<p>{safeInviterName} has invited you to join OpenWish to connect and share wishlists!<br/>" +
             $"<a href='{Encode(inviteLink)}'>Click here to join and connect</a>.</p>");
-        if (!await TrySendEmailAsync(toEmail, subject, body))
+        try
         {
-            throw new HttpRequestException("Friend invitation email could not be delivered.");
+            if (!await TrySendEmailAsync(toEmail, subject, body))
+            {
+                throw new HttpRequestException("Friend invitation email could not be delivered.");
+            }
+        }
+        catch (SmtpException ex)
+        {
+            throw new HttpRequestException("Friend invitation email could not be delivered.", ex);
         }
     }
 

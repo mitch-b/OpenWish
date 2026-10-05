@@ -211,6 +211,54 @@ public class FriendServiceRequestTests
         Assert.Equal(0, emailSender.InviteCount);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SendFriendInviteByEmailAsync_ClosesStaleInviteWhenRelationshipExists(bool alreadyFriends)
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "receiver", UserName = "receiver", Email = "receiver@example.com", NormalizedEmail = "RECEIVER@EXAMPLE.COM" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "Receiver@Example.com"
+            });
+            if (alreadyFriends)
+            {
+                context.Friends.Add(new Friend { UserId = "receiver", FriendUserId = "sender" });
+            }
+            else
+            {
+                context.FriendRequests.Add(new FriendRequest
+                {
+                    RequesterId = "receiver",
+                    ReceiverId = "sender",
+                    Status = "Pending"
+                });
+            }
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        var invite = await verificationContext.PendingFriendInvites.SingleAsync();
+        Assert.Equal("Cancelled", invite.Status);
+        Assert.True(invite.Deleted);
+        Assert.Empty(await service.GetPendingFriendInvitesAsync("sender"));
+        Assert.Equal(0, emailSender.InviteCount);
+        Assert.Equal(alreadyFriends ? 0 : 1, await verificationContext.FriendRequests.CountAsync());
+    }
+
     [Fact]
     public async Task SendFriendInviteByEmailAsync_DoesNotRecordInviteWhenDeliveryFails()
     {

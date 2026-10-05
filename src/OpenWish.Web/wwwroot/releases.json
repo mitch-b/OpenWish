@@ -8,7 +8,7 @@
       "Failed invitation emails no longer appear as sent, and failed resends keep their previous sent date.",
       "Bulk invitations surface delivery outages instead of reporting a partial result.",
       "Accepted friendships are saved before the inviter is notified.",
-      "Inviting someone who has since registered sends a friend request and closes their old registration invitation."
+      "Inviting someone who has since registered closes their old registration invitation, even when a friendship or request already exists."
     ]
   },
   {

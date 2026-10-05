@@ -322,9 +322,36 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         if (existingUser != null)
         {
-            // If user exists, send a friend request instead
+            var obsoleteInvites = await context.PendingFriendInvites
+                .Where(pfi => pfi.SenderUserId == senderUserId &&
+                    pfi.Email.ToUpper() == normalizedEmail && pfi.Status == "Pending" && !pfi.Deleted)
+                .ToListAsync();
+            foreach (var invite in obsoleteInvites)
+            {
+                invite.Status = "Cancelled";
+                invite.Deleted = true;
+                invite.UpdatedOn = DateTimeOffset.UtcNow;
+            }
+            await context.SaveChangesAsync();
+
+            // A registered recipient needs a request, even if their old registration link is still pending.
             await SendFriendRequestAsync(senderUserId, existingUser.Id);
             return true;
+        }
+
+        // Serialize sends across web instances before looking up or reserving an invite.
+        // Holding the transaction through delivery keeps a failed send out of the pending list.
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        var requestedAt = transaction == null
+            ? DateTimeOffset.UtcNow
+            : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
+        if (transaction != null)
+        {
+            var lockKey = $"{senderUserId}|{normalizedEmail}";
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))");
         }
 
         // Send invitation email using the application email sender
@@ -341,8 +368,19 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         if (existingInvite != null)
         {
+            if (existingInvite.InviteDate >= requestedAt)
+            {
+                if (transaction != null)
+                {
+                    await transaction.CommitAsync();
+                }
+                return true;
+            }
+
             // Update existing invite instead of creating new one
-            existingInvite.InviteDate = DateTimeOffset.UtcNow;
+            existingInvite.InviteDate = transaction == null
+                ? DateTimeOffset.UtcNow
+                : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
             existingInvite.UpdatedOn = DateTimeOffset.UtcNow;
         }
         else
@@ -357,7 +395,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 // Reactivate the previous invite
                 previousInvite.Deleted = false;
                 previousInvite.Status = "Pending";
-                previousInvite.InviteDate = DateTimeOffset.UtcNow;
+                previousInvite.InviteDate = transaction == null
+                    ? DateTimeOffset.UtcNow
+                    : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync();
                 previousInvite.UpdatedOn = DateTimeOffset.UtcNow;
             }
             else
@@ -367,7 +407,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 {
                     SenderUserId = senderUserId,
                     Email = emailAddress,
-                    InviteDate = DateTimeOffset.UtcNow,
+                    InviteDate = transaction == null
+                        ? DateTimeOffset.UtcNow
+                        : await context.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync(),
                     Status = "Pending",
                     CreatedOn = DateTimeOffset.UtcNow,
                     UpdatedOn = DateTimeOffset.UtcNow
@@ -375,8 +417,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                 context.PendingFriendInvites.Add(pendingInvite);
             }
         }
-
-        await context.SaveChangesAsync();
 
         // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
@@ -386,7 +426,19 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var registerPath = baseUri.EndsWith("/") ? "Account/Register" : "/Account/Register";
         var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
 
+        if (transaction != null)
+        {
+            await context.SaveChangesAsync();
+        }
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
+        if (transaction == null)
+        {
+            await context.SaveChangesAsync();
+        }
+        if (transaction != null)
+        {
+            await transaction.CommitAsync();
+        }
 
         await _notificationService.CreateNotificationAsync(
             senderUserId,
@@ -420,7 +472,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                     allSucceeded = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
             {
                 _logger.LogWarning(ex, "Unable to send one address from a friend invitation batch.");
                 allSucceeded = false;
@@ -528,19 +580,18 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             context.Friends.Add(friendship2);
         }
 
-        // Create notification for the inviter
+        // Mark any pending invite as accepted
+        pendingInvite.Status = "Accepted";
+        pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
         await _notificationService.CreateNotificationAsync(
             newUserId,
             inviterUserId,
             "Friend Invitation Accepted",
             $"{newUser.UserName ?? newUser.Email} has joined OpenWish and is now your friend.",
             "FriendAccept");
-
-        // Mark any pending invite as accepted
-        pendingInvite.Status = "Accepted";
-        pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
-
-        await context.SaveChangesAsync();
         return true;
     }
 
@@ -601,8 +652,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         invite.InviteDate = DateTimeOffset.UtcNow;
         invite.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await context.SaveChangesAsync();
-
         // Resend the email
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{invite.Email}|{userId}";
@@ -611,6 +660,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         var senderName = invite.Sender?.UserName ?? invite.Sender?.Email ?? "A friend";
         await _emailSender.SendFriendInviteEmailAsync(invite.Email, senderName, inviteLink);
+        await context.SaveChangesAsync();
 
         return true;
     }

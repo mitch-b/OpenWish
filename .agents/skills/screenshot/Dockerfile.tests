@@ -1,0 +1,8 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble
+
+WORKDIR /src
+COPY . .
+RUN dotnet restore OpenWish.Application.Tests/OpenWish.Application.Tests.csproj
+RUN dotnet build OpenWish.Application.Tests/OpenWish.Application.Tests.csproj --no-restore
+
+ENTRYPOINT ["dotnet", "test", "OpenWish.Application.Tests/OpenWish.Application.Tests.csproj", "--no-build", "--filter", "FullyQualifiedName~ConcurrentPostgresRequestsDeliverOnce", "--verbosity", "quiet"]

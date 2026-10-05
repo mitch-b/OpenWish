@@ -180,6 +180,143 @@ public class FriendServiceRequestTests
     }
 
     [Fact]
+    public async Task SendFriendInviteByEmailAsync_ClosesObsoleteInviteWhenRecipientHasRegistered()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "receiver", UserName = "receiver", Email = "receiver@example.com", NormalizedEmail = "RECEIVER@EXAMPLE.COM" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "Receiver@Example.com"
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        Assert.True(await service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal("receiver", (await verificationContext.FriendRequests.SingleAsync()).ReceiverId);
+        var invite = await verificationContext.PendingFriendInvites.SingleAsync();
+        Assert.Equal("Cancelled", invite.Status);
+        Assert.True(invite.Deleted);
+        Assert.Empty(await service.GetPendingFriendInvitesAsync("sender"));
+        Assert.Equal(0, emailSender.InviteCount);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SendFriendInviteByEmailAsync_ClosesStaleInviteWhenRelationshipExists(bool alreadyFriends)
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "receiver", UserName = "receiver", Email = "receiver@example.com", NormalizedEmail = "RECEIVER@EXAMPLE.COM" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "Receiver@Example.com"
+            });
+            if (alreadyFriends)
+            {
+                context.Friends.Add(new Friend { UserId = "receiver", FriendUserId = "sender" });
+            }
+            else
+            {
+                context.FriendRequests.Add(new FriendRequest
+                {
+                    RequesterId = "receiver",
+                    ReceiverId = "sender",
+                    Status = "Pending"
+                });
+            }
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var emailSender = new NoOpAppEmailSender();
+        var service = CreateFriendService(provider, emailSender);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        var invite = await verificationContext.PendingFriendInvites.SingleAsync();
+        Assert.Equal("Cancelled", invite.Status);
+        Assert.True(invite.Deleted);
+        Assert.Empty(await service.GetPendingFriendInvitesAsync("sender"));
+        Assert.Equal(0, emailSender.InviteCount);
+        Assert.Equal(alreadyFriends ? 0 : 1, await verificationContext.FriendRequests.CountAsync());
+    }
+
+    [Fact]
+    public async Task SendFriendInviteByEmailAsync_ConcurrentPostgresRequestsDeliverOnce()
+    {
+        var connectionString = Environment.GetEnvironmentVariable("OPENWISH_TEST_POSTGRES");
+        if (connectionString is null)
+        {
+            return;
+        }
+
+        var senderId = $"invite-test-{Guid.NewGuid():N}";
+        var email = $"{senderId}@openwish.local";
+        await using (var context = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(connectionString).Options))
+        {
+            context.Users.Add(new ApplicationUser { Id = senderId, UserName = senderId });
+            await context.SaveChangesAsync();
+        }
+
+        var services = new ServiceCollection();
+        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
+        using var provider = services.BuildServiceProvider();
+        var emailSender = new NoOpAppEmailSender { InviteDelay = TimeSpan.FromMilliseconds(250) };
+        var service = CreateFriendService(provider, emailSender);
+
+        var outcomes = await Task.WhenAll(
+            service.SendFriendInviteByEmailAsync(senderId, email),
+            service.SendFriendInviteByEmailAsync(senderId, email));
+
+        Assert.All(outcomes, Assert.True);
+        Assert.Equal(1, emailSender.InviteCount);
+        await using var verificationContext = new ApplicationDbContext(
+            new DbContextOptionsBuilder<ApplicationDbContext>().UseNpgsql(connectionString).Options);
+        Assert.Equal(1, await verificationContext.PendingFriendInvites.CountAsync(
+            invite => invite.SenderUserId == senderId && invite.Email == email &&
+                invite.Status == "Pending" && !invite.Deleted));
+    }
+
+    [Fact]
+    public async Task SendFriendInviteByEmailAsync_DoesNotRecordInviteWhenDeliveryFails()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider, new NoOpAppEmailSender { FailInvites = true });
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.SendFriendInviteByEmailAsync("sender", "receiver@example.com"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Empty(verificationContext.PendingFriendInvites);
+    }
+
+    [Fact]
     public async Task SendFriendInvitesByEmailAsync_HandlesNullEntriesAndContinuesWithValidAddresses()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -200,6 +337,26 @@ public class FriendServiceRequestTests
         await using var verificationContext = CreateContext(databaseName);
         Assert.Equal(2, await verificationContext.PendingFriendInvites.CountAsync());
         Assert.Equal(2, emailSender.InviteCount);
+    }
+
+    [Fact]
+    public async Task SendFriendInvitesByEmailAsync_PropagatesDeliveryFailures()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider, new NoOpAppEmailSender { FailInvites = true });
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.SendFriendInvitesByEmailAsync("sender", ["first@example.com", "second@example.com"]));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Empty(verificationContext.PendingFriendInvites);
     }
 
     [Fact]
@@ -307,6 +464,65 @@ public class FriendServiceRequestTests
         Assert.Single(await verificationContext.Friends.ToListAsync());
     }
 
+    [Fact]
+    public async Task CreateFriendshipFromInviteAsync_SavesFriendshipBeforeNotifying()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "sender", UserName = "sender" },
+                new ApplicationUser { Id = "new-user", UserName = "new-user", Email = "receiver@example.com" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "receiver@example.com"
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider, notificationService: new NoOpNotificationService(failAcceptance: true));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.CreateFriendshipFromInviteAsync("new-user", "sender"));
+
+        await using var verificationContext = CreateContext(databaseName);
+        Assert.Equal("Accepted", (await verificationContext.PendingFriendInvites.SingleAsync()).Status);
+        Assert.Equal(2, await verificationContext.Friends.CountAsync(f => !f.Deleted));
+    }
+
+    [Fact]
+    public async Task ResendPendingFriendInviteAsync_DoesNotAdvanceDateWhenDeliveryFails()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var originalDate = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        await using (var context = CreateContext(databaseName))
+        {
+            context.Users.Add(new ApplicationUser { Id = "sender", UserName = "sender" });
+            context.PendingFriendInvites.Add(new PendingFriendInvite
+            {
+                SenderUserId = "sender",
+                Email = "receiver@example.com",
+                InviteDate = originalDate,
+                UpdatedOn = originalDate
+            });
+            await context.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider, new NoOpAppEmailSender { FailInvites = true });
+        await using var verificationContext = CreateContext(databaseName);
+        var inviteId = (await verificationContext.PendingFriendInvites.SingleAsync()).Id;
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.ResendPendingFriendInviteAsync(inviteId, "sender"));
+
+        var invite = await verificationContext.PendingFriendInvites.SingleAsync();
+        Assert.Equal(originalDate, invite.InviteDate);
+        Assert.Equal(originalDate, invite.UpdatedOn);
+    }
+
     private static ApplicationDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName)
@@ -319,7 +535,10 @@ public class FriendServiceRequestTests
         return services.BuildServiceProvider();
     }
 
-    private static FriendService CreateFriendService(ServiceProvider provider, IAppEmailSender? emailSender = null)
+    private static FriendService CreateFriendService(
+        ServiceProvider provider,
+        IAppEmailSender? emailSender = null,
+        INotificationService? notificationService = null)
     {
         var mapper = new MapperConfiguration(
             configuration => configuration.AddProfile<OpenWishProfile>(),
@@ -329,13 +548,13 @@ public class FriendServiceRequestTests
         return new FriendService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             mapper,
-            new NoOpNotificationService(),
+            notificationService ?? new NoOpNotificationService(),
             emailSender ?? new NoOpAppEmailSender(),
             options,
             NullLogger<FriendService>.Instance);
     }
 
-    private sealed class NoOpNotificationService : INotificationService
+    private sealed class NoOpNotificationService(bool failAcceptance = false) : INotificationService
     {
         public Task<NotificationModel> CreateNotificationAsync(string userId, string message) =>
             Task.FromResult(new NotificationModel());
@@ -347,7 +566,9 @@ public class FriendServiceRequestTests
             string message,
             string type,
             NotificationActionModel? action = null) =>
-            Task.FromResult(new NotificationModel());
+            failAcceptance && title == "Friend Invitation Accepted"
+                ? Task.FromException<NotificationModel>(new HttpRequestException("Notification unavailable"))
+                : Task.FromResult(new NotificationModel());
 
         public Task<bool> DeleteNotificationAsync(string notificationPublicId, string userId) =>
             Task.FromResult(true);
@@ -365,19 +586,29 @@ public class FriendServiceRequestTests
 
     private sealed class NoOpAppEmailSender : IAppEmailSender
     {
-        public int InviteCount { get; private set; }
+        public bool FailInvites { get; init; }
+        public TimeSpan InviteDelay { get; init; }
+        private int _inviteCount;
+        public int InviteCount => Volatile.Read(ref _inviteCount);
         public string? LastInviteAddress { get; private set; }
         public string? LastInviteLink { get; private set; }
 
         public Task SendConfirmationLinkAsync(string toEmail, string confirmationLink) => Task.CompletedTask;
         public Task SendPasswordResetCodeAsync(string toEmail, string resetCode) => Task.CompletedTask;
         public Task SendPasswordResetLinkAsync(string toEmail, string resetLink) => Task.CompletedTask;
-        public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
+        public async Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
         {
-            InviteCount++;
+            if (FailInvites)
+            {
+                throw new HttpRequestException("Email unavailable");
+            }
+            if (InviteDelay != TimeSpan.Zero)
+            {
+                await Task.Delay(InviteDelay);
+            }
+            Interlocked.Increment(ref _inviteCount);
             LastInviteAddress = toEmail;
             LastInviteLink = inviteLink;
-            return Task.CompletedTask;
         }
         public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink) => Task.CompletedTask;
         public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink) => Task.CompletedTask;

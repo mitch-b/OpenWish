@@ -188,6 +188,11 @@ public class FriendController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "Invitation email could not be delivered. Try again later.");
+        }
         catch (InvalidOperationException ex)
         {
             return Conflict(ex.Message);
@@ -222,6 +227,11 @@ public class FriendController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "Invitation email could not be delivered. Check pending invitations before retrying.");
         }
     }
 
@@ -260,8 +270,16 @@ public class FriendController : ControllerBase
             return Unauthorized();
         }
 
-        var result = await _friendService.ResendPendingFriendInviteAsync(inviteId, userId);
-        return result ? Ok(true) : NotFound();
+        try
+        {
+            var result = await _friendService.ResendPendingFriendInviteAsync(inviteId, userId);
+            return result ? Ok(true) : NotFound();
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "Invitation email could not be delivered. Try again later.");
+        }
     }
 
     // Search by username functionality removed for security/privacy reasons

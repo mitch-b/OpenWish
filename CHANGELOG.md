@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.34] - 2026-10-05
+
+### Improved
+
+- Failed invitation emails no longer create an apparently sent friend invitation.
+- Failed invitation resends leave the original sent date intact so a retry remains clear.
+- Bulk invitations surface delivery outages instead of reporting only a partial result.
+- Accepted invitation friendships are saved before notifying the inviter, so a notification failure cannot leave a false acceptance alert.
+- Inviting someone who has since registered clears their obsolete registration invitation, even if a friend request or friendship already exists.
+
 ## [0.1.33] - 2026-10-04
 
 ### Improved

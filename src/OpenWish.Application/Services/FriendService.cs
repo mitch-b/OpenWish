@@ -324,6 +324,17 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         {
             // If user exists, send a friend request instead
             await SendFriendRequestAsync(senderUserId, existingUser.Id);
+            var obsoleteInvites = await context.PendingFriendInvites
+                .Where(pfi => pfi.SenderUserId == senderUserId &&
+                    pfi.Email.ToUpper() == normalizedEmail && pfi.Status == "Pending" && !pfi.Deleted)
+                .ToListAsync();
+            foreach (var invite in obsoleteInvites)
+            {
+                invite.Status = "Cancelled";
+                invite.Deleted = true;
+                invite.UpdatedOn = DateTimeOffset.UtcNow;
+            }
+            await context.SaveChangesAsync();
             return true;
         }
 
@@ -376,8 +387,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             }
         }
 
-        await context.SaveChangesAsync();
-
         // Generate an invite link using the configured BaseUri that includes both email and sender ID
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{emailAddress}|{senderUserId}";
@@ -387,6 +396,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         var inviteLink = $"{baseUri}{registerPath}?invite={Uri.EscapeDataString(inviteData)}";
 
         await _emailSender.SendFriendInviteEmailAsync(emailAddress, sender.UserName ?? sender.Email ?? "A friend", inviteLink);
+        await context.SaveChangesAsync();
 
         await _notificationService.CreateNotificationAsync(
             senderUserId,
@@ -420,7 +430,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
                     allSucceeded = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
             {
                 _logger.LogWarning(ex, "Unable to send one address from a friend invitation batch.");
                 allSucceeded = false;
@@ -528,19 +538,18 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             context.Friends.Add(friendship2);
         }
 
-        // Create notification for the inviter
+        // Mark any pending invite as accepted
+        pendingInvite.Status = "Accepted";
+        pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
+
+        await context.SaveChangesAsync();
+
         await _notificationService.CreateNotificationAsync(
             newUserId,
             inviterUserId,
             "Friend Invitation Accepted",
             $"{newUser.UserName ?? newUser.Email} has joined OpenWish and is now your friend.",
             "FriendAccept");
-
-        // Mark any pending invite as accepted
-        pendingInvite.Status = "Accepted";
-        pendingInvite.UpdatedOn = DateTimeOffset.UtcNow;
-
-        await context.SaveChangesAsync();
         return true;
     }
 
@@ -601,8 +610,6 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         invite.InviteDate = DateTimeOffset.UtcNow;
         invite.UpdatedOn = DateTimeOffset.UtcNow;
 
-        await context.SaveChangesAsync();
-
         // Resend the email
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteData = $"{invite.Email}|{userId}";
@@ -611,6 +618,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         var senderName = invite.Sender?.UserName ?? invite.Sender?.Email ?? "A friend";
         await _emailSender.SendFriendInviteEmailAsync(invite.Email, senderName, inviteLink);
+        await context.SaveChangesAsync();
 
         return true;
     }

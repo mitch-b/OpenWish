@@ -32,14 +32,17 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// <param name="inviterName">Name of the user sending the invite</param>
     /// <param name="inviteLink">Registration or invitation link</param>
     /// <returns></returns>
-    public Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
+    public async Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink)
     {
         _logger.LogInformation("Sending friend invite email.");
         var safeInviterName = Encode(inviterName);
         var subject = $"{SanitizeSubject(inviterName)} invited you to join OpenWish!";
         var body = WrapInHtmlFormattedEmail($"<p>{safeInviterName} has invited you to join OpenWish to connect and share wishlists!<br/>" +
             $"<a href='{Encode(inviteLink)}'>Click here to join and connect</a>.</p>");
-        return SendEmailAsync(toEmail, subject, body);
+        if (!await TrySendEmailAsync(toEmail, subject, body))
+        {
+            throw new HttpRequestException("Friend invitation email could not be delivered.");
+        }
     }
 
     /// <summary>
@@ -113,6 +116,11 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
 
     public async Task SendEmailAsync(string toEmail, string subject, string message)
     {
+        await TrySendEmailAsync(toEmail, subject, message);
+    }
+
+    private async Task<bool> TrySendEmailAsync(string toEmail, string subject, string message)
+    {
         var response = await _emailFactory
             .Create()
             .To(toEmail)
@@ -120,9 +128,14 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             .Body(message, true)
             .SendAsync();
 
-        _logger.LogInformation(response.Successful
-                               ? "Email queued successfully."
-                               : "Email delivery failed.");
+        if (!response.Successful)
+        {
+            _logger.LogError("Email delivery failed.");
+            return false;
+        }
+
+        _logger.LogInformation("Email queued successfully.");
+        return true;
     }
 
     private string WrapInHtmlFormattedEmail(string message)

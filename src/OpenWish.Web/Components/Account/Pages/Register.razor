@@ -176,13 +176,15 @@
         {
             try
             {
-                await FriendService.CreateFriendshipFromInviteAsync(userId, inviterUserId);
-                Logger.LogInformation("Created friendship between new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
+                if (await FriendService.CreateFriendshipFromInviteAsync(userId, inviterUserId))
+                {
+                    Logger.LogInformation("Created friendship between new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
+                }
             }
             catch (Exception ex)
             {
                 // Log error but continue with registration
-                Logger.LogError(ex, "Failed to create friendship between new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
+                Logger.LogError(ex, "Could not confirm invitation completion for new user {NewUserId} and inviter {InviterId}", userId, inviterUserId);
             }
         }
 

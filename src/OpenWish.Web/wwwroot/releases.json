@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.1.35",
+    "date": "2026-10-06",
+    "title": "Stronger test coverage for core services",
+    "summary": "Added 64 new tests covering notifications, product imports, item comments, and reservations.",
+    "highlights": [
+      "Notification service tests cover creation, reading, marking as read, and deletion with proper authorization.",
+      "Product import URL validation tests verify IPv4/IPv6 safety checks and prevent SSRF attacks.",
+      "Wishlist item comment and reservation tests ensure consistency and authorization.",
+      "Test coverage increased by 59% to strengthen confidence in refactoring and future features."
+    ]
+  },
+  {
     "version": "0.1.34",
     "date": "2026-10-05",
     "title": "More dependable friend invitations",

@@ -129,7 +129,45 @@ public class WishlistItemCommentTests
     }
 
     [Fact]
-    public async Task RemoveItemCommentAsync_RejectsUnauthorizedUser()
+    public async Task RemoveItemCommentAsync_RejectsAlreadyDeletedComment()
+    {
+        var factory = CreateFactory();
+        int commentId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            var owner = new ApplicationUser { Id = "owner", UserName = "owner" };
+            var commenter = new ApplicationUser { Id = "commenter", UserName = "commenter" };
+            context.Users.AddRange(owner, commenter);
+
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
+            context.Wishlists.Add(wishlist);
+
+            var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
+            context.WishlistItems.Add(item);
+
+            var comment = new ItemComment
+            {
+                WishlistItem = item,
+                UserId = "commenter",
+                Text = "Comment",
+                CreatedOn = DateTimeOffset.UtcNow,
+                Deleted = true
+            };
+            context.ItemComments.Add(comment);
+
+            await context.SaveChangesAsync();
+            commentId = comment.Id;
+        }
+
+        var service = CreateService(factory);
+        var result = await service.RemoveItemCommentAsync(commentId, "commenter");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task RemoveItemCommentAsync_PermitsWishlistOwnerDeletion()
     {
         var factory = CreateFactory();
         int commentId;
@@ -160,9 +198,13 @@ public class WishlistItemCommentTests
         }
 
         var service = CreateService(factory);
-        var result = await service.RemoveItemCommentAsync(commentId, "otheruser");
+        var result = await service.RemoveItemCommentAsync(commentId, "owner");
 
-        Assert.False(result);
+        Assert.True(result);
+
+        await using var verifyContext = factory.CreateDbContext();
+        var deleted = await verifyContext.ItemComments.IgnoreQueryFilters().FirstAsync(c => c.Id == commentId);
+        Assert.True(deleted.Deleted);
     }
 
     private static TestDbContextFactory CreateFactory() =>

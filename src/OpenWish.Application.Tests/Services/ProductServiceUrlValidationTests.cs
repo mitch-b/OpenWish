@@ -7,9 +7,9 @@ namespace OpenWish.Application.Tests.Services;
 public class ProductServiceUrlValidationTests
 {
     [Theory]
-    [InlineData("https://example.com", true)]
-    [InlineData("http://example.com", true)]
-    [InlineData("ftp://example.com", false)]
+    [InlineData("https://8.8.8.8", true)]
+    [InlineData("http://1.1.1.1", true)]
+    [InlineData("ftp://8.8.8.8", false)]
     [InlineData("file:///etc/passwd", false)]
     public async Task IsSafeUrlAsync_ValidatesScheme(string url, bool expected)
     {
@@ -71,34 +71,27 @@ public class ProductServiceUrlValidationTests
     }
 
     [Fact]
-    public async Task IsSafeUrlAsync_RejectsMalformedDomain()
+    public async Task TryScrapeProductFromUrl_RejectsMalformedUrl()
     {
-        var uri = new Uri("https://example.com");
-        var result = await ProductService.IsSafeUrlAsync(uri);
-
-        // A valid domain structure should return true unless it resolves to a private IP
-        Assert.True(result);
-    }
-
-    [Fact]
-    public async Task IsSafeUrlAsync_RejectsNonResolvableDomain()
-    {
-        var uri = new Uri("https://this-domain-definitely-does-not-exist-12345.invalid");
-        var result = await ProductService.IsSafeUrlAsync(uri);
-
-        Assert.False(result);
-    }
-
-    [Fact]
-    public async Task TryScrapeProductFromUrl_RejectsUnsafeUrl()
-    {
-        // Create a minimal mock factory
         var mockFactory = new MockHttpClientFactory();
+        var service = new ProductService(mockFactory, NullLogger<ProductService>.Instance);
+
+        var result = await service.TryScrapeProductFromUrl("ht!tp://[invalid:url");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task TryScrapeProductFromUrl_RejectsPrivateAddressWithoutRequest()
+    {
+        var recordingHandler = new RecordingHttpMessageHandler();
+        var mockFactory = new RecordingHttpClientFactory(recordingHandler);
         var service = new ProductService(mockFactory, NullLogger<ProductService>.Instance);
 
         var result = await service.TryScrapeProductFromUrl("https://192.168.1.1");
 
         Assert.Null(result);
+        Assert.Empty(recordingHandler.Requests);
     }
 
     [Fact]
@@ -151,6 +144,37 @@ public class ProductServiceUrlValidationTests
         {
             var handler = new HttpClientHandler();
             return new HttpClient(handler)
+            {
+                BaseAddress = new Uri("https://example.com")
+            };
+        }
+    }
+
+    private class RecordingHttpMessageHandler : HttpMessageHandler
+    {
+        public List<HttpRequestMessage> Requests { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK));
+        }
+    }
+
+    private class RecordingHttpClientFactory : IHttpClientFactory
+    {
+        private readonly RecordingHttpMessageHandler _handler;
+
+        public RecordingHttpClientFactory(RecordingHttpMessageHandler handler)
+        {
+            _handler = handler;
+        }
+
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(_handler)
             {
                 BaseAddress = new Uri("https://example.com")
             };

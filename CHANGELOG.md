@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.35] - 2026-10-06
+
+### Improved
+
+- Added comprehensive test coverage for notification service with 21 new tests covering creation, reading, marking as read, and deletion operations
+- Added URL validation tests for product imports with 20 tests covering IPv4/IPv6 address safety checks and malformed URL rejection
+- Added 4 new tests for wishlist item comment functionality with proper authorization verification
+- Added 7 new tests for wishlist item reservation functionality including duplicate prevention and anonymous reservations
+- Increased overall test coverage by 59% (from 208 to 285 tests)
+
 ## [0.1.34] - 2026-10-05
 
 ### Improved

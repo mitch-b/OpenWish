@@ -17,8 +17,8 @@
             {
                 <WishlistItemCard 
                     Item="@item" 
-                    OnEdit="@(OnEdit.HasDelegate ? item => StartEdit(item.Id) : null)" 
-                    OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)"
+                    OnEdit="OnEdit" 
+                    OnDelete="OnDelete"
                     ShowInteractions="@ShowInteractions"
                     WishlistId="@WishlistId"
                     OwnerId="@OwnerId"

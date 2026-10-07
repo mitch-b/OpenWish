@@ -74,7 +74,7 @@
     private string? _currentUserId;
     private string? _errorMessage;
     private string? _statusMessage;
-    private FriendRemoveConfirmationDialog _removeConfirmationDialog;
+    private FriendRemoveConfirmationDialog? _removeConfirmationDialog;
     
     protected override async Task OnInitializedAsync()
     {
@@ -125,7 +125,7 @@
         var friendName = GetFriendName(friend);
         const string title = "Remove friend";
         var message = $"Remove {friendName} from your friends? You will no longer see each other's friends-only wishlists. Wishlists shared directly may remain available.";
-        _removeConfirmationDialog.Show(title, message, friend.Id);
+        _removeConfirmationDialog?.Show(title, message, friend.Id);
     }
     
     private async Task ConfirmRemoveFriend(string friendId)

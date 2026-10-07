@@ -14,25 +14,29 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         var response = await httpClient.PostAsJsonAsync("api/events", eventModel);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventModel>();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created event.");
     }
 
     public async Task<EventModel> GetEventAsync(int id)
     {
-        return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{id}");
+        return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{id}")
+            ?? throw new InvalidOperationException("Event not found.");
     }
 
     public async Task<IEnumerable<EventModel>> GetUserEventsAsync(string userId)
     {
         // Assuming the server uses the authenticated user, so userId may not be needed
-        return await httpClient.GetFromJsonAsync<IEnumerable<EventModel>>("api/events");
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventModel>>("api/events")
+            ?? Enumerable.Empty<EventModel>();
     }
 
     public async Task<EventModel> UpdateEventAsync(int id, EventModel eventModel, string requestorId)
     {
         var response = await httpClient.PutAsJsonAsync($"api/events/{id}", eventModel);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventModel>();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated event.");
     }
 
     public async Task DeleteEventAsync(int id, string requestorId)
@@ -93,14 +97,16 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/invitations/user/{userId}", new { });
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize invitation.");
     }
 
     public async Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email)
     {
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventId}/invitations/email", new { Email = email });
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize invitation.");
     }
 
     public async Task<IEnumerable<EventUserModel>> GetEventInvitationsAsync(int eventId)
@@ -183,14 +189,16 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<EventModel> GetEventByPublicIdAsync(string publicId, string requestingUserId)
     {
         _ = requestingUserId;
-        return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{publicId}");
+        return await httpClient.GetFromJsonAsync<EventModel>($"api/events/{publicId}")
+            ?? throw new InvalidOperationException("Event not found.");
     }
 
     public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt, string requestorId)
     {
         var response = await httpClient.PutAsJsonAsync($"api/events/{publicId}", evt);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventModel>();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated event.");
     }
 
     public async Task DeleteEventByPublicIdAsync(string publicId, string requestorId)
@@ -221,14 +229,16 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<IEnumerable<WishlistModel>> GetEventWishlistsByPublicIdAsync(string eventPublicId, string? requestingUserId = null)
     {
         _ = requestingUserId;
-        return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventPublicId}/wishlists");
+        return await httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"api/events/{eventPublicId}/wishlists")
+            ?? Enumerable.Empty<WishlistModel>();
     }
 
     public async Task<WishlistModel> CreateEventWishlistByPublicIdAsync(string eventPublicId, WishlistModel wishlistModel, string ownerId)
     {
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/wishlists", wishlistModel);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created wishlist.");
     }
 
     public async Task<WishlistModel> AttachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId)
@@ -236,7 +246,8 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         var request = new { WishlistPublicId = wishlistPublicId };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/wishlists/attach", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize attached wishlist.");
     }
 
     public async Task<bool> DetachWishlistByPublicIdAsync(string eventPublicId, string wishlistPublicId, string userId)
@@ -255,7 +266,8 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/user/{userId}", null);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize invitation.");
     }
 
     public async Task<EventUserModel> InviteByEmailToEventByPublicIdAsync(string eventPublicId, string inviterId, string email)
@@ -263,12 +275,14 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         var request = new { Email = email };
         var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/invitations/email", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<EventUserModel>();
+        return await response.Content.ReadFromJsonAsync<EventUserModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize invitation.");
     }
 
     public async Task<IEnumerable<EventUserModel>> GetEventInvitationsByPublicIdAsync(string eventPublicId, string requestorId)
     {
-        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventPublicId}/invitations");
+        return await httpClient.GetFromJsonAsync<IEnumerable<EventUserModel>>($"api/events/{eventPublicId}/invitations")
+            ?? Enumerable.Empty<EventUserModel>();
     }
 
     // Gift Exchange methods

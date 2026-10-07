@@ -130,7 +130,7 @@
     public int ItemId { get; set; }
     
     [Parameter]
-    public string OwnerId { get; set; }
+    public string OwnerId { get; set; } = string.Empty;
 
     private bool _loading = true;
     private bool _error = false;

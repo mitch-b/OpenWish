@@ -19,7 +19,7 @@ OpenWish is fully navigable using the keyboard:
 - **Arrow Keys** (Left/Right): Navigate between wishlist tabs without scrolling the page
 - **Home/End**: Jump to the first/last tab
 - **Enter**: Open selected tab
-- Focus automatically moves to the tab content when selected
+- Focus automatically moves to the selected tab (not its content)
 
 #### Form Controls
 
@@ -125,7 +125,7 @@ OpenWish follows EU standards for accessible information and communication techn
 
 We continuously test OpenWish for accessibility:
 
-- **Automated Testing**: Axe-core integration tests catch common issues
+- **Automated Testing**: Razor markup assertions in `OpenWish.Shared.Tests/Accessibility` verify semantic HTML
 - **Manual Testing**: Team members test with screen readers and keyboard navigation
 - **User Testing**: We work with users who have disabilities to identify and fix issues
 - **Browser Testing**: Tested on Chrome, Firefox, Safari, and Edge
@@ -137,16 +137,11 @@ While we strive for full accessibility, some limitations exist:
 
 - **Third-Party Integrations**: Google Sign-In and product image imports may have their own accessibility limitations
 - **Complex Tables**: Event pairing rule tables may be challenging with some screen readers (we recommend using the keyboard to navigate)
-- **PDF Export**: Exported PDFs may not be fully accessible if the PDF viewer doesn't support all features
+- **Destructive Actions**: Wishlist deletion, item deletion, and event deletion are permanent and cannot be undone (confirmation dialogs clearly warn before deletion)
 
 ## Accessibility Shortcuts
 
-| Platform | Shortcut | Action |
-|----------|----------|--------|
-| All | `/` | Search wishlists and events (if focus is on main content) |
-| All | `?` | Show help (on some pages) |
-| Windows | `Alt+Letter` | Activate menu commands |
-| macOS | `Option+Letter` | Activate menu commands |
+Currently, OpenWish does not implement global keyboard shortcuts. To request shortcuts for specific workflows, open an issue on GitHub with details about the use case.
 
 ## Contributing to Accessibility
 
@@ -206,12 +201,19 @@ Provide descriptive labels for all interactive elements:
 Ensure keyboard focus is visible and logical:
 
 ```csharp
-// C# Razor component example
-@ref="elementReference"
-
-// After showing a dialog, focus the first interactive element:
-elementReference?.FocusAsync()
+// C# Razor component - focus an element after showing a dialog
+@code {
+    private ElementReference dialogReference;
+    
+    private async Task ShowDialog()
+    {
+        // Show the dialog
+        await dialogReference.FocusAsync();
+    }
+}
 ```
+
+Use this pattern to programmatically move focus after dynamic content changes.
 
 #### Color Contrast
 
@@ -249,7 +251,7 @@ Before submitting a pull request:
 2. **Screen Reader**: Test with NVDA or JAWS for Windows, VoiceOver for macOS
 3. **Color Contrast**: Check with WebAIM Color Contrast Checker or axe DevTools
 4. **Mobile**: Test with TalkBack or VoiceOver on a mobile device
-5. **Automated Tests**: Run `npm run test:a11y` (if available)
+5. **Unit Tests**: Verify Razor markup accessibility in `OpenWish.Shared.Tests/Accessibility` passes
 
 ## Resources
 

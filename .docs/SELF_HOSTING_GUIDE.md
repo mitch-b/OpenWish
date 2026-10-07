@@ -44,7 +44,7 @@ The fastest way to run OpenWish is with Docker Compose, which provisions both Po
        volumes:
          - openwish-data:/var/lib/postgresql/data
        ports:
-         - "5432:5432"
+         - "127.0.0.1:5432:5432"
        healthcheck:
          test: ["CMD-SHELL", "pg_isready -U openwish"]
          interval: 10s
@@ -113,19 +113,19 @@ All OpenWish configuration uses environment variables. This section documents th
 
 #### Email (SMTP)
 
-Configure email for password reset and notifications:
+Configure email for password reset and account confirmation (required for first account registration):
 
 ```bash
 OpenWishSettings__EmailConfig__SmtpHost=smtp.gmail.com
 OpenWishSettings__EmailConfig__SmtpPort=587
 OpenWishSettings__EmailConfig__SmtpUser=your-email@gmail.com
 OpenWishSettings__EmailConfig__SmtpPass=your-app-password
-OpenWishSettings__EmailConfig__SmtpEnableTls=true
-OpenWishSettings__EmailConfig__FromAddress=noreply@yourdomain.com
-OpenWishSettings__EmailConfig__FromDisplayName="OpenWish"
+OpenWishSettings__EmailConfig__SmtpFrom=noreply@yourdomain.com
 ```
 
-**Important**: Use application-specific passwords, not your Gmail password. See [Gmail App Passwords](https://myaccount.google.com/apppasswords).
+**Important**: 
+- **SMTP is required for first account registration**. The confirmation email is sent before account activation is complete.
+- Use application-specific passwords, not your Gmail password. See [Gmail App Passwords](https://myaccount.google.com/apppasswords).
 
 #### Google Sign-In (OAuth)
 
@@ -133,14 +133,13 @@ To enable Google sign-in:
 
 1. **Create a Google OAuth application** at [Google Cloud Console](https://console.cloud.google.com/):
    - Create a new project
-   - Enable the Google+ API
    - Create an OAuth 2.0 credential (Web application)
    - Add authorized redirect URIs: `https://yourdomain.com/signin-google`
 
 2. **Configure environment variables**:
    ```bash
-   OpenWishSettings__GoogleOAuthSettings__ClientId=your-client-id.apps.googleusercontent.com
-   OpenWishSettings__GoogleOAuthSettings__ClientSecret=your-client-secret
+   Authentication__Google__ClientId=your-client-id.apps.googleusercontent.com
+   Authentication__Google__ClientSecret=your-client-secret
    ```
 
 #### TLS/SSL Certificate
@@ -149,11 +148,14 @@ For HTTPS in production:
 
 ```bash
 # Option 1: Self-signed certificate (development only)
-# See .docs/SELF_SIGNED_CERTIFICATE.md
+# See [SELF_SIGNED_CERTIFICATE.md](SELF_SIGNED_CERTIFICATE.md)
 
 # Option 2: Use a reverse proxy (recommended)
 # Place nginx, Caddy, or Traefik in front of OpenWish
-# They handle TLS termination
+# They handle TLS termination and forwarded-header trust:
+ForwardedHeaders__KnownProxies=reverse-proxy
+# or for networks:
+ForwardedHeaders__KnownNetworks=10.0.0.0/8
 ```
 
 #### Logging
@@ -198,8 +200,10 @@ Server=db.example.com;Port=5432;Database=OpenWish;User Id=openwish;Password=Your
    DATE=$(date +%Y%m%d_%H%M%S)
    
    mkdir -p $BACKUP_DIR
-   docker exec openwish-postgres pg_dump -U openwish OpenWish | \
-     gzip > $BACKUP_DIR/openwish_$DATE.sql.gz
+   docker run --rm --volumes-from openwish-postgres \
+     -v $BACKUP_DIR:/backup \
+     postgres:18 \
+     pg_dump -U openwish OpenWish | gzip > $BACKUP_DIR/openwish_$DATE.sql.gz
    
    # Keep last 30 days of backups
    find $BACKUP_DIR -name "openwish_*.sql.gz" -mtime +30 -delete
@@ -257,7 +261,7 @@ VACUUM ANALYZE;
 
 ### Option 1: Self-Signed Certificate (Development)
 
-See [.docs/SELF_SIGNED_CERTIFICATE.md](.docs/SELF_SIGNED_CERTIFICATE.md) for detailed instructions.
+See [SELF_SIGNED_CERTIFICATE.md](SELF_SIGNED_CERTIFICATE.md) for detailed instructions.
 
 ### Option 2: Reverse Proxy with Let's Encrypt (Recommended)
 
@@ -319,13 +323,18 @@ docker-compose logs --timestamps web
 
 ### Health Checks
 
-OpenWish includes a health check endpoint:
+OpenWish includes a health check endpoint (Development environments only):
 
 ```bash
 curl http://localhost:5001/health
 ```
 
 Expected response: HTTP 200 OK
+
+**Note**: For production deployments in Development mode, enable with:
+```bash
+ASPNETCORE_ENVIRONMENT=Development
+```
 
 ### Metrics and Performance
 
@@ -430,11 +439,16 @@ For groups with many wishlists, events, or users:
 
 ### Database Optimization
 
+Pass PostgreSQL server settings directly to the `postgres` command:
+
 ```yaml
 database:
-  environment:
-    # Increase shared buffers for better performance
-    POSTGRES_INIT_ARGS: "-c shared_buffers=256MB -c effective_cache_size=1GB"
+  command:
+    - postgres
+    - -c
+    - shared_buffers=256MB
+    - -c
+    - effective_cache_size=1GB
 ```
 
 ### Container Resources
@@ -468,10 +482,10 @@ OpenWish does not currently support automated imports from other platforms.
 
 ## Getting Help
 
-- **Documentation**: Review [.docs/DEVELOPING.md](.docs/DEVELOPING.md) for development setup
+- **Documentation**: Review [DEVELOPING.md](../DEVELOPING.md) for development setup
 - **GitHub Issues**: Report bugs at [mitch-b/OpenWish](https://github.com/mitch-b/OpenWish/issues)
 - **Docker Hub**: [OpenWish container](https://github.com/mitch-b/OpenWish/pkgs/container/openwish-web)
 
 ## Version History
 
-See [releases.json](src/OpenWish.Web/wwwroot/releases.json) for release notes and version history.
+See [releases.json](../src/OpenWish.Web/wwwroot/releases.json) for release notes and version history.

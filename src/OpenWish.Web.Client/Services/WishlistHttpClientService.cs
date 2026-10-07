@@ -13,25 +13,29 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     {
         var response = await _httpClient.PostAsJsonAsync(BaseUrl, wishlist);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created wishlist.");
     }
 
     public async Task<WishlistModel> GetWishlistAsync(int id, string? userId = null)
     {
-        return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{id}");
+        return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{id}")
+            ?? throw new InvalidOperationException("Wishlist not found.");
     }
 
     public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
     {
         // Assuming userId is not required since the server knows the authenticated user
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>(BaseUrl);
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>(BaseUrl)
+            ?? Enumerable.Empty<WishlistModel>();
     }
 
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlist)
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{id}", wishlist);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated wishlist.");
     }
 
     public async Task DeleteWishlistAsync(int id)
@@ -45,24 +49,28 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     {
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items", item);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created item.");
     }
 
     public async Task<WishlistItemModel> GetWishlistItemAsync(int wishlistId, int itemId)
     {
-        return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistId}/items/{itemId}");
+        return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistId}/items/{itemId}")
+            ?? throw new InvalidOperationException("Wishlist item not found.");
     }
 
     public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsAsync(int wishlistId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistId}/items");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistId}/items")
+            ?? Enumerable.Empty<WishlistItemModel>();
     }
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel item)
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}", item);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated item.");
     }
 
     public async Task<bool> RemoveItemFromWishlistAsync(int wishlistId, int itemId)
@@ -78,7 +86,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         var shareRequest = new { userId, permissionType };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/permissions", shareRequest);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize permission.");
     }
 
     public async Task<string> CreateSharingLinkAsync(int wishlistId, string permissionType, TimeSpan? expiration = null)
@@ -99,7 +108,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsAsync(int wishlistId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistId}/permissions");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistId}/permissions")
+            ?? Enumerable.Empty<WishlistPermissionModel>();
     }
 
     public async Task<bool> RemoveWishlistPermissionAsync(int wishlistId, string userId)
@@ -111,12 +121,14 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<IEnumerable<WishlistModel>> GetSharedWithMeWishlistsAsync(string userId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/shared-with-me");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/shared-with-me")
+            ?? Enumerable.Empty<WishlistModel>();
     }
 
     public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/friends");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/friends")
+            ?? Enumerable.Empty<WishlistModel>();
     }
 
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)
@@ -138,12 +150,14 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         var commentRequest = new { text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistId}/items/{itemId}/comments", commentRequest);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
+        return await response.Content.ReadFromJsonAsync<ItemCommentModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created comment.");
     }
 
     public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsAsync(int wishlistId, int itemId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistId}/items/{itemId}/comments");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistId}/items/{itemId}/comments")
+            ?? Enumerable.Empty<ItemCommentModel>();
     }
 
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
@@ -192,7 +206,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     // PublicId-based methods
     public async Task<WishlistModel> GetWishlistByPublicIdAsync(string publicId, string? userId = null)
     {
-        return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{publicId}");
+        return await _httpClient.GetFromJsonAsync<WishlistModel>($"{BaseUrl}/{publicId}")
+            ?? throw new InvalidOperationException("Wishlist not found.");
     }
 
     public async Task<WishlistModel> UpdateWishlistByPublicIdAsync(
@@ -202,7 +217,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{publicId}", wishlist);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated wishlist.");
     }
 
     public async Task DeleteWishlistByPublicIdAsync(string publicId)
@@ -216,7 +232,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         var request = new { UserId = userId, PermissionType = permissionType };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/permissions", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistPermissionModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize permission.");
     }
 
     public async Task<string> CreateSharingLinkByPublicIdAsync(string wishlistPublicId, string permissionType, TimeSpan? expiration = null)
@@ -229,7 +246,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<IEnumerable<WishlistPermissionModel>> GetWishlistPermissionsByPublicIdAsync(string wishlistPublicId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistPublicId}/permissions");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistPermissionModel>>($"{BaseUrl}/{wishlistPublicId}/permissions")
+            ?? Enumerable.Empty<WishlistPermissionModel>();
     }
 
     public async Task<bool> RemoveWishlistPermissionByPublicIdAsync(string wishlistPublicId, string userId)
@@ -253,20 +271,23 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     public async Task<WishlistItemModel> GetWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, string? requestingUserId = null)
     {
         _ = requestingUserId;
-        return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}");
+        return await _httpClient.GetFromJsonAsync<WishlistItemModel>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}")
+            ?? throw new InvalidOperationException("Wishlist item not found.");
     }
 
     public async Task<IEnumerable<WishlistItemModel>> GetWishlistItemsByPublicIdAsync(string wishlistPublicId, string? requestingUserId = null)
     {
         _ = requestingUserId;
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistPublicId}/items");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistItemModel>>($"{BaseUrl}/{wishlistPublicId}/items")
+            ?? Enumerable.Empty<WishlistItemModel>();
     }
 
     public async Task<WishlistItemModel> AddItemToWishlistByPublicIdAsync(string wishlistPublicId, WishlistItemModel item)
     {
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items", item);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created item.");
     }
 
     public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, int itemId)
@@ -280,7 +301,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     {
         var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}", item);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<WishlistItemModel>();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated item.");
     }
 
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
@@ -289,12 +311,14 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         var request = new { Text = text };
         var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments", request);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<ItemCommentModel>();
+        return await response.Content.ReadFromJsonAsync<ItemCommentModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created comment.");
     }
 
     public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, int itemId)
     {
-        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments");
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>($"{BaseUrl}/{wishlistPublicId}/items/{itemId}/comments")
+            ?? Enumerable.Empty<ItemCommentModel>();
     }
 
     public async Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, bool isAnonymous = false)

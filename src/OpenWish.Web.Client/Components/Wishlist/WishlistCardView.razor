@@ -17,8 +17,8 @@
             {
                 <WishlistItemCard 
                     Item="@item" 
-                    OnEdit="@(OnEdit.HasDelegate ? item => StartEdit(item.Id) : null)" 
-                    OnDelete="@(OnDelete.HasDelegate ? item => OnDelete.InvokeAsync(item) : null)"
+                    OnEdit="@(OnEdit.HasDelegate ? new EventCallback<WishlistItemModel>(this, OnEditWithStartEdit) : default)" 
+                    OnDelete="@(OnDelete.HasDelegate ? new EventCallback<WishlistItemModel>(this, OnDeleteWithStartEdit) : default)"
                     ShowInteractions="@ShowInteractions"
                     WishlistId="@WishlistId"
                     OwnerId="@OwnerId"
@@ -42,6 +42,17 @@
     private void StartEdit(int itemId)
     {
         EditingItemId = itemId;
+    }
+    
+    private async Task OnEditWithStartEdit(WishlistItemModel item)
+    {
+        StartEdit(item.Id);
+        await OnEdit.InvokeAsync(item);
+    }
+    
+    private Task OnDeleteWithStartEdit(WishlistItemModel item)
+    {
+        return OnDelete.InvokeAsync(item);
     }
     
     private async Task HandleEditSubmit(WishlistItemModel item)

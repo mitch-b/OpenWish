@@ -21,6 +21,7 @@ public class EventService(
     INotificationService notificationService,
     IAppEmailSender emailSender,
     IOptions<OpenWishSettings> openWishSettings,
+    IGiftExchangeService giftExchangeService,
     ILogger<EventService> logger) : IEventService
 {
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
@@ -28,6 +29,7 @@ public class EventService(
     private readonly INotificationService _notificationService = notificationService;
     private readonly IAppEmailSender _emailSender = emailSender;
     private readonly string? _baseUri = openWishSettings.Value.BaseUri;
+    private readonly IGiftExchangeService _giftExchangeService = giftExchangeService;
     private readonly ILogger<EventService> _logger = logger;
 
     private static bool IsEventOwner(Event eventEntity, string userId) =>
@@ -1217,11 +1219,6 @@ public class EventService(
             eventUser.Event = eventEntity;
         }
 
-        if (updatedParticipantLink)
-        {
-            await UpdateEventParticipantReferencesAsync(context, eventEntity.Id, userId, normalizedEmail);
-        }
-
         return _mapper.Map<EventUserModel>(eventUser);
     }
 
@@ -1264,11 +1261,6 @@ public class EventService(
 
         await context.SaveChangesAsync();
 
-        foreach (var eventId in affectedEventIds)
-        {
-            await UpdateEventParticipantReferencesAsync(context, eventId, user.Id, normalizedEmail);
-        }
-
         return true;
     }
 
@@ -1296,517 +1288,6 @@ public class EventService(
         action.Parameters["eventPublicId"] = eventPublicId;
         action.Parameters["eventUserId"] = eventUserId.ToString(CultureInfo.InvariantCulture);
         return action;
-    }
-
-    // Gift Exchange methods
-    public async Task<EventModel> DrawNamesAsync(int eventId, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
-            .Include(e => e.EventUsers)
-                .ThenInclude(eu => eu.User)
-            .Include(e => e.GiftExchanges)
-            .Include(e => e.PairingRules)
-                .ThenInclude(pr => pr.SourceUser)
-            .Include(e => e.PairingRules)
-                .ThenInclude(pr => pr.TargetUser)
-            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
-
-        ValidateEventCreatorPermission(eventEntity, ownerId);
-
-        if (!eventEntity.IsGiftExchange)
-        {
-            throw new InvalidOperationException("This event is not configured as a gift exchange.");
-        }
-
-        if (eventEntity.NamesDrawnOn.HasValue)
-        {
-            throw new InvalidOperationException("Names have already been drawn for this event.");
-        }
-
-        var participants = BuildGiftExchangeParticipants(eventEntity);
-
-        if (participants.Count < 2)
-        {
-            throw new InvalidOperationException("Need at least 2 participants to draw names.");
-        }
-
-        // Get exclusion rules
-        var exclusions = eventEntity.PairingRules
-            .Where(pr => pr.RuleType == "Exclusion" && !pr.Deleted)
-            .Select(pr => new PairingExclusion(
-                pr.SourceUserId,
-                NormalizeEmail(pr.SourceInviteeEmail),
-                pr.TargetUserId,
-                NormalizeEmail(pr.TargetInviteeEmail)))
-            .ToList();
-
-        // Perform name drawing with exclusions
-        var assignments = DrawNamesWithExclusions(participants, exclusions);
-
-        if (assignments == null)
-        {
-            throw new InvalidOperationException("Unable to create valid gift exchange assignments with the current pairing rules. Please review the exclusion rules.");
-        }
-
-        // Clear existing gift exchanges (shouldn't happen, but just in case)
-        var existingExchanges = await context.GiftExchanges
-            .Where(ge => ge.EventId == eventId)
-            .ToListAsync();
-        context.GiftExchanges.RemoveRange(existingExchanges);
-
-        // Create gift exchange records
-        foreach (var (giver, receiver) in assignments)
-        {
-            var giftExchange = new GiftExchange
-            {
-                EventId = eventId,
-                GiverId = giver.UserId,
-                GiverEmail = giver.Email,
-                ReceiverId = receiver.UserId,
-                ReceiverEmail = receiver.Email,
-                IsAnonymous = false,
-                ReceiverPreferences = string.Empty,
-                Budget = eventEntity.Budget,
-                CreatedOn = DateTimeOffset.UtcNow,
-                UpdatedOn = DateTimeOffset.UtcNow
-            };
-            context.GiftExchanges.Add(giftExchange);
-        }
-
-        eventEntity.NamesDrawnOn = DateTimeOffset.UtcNow;
-        eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
-
-        await context.SaveChangesAsync();
-
-        // Send notifications to all participants
-        var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
-        foreach (var (giver, receiver) in assignments)
-        {
-            var receiverName = receiver.DisplayName;
-
-            if (!string.IsNullOrWhiteSpace(giver.UserId))
-            {
-                await _notificationService.CreateNotificationAsync(
-                    ownerId,
-                    giver.UserId!,
-                    "Gift Exchange Names Drawn!",
-                    $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
-                    "GiftExchangeDrawn");
-            }
-
-            if (!string.IsNullOrWhiteSpace(giver.Email))
-            {
-                await _emailSender.SendGiftExchangeDrawnEmailAsync(
-                    giver.Email,
-                    eventEntity.Name,
-                    receiverName,
-                    eventLink);
-            }
-        }
-
-        return await GetEventAsync(eventId);
-    }
-
-    public async Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
-        return await DrawNamesAsync(eventEntity.Id, ownerId);
-    }
-
-    public async Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
-            .Include(e => e.EventUsers)
-                .ThenInclude(eu => eu.User)
-            .Include(e => e.GiftExchanges)
-            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
-
-        ValidateEventCreatorPermission(eventEntity, ownerId);
-
-        if (!eventEntity.IsGiftExchange)
-        {
-            throw new InvalidOperationException("This event is not configured as a gift exchange.");
-        }
-
-        if (!eventEntity.NamesDrawnOn.HasValue)
-        {
-            throw new InvalidOperationException("No gift exchange to reset - names have not been drawn yet.");
-        }
-
-        // Delete all gift exchange records
-        var giftExchanges = await context.GiftExchanges
-            .Where(ge => ge.EventId == eventId)
-            .ToListAsync();
-        context.GiftExchanges.RemoveRange(giftExchanges);
-
-        // Reset the NamesDrawnOn timestamp
-        eventEntity.NamesDrawnOn = null;
-        eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
-
-        await context.SaveChangesAsync();
-
-        // Send notifications to participants whose assignments were reset.
-        var baseUri = _baseUri?.TrimEnd('/') ?? "";
-        var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
-
-        var participants = new List<(string userId, string? email)> { (eventEntity.CreatedBy.Id, eventEntity.CreatedBy.Email) };
-
-        foreach (var eu in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
-        {
-            if (!string.IsNullOrEmpty(eu.UserId) && eu.User?.Email != null)
-            {
-                participants.Add((eu.UserId, eu.User.Email));
-            }
-            else if (!string.IsNullOrEmpty(eu.InviteeEmail))
-            {
-                // Email-only invites (not yet registered)
-                participants.Add((string.Empty, eu.InviteeEmail));
-            }
-        }
-
-        foreach (var (userId, email) in participants)
-        {
-            if (!string.IsNullOrEmpty(email))
-            {
-                await _emailSender.SendGiftExchangeResetEmailAsync(
-                    email,
-                    eventEntity.Name,
-                    eventLink);
-
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    await _notificationService.CreateNotificationAsync(
-                        ownerId,
-                        userId,
-                        "Gift Exchange Reset",
-                        $"The gift exchange for {eventEntity.Name} has been reset.",
-                        "GiftExchangeReset");
-                }
-            }
-        }
-
-        return await GetEventAsync(eventId);
-    }
-
-    public async Task<EventModel> ResetGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
-        return await ResetGiftExchangeAsync(eventEntity.Id, ownerId);
-    }
-
-    private sealed record GiftExchangeParticipant(string Key, string? UserId, string Email, string NormalizedEmail, string DisplayName);
-    private sealed record PairingExclusion(string? SourceUserId, string? SourceEmail, string? TargetUserId, string? TargetEmail);
-
-    private static List<GiftExchangeParticipant> BuildGiftExchangeParticipants(Event eventEntity)
-    {
-        ArgumentNullException.ThrowIfNull(eventEntity);
-
-        if (eventEntity.CreatedBy == null)
-        {
-            throw new InvalidOperationException("Event is missing the organizer details needed for drawing names.");
-        }
-
-        var participants = new List<GiftExchangeParticipant>();
-        var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        void addParticipant(string key, string? userId, string? email, string? displayName)
-        {
-            if (string.IsNullOrWhiteSpace(email))
-            {
-                var name = displayName ?? userId ?? "Participant";
-                throw new InvalidOperationException($"Cannot include {name} in the gift exchange because no email address is on file.");
-            }
-
-            if (seenKeys.Add(key))
-            {
-                var trimmedEmail = email.Trim();
-                var normalizedEmail = NormalizeEmail(trimmedEmail)!;
-                var resolvedName = string.IsNullOrWhiteSpace(displayName) ? trimmedEmail : displayName;
-                participants.Add(new GiftExchangeParticipant(key, userId, trimmedEmail, normalizedEmail, resolvedName));
-            }
-        }
-
-        addParticipant($"user:{eventEntity.CreatedBy.Id}",
-            eventEntity.CreatedBy.Id,
-            eventEntity.CreatedBy.Email,
-            eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
-
-        foreach (var eventUser in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
-        {
-            if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
-            {
-                addParticipant($"user:{eventUser.UserId}",
-                    eventUser.UserId,
-                    eventUser.User.Email,
-                    eventUser.User.UserName ?? eventUser.User.Email ?? eventUser.UserId);
-            }
-            else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
-            {
-                var normalizedEmail = eventUser.InviteeEmail.Trim();
-                addParticipant($"invite:{eventUser.Id}",
-                    null,
-                    normalizedEmail,
-                    normalizedEmail);
-            }
-        }
-
-        return participants;
-    }
-
-    internal static bool IsEligibleGiftExchangeParticipant(EventUser participant) =>
-        !participant.Deleted &&
-        participant.IsAccepted &&
-        string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase);
-
-    private static List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>? DrawNamesWithExclusions(
-        IReadOnlyList<GiftExchangeParticipant> participants,
-        List<PairingExclusion> exclusions)
-    {
-        const int maxAttempts = 1000;
-        var random = new Random();
-
-        for (int attempt = 0; attempt < maxAttempts; attempt++)
-        {
-            var receivers = participants.ToList();
-            var assignments = new List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>();
-            var isValid = true;
-
-            // Shuffle receivers
-            for (int i = receivers.Count - 1; i > 0; i--)
-            {
-                int j = random.Next(i + 1);
-                (receivers[j], receivers[i]) = (receivers[i], receivers[j]);
-            }
-
-            // Try to assign each giver to a receiver
-            for (int i = 0; i < participants.Count; i++)
-            {
-                var giver = participants[i];
-                var receiver = receivers[i];
-
-                // Check if giver is assigned to themselves
-                if (ReferenceEquals(giver, receiver) || string.Equals(giver.Key, receiver.Key, StringComparison.Ordinal))
-                {
-                    isValid = false;
-                    break;
-                }
-
-                // Check if assignment violates exclusion rules (only meaningful for registered users)
-                if (exclusions.Any(e =>
-                        MatchesParticipant(e.SourceUserId, e.SourceEmail, giver) &&
-                        MatchesParticipant(e.TargetUserId, e.TargetEmail, receiver)))
-                {
-                    isValid = false;
-                    break;
-                }
-
-                assignments.Add((giver, receiver));
-            }
-
-            if (isValid)
-            {
-                return assignments;
-            }
-        }
-
-        return null; // Failed to find valid assignment
-    }
-
-    private static bool MatchesParticipant(string? userId, string? email, GiftExchangeParticipant participant)
-    {
-        if (!string.IsNullOrEmpty(userId) && string.Equals(participant.UserId, userId, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        if (!string.IsNullOrWhiteSpace(email))
-        {
-            return string.Equals(participant.NormalizedEmail, NormalizeEmail(email), StringComparison.Ordinal);
-        }
-
-        return false;
-    }
-
-    private static bool ParticipantExists(IEnumerable<GiftExchangeParticipant> participants, string? userId, string? normalizedEmail) =>
-        participants.Any(p =>
-            (!string.IsNullOrEmpty(userId) && string.Equals(p.UserId, userId, StringComparison.Ordinal)) ||
-            (!string.IsNullOrEmpty(normalizedEmail) && string.Equals(p.NormalizedEmail, normalizedEmail, StringComparison.Ordinal)));
-
-    private static bool HasParticipantIdentifier(string? userId, string? normalizedEmail) =>
-        !string.IsNullOrEmpty(userId) || !string.IsNullOrEmpty(normalizedEmail);
-
-    private static bool AreSameParticipant(string? firstUserId, string? firstEmail, string? secondUserId, string? secondEmail)
-    {
-        if (!string.IsNullOrEmpty(firstUserId) && string.Equals(firstUserId, secondUserId, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        var normalizedFirstEmail = NormalizeEmail(firstEmail);
-        var normalizedSecondEmail = NormalizeEmail(secondEmail);
-
-        if (!string.IsNullOrEmpty(normalizedFirstEmail) &&
-            !string.IsNullOrEmpty(normalizedSecondEmail) &&
-            string.Equals(normalizedFirstEmail, normalizedSecondEmail, StringComparison.Ordinal))
-        {
-            return true;
-        }
-
-        return false;
-    }
-
-    private static string? NormalizeEmail(string? email) =>
-        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
-
-    private static bool EmailEquals(string? email, string normalizedEmail) =>
-        string.Equals(NormalizeEmail(email), normalizedEmail, StringComparison.Ordinal);
-
-    private static async Task UpdateEventParticipantReferencesAsync(ApplicationDbContext context, int eventId, string userId, string? normalizedEmail)
-    {
-        if (string.IsNullOrEmpty(normalizedEmail))
-        {
-            return;
-        }
-
-        var giftExchanges = await context.GiftExchanges
-            .Where(ge => ge.EventId == eventId && !ge.Deleted)
-            .Where(ge =>
-                (ge.GiverId == null && ge.GiverEmail != null && EF.Functions.ILike(ge.GiverEmail, normalizedEmail)) ||
-                (ge.ReceiverId == null && ge.ReceiverEmail != null && EF.Functions.ILike(ge.ReceiverEmail, normalizedEmail)))
-            .ToListAsync();
-
-        var pairingRules = await context.CustomPairingRules
-            .Where(rule => rule.EventId == eventId && !rule.Deleted)
-            .Where(rule =>
-                (rule.SourceUserId == null && rule.SourceInviteeEmail != null && EF.Functions.ILike(rule.SourceInviteeEmail, normalizedEmail)) ||
-                (rule.TargetUserId == null && rule.TargetInviteeEmail != null && EF.Functions.ILike(rule.TargetInviteeEmail, normalizedEmail)))
-            .ToListAsync();
-
-        var updated = false;
-
-        foreach (var exchange in giftExchanges)
-        {
-            if (exchange.GiverId == null && EmailEquals(exchange.GiverEmail, normalizedEmail))
-            {
-                exchange.GiverId = userId;
-                exchange.UpdatedOn = DateTimeOffset.UtcNow;
-                updated = true;
-            }
-
-            if (exchange.ReceiverId == null && EmailEquals(exchange.ReceiverEmail, normalizedEmail))
-            {
-                exchange.ReceiverId = userId;
-                exchange.UpdatedOn = DateTimeOffset.UtcNow;
-                updated = true;
-            }
-        }
-
-        foreach (var rule in pairingRules)
-        {
-            if (rule.SourceUserId == null && EmailEquals(rule.SourceInviteeEmail, normalizedEmail))
-            {
-                rule.SourceUserId = userId;
-                rule.UpdatedOn = DateTimeOffset.UtcNow;
-                updated = true;
-            }
-
-            if (rule.TargetUserId == null && EmailEquals(rule.TargetInviteeEmail, normalizedEmail))
-            {
-                rule.TargetUserId = userId;
-                rule.UpdatedOn = DateTimeOffset.UtcNow;
-                updated = true;
-            }
-        }
-
-        if (updated)
-        {
-            await context.SaveChangesAsync();
-        }
-    }
-
-    public async Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
-            .Include(e => e.EventUsers)
-            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
-
-        if (!IsEventMember(eventEntity, userId))
-        {
-            throw new UnauthorizedAccessException("You must be part of this event.");
-        }
-
-        var giftExchange = await context.GiftExchanges
-            .AsNoTracking()
-            .Include(ge => ge.Receiver)
-            .Include(ge => ge.Giver)
-            .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId && !ge.Deleted);
-
-        return giftExchange == null ? null : _mapper.Map<GiftExchangeModel>(giftExchange);
-    }
-
-    public async Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
-        return await GetMyGiftExchangeAsync(eventEntity.Id, userId);
-    }
-
-    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var rules = await context.CustomPairingRules
-            .AsNoTracking()
-            .Include(pr => pr.SourceUser)
-            .Include(pr => pr.TargetUser)
-            .Where(pr => pr.EventId == eventId && !pr.Deleted)
-            .ToListAsync();
-
-        return _mapper.Map<IEnumerable<CustomPairingRuleModel>>(rules);
-    }
-
-    public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
-        ValidateEventCreatorPermission(eventEntity, requestorId);
-        return await GetPairingRulesAsync(eventEntity.Id);
     }
 
     private static void RemoveParticipantEmails(EventModel eventModel, bool isOwner)
@@ -1851,120 +1332,40 @@ public class EventService(
         }
     }
 
-    public async Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    private static string? NormalizeEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 
-        var eventEntity = await context.Events
-            .Include(e => e.CreatedBy)
-            .Include(e => e.EventUsers)
-                .ThenInclude(eu => eu.User)
-            .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with id {eventId} not found");
+    // Gift Exchange methods delegated to GiftExchangeService
+    public Task<EventModel> DrawNamesAsync(int eventId, string ownerId) =>
+        _giftExchangeService.DrawNamesAsync(eventId, ownerId);
 
-        ValidateEventCreatorPermission(eventEntity, ownerId);
+    public Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId) =>
+        _giftExchangeService.DrawNamesByPublicIdAsync(eventPublicId, ownerId);
 
-        if (eventEntity.NamesDrawnOn.HasValue)
-        {
-            throw new InvalidOperationException("Cannot add pairing rules after names have been drawn.");
-        }
+    public Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId) =>
+        _giftExchangeService.ResetGiftExchangeAsync(eventId, ownerId);
 
-        var participants = BuildGiftExchangeParticipants(eventEntity);
-        rule.SourceInviteeEmail = NormalizeEmail(rule.SourceInviteeEmail);
-        rule.TargetInviteeEmail = NormalizeEmail(rule.TargetInviteeEmail);
+    public Task<EventModel> ResetGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId) =>
+        _giftExchangeService.ResetGiftExchangeByPublicIdAsync(eventPublicId, ownerId);
 
-        if (!HasParticipantIdentifier(rule.SourceUserId, rule.SourceInviteeEmail))
-        {
-            throw new InvalidOperationException("Select the first participant for this rule.");
-        }
+    public Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId) =>
+        _giftExchangeService.GetMyGiftExchangeAsync(eventId, userId);
 
-        if (!HasParticipantIdentifier(rule.TargetUserId, rule.TargetInviteeEmail))
-        {
-            throw new InvalidOperationException("Select the second participant for this rule.");
-        }
+    public Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId) =>
+        _giftExchangeService.GetMyGiftExchangeByPublicIdAsync(eventPublicId, userId);
 
-        if (AreSameParticipant(rule.SourceUserId, rule.SourceInviteeEmail, rule.TargetUserId, rule.TargetInviteeEmail))
-        {
-            throw new InvalidOperationException("Participants in an exclusion rule must be different.");
-        }
+    public Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId) =>
+        _giftExchangeService.GetPairingRulesAsync(eventId);
 
-        if (!ParticipantExists(participants, rule.SourceUserId, rule.SourceInviteeEmail) ||
-            !ParticipantExists(participants, rule.TargetUserId, rule.TargetInviteeEmail))
-        {
-            throw new InvalidOperationException("Participants must belong to this event.");
-        }
+    public Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId) =>
+        _giftExchangeService.GetPairingRulesByPublicIdAsync(eventPublicId, requestorId);
 
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        await context.Database.ExecuteSqlInterpolatedAsync(
-            $"SELECT pg_advisory_xact_lock(20311, {eventId})");
+    public Task<CustomPairingRuleModel> AddPairingRuleAsync(int eventId, CustomPairingRuleModel rule, string ownerId) =>
+        _giftExchangeService.AddPairingRuleAsync(eventId, rule, ownerId);
 
-        var existingRules = await context.CustomPairingRules
-            .Where(existingRule => existingRule.EventId == eventId && !existingRule.Deleted)
-            .ToListAsync();
-        var existingRule = existingRules.FirstOrDefault(existingRule => PairingRulesMatch(existingRule, rule));
-        if (existingRule is not null)
-        {
-            await transaction.CommitAsync();
-            return _mapper.Map<CustomPairingRuleModel>(existingRule);
-        }
+    public Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId) =>
+        _giftExchangeService.AddPairingRuleByPublicIdAsync(eventPublicId, rule, ownerId);
 
-        var ruleEntity = _mapper.Map<CustomPairingRule>(rule);
-        ruleEntity.EventId = eventId;
-        ruleEntity.CreatedOn = DateTimeOffset.UtcNow;
-        ruleEntity.UpdatedOn = DateTimeOffset.UtcNow;
-
-        context.CustomPairingRules.Add(ruleEntity);
-        await context.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return _mapper.Map<CustomPairingRuleModel>(ruleEntity);
-    }
-
-    internal static bool PairingRulesMatch(CustomPairingRule existingRule, CustomPairingRuleModel requestedRule) =>
-        string.Equals(existingRule.SourceUserId, requestedRule.SourceUserId, StringComparison.Ordinal) &&
-        string.Equals(existingRule.SourceInviteeEmail, requestedRule.SourceInviteeEmail, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(existingRule.TargetUserId, requestedRule.TargetUserId, StringComparison.Ordinal) &&
-        string.Equals(existingRule.TargetInviteeEmail, requestedRule.TargetInviteeEmail, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(existingRule.RuleType, requestedRule.RuleType, StringComparison.OrdinalIgnoreCase);
-
-    public async Task<CustomPairingRuleModel> AddPairingRuleByPublicIdAsync(string eventPublicId, CustomPairingRuleModel rule, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var eventEntity = await context.Events
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
-        return await AddPairingRuleAsync(eventEntity.Id, rule, ownerId);
-    }
-
-    public async Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        var rule = await context.CustomPairingRules
-            .Include(pr => pr.Event)
-                .ThenInclude(e => e.CreatedBy)
-            .FirstOrDefaultAsync(pr => pr.Id == ruleId && !pr.Deleted);
-
-        if (rule == null)
-        {
-            return false;
-        }
-
-        ValidateEventCreatorPermission(rule.Event, ownerId);
-
-        if (rule.Event.NamesDrawnOn.HasValue)
-        {
-            throw new InvalidOperationException("Cannot remove pairing rules after names have been drawn.");
-        }
-
-        rule.Deleted = true;
-        rule.UpdatedOn = DateTimeOffset.UtcNow;
-        await context.SaveChangesAsync();
-
-        return true;
-    }
+    public Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId) =>
+        _giftExchangeService.RemovePairingRuleAsync(ruleId, ownerId);
 }

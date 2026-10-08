@@ -23,6 +23,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistModel> CreateWishlistAsync(WishlistModel wishlistModel, string ownerId)
     {
+        ArgumentNullException.ThrowIfNull(wishlistModel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId, nameof(ownerId));
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = _mapper.Map<Wishlist>(wishlistModel);
         wishlistEntity.OwnerId = ownerId;
@@ -94,6 +97,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistModel> GetWishlistByPublicIdAsync(string publicId, string? userId = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicId, nameof(publicId));
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = await context.Wishlists
             .Include(w => w.Items.Where(i => !i.Deleted))
@@ -128,6 +133,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntities = await context.Wishlists
             .Where(w => !w.Deleted && w.OwnerId == userId)
@@ -152,6 +159,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlistModel)
     {
+        ArgumentNullException.ThrowIfNull(wishlistModel);
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists.FindAsync(id)
             ?? throw new KeyNotFoundException($"Wishlist {id} not found");
@@ -178,6 +187,10 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         WishlistModel wishlistModel,
         string requestorId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicId, nameof(publicId));
+        ArgumentNullException.ThrowIfNull(wishlistModel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestorId, nameof(requestorId));
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
@@ -226,6 +239,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task DeleteWishlistByPublicIdAsync(string publicId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicId, nameof(publicId));
+
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
@@ -246,6 +261,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> AddItemToWishlistAsync(int wishlistId, WishlistItemModel itemModel)
     {
+        ArgumentNullException.ThrowIfNull(itemModel);
+
         ValidateItemUrls(itemModel);
         ValidateItemPrice(itemModel.Price);
         var creationRequestHash = string.IsNullOrWhiteSpace(itemModel.PublicId)

@@ -27,6 +27,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsAsync(string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var friends = await context.Friends
@@ -41,6 +43,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> AreFriendsAsync(string userId, string otherUserId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(otherUserId, nameof(otherUserId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return await context.Friends
@@ -52,6 +57,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> RemoveFriendAsync(string userId, string friendId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(friendId, nameof(friendId));
+
         // Find the friendship records in both directions (as friendship is reciprocal)
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -84,6 +92,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<FriendRequestModel> SendFriendRequestAsync(string requesterId, string receiverId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requesterId, nameof(requesterId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(receiverId, nameof(receiverId));
+
         if (requesterId == receiverId)
         {
             throw new InvalidOperationException("You cannot send a friend request to yourself.");
@@ -153,6 +164,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<IEnumerable<FriendRequestModel>> GetReceivedFriendRequestsAsync(string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var requests = await context.FriendRequests
@@ -166,6 +179,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<IEnumerable<FriendRequestModel>> GetSentFriendRequestsAsync(string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var requests = await context.FriendRequests
@@ -179,6 +194,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> AcceptFriendRequestAsync(int requestId, string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var request = await context.FriendRequests
@@ -251,6 +268,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> RejectFriendRequestAsync(int requestId, string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var request = await context.FriendRequests
@@ -271,6 +290,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> CancelFriendRequestAsync(int requestId, string requesterId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requesterId, nameof(requesterId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var request = await context.FriendRequests
@@ -291,6 +312,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<FriendRequestModel> ResendFriendRequestAsync(int requestId, string requesterId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requesterId, nameof(requesterId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var request = await context.FriendRequests
@@ -306,9 +329,12 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> SendFriendInviteByEmailAsync(string senderUserId, string emailAddress)
     {
-        emailAddress = emailAddress?.Trim() ?? "";
+        ArgumentException.ThrowIfNullOrWhiteSpace(senderUserId, nameof(senderUserId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(emailAddress, nameof(emailAddress));
+
+        emailAddress = emailAddress.Trim();
         // Validate email format
-        if (string.IsNullOrWhiteSpace(emailAddress) || !IsValidEmail(emailAddress))
+        if (!IsValidEmail(emailAddress))
         {
             throw new ArgumentException("Please provide a valid email address.");
         }
@@ -452,6 +478,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> SendFriendInvitesByEmailAsync(string senderUserId, IEnumerable<string> emailAddresses)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(senderUserId, nameof(senderUserId));
         ArgumentNullException.ThrowIfNull(emailAddresses);
 
         bool allSucceeded = true;
@@ -489,6 +516,9 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> CreateFriendshipFromInviteAsync(string newUserId, string inviterUserId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newUserId, nameof(newUserId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(inviterUserId, nameof(inviterUserId));
+
         // Check if both users exist
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -599,6 +629,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<IEnumerable<PendingFriendInviteModel>> GetPendingFriendInvitesAsync(string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -614,6 +646,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> CancelPendingFriendInviteAsync(int inviteId, string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
@@ -636,6 +670,8 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
     public async Task<bool> ResendPendingFriendInviteAsync(int inviteId, string userId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 

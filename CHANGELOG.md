@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.36] - 2026-10-08
+
+### Improved
+
+- Added comprehensive XML documentation to all core service interfaces (IWishlistService, IEventService, IFriendService, IActivityService) for better IDE IntelliSense and auto-generated documentation.
+- Implemented consistent input validation with ArgumentNullException.ThrowIfNull() and ArgumentException.ThrowIfNullOrWhiteSpace() checks across 33 public methods in EventService, WishlistService, and FriendService.
+- Enhanced accessibility of wishlist forms with aria-label attributes on icon-only buttons for improved screen reader support.
+- Refactored EventService by extracting gift exchange and pairing logic into a new GiftExchangeService, reducing EventService by 28% (545 lines) while improving code organization and testability.
+- Implemented aggressive per-user rate limiting (5 requests per minute per authenticated user) for product scraping endpoint to prevent abuse and protect server resources.
+
 ## [0.1.35] - 2026-10-06
 
 ### Improved

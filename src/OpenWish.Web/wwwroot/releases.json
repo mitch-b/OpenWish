@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.1.36",
+    "date": "2026-10-08",
+    "title": "Improved code quality, reliability, and accessibility",
+    "summary": "Enhanced API documentation, input validation, accessibility, and rate limiting.",
+    "highlights": [
+      "Added comprehensive XML documentation to all core service interfaces for better IDE support and auto-generated API documentation.",
+      "Implemented consistent input validation across 33 public methods to prevent null-reference exceptions and provide clearer error messages.",
+      "Enhanced accessibility in wishlist forms with aria-labels for icon-only buttons and screen reader improvements.",
+      "Implemented aggressive per-user rate limiting for product scraping (5 requests per minute per user) to prevent abuse and protect server resources."
+    ]
+  },
+  {
     "version": "0.1.35",
     "date": "2026-10-06",
     "title": "Stronger test coverage for core services",

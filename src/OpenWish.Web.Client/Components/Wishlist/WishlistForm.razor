@@ -29,7 +29,7 @@
                 </button>
                 @if (Model.Icon is not null)
                 {
-                    <button type="button" class="btn btn-link wishlist-icon-clear" @onclick="ClearIcon">
+                    <button type="button" class="btn btn-link wishlist-icon-clear" aria-label="Clear wishlist icon" @onclick="ClearIcon">
                         Clear
                     </button>
                 }

@@ -154,10 +154,10 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("product-scrape", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
-                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                context.Connection.RemoteIpAddress?.ToString() ?? "unauthenticated",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));

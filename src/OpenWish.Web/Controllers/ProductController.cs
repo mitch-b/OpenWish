@@ -16,7 +16,10 @@ public class ProductController(IProductService productService, ApiUserContextSer
     private readonly IProductService _productService = productService;
     private readonly ApiUserContextService _userContextService = userContextService;
 
-    // TODO: Rate Limit aggressively by user
+    // Rate limit product scraping aggressively by authenticated user:
+    // - 5 requests per minute per user (prevents abuse from single user account)
+    // - Fixed window limiter for consistent rate limiting
+    // - Queue limit of 0 (reject immediately when limit reached, no queuing)
     [HttpPost("scrape")]
     [EnableRateLimiting("product-scrape")]
     public async Task<ActionResult<WishlistModel>> TryScrape([FromBody] ProductScrapeRequest productScrapeRequest)

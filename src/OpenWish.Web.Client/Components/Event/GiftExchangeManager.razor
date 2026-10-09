@@ -449,7 +449,7 @@
         }
 
         _participantCount = _participants.Count;
-        _pendingParticipantCount = Event.EventUsers.Count(eventUser =>
+        _pendingParticipantCount = (Event.EventUsers ?? []).Count(eventUser =>
             !eventUser.Deleted &&
             string.Equals(eventUser.Status, "Pending", StringComparison.OrdinalIgnoreCase));
         var acceptedUserIds = _participants

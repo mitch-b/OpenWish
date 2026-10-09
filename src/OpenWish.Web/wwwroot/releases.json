@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.1.37",
+    "date": "2026-10-09",
+    "title": "Nullability and safety improvements",
+    "summary": "Enhanced null-safety throughout the application with improved type declarations and defensive checks.",
+    "highlights": [
+      "Fixed entity model nullability declarations to properly reflect database schema and application behavior.",
+      "Enhanced component rendering safety with improved null checks in WishlistItemModal and wishlist filtering.",
+      "Strengthened LINQ query type safety with explicit casting for nullable collections.",
+      "Added null coalescing and guard clauses to event handling and service methods."
+    ]
+  },
+  {
     "version": "0.1.36",
     "date": "2026-10-08",
     "title": "Improved code quality, reliability, and accessibility",

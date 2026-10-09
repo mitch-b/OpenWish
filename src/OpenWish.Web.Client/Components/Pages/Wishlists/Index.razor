@@ -109,7 +109,7 @@
                         <span>Loading wishlists...</span>
                     </div>
                 }
-                else if (filteredWishlists.Count == 0)
+                else if (filteredWishlists is { Count: 0 })
                 {
                     <p class="visually-hidden" role="status" aria-live="polite">No wishlists found.</p>
                     <div class="empty-state">
@@ -150,14 +150,17 @@
                         </dl>
                     </section>
                     <p class="visually-hidden" role="status" aria-live="polite">
-                        @filteredWishlists.Count @(filteredWishlists.Count == 1 ? "wishlist" : "wishlists") found.
+                        @(filteredWishlists?.Count) @(filteredWishlists?.Count == 1 ? "wishlist" : "wishlists") found.
                     </p>
                     <div class="row g-3">
-                        @foreach (var wishlist in filteredWishlists)
+                        @if (filteredWishlists is not null)
                         {
-                            <div class="col-md-6 col-xl-4">
+                            @foreach (var wishlist in filteredWishlists)
+                            {
+                                <div class="col-md-6 col-xl-4">
                                 <WishlistCard Wishlist="@wishlist" ShowOwner="false" OnDelete="@HandleWishlistDeleted" />
                             </div>
+                        }
                         }
                     </div>
                 }

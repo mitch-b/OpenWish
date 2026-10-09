@@ -491,7 +491,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Model.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("Model?.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-background-allowed", modalMarkup, StringComparison.Ordinal);

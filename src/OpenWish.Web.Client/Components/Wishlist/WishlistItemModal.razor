@@ -154,12 +154,12 @@
                     @if (_isSubmitting)
                     {
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+                        <span>@(Model?.Id > 0 ? "Saving changes..." : "Adding item...")</span>
                     }
                     else
                     {
                         <OpenWishIcon Name="check-lg" />
-                        <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
+                        <span>@(Model?.Id > 0 ? "Save changes" : "Add item")</span>
                     }
                 </button>
             </div>

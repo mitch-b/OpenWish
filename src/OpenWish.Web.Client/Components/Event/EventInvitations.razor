@@ -518,6 +518,12 @@
         _loadErrorMessage = null;
         try
         {
+            if (string.IsNullOrEmpty(CurrentUserId))
+            {
+                _loadErrorMessage = "Authentication required to view invitations.";
+                return;
+            }
+
             var invitations = await EventService.GetEventInvitationsByPublicIdAsync(EventId, CurrentUserId);
             _invitations = invitations.ToList();
         }

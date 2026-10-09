@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.37] - 2026-10-09
+
+### Improved
+
+- Enhanced null-safety in component rendering with improved defensive checks in WishlistItemModal
+- Strengthened LINQ query type safety with explicit casting in SecretSantaSetup participant tracking
+- Added null coalescing operators to event collection handling in GiftExchangeManager
+- Improved EventInvitations lifecycle error handling with clear authentication failure messages
+- Corrected entity model field nullability to properly align with database schema requirements
+
 ## [0.1.36] - 2026-10-08
 
 ### Improved

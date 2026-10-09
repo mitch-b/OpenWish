@@ -514,6 +514,11 @@
 
     private async Task LoadInvitations()
     {
+        if (string.IsNullOrEmpty(CurrentUserId))
+        {
+            return;
+        }
+
         _isLoading = true;
         _loadErrorMessage = null;
         try

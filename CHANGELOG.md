@@ -2,6 +2,16 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.38] - 2026-10-10
+
+### Improved
+
+- Enhanced entity model null-safety with required modifiers on non-nullable scalar properties (FriendRequest, Friend, Comment, CustomPairingRule, WishlistComment, ItemComment, ItemReaction, Notification, ItemReservation, WillPurchase, Wishlist, WishlistItem)
+- Fixed Blazor form property initializer warnings by removing default assignments from SupplyParameterFromForm-decorated properties
+- Improved EventService LINQ query type safety by explicitly marking navigation properties in ThenInclude chains
+- Clarified entity relationships by consistently marking optional navigation properties as nullable while enforcing required scalar properties
+- Reduced compiler warnings from 108 to 1 (unrelated Aspire configuration only)
+
 ## [0.1.37] - 2026-10-09
 
 ### Improved

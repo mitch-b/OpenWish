@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.38",
+    "date": "2026-10-10",
+    "title": "Improved code reliability and maintainability",
+    "summary": "Enhanced entity model null-safety and reduced compiler warnings through improved type declarations.",
+    "highlights": [
+      "Added required modifiers to non-nullable scalar properties across 12 entity classes for compile-time validation.",
+      "Fixed Blazor form property initializers to prevent null overwrites during form posts.",
+      "Improved EventService LINQ query type safety with explicit navigation property handling.",
+      "Clarified entity relationships by consistently marking optional navigation properties as nullable.",
+      "Reduced compiler warnings from 108 to 1 (unrelated Aspire configuration only)."
+    ]
+  },
+  {
     "version": "0.1.37",
     "date": "2026-10-09",
     "title": "Nullability and safety improvements",

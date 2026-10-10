@@ -385,6 +385,19 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         return Ok(wishlists);
     }
 
+    [HttpGet("editable")]
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetEditableWishlists()
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var wishlists = await _wishlistService.GetEditableWishlistsAsync(userId);
+        return Ok(wishlists);
+    }
+
     [HttpGet("friends")]
     public async Task<ActionResult<IEnumerable<WishlistModel>>> GetFriendsWishlists()
     {

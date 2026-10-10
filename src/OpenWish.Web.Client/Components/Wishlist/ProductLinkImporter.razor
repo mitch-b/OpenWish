@@ -1,0 +1,273 @@
+@using System.Net
+@using OpenWish.Shared.Products
+@using OpenWish.Web.Client.CustomEvents
+@implements IDisposable
+
+@inject IProductService ProductService
+@inject ILogger<ProductLinkImporter> Logger
+
+<div class="product-import" aria-busy="@(_isImporting ? "true" : "false")">
+    <label for="@InputId" class="form-label">Product URL</label>
+    <div class="product-import-row">
+        <input id="@InputId"
+               class="form-control"
+               type="url"
+               inputmode="url"
+               autocomplete="url"
+               enterkeyhint="go"
+               spellcheck="false"
+               data-product-link-input
+               aria-describedby="@HelpId"
+               placeholder="@Placeholder"
+               value="@ImportUrl"
+               readonly="@_isImporting"
+               disabled="@Disabled"
+               @oninput="UpdateImportUrl"
+               @onkeydown="HandleImportKeyDown"
+               @onopenwishpaste="HandleUrlPaste"
+               @attributes="InputAttributes" />
+        <button class="btn btn-outline-secondary"
+                type="button"
+                @onclick="ImportFromInputAsync"
+                disabled="@(_isImporting || Disabled || string.IsNullOrWhiteSpace(ImportUrl))">
+            @if (_isImporting)
+            {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span>Importing...</span>
+            }
+            else
+            {
+                <OpenWishIcon Name="download" />
+                <span>Import</span>
+            }
+        </button>
+    </div>
+    <div id="@HelpId" class="form-text">@HelpText</div>
+
+    @if (_isImporting)
+    {
+        <p class="product-import-feedback" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Checking @_lookupStoreName for product details...</span>
+        </p>
+    }
+    else if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert @MessageClass product-import-message" role="@(_messageIsError ? "alert" : "status")">
+            @_message
+        </div>
+    }
+
+    @* Wait for interactivity so an image that fails to load is caught and Remove image works. *@
+    @if (RendererInfo.IsInteractive && !string.IsNullOrWhiteSpace(Model.Image) && !_imageFailed)
+    {
+        <div class="product-import-preview">
+            <img src="@Model.Image" alt="" width="64" height="64" loading="lazy" @onerror="HandleImageError" />
+            <div class="product-import-preview-text">
+                <span>Product image</span>
+                <button type="button" class="btn btn-link btn-sm" @onclick="RemoveImageAsync" disabled="@(_isImporting || Disabled)">
+                    <OpenWishIcon Name="x-lg" /> Remove image
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private const int MaxSharedTextLength = 2000;
+    private static readonly TimeSpan ImportTimeout = TimeSpan.FromSeconds(25);
+
+    [Parameter, EditorRequired] public WishlistItemModel Model { get; set; } = new();
+    [Parameter] public string InputId { get; set; } = "product-url-import";
+    [Parameter] public string Placeholder { get; set; } = "Paste a link from any store";
+    [Parameter] public string HelpText { get; set; } =
+        "Paste a product link or text shared from a shopping app. Existing details won't be replaced.";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool IsImporting { get; set; }
+    [Parameter] public EventCallback<bool> IsImportingChanged { get; set; }
+    [Parameter] public EventCallback<ProductImportResult> OnImported { get; set; }
+
+    /// <summary>A link, or text containing one, to import as soon as the importer is interactive.</summary>
+    [Parameter] public string? InitialLink { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? InputAttributes { get; set; }
+
+    private readonly CancellationTokenSource _disposeCts = new();
+    private bool _isImporting;
+    private string ImportUrl { get; set; } = string.Empty;
+    private string _lookupStoreName = "the store";
+    private string? _message;
+    private bool _messageIsError;
+    private bool _messageIsSuccess;
+    private bool _imageFailed;
+    private string? _importedImage;
+    private string HelpId => $"{InputId}-help";
+    private string MessageClass => _messageIsError
+        ? "alert-danger"
+        : _messageIsSuccess ? "alert-success" : "alert-info";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrWhiteSpace(InitialLink))
+        {
+            await ImportAsync(InitialLink);
+        }
+    }
+
+    /// <summary>Imports product details from a link or shared text, filling only empty fields.</summary>
+    public async Task ImportAsync(string text)
+    {
+        if (_isImporting || Disabled || Model is null || _disposeCts.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (!ProductLink.TryParse(text, out var sharedLink))
+        {
+            ImportUrl = text.Trim();
+            ShowMessage("Enter a complete product link that starts with http:// or https://.", isError: true);
+            return;
+        }
+
+        var link = ProductLink.Clean(sharedLink.Url);
+        ImportUrl = link.AbsoluteUri;
+        _lookupStoreName = ProductLink.GetStoreName(link);
+        _message = null;
+        // Keep the link on the item before looking it up, so a slow store, timeout, or rate limit can't lose it.
+        var seed = ProductImport.SeedLink(Model, link);
+        await SetImportingAsync(true);
+
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token);
+            timeout.CancelAfter(ImportTimeout);
+
+            // Shared text keeps the title a shopping app included, which helps when the store blocks lookups.
+            var lookup = sharedLink.TitleHint is not null && text.Length <= MaxSharedTextLength
+                ? text.Trim()
+                : link.AbsoluteUri;
+            var product = await ProductService.TryScrapeProductFromUrl(lookup, timeout.Token);
+            var imageBefore = Model.Image;
+            var result = ProductImport.Apply(Model, link, product, seed);
+            if (!string.Equals(imageBefore, Model.Image, StringComparison.Ordinal))
+            {
+                _importedImage = Model.Image;
+                _imageFailed = false;
+            }
+
+            ShowMessage(result.Message, isError: false, isSuccess: result.FoundDetails);
+            if (OnImported.HasDelegate)
+            {
+                await OnImported.InvokeAsync(result);
+            }
+        }
+        catch (OperationCanceledException) when (_disposeCts.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (OperationCanceledException ex)
+        {
+            Logger.LogWarning(ex, "Product import timed out for {ProductHost}", link.Host);
+            ShowMessage("Product import timed out. The link is still here so you can try again or add the details yourself.", isError: true);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            ShowMessage("You've looked up several links quickly. Wait a few seconds, then try again. The link is still here.", isError: true);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Failed to import product details from {ProductHost}", link.Host);
+            ShowMessage("We couldn't import product details. The link is still here so you can try again.", isError: true);
+        }
+        finally
+        {
+            if (!_disposeCts.IsCancellationRequested)
+            {
+                await SetImportingAsync(false);
+            }
+        }
+    }
+
+    private void UpdateImportUrl(ChangeEventArgs eventArgs)
+    {
+        if (_isImporting)
+        {
+            return;
+        }
+
+        ImportUrl = eventArgs.Value?.ToString() ?? string.Empty;
+    }
+
+    private Task ImportFromInputAsync() =>
+        string.IsNullOrWhiteSpace(ImportUrl) ? Task.CompletedTask : ImportAsync(ImportUrl);
+
+    private async Task HandleImportKeyDown(KeyboardEventArgs eventArgs)
+    {
+        if (eventArgs.Key == "Enter" && !eventArgs.IsComposing)
+        {
+            await ImportFromInputAsync();
+        }
+    }
+
+    private async Task HandleUrlPaste(OpenWishPasteEventArgs eventArgs)
+    {
+        // app.js stops the browser's own paste only when the text contains a link, so plain text pastes normally.
+        if (_isImporting || Disabled || !ProductLink.ContainsWebAddress(eventArgs.PastedData))
+        {
+            return;
+        }
+
+        await ImportAsync(eventArgs.PastedData!);
+    }
+
+    private async Task RemoveImageAsync()
+    {
+        Model.Image = null;
+        _importedImage = null;
+        _imageFailed = false;
+        await NotifyChangedAsync();
+    }
+
+    private async Task HandleImageError()
+    {
+        _imageFailed = true;
+        // A new item's image came from a capture or import, so drop it if the browser can't show it.
+        // A saved item keeps its image unless this importer just replaced it.
+        var isNewItem = Model.Id == 0;
+        var importedHere = _importedImage is not null && string.Equals(_importedImage, Model.Image, StringComparison.Ordinal);
+        if (isNewItem || importedHere)
+        {
+            Model.Image = null;
+            _importedImage = null;
+            _imageFailed = false;
+            await NotifyChangedAsync();
+        }
+    }
+
+    private void ShowMessage(string message, bool isError, bool isSuccess = false)
+    {
+        _message = message;
+        _messageIsError = isError;
+        _messageIsSuccess = isSuccess;
+    }
+
+    private async Task SetImportingAsync(bool isImporting)
+    {
+        _isImporting = isImporting;
+        StateHasChanged();
+        if (IsImportingChanged.HasDelegate)
+        {
+            await IsImportingChanged.InvokeAsync(isImporting);
+        }
+    }
+
+    private Task NotifyChangedAsync() =>
+        IsImportingChanged.HasDelegate ? IsImportingChanged.InvokeAsync(_isImporting) : Task.CompletedTask;
+
+    public void Dispose()
+    {
+        _disposeCts.Cancel();
+        _disposeCts.Dispose();
+    }
+}

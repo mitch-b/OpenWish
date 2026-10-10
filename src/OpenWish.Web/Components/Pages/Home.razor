@@ -9,6 +9,7 @@
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
 @inject ILogger<Home> Logger
+@inject NavigationManager NavigationManager
 
 @rendermode InteractiveServer
 
@@ -54,6 +55,31 @@
 
         @if (_userId != null)
         {
+            <form class="quick-add-panel" method="get" action="/add" @onsubmit="SubmitQuickAdd" @onsubmit:preventDefault="true">
+                <label for="dashboard-quick-add" class="quick-add-label">
+                    <span class="quick-add-icon" aria-hidden="true"><OpenWishIcon Name="plus-lg" /></span>
+                    Quick add an idea
+                </label>
+                <div class="quick-add-row">
+                    <input id="dashboard-quick-add"
+                           name="text"
+                           class="form-control"
+                           type="text"
+                           inputmode="url"
+                           autocomplete="off"
+                           enterkeyhint="go"
+                           spellcheck="false"
+                           aria-describedby="dashboard-quick-add-help"
+                           placeholder="Paste a store link or type an idea"
+                           @bind="_quickAddText"
+                           @bind:event="oninput" />
+                    <button type="submit" class="btn btn-primary">Add</button>
+                </div>
+                <p id="dashboard-quick-add-help" class="quick-add-help">
+                    Then choose a wishlist. <a href="/add">More ways to add, like sharing from your phone</a>
+                </p>
+            </form>
+
             <div class="dashboard-grid">
                 <section class="action-panel">
                     <div class="section-intro">
@@ -248,6 +274,13 @@
     private string? _userId;
     private string? _loadError;
     private bool _isLoading = true;
+    private string _quickAddText = string.Empty;
+
+    private void SubmitQuickAdd()
+    {
+        var text = _quickAddText.Trim();
+        NavigationManager.NavigateTo(text.Length == 0 ? "/add" : $"/add?text={Uri.EscapeDataString(text)}");
+    }
 
     protected override async Task OnInitializedAsync()
     {

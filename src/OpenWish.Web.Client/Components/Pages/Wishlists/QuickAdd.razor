@@ -1,0 +1,317 @@
+@attribute [Authorize]
+@page "/add"
+
+@using OpenWish.Shared.Products
+@using OpenWish.Web.Client.Components.Wishlist
+
+@inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ILogger<QuickAdd> Logger
+
+@rendermode InteractiveAuto
+
+<PageTitle>Add to a wishlist</PageTitle>
+
+<div class="container page-shell quick-add">
+    <PageHeader Title="Add to a wishlist" Description="@PageDescription">
+        <Actions>
+            @if (!_capture.IsEmpty)
+            {
+                <a href="/add" class="btn btn-outline-secondary">
+                    <OpenWishIcon Name="arrow-left" /> Start over
+                </a>
+            }
+        </Actions>
+    </PageHeader>
+
+    @if (!_capture.IsEmpty)
+    {
+        <section class="capture-preview" aria-labelledby="capture-title">
+            @if (_capture.Image is not null && !_imageFailed)
+            {
+                <img class="capture-image" src="@_capture.Image" alt="" width="72" height="72" @onerror="HandleImageError" />
+            }
+            else
+            {
+                <span class="capture-image capture-placeholder" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
+            }
+            <div class="capture-copy">
+                <h2 id="capture-title">@(_capture.Name ?? "Product from " + (_capture.StoreName ?? "a store"))</h2>
+                <p class="capture-meta">
+                    @if (_capture.StoreName is not null)
+                    {
+                        <span><OpenWishIcon Name="shop" /> @_capture.StoreName</span>
+                    }
+                    @if (_capture.Price.HasValue)
+                    {
+                        <span>@_capture.Price.Value.ToString("C")</span>
+                    }
+                    @if (_capture.Link is null)
+                    {
+                        <span>No product link</span>
+                    }
+                </p>
+            </div>
+        </section>
+
+        <section class="choose-list" aria-labelledby="choose-list-title" aria-busy="@(_isLoading ? "true" : "false")">
+            <h2 id="choose-list-title">Choose a wishlist</h2>
+            @if (_isLoading)
+            {
+                <p class="quick-add-status" role="status">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Loading your wishlists...</span>
+                </p>
+            }
+            else if (_loadError is not null)
+            {
+                <div class="alert alert-danger" role="alert">@_loadError</div>
+            }
+            else if (_wishlists.Count == 0)
+            {
+                <div class="empty-state compact">
+                    <OpenWishIcon Name="gift" />
+                    <h3>You don't have a wishlist yet</h3>
+                    <p>Create one, then add this idea to it.</p>
+                    <a href="/wishlists/new" class="btn btn-primary"><OpenWishIcon Name="plus-lg" /> Create a wishlist</a>
+                </div>
+            }
+            else
+            {
+                <ul class="wishlist-choices">
+                    @foreach (var wishlist in _wishlists)
+                    {
+                        <li>
+                            <a class="wishlist-choice" href="@GetAddItemHref(wishlist)">
+                                <span class="choice-icon" aria-hidden="true">
+                                    @if (string.IsNullOrWhiteSpace(wishlist.Icon))
+                                    {
+                                        <OpenWishIcon Name="gift" />
+                                    }
+                                    else
+                                    {
+                                        @wishlist.Icon
+                                    }
+                                </span>
+                                <span class="choice-copy">
+                                    <strong>@wishlist.Name</strong>
+                                    <small>@GetWishlistSummary(wishlist)</small>
+                                </span>
+                                <OpenWishIcon Name="chevron-right" Class="choice-arrow" />
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+    else
+    {
+        <form class="quick-add-form" method="get" action="/add" @onsubmit="Continue" @onsubmit:preventDefault="true">
+            <label for="quick-add-text" class="form-label">Link or gift idea</label>
+            <div class="quick-add-row">
+                <input id="quick-add-text"
+                       name="text"
+                       class="form-control"
+                       type="text"
+                       inputmode="url"
+                       autocomplete="off"
+                       enterkeyhint="go"
+                       spellcheck="false"
+                       aria-describedby="quick-add-help"
+                       placeholder="Paste a link from any store"
+                       @bind="_text"
+                       @bind:event="oninput" />
+                <button type="submit" class="btn btn-primary">
+                    <OpenWishIcon Name="arrow-right" /> Continue
+                </button>
+            </div>
+            <div id="quick-add-help" class="form-text">Store links, text shared from shopping apps, or just the name of an idea all work.</div>
+            @if (_formError is not null)
+            {
+                <div class="alert alert-danger quick-add-message" role="alert">@_formError</div>
+            }
+        </form>
+
+        <section class="add-anywhere" aria-labelledby="add-anywhere-title">
+            <h2 id="add-anywhere-title">Add ideas from anywhere</h2>
+            <div class="way-list">
+                <article class="way">
+                    <span class="way-icon" aria-hidden="true"><OpenWishIcon Name="bookmark-plus" /></span>
+                    <div class="way-copy">
+                        <h3>From your computer</h3>
+                        <p>Drag this button to your bookmarks bar. On any product page, click the bookmark to send the product here with its name, price, and picture.</p>
+                        <div class="way-actions">
+                            <a class="btn btn-primary bookmarklet-button"
+                               href="@_bookmarklet"
+                               draggable="true"
+                               title="Drag to your bookmarks bar"
+                               @onclick="ExplainBookmarklet"
+                               @onclick:preventDefault="true">
+                                <OpenWishIcon Name="bookmark-plus" /> Add to OpenWish
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CopyBookmarkletAsync">
+                                <OpenWishIcon Name="copy" /> Copy bookmarklet
+                            </button>
+                        </div>
+                        <p class="way-feedback" role="status">@_bookmarkletMessage</p>
+                    </div>
+                </article>
+                <article class="way">
+                    <span class="way-icon" aria-hidden="true"><OpenWishIcon Name="phone" /></span>
+                    <div class="way-copy">
+                        <h3>From your phone</h3>
+                        <p>Install OpenWish from your browser menu with Install app or Add to Home screen. Then choose OpenWish when you share a product from a shopping app or browser.</p>
+                        <p class="way-note">On iPhone and iPad, copy the product link and paste it here instead.</p>
+                    </div>
+                </article>
+                <article class="way">
+                    <span class="way-icon" aria-hidden="true"><OpenWishIcon Name="clipboard" /></span>
+                    <div class="way-copy">
+                        <h3>On a wishlist</h3>
+                        <p>Copy a product link, open one of your wishlists, and paste. A new item opens with the details filled in.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    // Filled by the installed app's share target, the bookmarklet, or the dashboard quick add.
+    [SupplyParameterFromQuery(Name = "url")] public string? SharedUrl { get; set; }
+    [SupplyParameterFromQuery(Name = "text")] public string? SharedText { get; set; }
+    [SupplyParameterFromQuery(Name = "title")] public string? SharedTitle { get; set; }
+    [SupplyParameterFromQuery(Name = "description")] public string? SharedDescription { get; set; }
+    [SupplyParameterFromQuery(Name = "price")] public string? SharedPrice { get; set; }
+    [SupplyParameterFromQuery(Name = "image")] public string? SharedImage { get; set; }
+
+    private ProductCapture _capture = new();
+    private string _captureQuery = string.Empty;
+    private List<WishlistModel> _wishlists = [];
+    private string? _userId;
+    private bool _isLoading = true;
+    private bool _wishlistsLoaded;
+    private string? _loadError;
+    private bool _imageFailed;
+    private string _text = string.Empty;
+    private string? _formError;
+    private string _bookmarklet = string.Empty;
+    private string? _bookmarkletMessage;
+
+    private string PageDescription => _capture.IsEmpty
+        ? "Paste a product link from any store, or set up a shortcut for next time."
+        : "Choose a wishlist for this idea. You'll review the details before saving.";
+
+    protected override void OnInitialized()
+    {
+        _bookmarklet = ProductBookmarklet.Create(new Uri(NavigationManager.BaseUri));
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _capture = ProductCapture.FromQuery(SharedUrl, SharedText, SharedTitle, SharedDescription, SharedPrice, SharedImage);
+        _captureQuery = _capture.ToQueryString();
+        _imageFailed = false;
+        _formError = null;
+        if (_capture.IsEmpty)
+        {
+            return;
+        }
+
+        if (!_wishlistsLoaded)
+        {
+            await LoadWishlistsAsync();
+        }
+
+        // With only one list there is nothing to choose, so go straight to reviewing the item.
+        if (_wishlists.Count == 1)
+        {
+            NavigationManager.NavigateTo(GetAddItemHref(_wishlists[0]), replace: true);
+        }
+    }
+
+    private async Task LoadWishlistsAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        try
+        {
+            _userId ??= await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(_userId))
+            {
+                _loadError = "Sign in again to choose a wishlist.";
+                return;
+            }
+
+            // Sharing can be view-only, so offer only the lists this person can add to.
+            var editableWishlists = await WishlistService.GetEditableWishlistsAsync(_userId);
+            _wishlists = editableWishlists
+                .Where(wishlist => !wishlist.Deleted)
+                .DistinctBy(wishlist => wishlist.PublicId)
+                .OrderBy(wishlist => wishlist.OwnerId == _userId ? 0 : 1)
+                .ThenByDescending(wishlist => wishlist.UpdatedOn)
+                .ToList();
+            _wishlistsLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unable to load wishlists for quick add.");
+            _loadError = "Your wishlists could not be loaded. Refresh the page to try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetAddItemHref(WishlistModel wishlist) =>
+        $"/wishlists/{Uri.EscapeDataString(wishlist.PublicId)}/items/new{_captureQuery}";
+
+    private string GetWishlistSummary(WishlistModel wishlist)
+    {
+        var count = wishlist.Items?.Count ?? 0;
+        var summary = $"{count} {(count == 1 ? "item" : "items")}";
+        return wishlist.OwnerId == _userId ? summary : $"{summary} · Shared with you";
+    }
+
+    private void HandleImageError() => _imageFailed = true;
+
+    private void Continue()
+    {
+        var text = _text.Trim();
+        if (text.Length == 0)
+        {
+            _formError = "Paste a product link or type an idea to continue.";
+            return;
+        }
+
+        if (ProductCapture.FromQuery(null, text).IsEmpty)
+        {
+            _formError = "We couldn't read that. Paste a complete product link that starts with http:// or https://.";
+            return;
+        }
+
+        _text = string.Empty;
+        NavigationManager.NavigateTo($"/add?text={Uri.EscapeDataString(text)}");
+    }
+
+    private void ExplainBookmarklet() =>
+        _bookmarkletMessage = "Drag the Add to OpenWish button to your bookmarks bar, then use it on a product page.";
+
+    private async Task CopyBookmarkletAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _bookmarklet);
+            _bookmarkletMessage = "Bookmarklet copied. Create a bookmark and paste it as the address.";
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Unable to copy the bookmarklet.");
+            _bookmarkletMessage = "We couldn't copy the bookmarklet. Drag the Add to OpenWish button to your bookmarks bar instead.";
+        }
+    }
+}

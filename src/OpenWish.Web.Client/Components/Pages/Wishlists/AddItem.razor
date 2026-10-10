@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId}/items/new"
 
+@using OpenWish.Shared.Products
 @using OpenWish.Web.Client.Components.Wishlist
 
 @inject IWishlistService WishlistService
@@ -30,6 +31,7 @@
                           OnSubmit="@HandleSubmit"
                           OnCancel="@HandleCancel"
                           AutoFocusImport="true"
+                          InitialImportLink="@_initialImportLink"
                           IsSubmitting="@_isSubmitting" />
         </div>
     </div>
@@ -41,6 +43,29 @@
     private readonly WishlistItemModel _item = new() { PublicId = Guid.NewGuid().ToString() };
     private bool _isSubmitting;
     private string? _errorMessage;
+    private string? _initialImportLink;
+    private bool _captureApplied;
+
+    // Filled by the share page, the "Add to OpenWish" bookmarklet, or the installed app's share target.
+    [SupplyParameterFromQuery(Name = "url")] public string? SharedUrl { get; set; }
+    [SupplyParameterFromQuery(Name = "text")] public string? SharedText { get; set; }
+    [SupplyParameterFromQuery(Name = "title")] public string? SharedTitle { get; set; }
+    [SupplyParameterFromQuery(Name = "description")] public string? SharedDescription { get; set; }
+    [SupplyParameterFromQuery(Name = "price")] public string? SharedPrice { get; set; }
+    [SupplyParameterFromQuery(Name = "image")] public string? SharedImage { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (_captureApplied)
+        {
+            return;
+        }
+
+        _captureApplied = true;
+        var capture = ProductCapture.FromQuery(SharedUrl, SharedText, SharedTitle, SharedDescription, SharedPrice, SharedImage);
+        capture.ApplyTo(_item);
+        _initialImportLink = capture.Link?.AbsoluteUri;
+    }
 
     private async Task HandleSubmit(WishlistItemModel item)
     {

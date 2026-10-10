@@ -30,7 +30,7 @@ public class ProductServiceRedirectTests
             Assert.Equal(12m, product.Price);
         }
         Assert.Equal(expectedImageUrl, product.ImageUrl);
-        Assert.Equal(originalUrl, product.Url);
+        Assert.Equal(destinationUrl, product.Url);
         Assert.Equal(2, handler.RequestCount);
     }
 

@@ -2,6 +2,36 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.39] - 2026-10-10
+
+### Added
+
+- Paste a product link anywhere on a wishlist you can edit to start a new item with its details filled in.
+- Quick add on the dashboard and a new Add to a wishlist page (`/add`) take a link, shared text, or an idea and let you choose the list.
+- An Add to OpenWish bookmarklet sends the product page you're viewing, including its name, price, picture, and description, even from stores that block OpenWish.
+- OpenWish can be installed as an app, and the installed app appears as a share target for product links on supported phones.
+
+### Improved
+
+- Product link import now reads compressed and large store pages, structured product data, and common store markup, so Amazon and many other stores import far more often.
+- Shared text from shopping apps, short links, and tracking-heavy addresses are cleaned into a canonical product link, and the shared title is used when a store blocks lookups.
+- Imports never replace details you already entered, show which store is being checked, and explain what was filled in.
+- Successful lookups are cached briefly so repeat imports are instant, and product lookups use a burst-friendly per-user limit.
+
+### Fixed
+
+- Primary buttons keep the OpenWish purple when hovered, focused, or pressed instead of switching to the default blue.
+- Shared text that puts the product name after the link now imports the right link and keeps the name.
+- Amazon prices written in European format, such as 1.299,99, import at the right amount.
+- A product link stays on the item when a lookup times out, is rate limited, or loses its connection.
+- Product lookups retry a store's temporary server errors, not just 503 and 429 responses.
+- The bookmarklet shortens long descriptions and titles so very detailed product pages still open OpenWish.
+- A bare store address, such as `etsy.com/listing/...`, is no longer used as an item name.
+- The Add item button is disabled while a product link is being imported.
+- When a shopping app shares a product name with its link, that name is used instead of the app's title.
+- Wishlist pages show add and edit controls only to people who can edit the list, including those with Edit or Admin sharing, so paste-anywhere works for them.
+- A captured product image that can't load is left off the new item instead of being saved as a broken image.
+
 ## [0.1.38] - 2026-10-10
 
 ### Improved

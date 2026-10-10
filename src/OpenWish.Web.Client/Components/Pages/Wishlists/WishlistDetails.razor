@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId}"
 
+@using OpenWish.Shared.Products
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Wishlist
 
@@ -8,7 +9,9 @@
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILogger<WishlistDetails> Logger
 
+@implements IAsyncDisposable
 @rendermode InteractiveAuto
 
 <PageTitle>@(_wishlist?.Name ?? "Wishlist")</PageTitle>
@@ -70,6 +73,14 @@ else
             }
         </div>
     </div>
+
+    @if (_canEdit)
+    {
+        <p class="paste-hint">
+            <OpenWishIcon Name="clipboard" />
+            <span>Have a product link? Paste it anywhere on this page to add it.</span>
+        </p>
+    }
 
     @if (_wishlist.Event != null)
     {
@@ -323,7 +334,7 @@ else
                         @if (_canEdit)
                         {
                             <h2>No ideas in this wishlist yet</h2>
-                            <p>Add a name now; you can fill in the details later.</p>
+                            <p>Add a name now, or paste a product link and we'll fill in what we can.</p>
                             <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
                                 <OpenWishIcon Name="plus-lg" /> Add item
                             </button>
@@ -578,6 +589,9 @@ else
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
     private string? _deleteItemError;
+    private readonly string _pasteListenerKey = $"wishlist-details-{Guid.NewGuid():N}";
+    private DotNetObjectReference<WishlistDetails>? _pasteListenerReference;
+    private bool _isListeningForPaste;
 
     protected override async Task OnInitializedAsync()
     {
@@ -782,6 +796,24 @@ else
         _itemModal?.Show(_modalItem);
     }
 
+    /// <summary>
+    /// Called from app.js when someone pastes a product link outside a text field on this page.
+    /// </summary>
+    [JSInvokable]
+    public Task ImportPastedProductLink(string text)
+    {
+        if (!_canEdit || _itemModal is null || _itemModal.IsVisible || !ProductLink.ContainsWebAddress(text))
+        {
+            return Task.CompletedTask;
+        }
+
+        return InvokeAsync(() =>
+        {
+            _modalItem = new WishlistItemModel();
+            _itemModal.Show(_modalItem, text);
+        });
+    }
+
     private void HandleItemEditClick(WishlistItemModel item)
     {
         _modalItem = new WishlistItemModel
@@ -904,14 +936,28 @@ else
     private static string GetItemName(WishlistItemModel item) =>
         string.IsNullOrWhiteSpace(item.Name) ? "This item" : item.Name;
 
-    private Task SetupSecurity()
+    private async Task SetupSecurity()
     {
         if (_wishlist == null || string.IsNullOrEmpty(_currentUserId))
-            return Task.CompletedTask;
+            return;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
-        _canEdit = _isOwner || _wishlist.IsCollaborative;
-        return Task.CompletedTask;
+        if (_isOwner)
+        {
+            _canEdit = true;
+            return;
+        }
+
+        try
+        {
+            // Match the server's rules: Edit or Admin sharing, or an accepted member of a collaborative event list.
+            _canEdit = await WishlistService.CanUserEditWishlistByPublicIdAsync(WishlistId, _currentUserId);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "Could not check edit access for wishlist {WishlistId}", WishlistId);
+            _canEdit = false;
+        }
     }
 
     private async Task ShareWishlist()
@@ -1005,12 +1051,38 @@ else
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        if (_canEdit && !_isListeningForPaste)
+        {
+            _pasteListenerReference ??= DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("openWishListenForProductLinkPaste", _pasteListenerKey, _pasteListenerReference);
+            _isListeningForPaste = true;
+        }
+
         if (_pendingInteractionItemId.HasValue && ViewMode == "list" && _itemListRef is not null)
         {
             var targetId = _pendingInteractionItemId.Value;
             _pendingInteractionItemId = null;
             await _itemListRef.ExpandItemAsync(targetId);
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isListeningForPaste)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("openWishStopListeningForProductLinkPaste", _pasteListenerKey);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }
+
+        _pasteListenerReference?.Dispose();
     }
 
     private string GetPriorityText(int priority) => priority switch

@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.1.39",
+    "date": "2026-10-10",
+    "title": "Add gift ideas from any store link",
+    "summary": "Pasting or sharing a product link now fills in a new wishlist item far more often, and there are faster ways to send ideas to OpenWish from anywhere.",
+    "highlights": [
+      "Product links from Amazon and other stores now import their name, price, picture, and description much more reliably, and repeat lookups are instant.",
+      "Paste a product link anywhere on one of your wishlists to start a new item, or paste text shared from a shopping app into the product field.",
+      "When a store blocks lookups, OpenWish still fills in the link, the store, and a name from the link or shared text.",
+      "Quick add on the dashboard and the new Add to a wishlist page take a link or idea and let you choose the list.",
+      "The Add to OpenWish bookmarklet sends the product you're viewing, including from stores that block OpenWish.",
+      "Install OpenWish on your phone, then share products to it from shopping apps and browsers."
+    ]
+  },
+  {
     "version": "0.1.38",
     "date": "2026-10-10",
     "title": "Improved code reliability and maintainability",

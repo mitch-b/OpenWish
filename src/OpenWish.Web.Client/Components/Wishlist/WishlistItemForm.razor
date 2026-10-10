@@ -1,55 +1,18 @@
-@using OpenWish.Web.Client.CustomEvents
+@using OpenWish.Shared.Products
 
-@inject IProductService ProductService
-@inject ILogger<WishlistItemForm> Logger
-
-<FocusOnFirstRender ElementId="product-url-import" Enabled="@AutoFocusImport" />
-<div class="url-import-section mb-4" aria-busy="@isLoading">
+<FocusOnFirstRender ElementId="product-url-import" Enabled="@(AutoFocusImport && string.IsNullOrWhiteSpace(InitialImportLink))" />
+<div class="url-import-section mb-4">
     <h2 class="h5">Have a product link?</h2>
-    <p class="text-muted mb-3">Optional shortcut: we'll fill in details we can find. You can also enter an idea below.</p>
-            <label for="product-url-import" class="form-label">Product URL</label>
-            <div class="input-group">
-                <input id="product-url-import"
-                       class="form-control"
-                       type="url"
-                       inputmode="url"
-                       autocomplete="url"
-                       aria-describedby="product-url-import-help"
-                       autofocus="@AutoFocusImport"
-                       placeholder="https://example.com/gift"
-                       value="@ImportUrl"
-                       @oninput="UpdateImportUrl"
-                       @onopenwishpaste="HandleUrlPaste"
-                       disabled="@(isLoading || IsSubmitting)" />
-                <button class="btn btn-outline-secondary"
-                        type="button"
-                        @onclick="ImportFromUrl"
-                        disabled="@(isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))">
-                    @if (isLoading)
-                    {
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <span>Importing...</span>
-                    }
-                    else
-                    {
-                        <span>Import</span>
-                    }
-                </button>
-            </div>
-            <small id="product-url-import-help" class="text-muted">Use a full http:// or https:// link. Existing details won't be replaced.</small>
-    @if (isLoading)
-    {
-        <p class="import-feedback" role="status">Looking for product details...</p>
-    }
-    @if (showImportMessage && !string.IsNullOrEmpty(importMessage))
-    {
-        <div class="alert @ImportMessageClass mt-2 mb-0" role="@(importFailed ? "alert" : "status")">
-            @importMessage
-        </div>
-    }
+    <p class="text-muted mb-3">Optional shortcut: paste a link from any store and we'll fill in the details we can find. You can also enter an idea below.</p>
+    <ProductLinkImporter Model="@Model"
+                         InputId="product-url-import"
+                         HelpText="Links and text shared from shopping apps both work. Existing details won't be replaced."
+                         Disabled="@IsSubmitting"
+                         @bind-IsImporting="_isImporting"
+                         InitialLink="@InitialImportLink" />
 </div>
 
-<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@IsSubmitting">
+<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -104,7 +67,7 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+        <button type="submit" class="btn btn-primary" disabled="@IsBusy">
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -129,137 +92,19 @@
     [Parameter] public bool AutoFocusImport { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
 
-    private bool isLoading;
-    private string ImportUrl { get; set; } = string.Empty;
-    private string importMessage = string.Empty;
-    private bool showImportMessage;
-    private bool importSuccess;
-    private bool importFailed;
-    private string ImportMessageClass => importFailed
-        ? "alert-danger"
-        : importSuccess ? "alert-success" : "alert-info";
+    /// <summary>A product link, or text containing one, to import once the form is interactive.</summary>
+    [Parameter] public string? InitialImportLink { get; set; }
 
-    private void UpdateImportUrl(ChangeEventArgs eventArgs)
-    {
-        ImportUrl = eventArgs.Value?.ToString() ?? string.Empty;
-    }
-
-    private async Task ImportFromUrl()
-    {
-        if (isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))
-            return;
-
-        await ProcessUrlImport(ImportUrl);
-    }
-
-    private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
-    {
-        if (isLoading || IsSubmitting)
-            return;
-
-        ImportUrl = e.PastedData ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(ImportUrl))
-        {
-            await ProcessUrlImport(ImportUrl);
-        }
-    }
-
-    private async Task ProcessUrlImport(string url)
-    {
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var productUri) ||
-            string.IsNullOrWhiteSpace(productUri.Host) ||
-            (productUri.Scheme != Uri.UriSchemeHttp && productUri.Scheme != Uri.UriSchemeHttps))
-        {
-            importMessage = "Enter a complete product link that starts with http:// or https://.";
-            importSuccess = false;
-            importFailed = true;
-            showImportMessage = true;
-            return;
-        }
-
-        var normalizedUrl = productUri.AbsoluteUri;
-        ImportUrl = normalizedUrl;
-        showImportMessage = false;
-        importFailed = false;
-        try
-        {
-            isLoading = true;
-            StateHasChanged();
-            await Task.Yield();
-
-            var product = await ProductService.TryScrapeProductFromUrl(normalizedUrl);
-            if (string.IsNullOrWhiteSpace(Model.Url))
-                Model.Url = normalizedUrl;
-
-            if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
-                Model.WhereToBuy = productUri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase);
-
-            if (product != null)
-            {
-                var hasDetails =
-                    !string.IsNullOrWhiteSpace(product.Name) ||
-                    !string.IsNullOrWhiteSpace(product.Description) ||
-                    product.Price.HasValue;
-                var importedDetails = false;
-
-                if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
-                {
-                    Model.Name = product.Name;
-                    importedDetails = true;
-                }
-
-                if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
-                {
-                    Model.Description = product.Description;
-                    importedDetails = true;
-                }
-
-                if (!Model.Price.HasValue && product.Price.HasValue)
-                {
-                    Model.Price = product.Price;
-                    importedDetails = true;
-                }
-
-                importMessage = importedDetails
-                    ? "Product details imported. Review them before saving."
-                    : hasDetails
-                        ? "Product details checked. Your existing details were kept."
-                        : "No product details were found. The link is ready; add any details you want.";
-                importSuccess = hasDetails;
-            }
-            else
-            {
-                importMessage = "We couldn't import product details. The link is still here; add the details you know.";
-                importSuccess = false;
-                importFailed = true;
-            }
-            showImportMessage = true;
-        }
-        catch (HttpRequestException ex)
-        {
-            Logger.LogError(ex, "Failed to import product details from {ProductHost}", productUri.Host);
-            importMessage = "We couldn't import product details. Check the link or enter the details yourself.";
-            importSuccess = false;
-            importFailed = true;
-            showImportMessage = true;
-        }
-        catch (TaskCanceledException ex)
-        {
-            Logger.LogError(ex, "Product import timed out for {ProductHost}", productUri.Host);
-            importMessage = "Product lookup timed out. Try again or enter the details yourself.";
-            importSuccess = false;
-            importFailed = true;
-            showImportMessage = true;
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
-        }
-    }
+    private bool _isImporting;
+    private bool IsBusy => IsSubmitting || _isImporting;
 
     private async Task HandleSubmit()
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         if (OnSubmit.HasDelegate)
         {
             await OnSubmit.InvokeAsync(Model);

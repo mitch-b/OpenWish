@@ -14,19 +14,6 @@
     max-width: 38rem;
 }
 
-.url-import-section .input-group {
-    margin-bottom: 0.5rem;
-}
-
-.url-import-section .btn {
-    min-height: 2.75rem;
-}
-
-.import-feedback {
-    margin: 0.75rem 0 0;
-    color: var(--color-text-muted);
-}
-
 .form-control,
 .form-select {
     min-height: 2.75rem;
@@ -65,16 +52,6 @@
 @media (max-width: 767.98px) {
     .url-import-section {
         padding: 1rem;
-    }
-
-    .url-import-section .input-group {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .url-import-section .input-group > * {
-        width: 100%;
-        border-radius: 0.75rem !important;
     }
 
     .form-actions .btn {

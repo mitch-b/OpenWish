@@ -670,6 +670,38 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
     }
 
+    public async Task<IEnumerable<WishlistModel>> GetEditableWishlistsAsync(string userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        // Applies the CanUserEditWishlistAsync rules in one query, so wishlist pickers don't check each list separately.
+        var wishlistEntities = await context.Wishlists
+            .Where(w => !w.Deleted &&
+                (w.OwnerId == userId ||
+                 context.WishlistPermissions.Any(wp =>
+                     wp.WishlistId == w.Id &&
+                     wp.UserId == userId &&
+                     !wp.Deleted &&
+                     (wp.PermissionType == "Edit" || wp.PermissionType == "Admin")) ||
+                 (w.IsCollaborative &&
+                  w.Event != null &&
+                  !w.Event.Deleted &&
+                  (w.Event.CreatedBy.Id == userId ||
+                   w.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId)))))
+            .Include(w => w.Owner)
+            .Include(w => w.Items.Where(i => !i.Deleted))
+            .ToListAsync();
+
+        var wishlistModels = _mapper.Map<List<WishlistModel>>(wishlistEntities);
+        foreach (var wishlistModel in wishlistModels)
+        {
+            FilterWishlistItemsForViewer(wishlistModel, userId);
+        }
+
+        return wishlistModels;
+    }
+
     public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

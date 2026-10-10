@@ -151,14 +151,17 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0
             }));
+    // A token bucket lets someone import a handful of links in a row, then settles to a steady pace.
     options.AddPolicy("product-scrape", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.GetTokenBucketLimiter(
             context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
                 context.Connection.RemoteIpAddress?.ToString() ?? "unauthenticated",
-            _ => new FixedWindowRateLimiterOptions
+            _ => new TokenBucketRateLimiterOptions
             {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(1),
+                TokenLimit = 10,
+                TokensPerPeriod = 2,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(15),
+                AutoReplenishment = true,
                 QueueLimit = 0
             }));
 });

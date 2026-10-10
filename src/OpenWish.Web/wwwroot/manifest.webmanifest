@@ -1,0 +1,54 @@
+{
+  "id": "./",
+  "name": "OpenWish",
+  "short_name": "OpenWish",
+  "description": "Wishlists and gift exchanges for the people you shop for.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f7fb",
+  "theme_color": "#f7f7fb",
+  "icons": [
+    {
+      "src": "icons/app/openwish-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app/openwish-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app/openwish-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add to a wishlist",
+      "short_name": "Add idea",
+      "url": "./add",
+      "icons": [
+        {
+          "src": "icons/app/openwish-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "./add",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

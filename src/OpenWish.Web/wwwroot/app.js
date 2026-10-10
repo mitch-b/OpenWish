@@ -225,3 +225,60 @@ document.addEventListener("click", event => {
         syncNavigationDisclosure(navigationToggle);
     }
 });
+
+// Mirrors ProductLink.ContainsWebAddress so pasted text that contains a product link can be imported.
+const productLinkPattern = /https?:\/\/[^\s<>"'`]+|(?:^|[^\w@.\/-])www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+/i;
+const maxProductLinkPasteLength = 4096;
+const productLinkPasteListeners = new Map();
+
+const textHasProductLink = text =>
+    typeof text === "string" &&
+    text.length > 0 &&
+    text.length <= maxProductLinkPasteLength &&
+    productLinkPattern.test(text);
+
+window.openWishTextHasProductLink = textHasProductLink;
+
+window.openWishListenForProductLinkPaste = function (key, dotNetReference) {
+    productLinkPasteListeners.set(key, dotNetReference);
+};
+
+window.openWishStopListeningForProductLinkPaste = function (key) {
+    productLinkPasteListeners.delete(key);
+};
+
+const isEditableTarget = target =>
+    target instanceof Element &&
+    target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])") !== null;
+
+// A link pasted into a product link field is imported right away; keep the browser from also inserting
+// the shared text so the field shows only the cleaned link.
+document.addEventListener("paste", event => {
+    if (!(event.target instanceof Element) || !event.target.closest("[data-product-link-input]")) {
+        return;
+    }
+
+    if (textHasProductLink(event.clipboardData?.getData("text") ?? "")) {
+        event.preventDefault();
+    }
+}, true);
+
+// On pages that opt in, pasting a product link outside a text field starts adding it as a new item.
+document.addEventListener("paste", event => {
+    if (event.defaultPrevented ||
+        productLinkPasteListeners.size === 0 ||
+        openWishDialogs.size > 0 ||
+        isEditableTarget(event.target)) {
+        return;
+    }
+
+    const text = event.clipboardData?.getData("text") ?? "";
+    if (!textHasProductLink(text)) {
+        return;
+    }
+
+    const listener = [...productLinkPasteListeners.values()].at(-1);
+    event.preventDefault();
+    listener.invokeMethodAsync("ImportPastedProductLink", text)
+        .catch(error => console.error("Unable to add the pasted product link.", error));
+});

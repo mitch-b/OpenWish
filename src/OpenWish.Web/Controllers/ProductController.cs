@@ -16,13 +16,11 @@ public class ProductController(IProductService productService, ApiUserContextSer
     private readonly IProductService _productService = productService;
     private readonly ApiUserContextService _userContextService = userContextService;
 
-    // Rate limit product scraping aggressively by authenticated user:
-    // - 5 requests per minute per user (prevents abuse from single user account)
-    // - Fixed window limiter for consistent rate limiting
-    // - Queue limit of 0 (reject immediately when limit reached, no queuing)
+    // Product lookups are rate limited per authenticated user with a token bucket so a burst of
+    // pasted links is quick while sustained automated use is still rejected (see Program.cs).
     [HttpPost("scrape")]
     [EnableRateLimiting("product-scrape")]
-    public async Task<ActionResult<WishlistModel>> TryScrape([FromBody] ProductScrapeRequest productScrapeRequest)
+    public async Task<ActionResult<ProductModel>> TryScrape([FromBody] ProductScrapeRequest productScrapeRequest)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
@@ -34,7 +32,7 @@ public class ProductController(IProductService productService, ApiUserContextSer
             return BadRequest("A product URL is required.");
         }
 
-        var product = await _productService.TryScrapeProductFromUrl(productScrapeRequest.ProductUrl);
+        var product = await _productService.TryScrapeProductFromUrl(productScrapeRequest.ProductUrl, HttpContext.RequestAborted);
         if (product is null)
         {
             return NoContent();

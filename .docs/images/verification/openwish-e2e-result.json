@@ -63,7 +63,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/9b8e1913-0eb3-4ac3-8f03-36639c340ef3/manage",
+        "/events/8269e9ee-ac19-4df0-af30-195bb542a391/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -135,6 +135,7 @@
       "seedAuthorizationStatus": 403,
       "deleteAuthorizationStatus": 403,
       "visitedRoutes": [
+        "/",
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",

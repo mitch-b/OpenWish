@@ -53,6 +53,7 @@
 .dashboard-hero-copy > p:not(.welcome-note) {
     max-width: 38rem;
     margin: 0;
+    overflow-wrap: anywhere;
     color: rgba(255,255,255,.76);
     font-size: clamp(1rem, 1.8vw, 1.18rem);
     line-height: 1.65;
@@ -135,6 +136,105 @@
     left: 8%;
     width: 0.35rem;
     height: 0.35rem;
+}
+
+.dashboard-hero.dashboard-welcome {
+    min-height: 6.5rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1.25rem;
+    padding: 1.35rem clamp(1.25rem, 3vw, 2rem);
+    border-radius: 1.1rem;
+}
+
+.dashboard-welcome::after {
+    right: -4rem;
+    bottom: -12rem;
+}
+
+.welcome-mark {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 36% 64% 52% 48% / 46% 40% 60% 54%;
+    background: linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.04));
+    color: #ff9aa8;
+    font-size: 1.45rem;
+}
+
+.dashboard-welcome-copy {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.dashboard-hero.dashboard-welcome h1 {
+    max-width: none;
+    margin: 0;
+    font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+    line-height: 1.2;
+}
+
+.dashboard-welcome-copy p {
+    max-width: 62ch;
+    margin: 0.35rem 0 0;
+    color: rgba(255,255,255,.78);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.dashboard-welcome-action {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding-inline: 1.15rem;
+    border-color: #fff;
+    background: #fff;
+    color: #282345;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.dashboard-welcome-action:hover,
+.dashboard-welcome-action:focus-visible {
+    border-color: #f3f1ff;
+    background: #f3f1ff;
+    color: #282345;
+}
+
+.welcome-placeholder {
+    display: block;
+    width: min(26rem, 85%);
+    height: 0.85rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,.14);
+    animation: welcome-placeholder-pulse 1.4s ease-in-out infinite;
+}
+
+.welcome-placeholder-title {
+    width: min(19rem, 65%);
+    height: 1.4rem;
+    margin-bottom: 0.65rem;
+}
+
+@keyframes welcome-placeholder-pulse {
+    50% {
+        opacity: .55;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-placeholder {
+        animation: none;
+    }
 }
 
 .quick-add-panel {
@@ -450,6 +550,29 @@
     }
 
     .hero-actions .btn {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .dashboard-hero.dashboard-welcome {
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 0.9rem 1rem;
+        padding: 1.15rem;
+    }
+
+    .welcome-mark {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 1.2rem;
+    }
+
+    .dashboard-hero.dashboard-welcome h1 {
+        font-size: 1.3rem;
+    }
+
+    .dashboard-welcome-action {
+        grid-column: 1 / -1;
         justify-content: center;
         width: 100%;
     }

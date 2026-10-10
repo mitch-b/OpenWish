@@ -235,6 +235,115 @@ async function assertResponsiveWidths(page, viewports) {
   }
 }
 
+async function assertReturningDashboardWelcome(page) {
+  const welcome = page.locator(".dashboard-welcome:not(.dashboard-welcome-loading)");
+  await welcome.locator("h1").waitFor({ state: "visible" });
+  if (await page.locator(".dashboard-hero-copy").count() !== 0 ||
+      await page.getByText("Welcome to OpenWish").count() !== 0) {
+    throw new Error("A returning user still saw the first-run dashboard welcome.");
+  }
+  if (await page.locator("h1").count() !== 1) {
+    throw new Error("The dashboard did not expose exactly one page heading.");
+  }
+}
+
+async function assertDashboardWelcomeWrapsLongNames(page, welcomeSelector, textSelectors, description) {
+  // Measures a detached copy so Blazor's live DOM is never edited.
+  const overflow = await page.evaluate(({ welcomeSelector, textSelectors }) => {
+    const original = document.querySelector(welcomeSelector);
+    if (!original) {
+      return [`${welcomeSelector} was not found`];
+    }
+    const sandbox = document.createElement("div");
+    sandbox.style.cssText = `position:absolute;left:0;top:0;width:${original.getBoundingClientRect().width}px;`;
+    const copy = original.cloneNode(true);
+    sandbox.append(copy);
+    document.body.append(sandbox);
+    try {
+      const longName = "GrandmaRosalindsExtraordinarilyLongHolidayCookieAndGiftExchange2026";
+      const problems = [];
+      const bounds = copy.getBoundingClientRect();
+      for (const selector of textSelectors) {
+        const element = copy.querySelector(selector);
+        if (!element) {
+          problems.push(`${selector} was not found`);
+          continue;
+        }
+        element.textContent = `${longName} ${element.textContent}`;
+        const box = element.getBoundingClientRect();
+        if (element.scrollWidth > element.clientWidth + 1 || box.right > bounds.right + 1) {
+          problems.push(
+            `${selector} overflowed (${element.scrollWidth}px of text in ${element.clientWidth}px, ` +
+            `right edge ${Math.round(box.right)}px past ${Math.round(bounds.right)}px)`
+          );
+        }
+      }
+      return problems;
+    } finally {
+      sandbox.remove();
+    }
+  }, { welcomeSelector, textSelectors });
+
+  if (overflow.length > 0) {
+    throw new Error(`${description} did not wrap a long unspaced name: ${overflow.join("; ")}.`);
+  }
+}
+
+async function recordDashboardWelcomeStates(page) {
+  await page.addInitScript(() => {
+    const states = [];
+    window.__openWishWelcomeStates = states;
+    const record = () => {
+      const hero = document.querySelector(".dashboard-hero");
+      const state = !hero
+        ? "none"
+        : hero.classList.contains("dashboard-welcome-loading")
+          ? "loading"
+          : hero.getAttribute("data-welcome") ?? "unknown";
+      if (states[states.length - 1] !== state) {
+        states.push(state);
+      }
+    };
+    new MutationObserver(record).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class", "data-welcome"]
+    });
+  });
+
+  // Wrapped so the caller can await setup without waiting for the circuit to connect.
+  return {
+    socket: page.waitForEvent("websocket", {
+      predicate: socket => socket.url().includes("/_blazor"),
+      timeout: 30000
+    }).catch(error => ({ error }))
+  };
+}
+
+async function assertDashboardWelcomeSurvivesHydration(page, circuit) {
+  const socket = await circuit.socket;
+  if (socket.error) {
+    throw new Error(`The dashboard never opened an interactive circuit: ${socket.error.message}`);
+  }
+  let lastFrameAt = Date.now();
+  socket.on("framereceived", () => {
+    lastFrameAt = Date.now();
+  });
+  const deadline = Date.now() + 15000;
+  while (Date.now() - lastFrameAt < 1500 && Date.now() < deadline) {
+    await page.waitForTimeout(100);
+  }
+
+  const states = await page.evaluate(() => window.__openWishWelcomeStates ?? []);
+  const firstSettled = states.findIndex(state => state !== "none" && state !== "loading");
+  if (firstSettled < 0 || states.slice(firstSettled).includes("loading")) {
+    throw new Error(
+      `The dashboard welcome fell back to its loading placeholder after it rendered: ${states.join(" -> ")}.`
+    );
+  }
+}
+
 async function assertMinimumTouchTarget(locator, description) {
   const bounds = await locator.boundingBox();
   const subpixelTolerance = 0.01;
@@ -466,7 +575,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
   const loginStatus = await login(context, "owner", ownerEmail);
-  const homeResponse = await visit(page, "/", "Welcome Back!", visitedRoutes);
+  const homeResponse = await visit(page, "/", "Quick add an idea", visitedRoutes);
   const contentSecurityPolicy = homeResponse.headers()["content-security-policy"];
   if (!contentSecurityPolicy?.includes("frame-ancestors 'none'")) {
     throw new Error("The home page did not include the expected Content-Security-Policy.");
@@ -511,10 +620,24 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await assertVisible(page, "Family Gift Ideas");
   await assertVisible(page, "Holiday Gift Exchange");
-  await assertVisible(page, "Friend Requests");
+  await assertVisible(page, "Friend requests");
   if (await page.locator(".dashboard-content").getAttribute("aria-busy") !== "false") {
     throw new Error("The loaded dashboard remained marked as busy.");
   }
+  await assertReturningDashboardWelcome(page);
+  const ownerWelcome = page.locator(".dashboard-welcome");
+  await ownerWelcome
+    .getByRole("heading", { level: 1, name: /^Holiday Gift Exchange is (today|tomorrow|in \d+ days)\.$/ })
+    .waitFor({ state: "visible" });
+  await ownerWelcome.getByText("Names have been drawn", { exact: false }).waitFor({ state: "visible" });
+  if ((await ownerWelcome.textContent()).includes("JordanDemo")) {
+    throw new Error("The dashboard welcome revealed the owner's gift exchange match.");
+  }
+  const openEventAction = ownerWelcome.getByRole("link", { name: "Open event" });
+  if (await openEventAction.getAttribute("href") !== `/events/${manifest.eventPublicId}`) {
+    throw new Error("The dashboard welcome did not link to the upcoming event.");
+  }
+  await assertMinimumTouchTarget(openEventAction, "Dashboard welcome action");
   await screenshot(page, "home-dashboard.png");
   await screenshot(page, "readme-home.png", false);
 
@@ -1546,7 +1669,7 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The installed app cannot receive shared product links.");
   }
 
-  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  await visit(page, "/", "Quick add an idea", visitedRoutes);
   if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
     throw new Error("Pages do not link the web app manifest.");
   }
@@ -1936,6 +2059,32 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const diagnostics = monitorPage(page);
   const visitedRoutes = [];
   const loginStatus = await login(context, "guest", guestEmail);
+
+  const circuit = await recordDashboardWelcomeStates(page);
+  await visit(page, "/", "Your gift season, together.", visitedRoutes);
+  const firstRunWelcome = page.locator(".dashboard-hero[data-welcome='FirstRun']");
+  await firstRunWelcome.getByText("Welcome to OpenWish").waitFor({ state: "visible" });
+  await assertDashboardWelcomeSurvivesHydration(page, circuit);
+  await firstRunWelcome.getByText("You're invited to Holiday Gift Exchange.", { exact: false })
+    .waitFor({ state: "visible" });
+  const reviewInvitation = firstRunWelcome.getByRole("link", { name: "Review invitation" });
+  if (await reviewInvitation.getAttribute("href") !== `/events/${manifest.eventPublicId}`) {
+    throw new Error("The first-run welcome did not link to the pending invitation.");
+  }
+  if (await firstRunWelcome.getByRole("link", { name: "Create a wishlist" }).count() !== 1) {
+    throw new Error("The first-run welcome did not offer to create a wishlist.");
+  }
+  await screenshot(page, "home-first-run.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await screenshot(page, "home-first-run-mobile.png");
+  await assertDashboardWelcomeWrapsLongNames(
+    page,
+    ".dashboard-hero[data-welcome='FirstRun']",
+    [".dashboard-hero-copy > p:not(.welcome-note)"],
+    "The first-run mobile dashboard welcome"
+  );
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   const forbiddenSeed = await context.request.post(`${baseUrl}/auth/dev-seed`);
   if (forbiddenSeed.status() !== 403) {
@@ -2361,10 +2510,22 @@ async function verifyMobileJourney(browser, manifest, results) {
   const visitedRoutes = [];
   const loginStatus = await login(context, "owner", ownerEmail);
 
-  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  await visit(page, "/", "Quick add an idea", visitedRoutes);
   await assertVisible(page, "Family Gift Ideas");
+  await assertReturningDashboardWelcome(page);
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  const welcomeBox = await page.locator(".dashboard-welcome").boundingBox();
+  if (!welcomeBox || welcomeBox.height > 260) {
+    throw new Error(`The returning mobile dashboard welcome is too tall (${welcomeBox?.height}px).`);
+  }
   await screenshot(page, "home-mobile.png");
   await screenshot(page, "readme-mobile.png", false);
+  await assertDashboardWelcomeWrapsLongNames(
+    page,
+    ".dashboard-welcome",
+    [".dashboard-welcome-copy h1", ".dashboard-welcome-copy p"],
+    "The returning mobile dashboard welcome"
+  );
   const navigationToggle = page.locator(".navbar-toggler");
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("The closed mobile navigation did not expose its collapsed state.");

@@ -247,6 +247,45 @@ async function assertReturningDashboardWelcome(page) {
   }
 }
 
+async function assertDashboardWelcomeWrapsLongNames(page, welcomeSelector, textSelectors, description) {
+  // Measures a detached copy so Blazor's live DOM is never edited.
+  const overflow = await page.evaluate(({ welcomeSelector, textSelectors }) => {
+    const original = document.querySelector(welcomeSelector);
+    if (!original) {
+      return [`${welcomeSelector} was not found`];
+    }
+    const sandbox = document.createElement("div");
+    sandbox.style.cssText = `position:absolute;left:0;top:0;width:${original.getBoundingClientRect().width}px;`;
+    const copy = original.cloneNode(true);
+    sandbox.append(copy);
+    document.body.append(sandbox);
+    try {
+      const longName = "Grandma-Rosalind's-Extraordinarily-Long-Holiday-Cookie-And-Gift-Exchange-2026";
+      const problems = [];
+      const bounds = copy.getBoundingClientRect();
+      for (const selector of textSelectors) {
+        const element = copy.querySelector(selector);
+        if (!element) {
+          problems.push(`${selector} was not found`);
+          continue;
+        }
+        element.textContent = `${longName} ${element.textContent}`;
+        const box = element.getBoundingClientRect();
+        if (element.scrollWidth > element.clientWidth + 1 || box.right > bounds.right + 1) {
+          problems.push(`${selector} overflowed (${Math.round(element.scrollWidth)}px in ${Math.round(element.clientWidth)}px)`);
+        }
+      }
+      return problems;
+    } finally {
+      sandbox.remove();
+    }
+  }, { welcomeSelector, textSelectors });
+
+  if (overflow.length > 0) {
+    throw new Error(`${description} did not wrap a long unspaced name: ${overflow.join("; ")}.`);
+  }
+}
+
 async function recordDashboardWelcomeStates(page) {
   await page.addInitScript(() => {
     const states = [];
@@ -2036,6 +2075,12 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.setViewportSize({ width: 390, height: 844 });
   await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
   await screenshot(page, "home-first-run-mobile.png");
+  await assertDashboardWelcomeWrapsLongNames(
+    page,
+    ".dashboard-hero[data-welcome='FirstRun']",
+    [".dashboard-hero-copy > p:not(.welcome-note)"],
+    "The first-run mobile dashboard welcome"
+  );
   await page.setViewportSize({ width: 1280, height: 900 });
 
   const forbiddenSeed = await context.request.post(`${baseUrl}/auth/dev-seed`);
@@ -2472,6 +2517,12 @@ async function verifyMobileJourney(browser, manifest, results) {
   }
   await screenshot(page, "home-mobile.png");
   await screenshot(page, "readme-mobile.png", false);
+  await assertDashboardWelcomeWrapsLongNames(
+    page,
+    ".dashboard-welcome",
+    [".dashboard-welcome-copy h1", ".dashboard-welcome-copy p"],
+    "The returning mobile dashboard welcome"
+  );
   const navigationToggle = page.locator(".navbar-toggler");
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("The closed mobile navigation did not expose its collapsed state.");

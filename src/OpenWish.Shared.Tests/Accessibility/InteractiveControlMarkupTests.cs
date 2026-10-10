@@ -1303,6 +1303,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
         Assert.Contains("@media (prefers-reduced-motion: reduce)", styles, StringComparison.Ordinal);
         Assert.Contains("grid-column: 1 / -1;", styles, StringComparison.Ordinal);
+        var normalizedStyles = styles.ReplaceLineEndings("\n");
+        Assert.Contains(".dashboard-hero-copy > p:not(.welcome-note) {\n    max-width: 38rem;\n    margin: 0;\n    overflow-wrap: anywhere;", normalizedStyles, StringComparison.Ordinal);
+        Assert.Contains(".dashboard-welcome-copy {\n    position: relative;\n    z-index: 1;\n    min-width: 0;\n    overflow-wrap: anywhere;", normalizedStyles, StringComparison.Ordinal);
     }
 
     [Fact]

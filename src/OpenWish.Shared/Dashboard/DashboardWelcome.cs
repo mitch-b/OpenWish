@@ -48,22 +48,20 @@ public sealed record DashboardWelcome
         IReadOnlyCollection<FriendRequestModel>? friendRequests,
         DateTimeOffset now)
     {
-        if (wishlists is null || events is null)
+        // A partial load can't rule out a higher-priority message, so don't claim anything.
+        if (wishlists is null || events is null || pendingInvitations is null || friendRequests is null)
         {
             return Unavailable;
         }
 
-        var invitations = pendingInvitations ?? [];
-        var requests = friendRequests ?? [];
-
         if (wishlists.Count == 0 && events.Count == 0)
         {
-            return CreateFirstRun(invitations);
+            return CreateFirstRun(pendingInvitations);
         }
 
-        if (invitations.Count > 0)
+        if (pendingInvitations.Count > 0)
         {
-            return CreateInvitation(invitations, now);
+            return CreateInvitation(pendingInvitations, now);
         }
 
         var nextEvent = GetUpcomingEvents(events, now).FirstOrDefault();
@@ -72,9 +70,9 @@ public sealed record DashboardWelcome
             return CreateUpcomingEvent(nextEvent, userId, now);
         }
 
-        if (requests.Count > 0)
+        if (friendRequests.Count > 0)
         {
-            return CreateFriendRequest(requests);
+            return CreateFriendRequest(friendRequests);
         }
 
         return CreateCaughtUp(wishlists, events, now);

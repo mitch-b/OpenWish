@@ -53,6 +53,7 @@
 .dashboard-hero-copy > p:not(.welcome-note) {
     max-width: 38rem;
     margin: 0;
+    overflow-wrap: anywhere;
     color: rgba(255,255,255,.76);
     font-size: clamp(1rem, 1.8vw, 1.18rem);
     line-height: 1.65;
@@ -168,6 +169,7 @@
     position: relative;
     z-index: 1;
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-hero.dashboard-welcome h1 {

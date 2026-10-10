@@ -22,6 +22,24 @@ public class DashboardWelcomeTests
         Assert.Null(welcome.PrimaryAction);
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void Create_ReturnsUnavailable_WhenInvitationsOrFriendRequestsFailedToLoad(bool invitationsMissing, bool requestsMissing)
+    {
+        var welcome = DashboardWelcome.Create(
+            UserId,
+            [Wishlist(1)],
+            [],
+            invitationsMissing ? null : [],
+            requestsMissing ? null : [],
+            _now);
+
+        Assert.Equal(DashboardWelcomeKind.Unavailable, welcome.Kind);
+        Assert.DoesNotContain("caught up", welcome.Headline, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void Create_ShowsFullWelcome_ForAccountWithoutWishlistsOrEvents()
     {

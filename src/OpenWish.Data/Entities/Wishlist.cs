@@ -4,7 +4,7 @@ public class Wishlist : BaseEntity
 {
     public required string Name { get; set; }
     public string? Icon { get; set; } // Optional emoji or single character icon
-    public required string OwnerId { get; set; } // Nullable if shared directly to event
+    public required string OwnerId { get; set; }
     public ApplicationUser? Owner { get; set; }
     public int? EventId { get; set; } // Nullable if a personal wishlist
     public Event? Event { get; set; }

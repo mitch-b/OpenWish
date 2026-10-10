@@ -115,11 +115,15 @@ public class InteractiveControlMarkupTests
         var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
         var modal = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
         var list = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        var importer = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ProductLinkImporter.razor");
+        var import = ReadComponent("OpenWish.Shared", "Products", "ProductImport.cs");
 
         Assert.Contains("Have a product link?", form, StringComparison.Ordinal);
-        Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", form, StringComparison.Ordinal);
-        Assert.Contains("The link is still here", form, StringComparison.Ordinal);
-        Assert.Contains("No product details were found. The link is ready", form, StringComparison.Ordinal);
+        Assert.Contains("<ProductLinkImporter Model=\"@Model\"", form, StringComparison.Ordinal);
+        Assert.Contains("<ProductLinkImporter Model=\"@Model\"", modal, StringComparison.Ordinal);
+        Assert.Contains("ProductLink.TryParse(text, out var sharedLink)", importer, StringComparison.Ordinal);
+        Assert.Contains("The link is still here", importer, StringComparison.Ordinal);
+        Assert.Contains("No product details were found. The product link is ready", import, StringComparison.Ordinal);
         Assert.Contains("<option value=\"\">No priority</option>", form, StringComparison.Ordinal);
         Assert.Contains("Only you can see private ideas", form, StringComparison.Ordinal);
         Assert.Contains("Only you can see private ideas", modal, StringComparison.Ordinal);
@@ -477,20 +481,26 @@ public class InteractiveControlMarkupTests
     {
         var formMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
         var modalMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var importerMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ProductLinkImporter.razor");
         var dialogScript = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
 
-        Assert.Contains("for=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"product-url-import-help\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("@oninput=\"UpdateImportUrl\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("type=\"url\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@(isLoading || IsSubmitting || string.IsNullOrWhiteSpace(ImportUrl))\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("<label for=\"@InputId\" class=\"form-label\">Product URL</label>", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"@HelpId\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("<div id=\"@HelpId\" class=\"form-text\">", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("private string HelpId => $\"{InputId}-help\";", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("@oninput=\"UpdateImportUrl\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("type=\"url\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_isImporting ? \"true\" : \"false\")\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_isImporting || Disabled || string.IsNullOrWhiteSpace(ImportUrl))\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("@attributes=\"InputAttributes\"", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("Disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-busy=\"@_isImporting\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("for=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"product-url-import-modal-help\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("data-dialog-initial-focus", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("InputId=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("@bind-IsImporting=\"_isImporting\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("Model?.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
@@ -506,10 +516,65 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void ProductCapture_OffersQuickAddShareTargetAndPasteAnywhere()
+    {
+        var quickAdd = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "QuickAdd.razor");
+        var addItem = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var home = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var app = ReadComponent("OpenWish.Web", "Components", "App.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+        var manifest = ReadComponent("OpenWish.Web", "wwwroot", "manifest.webmanifest");
+
+        Assert.Contains("@page \"/add\"", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("@attribute [Authorize]", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("<label for=\"quick-add-text\" class=\"form-label\">Link or gift idea</label>", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quick-add-help\"", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"choose-list-title\" aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("CanUserEditWishlistByPublicIdAsync(wishlist.PublicId, _userId)", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("NavigationManager.NavigateTo(GetAddItemHref(_wishlists[0]), replace: true);", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("ProductBookmarklet.Create(new Uri(NavigationManager.BaseUri))", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("@onclick:preventDefault=\"true\"", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("class=\"way-feedback\" role=\"status\"", quickAdd, StringComparison.Ordinal);
+
+        Assert.Contains("[SupplyParameterFromQuery(Name = \"url\")]", addItem, StringComparison.Ordinal);
+        Assert.Contains("capture.ApplyTo(_item);", addItem, StringComparison.Ordinal);
+        Assert.Contains("InitialImportLink=\"@_initialImportLink\"", addItem, StringComparison.Ordinal);
+
+        Assert.Contains("[JSInvokable]", details, StringComparison.Ordinal);
+        Assert.Contains("if (!_canEdit || _itemModal is null || _itemModal.IsVisible || !ProductLink.ContainsWebAddress(text))", details, StringComparison.Ordinal);
+        Assert.Contains("openWishListenForProductLinkPaste", details, StringComparison.Ordinal);
+        Assert.Contains("openWishStopListeningForProductLinkPaste", details, StringComparison.Ordinal);
+        Assert.Contains("Paste it anywhere on this page to add it.", details, StringComparison.Ordinal);
+
+        Assert.Contains("openWishDialogs.size > 0", script, StringComparison.Ordinal);
+        Assert.Contains("isEditableTarget(event.target)", script, StringComparison.Ordinal);
+        Assert.Contains("closest(\"[data-product-link-input]\")", script, StringComparison.Ordinal);
+
+        Assert.Contains("<label for=\"dashboard-quick-add\" class=\"quick-add-label\">", home, StringComparison.Ordinal);
+        Assert.Contains("method=\"get\" action=\"/add\"", home, StringComparison.Ordinal);
+
+        Assert.Contains("<link rel=\"manifest\" href=\"manifest.webmanifest\" />", app, StringComparison.Ordinal);
+        Assert.Contains("<link rel=\"apple-touch-icon\"", app, StringComparison.Ordinal);
+        using var manifestJson = System.Text.Json.JsonDocument.Parse(manifest);
+        var shareTarget = manifestJson.RootElement.GetProperty("share_target");
+        Assert.Equal("./add", shareTarget.GetProperty("action").GetString());
+        Assert.Equal("GET", shareTarget.GetProperty("method").GetString());
+        Assert.Equal("url", shareTarget.GetProperty("params").GetProperty("url").GetString());
+        Assert.Equal("text", shareTarget.GetProperty("params").GetProperty("text").GetString());
+        Assert.Equal("title", shareTarget.GetProperty("params").GetProperty("title").GetString());
+        Assert.Contains(
+            manifestJson.RootElement.GetProperty("icons").EnumerateArray(),
+            icon => icon.GetProperty("purpose").GetString() == "maskable");
+    }
+
+    [Fact]
     public void WishlistItemDialog_ProtectsSaveAndImportOperations()
     {
         var modalMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
         var detailsMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var importerMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ProductLinkImporter.razor");
+        var importRules = ReadComponent("OpenWish.Shared", "Products", "ProductImport.cs");
 
         Assert.Contains("if (_isSubmitting || _isImporting || Model is null)", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@_isSubmitting\"", modalMarkup, StringComparison.Ordinal);
@@ -518,14 +583,15 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Adding item...", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\">@_saveError", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("if (saved)", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Uri.TryCreate(url.Trim(), UriKind.Absolute", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("string.IsNullOrWhiteSpace(productUri.Host)", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("The product link is ready", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("The link is still here so you can try again.", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Your existing details were kept.", modalMarkup, StringComparison.Ordinal);
-        Assert.DoesNotContain("ImportUrl = string.Empty;\n            _isImporting = false;", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("if (product != null)", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Product import timed out", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("ProductLink.TryParse(text, out var sharedLink)", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("if (_isImporting || Disabled || Model is null || _disposeCts.IsCancellationRequested)", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("The link is still here so you can try again.", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("Product import timed out", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("HttpStatusCode.TooManyRequests", importerMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ImportUrl = string.Empty;", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("The product link is ready", importRules, StringComparison.Ordinal);
+        Assert.Contains("Your existing details were kept.", importRules, StringComparison.Ordinal);
+        Assert.Contains("if (product is null)", importRules, StringComparison.Ordinal);
         Assert.Contains("Model.PublicId = Guid.NewGuid().ToString();", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("_items[existingItemIndex] = savedItem;", detailsMarkup, StringComparison.Ordinal);
         Assert.Contains("_items.RemoveAt(existingItemIndex);", detailsMarkup, StringComparison.Ordinal);

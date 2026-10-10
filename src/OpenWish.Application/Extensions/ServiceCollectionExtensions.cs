@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenWish.Application.Models;
 using OpenWish.Application.Models.Configuration;
+using OpenWish.Application.Products;
 using OpenWish.Application.Services;
 using OpenWish.Shared.Services;
 
@@ -19,11 +20,13 @@ public static class ServiceCollectionExtensions
         {
             client.DefaultRequestVersion = new Version(2, 0);
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Add("User-Agent", "OpenWish/1.0");
         })
         .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
+            // Stores such as Amazon compress pages even when compression was not requested.
+            AutomaticDecompression = DecompressionMethods.All,
+            ConnectTimeout = TimeSpan.FromSeconds(5),
             PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             KeepAlivePingPolicy = HttpKeepAlivePingPolicy.WithActiveRequests,
             EnableMultipleHttp2Connections = true,
@@ -51,6 +54,8 @@ public static class ServiceCollectionExtensions
                 }
             }
         });
+
+        services.AddSingleton<ProductLookupCache>();
 
         services.AddScoped<IAppEmailSender, OpenWishEmailSender>();
 

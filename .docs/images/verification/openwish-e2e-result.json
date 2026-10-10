@@ -63,7 +63,7 @@
         "/events",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/a89ae36e-0254-4d04-9a4b-35864295770e/manage",
+        "/events/3106221d-57c4-489a-8dd3-50c399e6b8fb/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -106,6 +106,28 @@
       ]
     },
     {
+      "scenario": "product-capture",
+      "loginStatus": 200,
+      "visitedRoutes": [
+        "/",
+        "/add",
+        "/add?text=Trail%20lantern%20https%3A%2F%2Fshop.example%2Fproducts%2Ftrail-lantern",
+        "/add",
+        "/add?text=Board%20game"
+      ],
+      "assertions": [
+        "installable app manifest with a product share target",
+        "dashboard quick add hands off to wishlist choice",
+        "quick add empty-state guidance and bookmarklet setup",
+        "bookmarklet captures name, description, price, and image from a store page",
+        "captured product prefills a new item and saves with its clean link",
+        "pasting a product link anywhere on a wishlist starts a new item",
+        "shared text pasted into the product field imports the link and name",
+        "dark quick add contrast",
+        "view-only shared wishlists are not offered for quick add"
+      ]
+    },
+    {
       "scenario": "guest-collaboration",
       "loginStatus": 200,
       "seedAuthorizationStatus": 403,
@@ -142,6 +164,8 @@
       "visitedRoutes": [
         "/",
         "/wishlists/demo-family-gift-ideas",
+        "/add",
+        "/add?url=https%3A%2F%2Fgifts.example%2Fproducts%2Fhandmade-ceramic-tea-mug&title=Handmade%20Ceramic%20Tea%20Mug&price=28",
         "/wishlists/demo-family-gift-ideas/manage",
         "/events",
         "/events/demo-holiday-gift-exchange",

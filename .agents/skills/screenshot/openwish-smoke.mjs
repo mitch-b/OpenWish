@@ -1458,6 +1458,311 @@ async function verifyOwnerJourney(browser, manifest, results) {
   return { notificationPublicId };
 }
 
+const capturedProductImage = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect width="120" height="120" rx="18" fill="#f4efe4"/>
+<rect x="46" y="16" width="28" height="10" rx="4" fill="#2f4858"/>
+<path d="M40 30h40l7 58H33z" fill="#e3a72f"/>
+<circle cx="60" cy="58" r="13" fill="#fff6d8"/>
+<rect x="31" y="88" width="58" height="13" rx="5" fill="#2f4858"/>
+</svg>`;
+
+const capturedProductPage = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trail Lantern | Shop Example</title>
+<meta property="og:title" content="Trail Lantern">
+<meta property="og:description" content="Rechargeable camping lantern with a warm dimmer.">
+<meta property="og:image" content="https://shop.example/images/trail-lantern.svg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":"Trail Lantern",
+"description":"Rechargeable camping lantern with a warm dimmer.",
+"image":"https://shop.example/images/trail-lantern.svg",
+"offers":{"@type":"Offer","price":"34.99","priceCurrency":"USD"}}
+</script>
+</head>
+<body><h1>Trail Lantern</h1><p>$34.99</p></body>
+</html>`;
+
+async function pasteText(locator, text) {
+  await locator.evaluate((element, value) => {
+    const clipboardData = new DataTransfer();
+    clipboardData.setData("text/plain", value);
+    element.dispatchEvent(new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true }));
+  }, text);
+}
+
+async function verifyProductCaptureJourney(browser, results) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await context.route("https://shop.example/**", route => {
+    const requestUrl = new URL(route.request().url());
+    return requestUrl.pathname.endsWith(".svg")
+      ? route.fulfill({ status: 200, contentType: "image/svg+xml", body: capturedProductImage })
+      : route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: capturedProductPage });
+  });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const visitedRoutes = [];
+  const loginStatus = await login(context, "owner", ownerEmail);
+
+  const manifestResponse = await context.request.get(`${baseUrl}/manifest.webmanifest`);
+  if (!manifestResponse.ok() ||
+      !(manifestResponse.headers()["content-type"] ?? "").includes("application/manifest+json")) {
+    throw new Error("The web app manifest was not served with its manifest content type.");
+  }
+  const appManifest = await manifestResponse.json();
+  const shareTargetAction = appManifest.share_target?.action
+    ? new URL(appManifest.share_target.action, `${baseUrl}/manifest.webmanifest`).pathname
+    : null;
+  if (shareTargetAction !== "/add" ||
+      appManifest.share_target?.method !== "GET" ||
+      appManifest.share_target?.params?.url !== "url" ||
+      appManifest.share_target?.params?.text !== "text" ||
+      appManifest.share_target?.params?.title !== "title" ||
+      !appManifest.icons?.some(icon => icon.sizes === "512x512")) {
+    throw new Error("The installed app cannot receive shared product links.");
+  }
+
+  await visit(page, "/", "Welcome Back!", visitedRoutes);
+  if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
+    throw new Error("Pages do not link the web app manifest.");
+  }
+  const dashboardQuickAdd = page.getByLabel("Quick add an idea");
+  if (await dashboardQuickAdd.getAttribute("aria-describedby") !== "dashboard-quick-add-help") {
+    throw new Error("The dashboard quick add field is not connected to its help text.");
+  }
+  await dashboardQuickAdd.fill("Cozy wool socks");
+  await dashboardQuickAdd.press("Enter");
+  await page.waitForURL(url => url.pathname === "/add" && url.searchParams.get("text") === "Cozy wool socks");
+  await page.getByRole("heading", { name: "Cozy wool socks" }).waitFor({ state: "visible" });
+  const chooseWishlist = page.getByRole("region", { name: "Choose a wishlist" });
+  await chooseWishlist.getByRole("link", { name: /Family Gift Ideas/ }).waitFor({ state: "visible" });
+  if (await chooseWishlist.getAttribute("aria-busy") !== "false") {
+    throw new Error("The wishlist choices did not finish loading.");
+  }
+
+  await visit(page, "/add", "Add to a wishlist", visitedRoutes);
+  await assertVisible(page, "Add ideas from anywhere");
+  const quickAddText = page.getByLabel("Link or gift idea");
+  if (await quickAddText.getAttribute("aria-describedby") !== "quick-add-help") {
+    throw new Error("The quick add field is not connected to its help text.");
+  }
+  const emptyQuickAdd = page.getByRole("alert")
+    .filter({ hasText: "Paste a product link or type an idea to continue." });
+  for (let attempt = 0; ; attempt++) {
+    await page.getByRole("button", { name: "Continue" }).click();
+    try {
+      await emptyQuickAdd.waitFor({ state: "visible", timeout: 2000 });
+      break;
+    } catch (error) {
+      if (attempt >= 5) {
+        throw new Error("Continuing without a link or idea did not explain what to enter.");
+      }
+    }
+  }
+  const bookmarkletButton = page.getByRole("link", { name: "Add to OpenWish" });
+  const bookmarklet = await bookmarkletButton.getAttribute("href");
+  if (!bookmarklet?.startsWith("javascript:(()=>{") ||
+      !bookmarklet.includes(`'${baseUrl}/'+'add?'`) ||
+      /[%#\r\n]/.test(bookmarklet)) {
+    throw new Error("The bookmarklet does not send products to this OpenWish site.");
+  }
+  await bookmarkletButton.click();
+  await page.getByRole("status")
+    .filter({ hasText: "Drag the Add to OpenWish button to your bookmarks bar" })
+    .waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(bookmarkletButton, "Bookmarklet button");
+  await screenshot(page, "quick-add.png");
+
+  const storePage = await context.newPage();
+  await storePage.goto("https://shop.example/products/trail-lantern?utm_source=newsletter&ref=share");
+  const [capturePage] = await Promise.all([
+    storePage.waitForEvent("popup"),
+    storePage.evaluate(script => (0, eval)(script), bookmarklet.slice("javascript:".length))
+  ]);
+  const captureDiagnostics = monitorPage(capturePage);
+  await capturePage.waitForURL(url => url.origin === baseUrl && url.pathname === "/add");
+  const capturedQuery = new URL(capturePage.url()).searchParams;
+  if (capturedQuery.get("title") !== "Trail Lantern" ||
+      capturedQuery.get("price") !== "34.99" ||
+      capturedQuery.get("image") !== "https://shop.example/images/trail-lantern.svg" ||
+      !capturedQuery.get("url")?.startsWith("https://shop.example/products/trail-lantern")) {
+    throw new Error(`The bookmarklet did not capture the product details: ${capturePage.url()}`);
+  }
+  await storePage.close();
+  await capturePage.getByRole("heading", { name: "Trail Lantern" }).waitFor({ state: "visible" });
+  await capturePage.getByText("34.99").first().waitFor({ state: "visible" });
+  await capturePage.getByText("shop.example").first().waitFor({ state: "visible" });
+  const captureChoices = capturePage.getByRole("region", { name: "Choose a wishlist" });
+  const emojiWishlistChoice = captureChoices.getByRole("link", { name: /Emoji Test Wishlist/ });
+  await emojiWishlistChoice.waitFor({ state: "visible" });
+  await captureChoices.getByRole("link", { name: /Family Gift Ideas/ }).waitFor({ state: "visible" });
+  const choiceHref = await emojiWishlistChoice.getAttribute("href");
+  if (!/^\/wishlists\/[^/]+\/items\/new\?url=https%3A%2F%2Fshop\.example%2Fproducts%2Ftrail-lantern&title=Trail%20Lantern/.test(choiceHref ?? "")) {
+    throw new Error(`The wishlist choice does not carry the captured product: ${choiceHref}`);
+  }
+  await screenshot(capturePage, "quick-add-capture.png");
+
+  await emojiWishlistChoice.click();
+  await capturePage.waitForURL(url => /^\/wishlists\/[^/]+\/items\/new$/.test(url.pathname));
+  const captureWishlistPath = new URL(capturePage.url()).pathname.replace(/\/items\/new$/, "");
+  await assertVisible(capturePage, "Add an item");
+  await capturePage.getByRole("status")
+    .filter({ hasText: "The product link is ready. Review the details before saving." })
+    .waitFor({ state: "visible", timeout: 30000 });
+  const capturedFields = {
+    name: await capturePage.getByLabel("Name").inputValue(),
+    description: await capturePage.getByLabel("Description").inputValue(),
+    price: await capturePage.getByLabel("Estimated price").inputValue(),
+    url: await capturePage.getByLabel("Product Link").inputValue(),
+    importUrl: await capturePage.getByLabel("Product URL").inputValue(),
+    whereToBuy: await capturePage.getByLabel("Where to buy").inputValue()
+  };
+  if (capturedFields.name !== "Trail Lantern" ||
+      capturedFields.description !== "Rechargeable camping lantern with a warm dimmer." ||
+      Number(capturedFields.price) !== 34.99 ||
+      capturedFields.url !== "https://shop.example/products/trail-lantern" ||
+      capturedFields.importUrl !== "https://shop.example/products/trail-lantern" ||
+      capturedFields.whereToBuy !== "shop.example") {
+    throw new Error(`The captured product did not prefill the item: ${JSON.stringify(capturedFields)}`);
+  }
+  await capturePage.getByRole("button", { name: "Remove image" }).waitFor({ state: "visible" });
+  await screenshot(capturePage, "add-item-from-capture.png");
+  await capturePage.getByRole("button", { name: "Add item", exact: true }).click();
+  await capturePage.waitForURL(url => url.pathname === captureWishlistPath);
+  const savedCaptureLink = capturePage.getByRole("link", {
+    name: "View Trail Lantern product (opens in a new tab)"
+  });
+  await savedCaptureLink.waitFor({ state: "visible" });
+  if (await savedCaptureLink.getAttribute("href") !== "https://shop.example/products/trail-lantern") {
+    throw new Error("The captured product link was not saved.");
+  }
+
+  await assertVisible(capturePage, "Have a product link? Paste it anywhere on this page to add it.");
+  const pastedItemDialog = capturePage.getByRole("dialog", { name: "Add item" });
+  for (let attempt = 0; ; attempt++) {
+    await pasteText(
+      capturePage.locator("body"),
+      "Handmade Ceramic Tea Mug https://gifts.example/products/handmade-ceramic-tea-mug?utm_source=newsletter"
+    );
+    try {
+      await pastedItemDialog.waitFor({ state: "visible", timeout: 3000 });
+      break;
+    } catch (error) {
+      if (attempt >= 4) {
+        throw new Error("Pasting a product link on the wishlist did not start a new item.");
+      }
+    }
+  }
+  await pastedItemDialog.getByRole("status")
+    .filter({ hasText: "gifts.example didn't share product details" })
+    .waitFor({ state: "visible", timeout: 30000 });
+  const pastedFields = {
+    name: await pastedItemDialog.getByLabel("Name").inputValue(),
+    importUrl: await pastedItemDialog.getByLabel("Product URL").inputValue(),
+    url: await pastedItemDialog.getByLabel("Product Link").inputValue(),
+    whereToBuy: await pastedItemDialog.getByLabel("Where to buy").inputValue()
+  };
+  if (pastedFields.name !== "Handmade Ceramic Tea Mug" ||
+      pastedFields.importUrl !== "https://gifts.example/products/handmade-ceramic-tea-mug" ||
+      pastedFields.url !== "https://gifts.example/products/handmade-ceramic-tea-mug" ||
+      pastedFields.whereToBuy !== "gifts.example") {
+    throw new Error(`Pasting shared text did not fill the new item: ${JSON.stringify(pastedFields)}`);
+  }
+  await screenshot(capturePage, "wishlist-paste-import.png", false);
+  await pastedItemDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await pastedItemDialog.waitFor({ state: "detached" });
+  await capturePage.getByRole("alert")
+    .filter({ hasText: "Handmade Ceramic Tea Mug added to the wishlist." })
+    .waitFor({ state: "visible" });
+
+  const addItemButton = capturePage.getByRole("button", { name: "Add item", exact: true }).first();
+  await addItemButton.click();
+  const sharedTextDialog = capturePage.getByRole("dialog", { name: "Add item" });
+  await sharedTextDialog.waitFor({ state: "visible" });
+  const sharedTextField = sharedTextDialog.getByLabel("Product URL");
+  await pasteText(
+    sharedTextField,
+    "Cozy Sherpa Throw by Fireside Goods https://home.example/products/cozy-sherpa-throw?utm_campaign=share"
+  );
+  await sharedTextDialog.getByRole("status")
+    .filter({ hasText: "home.example didn't share product details" })
+    .waitFor({ state: "visible", timeout: 30000 });
+  if (await sharedTextField.inputValue() !== "https://home.example/products/cozy-sherpa-throw" ||
+      await sharedTextDialog.getByLabel("Name").inputValue() !== "Cozy Sherpa Throw by Fireside Goods") {
+    throw new Error("Pasting shared text into the product URL field did not import the product.");
+  }
+  await sharedTextDialog.getByRole("button", { name: "Cancel" }).click();
+  await sharedTextDialog.waitFor({ state: "detached" });
+
+  // The captured image is served only to this browser context, so remove the item before other journeys run.
+  await capturePage.getByRole("button", { name: "Delete Trail Lantern" }).click();
+  const captureDeleteDialog = capturePage.getByRole("dialog", { name: "Delete item" });
+  await captureDeleteDialog.getByRole("button", { name: "Delete item" }).click();
+  await captureDeleteDialog.waitFor({ state: "detached" });
+  await savedCaptureLink.waitFor({ state: "detached" });
+
+  await page.evaluate(() => localStorage.setItem("theme", "dark"));
+  await visit(page, "/add?text=Trail%20lantern%20https%3A%2F%2Fshop.example%2Fproducts%2Ftrail-lantern", "Choose a wishlist", visitedRoutes);
+  if (await page.evaluate(() => document.documentElement.dataset.theme) !== "dark") {
+    throw new Error("The quick add page did not use the saved dark theme.");
+  }
+  await page.getByRole("heading", { name: "Trail lantern" }).waitFor({ state: "visible" });
+  await page.getByRole("region", { name: "Choose a wishlist" })
+    .getByRole("link", { name: /Family Gift Ideas/ })
+    .waitFor({ state: "visible" });
+  await assertTextContrast(page.locator(".wishlist-choice strong").first(), "Dark wishlist choice name");
+  await screenshot(page, "quick-add-capture-dark.png");
+  await visit(page, "/add", "Add ideas from anywhere", visitedRoutes);
+  await screenshot(page, "quick-add-dark.png");
+  await page.evaluate(() => localStorage.setItem("theme", "light"));
+
+  for (const [label, pageDiagnostics] of [["Quick add", diagnostics], ["Captured product", captureDiagnostics]]) {
+    if (pageDiagnostics.browserErrors.length > 0) {
+      throw new Error(`${label} browser errors: ${pageDiagnostics.browserErrors.join(" | ")}`);
+    }
+    if (pageDiagnostics.failedResponses.length > 0) {
+      throw new Error(`${label} failed responses: ${pageDiagnostics.failedResponses.join(" | ")}`);
+    }
+  }
+  await context.close();
+
+  const guestContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const guestPage = await guestContext.newPage();
+  const guestDiagnostics = monitorPage(guestPage);
+  await login(guestContext, "guest", guestEmail);
+  await visit(guestPage, "/add?text=Board%20game", "Choose a wishlist", visitedRoutes);
+  // The guest can view Family Gift Ideas but cannot add to it, so there is no list to choose.
+  await guestPage.getByRole("heading", { name: "You don't have a wishlist yet" }).waitFor({ state: "visible" });
+  await guestPage.getByRole("link", { name: "Create a wishlist" }).waitFor({ state: "visible" });
+  if (await guestPage.getByRole("link", { name: /Family Gift Ideas/ }).count() !== 0) {
+    throw new Error("Quick add offered a wishlist the person can only view.");
+  }
+  if (guestDiagnostics.browserErrors.length > 0 || guestDiagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Guest quick add errors: ${[...guestDiagnostics.browserErrors, ...guestDiagnostics.failedResponses].join(" | ")}`
+    );
+  }
+  await guestContext.close();
+
+  results.push({
+    scenario: "product-capture",
+    loginStatus,
+    visitedRoutes,
+    assertions: [
+      "installable app manifest with a product share target",
+      "dashboard quick add hands off to wishlist choice",
+      "quick add empty-state guidance and bookmarklet setup",
+      "bookmarklet captures name, description, price, and image from a store page",
+      "captured product prefills a new item and saves with its clean link",
+      "pasting a product link anywhere on a wishlist starts a new item",
+      "shared text pasted into the product field imports the link and name",
+      "dark quick add contrast",
+      "view-only shared wishlists are not offered for quick add"
+    ]
+  });
+}
+
 async function verifyDevelopmentLoginJourney(browser, results) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
@@ -2081,6 +2386,27 @@ async function verifyMobileJourney(browser, manifest, results) {
   }
   await screenshot(page, "wishlist-mobile.png");
 
+  await visit(page, "/add", "Add ideas from anywhere", visitedRoutes);
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error("Mobile quick add has horizontal overflow.");
+  }
+  await assertMinimumTouchTarget(page.getByRole("button", { name: "Continue" }), "Mobile quick add continue action");
+  await screenshot(page, "quick-add-mobile.png");
+  await visit(
+    page,
+    "/add?url=https%3A%2F%2Fgifts.example%2Fproducts%2Fhandmade-ceramic-tea-mug&title=Handmade%20Ceramic%20Tea%20Mug&price=28",
+    "Choose a wishlist",
+    visitedRoutes
+  );
+  const mobileWishlistChoice = page.getByRole("region", { name: "Choose a wishlist" })
+    .getByRole("link", { name: /Family Gift Ideas/ });
+  await mobileWishlistChoice.waitFor({ state: "visible" });
+  await assertMinimumTouchTarget(mobileWishlistChoice, "Mobile wishlist choice");
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error("Mobile wishlist choice has horizontal overflow.");
+  }
+  await screenshot(page, "quick-add-capture-mobile.png");
+
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
   await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
   await assertMinimumTouchTarget(
@@ -2231,6 +2557,7 @@ try {
   await verifyDevelopmentLoginJourney(browser, results);
   await verifyExternalLogin(browser, results);
   const securityFixture = await verifyOwnerJourney(browser, manifest, results);
+  await verifyProductCaptureJourney(browser, results);
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);

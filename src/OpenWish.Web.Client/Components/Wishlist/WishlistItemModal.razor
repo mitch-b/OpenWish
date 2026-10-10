@@ -1,7 +1,6 @@
-@using OpenWish.Web.Client.CustomEvents
+@using OpenWish.Shared.Products
 @implements IAsyncDisposable
 
-@inject IProductService ProductService
 @inject IJSRuntime JSRuntime
 @inject ILogger<WishlistItemModal> Logger
 
@@ -25,48 +24,15 @@
                         disabled="@IsBusy"></button>
             </div>
             <div class="modal-body">
-                <div class="url-import-section mb-4" aria-busy="@_isImporting">
-                    <label for="product-url-import-modal" class="form-label">Product URL</label>
-                    <div class="input-group">
-                        <input id="product-url-import-modal"
-                               class="form-control"
-                               type="url"
-                               inputmode="url"
-                               autocomplete="url"
-                               aria-describedby="product-url-import-modal-help"
-                               data-dialog-initial-focus
-                               placeholder="Paste a product URL"
-                               value="@ImportUrl"
-                               @oninput="UpdateImportUrl"
-                               @onopenwishpaste="HandleUrlPaste"
-                               disabled="@IsBusy" />
-                        <button class="btn btn-outline-secondary"
-                                type="button"
-                                @onclick="ImportFromUrl"
-                                disabled="@(IsBusy || string.IsNullOrWhiteSpace(ImportUrl))">
-                            @if (_isImporting)
-                            {
-                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                <span>Importing...</span>
-                            }
-                            else
-                            {
-                                <OpenWishIcon Name="download" />
-                                <span>Import</span>
-                            }
-                        </button>
-                    </div>
-                    <small id="product-url-import-modal-help" class="text-muted">Optional: import what we can find, or enter an idea below. Existing details won't be replaced.</small>
-                    @if (_isImporting)
-                    {
-                        <div class="alert alert-info mt-2 mb-0" role="status">Importing product details...</div>
-                    }
-                    else if (_showImportMessage && !string.IsNullOrEmpty(_importMessage))
-                    {
-                        <div class="alert @ImportMessageClass mt-2 mb-0" role="@(_importFailed ? "alert" : "status")">
-                            @_importMessage
-                        </div>
-                    }
+                <div class="url-import-section mb-4">
+                    <ProductLinkImporter Model="@Model"
+                                         InputId="product-url-import-modal"
+                                         HelpText="Optional: paste a link or text shared from a shopping app and we'll fill in what we can. Existing details won't be replaced."
+                                         Disabled="@_isSubmitting"
+                                         @bind-IsImporting="_isImporting"
+                                         InitialLink="@_initialImportText"
+                                         OnImported="HandleProductImported"
+                                         data-dialog-initial-focus="true" />
                 </div>
 
                 <EditForm Model="@Model"
@@ -175,24 +141,10 @@
 
     private bool _isImporting;
     private bool _isSubmitting;
-    private string ImportUrl { get; set; } = string.Empty;
-    private string _importMessage = string.Empty;
-    private bool _showImportMessage;
-    private bool _importSuccess;
-    private bool _importFailed;
+    private string? _initialImportText;
     private string? _saveError;
     private bool _dialogActive;
     private bool IsBusy => _isImporting || _isSubmitting;
-    private string ImportMessageClass => _importFailed
-        ? "alert-danger"
-        : _importSuccess
-            ? "alert-success"
-            : "alert-info";
-
-    private void UpdateImportUrl(ChangeEventArgs eventArgs)
-    {
-        ImportUrl = eventArgs.Value?.ToString() ?? string.Empty;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -203,12 +155,13 @@
         }
     }
 
-    public void Show(WishlistItemModel? model = null)
+    /// <summary>
+    /// Opens the dialog. When <paramref name="importText"/> contains a product link, its details are imported right away.
+    /// </summary>
+    public void Show(WishlistItemModel? model = null, string? importText = null)
     {
         Model = model ?? new WishlistItemModel();
-        ImportUrl = string.Empty;
-        _showImportMessage = false;
-        _importMessage = string.Empty;
+        _initialImportText = importText;
         _saveError = null;
         if (Model.Id == 0 && string.IsNullOrWhiteSpace(Model.PublicId))
         {
@@ -227,144 +180,15 @@
         }
 
         IsVisible = false;
-        ImportUrl = string.Empty;
-        _showImportMessage = false;
-        _importMessage = string.Empty;
+        _initialImportText = null;
         StateHasChanged();
     }
 
-    private async Task ImportFromUrl()
+    private void HandleProductImported(ProductImportResult result)
     {
-        if (_isImporting || _isSubmitting || string.IsNullOrWhiteSpace(ImportUrl))
+        if (result.Kind != ProductImportKind.Unavailable && !Model.Priority.HasValue)
         {
-            return;
-        }
-
-        await ProcessUrlImport(ImportUrl);
-    }
-
-    private async Task HandleUrlPaste(OpenWishPasteEventArgs e)
-    {
-        if (_isImporting || _isSubmitting)
-        {
-            return;
-        }
-
-        ImportUrl = e.PastedData ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(ImportUrl))
-        {
-            await ProcessUrlImport(ImportUrl);
-        }
-    }
-
-    private async Task ProcessUrlImport(string url)
-    {
-        if (_isImporting || Model is null)
-        {
-            return;
-        }
-
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var productUri) ||
-            string.IsNullOrWhiteSpace(productUri.Host) ||
-            (productUri.Scheme != Uri.UriSchemeHttp && productUri.Scheme != Uri.UriSchemeHttps))
-        {
-            _importMessage = "Enter a complete product link that starts with http:// or https://.";
-            _importSuccess = false;
-            _importFailed = true;
-            _showImportMessage = true;
-            return;
-        }
-
-        var normalizedUrl = productUri.AbsoluteUri;
-        ImportUrl = normalizedUrl;
-        _showImportMessage = false;
-        _importFailed = false;
-
-        try
-        {
-            _isImporting = true;
-            StateHasChanged();
-            await Task.Yield();
-
-            var product = await ProductService.TryScrapeProductFromUrl(normalizedUrl);
-            var importedDetails = false;
-
-            if (string.IsNullOrWhiteSpace(Model.Url))
-            {
-                Model.Url = normalizedUrl;
-            }
-
-            if (string.IsNullOrWhiteSpace(Model.WhereToBuy))
-            {
-                Model.WhereToBuy = productUri.Host.Replace("www.", "", StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (product != null)
-            {
-                var productHasDetails =
-                    !string.IsNullOrWhiteSpace(product.Name) ||
-                    !string.IsNullOrWhiteSpace(product.Description) ||
-                    product.Price.HasValue;
-
-                if (string.IsNullOrWhiteSpace(Model.Name) && !string.IsNullOrWhiteSpace(product.Name))
-                {
-                    Model.Name = product.Name;
-                    importedDetails = true;
-                }
-
-                if (string.IsNullOrWhiteSpace(Model.Description) && !string.IsNullOrWhiteSpace(product.Description))
-                {
-                    Model.Description = product.Description;
-                    importedDetails = true;
-                }
-
-                if (!Model.Price.HasValue && product.Price.HasValue)
-                {
-                    Model.Price = product.Price;
-                    importedDetails = true;
-                }
-
-                if (!Model.Priority.HasValue)
-                {
-                    Model.Priority = 2;
-                }
-
-                _importMessage = importedDetails
-                    ? "Product details imported. Review them before saving."
-                    : productHasDetails
-                        ? "Product details checked. Your existing details were kept."
-                        : "No product details were found. The product link is ready; add any details you want.";
-                _importSuccess = productHasDetails;
-            }
-            else
-            {
-                _importMessage = "We couldn't import product details. The link is still here so you can try again.";
-                _importSuccess = false;
-                _importFailed = true;
-            }
-
-            _showImportMessage = true;
-        }
-        catch (HttpRequestException ex)
-        {
-            Logger.LogError(ex, "Failed to import product details from {ProductHost}", productUri.Host);
-            _importMessage = "We couldn't import product details. The link is still here so you can try again.";
-            _importSuccess = false;
-            _importFailed = true;
-            _showImportMessage = true;
-        }
-        catch (TaskCanceledException ex)
-        {
-            Logger.LogError(ex, "Product import timed out for {ProductHost}", productUri.Host);
-            _importMessage = "We couldn't import product details. The link is still here so you can try again.";
-            _importSuccess = false;
-            _importFailed = true;
-            _showImportMessage = true;
-        }
-        finally
-        {
-            _isImporting = false;
-            StateHasChanged();
+            Model.Priority = 2;
         }
     }
 

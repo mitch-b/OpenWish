@@ -39,6 +39,22 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.35);
 }
 
+.paste-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: -1.25rem 0 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+/* Paste-anywhere needs a keyboard or pointer; touch devices paste into the add item field instead. */
+@media (hover: none) {
+    .paste-hint {
+        display: none;
+    }
+}
+
 .badge-collaborative {
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);

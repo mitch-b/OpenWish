@@ -4,5 +4,5 @@ namespace OpenWish.Shared.Services;
 
 public interface IProductService
 {
-    Task<ProductModel?> TryScrapeProductFromUrl(string url);
+    Task<ProductModel?> TryScrapeProductFromUrl(string url, CancellationToken cancellationToken = default);
 }

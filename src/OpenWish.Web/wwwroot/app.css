@@ -47,6 +47,19 @@ a:hover, .btn-link:hover {
 }
 
 .btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--color-primary-bg);
+    --bs-btn-border-color: var(--color-primary-border);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: color-mix(in srgb, var(--color-primary-bg) 86%, #000);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--color-primary-border) 86%, #000);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: color-mix(in srgb, var(--color-primary-bg) 78%, #000);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--color-primary-border) 78%, #000);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--color-primary-bg);
+    --bs-btn-disabled-border-color: var(--color-primary-border);
+    --bs-btn-focus-shadow-rgb: 91, 77, 204;
     color: #fff;
     background-color: var(--color-primary-bg);
     border-color: var(--color-primary-border);

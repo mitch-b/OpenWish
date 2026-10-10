@@ -6,7 +6,11 @@ improves.
 - Day type: <!-- Polish / Feature / Major feature / Override / Owner request -->
 - Journey: <!-- J1-J8 on polish days; delete otherwise -->
 - Roadmap: <!-- for example A3; delete when not a roadmap item -->
-- Tracking issue: <!-- major-feature or autowork issue; delete when none -->
+- Issues: <!-- "Closes #N" for each autowork or polish issue this completes,
+  and for a major-feature tracking issue on its final milestone;
+  "Part of #N" for an earlier milestone; delete when none -->
+- Labels: <!-- auto-improvement plus one of polish, feature, major-feature,
+  or override; add autowork for an owner issue -->
 
 ## Jank log
 

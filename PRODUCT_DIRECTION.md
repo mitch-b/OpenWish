@@ -102,6 +102,8 @@ outcome. Use the calendar date in the automation host's time zone.
 A security fix, a broken default-branch build or CI workflow, a vulnerable
 dependency that Dependabot has not addressed, a data-loss risk, or a
 reproduced user-visible regression overrides the day type. Fix it, then stop.
+Label the pull request `override`; override work does not count toward the
+journey rotation, theme rotation, or major cadence.
 
 ### 2. Day type
 
@@ -202,10 +204,10 @@ Choose the first rule that applies:
    `major-feature` tracking issue.
 4. Otherwise ship a **Small** or **Medium** roadmap item. Rotate themes
    A, B, C, D in that order, starting after the theme of the most recently
-   merged `feature` pull request (or with A when there is none), and take the
-   first undelivered item in the theme. A follow-up recorded on the latest
-   major feature's tracking issue may be taken instead when it is more
-   valuable.
+   merged `feature` pull request whose body contains a `Roadmap:` ID (or with
+   A when there is none), and take the first undelivered item in the theme.
+   A follow-up recorded on the latest major feature's tracking issue may be
+   taken instead when it is more valuable.
 
 Before starting, search merged pull requests and issues for the roadmap ID
 (for example `Roadmap: A3`) so an item is never delivered twice. The owner
@@ -229,8 +231,10 @@ service, and browser journey.
 - Only one major feature is in progress at a time. Finish it before starting
   another.
 - Use additive migrations only.
-- Close the tracking issue when its acceptance criteria are proven, and list
-  worthwhile follow-ups in the closing comment.
+- Earlier milestone pull requests reference the tracking issue with
+  `Part of #N`. Before the final milestone merges, record worthwhile
+  follow-ups on the tracking issue; the final pull request closes it with
+  `Closes #N` once its acceptance criteria are proven.
 
 ### What does not count as an increment
 
@@ -248,6 +252,22 @@ The following are not acceptable as the outcome of a day:
 Do this work only when the day's user-visible change requires it in the code
 it touches, when the owner files an `autowork` issue for it, or when an
 override applies.
+
+### Recording work for later runs
+
+Later runs choose work from the history earlier runs leave behind, so every
+automated pull request records:
+
+- exactly one type label: `polish`, `feature`, `major-feature`, or
+  `override`, plus `autowork` when it implements an owner issue;
+- a `Journey:` line on polish work and a `Roadmap:` line on roadmap work;
+- `Closes #N` for each `autowork` or `polish` issue it completes, so merged
+  work is never selected again.
+
+Rotations read only pull requests carrying the matching line: the journey
+rotation uses the latest merged `polish` pull request for each journey, with
+no time limit, and the theme rotation uses the latest merged `feature` pull
+request with a `Roadmap:` ID.
 
 ## Product Roadmap
 

@@ -13,8 +13,12 @@ issues first, then polish-day jank sweeps or feature-day roadmap items.
    type from the calendar date.
 3. Gather selection state:
    - open issues labeled `autowork`, `polish`, and `major-feature`;
-   - pull requests labeled `polish`, `feature`, and `major-feature` merged in
-     the last 30 days, with the `Journey:` or `Roadmap:` line from each body.
+   - for each journey, the most recently merged `polish` pull request whose
+     body names it in a `Journey:` line, with no time limit;
+   - the most recently merged `feature` pull request whose body contains a
+     `Roadmap:` ID;
+   - whether a `major-feature` pull request merged in the last 14 days;
+   - merged pull requests and issues that mention the candidate roadmap ID.
 4. Select exactly one outcome using the rules for the day type. State the day
    type, the journey or roadmap ID, the user outcome, and the value area from
    `PRODUCT_DIRECTION.md` it improves.
@@ -29,23 +33,31 @@ issues first, then polish-day jank sweeps or feature-day roadmap items.
 8. Run formatting, build, unit tests, and the committed E2E verification.
 9. Review the complete diff, remediate actionable findings, and open a pull
    request only when all evidence is present. Apply `auto-improvement` and
-   exactly one of `polish`, `feature`, or `major-feature`; also apply
-   `autowork` when implementing an `autowork` issue.
-10. Afterward, file deferred polish findings (at most three, deduplicated) and
-    update or close the major-feature tracking issue.
+   exactly one type label: `polish`, `feature`, `major-feature`, or
+   `override`. Also apply `autowork` when implementing an `autowork` issue.
+   Add `Closes #N` for each `autowork` or `polish` issue the pull request
+   completes, and `Part of #N` or `Closes #N` for a major-feature tracking
+   issue as `PRODUCT_DIRECTION.md` describes.
+10. Only after the pull request links the issues it completes, file deferred
+    polish findings (at most three, deduplicated against open issues) and
+    update the major-feature tracking issue.
 
 ## Labels
 
 | Label | Applies to | Meaning |
 |---|---|---|
-| `autowork` | issues | Owner-approved work; outranks self-selected work. |
+| `autowork` | issues, pull requests | Owner-approved work; outranks self-selected work. |
 | `auto-improvement` | pull requests | Opened by the daily automation. |
 | `polish` | pull requests, issues | Polish-day pull request, or a deferred jank finding. |
 | `feature` | pull requests | Small or Medium feature-day pull request. |
 | `major-feature` | pull requests, issues | Major feature milestone, or its tracking issue. |
+| `override` | pull requests | Override work; excluded from rotations and cadence. |
 
-Create a missing label with `gh label create` rather than skipping it; the
-labels are how later runs find the major cadence and journey rotation.
+Owner `autowork` work takes the type label that matches its kind: `polish`
+for a bug or UX problem, `feature` for a capability, or `major-feature` for a
+tracking-issue milestone. Create a missing label with `gh label create`
+rather than skipping it; the labels are how later runs find the major cadence
+and journey rotation.
 
 ## Acceptance Gates
 
@@ -60,8 +72,9 @@ labels are how later runs find the major cadence and journey rotation.
   friends, notifications, and responsive layouts
 - polish days: a before-and-after screenshot pair for each fixed finding at
   the same viewport, and the jank log in the pull request
-- feature days: browser assertions for the new capability, including what a
-  recipient or non-member must not see
+- feature days: browser assertions for the new capability; for coordination
+  or sharing features, also assert what a recipient or non-member must not
+  see
 - a dated release note under `.docs/releases/`
 
 ## Release Evidence

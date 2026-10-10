@@ -1485,6 +1485,8 @@ const capturedProductPage = `<!doctype html>
 </html>`;
 
 // Stores with very long metadata must not push the capture address past common request-line limits.
+const unavailableCaptureImagePath = "/images/glow-lamp-unavailable.png";
+
 const longMetadataProductPage = `<!doctype html>
 <html lang="en">
 <head>
@@ -1510,6 +1512,9 @@ async function verifyProductCaptureJourney(browser, results) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.route("https://shop.example/**", route => {
     const requestUrl = new URL(route.request().url());
+    if (requestUrl.pathname === unavailableCaptureImagePath) {
+      return route.fulfill({ status: 200, contentType: "image/png", body: "not an image" });
+    }
     return requestUrl.pathname.endsWith(".svg")
       ? route.fulfill({ status: 200, contentType: "image/svg+xml", body: capturedProductImage })
       : route.fulfill({
@@ -1729,6 +1734,32 @@ async function verifyProductCaptureJourney(browser, results) {
   await sharedTextDialog.getByRole("button", { name: "Cancel" }).click();
   await sharedTextDialog.waitFor({ state: "detached" });
 
+  const unavailableImageUrl = `https://shop.example${unavailableCaptureImagePath}`;
+  await capturePage.goto(`${baseUrl}${captureWishlistPath}/items/new?${new URLSearchParams({
+    url: "https://shop.example/products/glow-lamp",
+    title: "Glow Lamp",
+    image: unavailableImageUrl
+  })}`);
+  await capturePage.getByRole("status")
+    .filter({ hasText: "The product link is ready. Review the details before saving." })
+    .waitFor({ state: "visible", timeout: 30000 });
+  await capturePage.locator(`img[src="${unavailableImageUrl}"]`).waitFor({ state: "detached" });
+  if (await capturePage.getByLabel("Name").inputValue() !== "Glow Lamp" ||
+      await capturePage.getByRole("button", { name: "Remove image" }).count() > 0) {
+    throw new Error("A captured image that could not load still appeared on the new item.");
+  }
+  await capturePage.getByRole("button", { name: "Add item", exact: true }).click();
+  await capturePage.waitForURL(url => url.pathname === captureWishlistPath);
+  await capturePage.getByRole("link", { name: "View Glow Lamp product (opens in a new tab)" })
+    .waitFor({ state: "visible" });
+  if (await capturePage.locator(`img[src="${unavailableImageUrl}"]`).count() > 0) {
+    throw new Error("A captured image that could not load was saved with the item.");
+  }
+  await capturePage.getByRole("button", { name: "Delete Glow Lamp" }).click();
+  const unavailableImageDeleteDialog = capturePage.getByRole("dialog", { name: "Delete item" });
+  await unavailableImageDeleteDialog.getByRole("button", { name: "Delete item" }).click();
+  await unavailableImageDeleteDialog.waitFor({ state: "detached" });
+
   // The captured image is served only to this browser context, so remove the item before other journeys run.
   await capturePage.getByRole("button", { name: "Delete Trail Lantern" }).click();
   const captureDeleteDialog = capturePage.getByRole("dialog", { name: "Delete item" });
@@ -1794,6 +1825,7 @@ async function verifyProductCaptureJourney(browser, results) {
       "bookmarklet captures name, description, price, and image from a store page",
       "bookmarklet keeps pages with very long metadata within request limits",
       "captured product prefills a new item and saves with its clean link",
+      "a captured image that cannot load is not saved with the item",
       "pasting a product link anywhere on a wishlist starts a new item",
       "shared text pasted into the product field imports the link and name",
       "dark quick add contrast",

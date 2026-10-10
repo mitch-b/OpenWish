@@ -28,6 +28,9 @@ All notable user-facing changes to OpenWish are documented here.
 - The bookmarklet shortens long descriptions and titles so very detailed product pages still open OpenWish.
 - A bare store address, such as `etsy.com/listing/...`, is no longer used as an item name.
 - The Add item button is disabled while a product link is being imported.
+- When a shopping app shares a product name with its link, that name is used instead of the app's title.
+- Wishlist pages show add and edit controls only to people who can edit the list, including those with Edit or Admin sharing, so paste-anywhere works for them.
+- A captured product image that can't load is left off the new item instead of being saved as a broken image.
 
 ## [0.1.38] - 2026-10-10
 

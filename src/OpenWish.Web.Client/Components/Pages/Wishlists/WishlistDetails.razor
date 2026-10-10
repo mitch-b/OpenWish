@@ -9,6 +9,7 @@
 @inject IWishlistService WishlistService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILogger<WishlistDetails> Logger
 
 @implements IAsyncDisposable
 @rendermode InteractiveAuto
@@ -935,14 +936,28 @@ else
     private static string GetItemName(WishlistItemModel item) =>
         string.IsNullOrWhiteSpace(item.Name) ? "This item" : item.Name;
 
-    private Task SetupSecurity()
+    private async Task SetupSecurity()
     {
         if (_wishlist == null || string.IsNullOrEmpty(_currentUserId))
-            return Task.CompletedTask;
+            return;
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
-        _canEdit = _isOwner || _wishlist.IsCollaborative;
-        return Task.CompletedTask;
+        if (_isOwner)
+        {
+            _canEdit = true;
+            return;
+        }
+
+        try
+        {
+            // Match the server's rules: Edit or Admin sharing, or an accepted member of a collaborative event list.
+            _canEdit = await WishlistService.CanUserEditWishlistByPublicIdAsync(WishlistId, _currentUserId);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "Could not check edit access for wishlist {WishlistId}", WishlistId);
+            _canEdit = false;
+        }
     }
 
     private async Task ShareWishlist()

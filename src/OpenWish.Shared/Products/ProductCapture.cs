@@ -33,19 +33,21 @@ public sealed record ProductCapture
         string? price = null,
         string? image = null)
     {
-        SharedProductLink? sharedLink = null;
+        Uri? sharedUrl = null;
+        string? titleHint = null;
         foreach (var candidate in new[] { url, text, title })
         {
             if (ProductLink.TryParse(candidate, out var parsed))
             {
-                sharedLink = parsed;
-                break;
+                sharedUrl ??= parsed.Url;
+                titleHint ??= parsed.TitleHint;
             }
         }
 
-        var link = sharedLink is null ? null : ProductLink.Clean(sharedLink.Url);
+        var link = sharedUrl is null ? null : ProductLink.Clean(sharedUrl);
         var storeName = link is null ? null : ProductLink.GetStoreName(link);
-        var name = CleanName(title, storeName) ?? CleanName(text, storeName) ?? sharedLink?.TitleHint;
+        // Text shared with a link usually names the product, while a share's title is often just the app's name.
+        var name = CleanName(titleHint, storeName) ?? CleanName(title, storeName) ?? CleanName(text, storeName);
         var cleanDescription = ProductLink.CleanDescription(description, name);
         decimal? cleanPrice = ProductLink.TryParsePrice(price, out var parsedPrice) ? parsedPrice : null;
 

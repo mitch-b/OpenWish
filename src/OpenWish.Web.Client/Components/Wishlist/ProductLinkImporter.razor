@@ -58,7 +58,8 @@
         </div>
     }
 
-    @if (!string.IsNullOrWhiteSpace(Model.Image) && !_imageFailed)
+    @* Wait for interactivity so an image that fails to load is caught and Remove image works. *@
+    @if (RendererInfo.IsInteractive && !string.IsNullOrWhiteSpace(Model.Image) && !_imageFailed)
     {
         <div class="product-import-preview">
             <img src="@Model.Image" alt="" width="64" height="64" loading="lazy" @onerror="HandleImageError" />
@@ -231,8 +232,11 @@
     private async Task HandleImageError()
     {
         _imageFailed = true;
-        // Drop an image we just imported if the browser can't show it; keep saved images untouched.
-        if (_importedImage is not null && string.Equals(_importedImage, Model.Image, StringComparison.Ordinal))
+        // A new item's image came from a capture or import, so drop it if the browser can't show it.
+        // A saved item keeps its image unless this importer just replaced it.
+        var isNewItem = Model.Id == 0;
+        var importedHere = _importedImage is not null && string.Equals(_importedImage, Model.Image, StringComparison.Ordinal);
+        if (isNewItem || importedHere)
         {
             Model.Image = null;
             _importedImage = null;

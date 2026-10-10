@@ -496,6 +496,11 @@ public class InteractiveControlMarkupTests
         var seedIndex = importerMarkup.IndexOf("var seed = ProductImport.SeedLink(Model, link);", StringComparison.Ordinal);
         Assert.InRange(seedIndex, 0, importerMarkup.IndexOf("await ProductService.TryScrapeProductFromUrl", StringComparison.Ordinal));
         Assert.Contains("ProductImport.Apply(Model, link, product, seed)", importerMarkup, StringComparison.Ordinal);
+        var imageErrorHandler = importerMarkup[importerMarkup.IndexOf("private async Task HandleImageError()", StringComparison.Ordinal)..];
+        Assert.Contains("@if (RendererInfo.IsInteractive && !string.IsNullOrWhiteSpace(Model.Image) && !_imageFailed)", importerMarkup, StringComparison.Ordinal);
+        Assert.Contains("var isNewItem = Model.Id == 0;", imageErrorHandler, StringComparison.Ordinal);
+        Assert.Contains("if (isNewItem || importedHere)", imageErrorHandler, StringComparison.Ordinal);
+        Assert.Contains("Model.Image = null;", imageErrorHandler, StringComparison.Ordinal);
         Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
@@ -551,6 +556,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("[JSInvokable]", details, StringComparison.Ordinal);
         Assert.Contains("if (!_canEdit || _itemModal is null || _itemModal.IsVisible || !ProductLink.ContainsWebAddress(text))", details, StringComparison.Ordinal);
         Assert.Contains("openWishListenForProductLinkPaste", details, StringComparison.Ordinal);
+        Assert.Contains("_canEdit = await WishlistService.CanUserEditWishlistByPublicIdAsync(WishlistId, _currentUserId);", details, StringComparison.Ordinal);
+        Assert.DoesNotContain("_wishlist.IsCollaborative;", details, StringComparison.Ordinal);
         Assert.Contains("openWishStopListeningForProductLinkPaste", details, StringComparison.Ordinal);
         Assert.Contains("Paste it anywhere on this page to add it.", details, StringComparison.Ordinal);
 

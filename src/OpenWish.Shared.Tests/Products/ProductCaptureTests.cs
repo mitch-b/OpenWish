@@ -53,6 +53,20 @@ public class ProductCaptureTests
         Assert.Equal("https://www.etsy.com/listing/123456789/handmade-mug", item.Url);
     }
 
+    [Theory]
+    [InlineData("https://www.amazon.com/dp/B0CJZMP7L1?ref_=share")]
+    [InlineData(null)]
+    public void FromQuery_PrefersTheProductNameInSharedTextOverTheAppTitle(string? url)
+    {
+        var capture = ProductCapture.FromQuery(
+            url,
+            text: "Check out Ember Mug 2, Temperature Control Smart Mug https://www.amazon.com/dp/B0CJZMP7L1",
+            title: "Amazon Shopping");
+
+        Assert.Equal("https://www.amazon.com/dp/B0CJZMP7L1", capture.Link?.AbsoluteUri);
+        Assert.Equal("Ember Mug 2, Temperature Control Smart Mug", capture.Name);
+    }
+
     [Fact]
     public void FromQuery_UsesTheSharedTitleWhenTheTextIsOnlyALink()
     {

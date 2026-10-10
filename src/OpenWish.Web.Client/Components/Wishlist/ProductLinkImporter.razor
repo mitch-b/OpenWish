@@ -133,6 +133,8 @@
         ImportUrl = link.AbsoluteUri;
         _lookupStoreName = ProductLink.GetStoreName(link);
         _message = null;
+        // Keep the link on the item before looking it up, so a slow store, timeout, or rate limit can't lose it.
+        var seed = ProductImport.SeedLink(Model, link);
         await SetImportingAsync(true);
 
         try
@@ -146,7 +148,7 @@
                 : link.AbsoluteUri;
             var product = await ProductService.TryScrapeProductFromUrl(lookup, timeout.Token);
             var imageBefore = Model.Image;
-            var result = ProductImport.Apply(Model, link, product);
+            var result = ProductImport.Apply(Model, link, product, seed);
             if (!string.Equals(imageBefore, Model.Image, StringComparison.Ordinal))
             {
                 _importedImage = Model.Image;

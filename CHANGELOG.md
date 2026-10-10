@@ -23,6 +23,11 @@ All notable user-facing changes to OpenWish are documented here.
 - Primary buttons keep the OpenWish purple when hovered, focused, or pressed instead of switching to the default blue.
 - Shared text that puts the product name after the link now imports the right link and keeps the name.
 - Amazon prices written in European format, such as 1.299,99, import at the right amount.
+- A product link stays on the item when a lookup times out, is rate limited, or loses its connection.
+- Product lookups retry a store's temporary server errors, not just 503 and 429 responses.
+- The bookmarklet shortens long descriptions and titles so very detailed product pages still open OpenWish.
+- A bare store address, such as `etsy.com/listing/...`, is no longer used as an item name.
+- The Add item button is disabled while a product link is being imported.
 
 ## [0.1.38] - 2026-10-10
 

@@ -37,6 +37,22 @@ public class ProductCaptureTests
         Assert.Equal("Handmade ceramic tea mug", capture.Name);
     }
 
+    [Theory]
+    [InlineData(null, "etsy.com/listing/123456789/handmade-mug")]
+    [InlineData("etsy.com/listing/123456789/handmade-mug", null)]
+    [InlineData("etsy.com/listing/123456789/handmade-mug", "etsy.com/listing/123456789/handmade-mug")]
+    public void FromQuery_DoesNotUseABareLinkAsTheName(string? url, string? text)
+    {
+        var capture = ProductCapture.FromQuery(url, text, title: text);
+
+        Assert.Equal("https://www.etsy.com/listing/123456789/handmade-mug", capture.Link?.AbsoluteUri);
+        Assert.Null(capture.Name);
+        var item = new WishlistItemModel { Name = string.Empty };
+        capture.ApplyTo(item);
+        Assert.Equal(string.Empty, item.Name);
+        Assert.Equal("https://www.etsy.com/listing/123456789/handmade-mug", item.Url);
+    }
+
     [Fact]
     public void FromQuery_UsesTheSharedTitleWhenTheTextIsOnlyALink()
     {

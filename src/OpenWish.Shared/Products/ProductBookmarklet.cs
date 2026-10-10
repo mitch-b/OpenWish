@@ -8,9 +8,15 @@ public static class ProductBookmarklet
 {
     public const string CapturePath = "add";
 
+    /// <summary>
+    /// Longest encoded query the bookmarklet sends. Servers and proxies commonly reject request lines over 8 KB,
+    /// so lower-priority details are shortened or left out on pages with very long metadata.
+    /// </summary>
+    public const int MaxQueryLength = 6000;
+
     // A javascript: URL is one line, and browsers percent-decode it before running it,
     // so this script avoids line breaks, comments, '%', and '#'.
-    private const string Script =
+    private static readonly string _script =
         "(()=>{" +
         "const d=document,l=location;" +
         "if(!/^https?:$/.test(l.protocol)){alert('Open a product page, then use Add to OpenWish.');return}" +
@@ -27,8 +33,11 @@ public static class ProductBookmarklet
         "description:j.description||m('og:description')||m('description')," +
         "price:o.price||o.lowPrice||m('product:price:amount')||m('og:price:amount')||(c?c.textContent:'')," +
         "image:(g&&(g.url||g))||m('og:image')||m('twitter:image')||(a?a.getAttribute('data-old-hires')||a.src:'')};" +
-        "const q=new URLSearchParams();" +
-        "for(const k in p){const v=String(p[k]||'').trim();if(v)q.set(k,v.slice(0,k==='description'?600:2000))}" +
+        "const q=new URLSearchParams(),b=" + MaxQueryLength + ";" +
+        "for(const k of['url','title','price','image','description']){" +
+        "let v=String(p[k]||'').trim().slice(0,k==='description'?600:2000);if(!v)continue;q.set(k,v);" +
+        "while(String(q).length>b&&(k==='title'||k==='description')&&v.length>40){v=v.slice(0,v.length>>1).trim();q.set(k,v)}" +
+        "if(String(q).length>b)q.delete(k)}" +
         "const u=__OPENWISH_APP__+'" + CapturePath + "?'+q;" +
         "if(!window.open(u,'_blank'))l.href=u" +
         "})()";
@@ -54,6 +63,6 @@ public static class ProductBookmarklet
             .Replace("'", "\\'", StringComparison.Ordinal)
             .Replace("%", "%25", StringComparison.Ordinal)
             .Replace("#", "%23", StringComparison.Ordinal) + "'";
-        return "javascript:" + Script.Replace("__OPENWISH_APP__", appLiteral, StringComparison.Ordinal);
+        return "javascript:" + _script.Replace("__OPENWISH_APP__", appLiteral, StringComparison.Ordinal);
     }
 }

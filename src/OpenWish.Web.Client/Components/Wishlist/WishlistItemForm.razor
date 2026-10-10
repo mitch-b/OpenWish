@@ -12,7 +12,7 @@
                          InitialLink="@InitialImportLink" />
 </div>
 
-<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@IsSubmitting">
+<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -67,7 +67,7 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+        <button type="submit" class="btn btn-primary" disabled="@IsBusy">
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -96,10 +96,11 @@
     [Parameter] public string? InitialImportLink { get; set; }
 
     private bool _isImporting;
+    private bool IsBusy => IsSubmitting || _isImporting;
 
     private async Task HandleSubmit()
     {
-        if (_isImporting)
+        if (IsBusy)
         {
             return;
         }

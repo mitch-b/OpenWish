@@ -117,7 +117,8 @@ public sealed record ProductCapture
 
     private static string? CleanName(string? value, string? storeName)
     {
-        if (ProductLink.ContainsWebAddress(value))
+        // A bare link such as etsy.com/listing/123/mug is still a link, not a product name.
+        if (ProductLink.ContainsWebAddress(value) || ProductLink.TryParse(value, out _))
         {
             return null;
         }

@@ -449,7 +449,7 @@ public partial class ProductService : IProductService
                 return new FetchedPage(pageUri)
                 {
                     Reason = $"HTTP {(int)response.StatusCode}",
-                    MayRetry = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.TooManyRequests
+                    MayRetry = (int)response.StatusCode >= 500 || response.StatusCode == HttpStatusCode.TooManyRequests
                 };
             }
 

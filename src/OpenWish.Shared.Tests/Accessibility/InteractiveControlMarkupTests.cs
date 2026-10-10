@@ -493,8 +493,14 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-busy=\"@(_isImporting ? \"true\" : \"false\")\"", importerMarkup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@(_isImporting || Disabled || string.IsNullOrWhiteSpace(ImportUrl))\"", importerMarkup, StringComparison.Ordinal);
         Assert.Contains("@attributes=\"InputAttributes\"", importerMarkup, StringComparison.Ordinal);
+        var seedIndex = importerMarkup.IndexOf("var seed = ProductImport.SeedLink(Model, link);", StringComparison.Ordinal);
+        Assert.InRange(seedIndex, 0, importerMarkup.IndexOf("await ProductService.TryScrapeProductFromUrl", StringComparison.Ordinal));
+        Assert.Contains("ProductImport.Apply(Model, link, product, seed)", importerMarkup, StringComparison.Ordinal);
         Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("<button type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\">", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("private bool IsBusy => IsSubmitting || _isImporting;", formMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"wishlist-item-dialog-title\"", modalMarkup, StringComparison.Ordinal);
@@ -531,7 +537,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<label for=\"quick-add-text\" class=\"form-label\">Link or gift idea</label>", quickAdd, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"quick-add-help\"", quickAdd, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"choose-list-title\" aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", quickAdd, StringComparison.Ordinal);
-        Assert.Contains("CanUserEditWishlistByPublicIdAsync(wishlist.PublicId, _userId)", quickAdd, StringComparison.Ordinal);
+        Assert.Contains("WishlistService.GetEditableWishlistsAsync(_userId)", quickAdd, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanUserEditWishlistByPublicIdAsync", quickAdd, StringComparison.Ordinal);
         Assert.Contains("NavigationManager.NavigateTo(GetAddItemHref(_wishlists[0]), replace: true);", quickAdd, StringComparison.Ordinal);
         Assert.Contains("ProductBookmarklet.Create(new Uri(NavigationManager.BaseUri))", quickAdd, StringComparison.Ordinal);
         Assert.Contains("@onclick:preventDefault=\"true\"", quickAdd, StringComparison.Ordinal);
@@ -1067,7 +1074,8 @@ public class InteractiveControlMarkupTests
             cancelHandler.IndexOf("if (_isSubmitting)", StringComparison.Ordinal) <
             cancelHandler.IndexOf("NavigationManager.NavigateTo", StringComparison.Ordinal));
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-busy=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\"", formMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
     }
 

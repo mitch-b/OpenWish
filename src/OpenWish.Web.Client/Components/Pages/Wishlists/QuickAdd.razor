@@ -246,16 +246,9 @@
                 return;
             }
 
-            var ownWishlists = await WishlistService.GetUserWishlistsAsync(_userId);
-            var sharedWishlists = (await WishlistService.GetSharedWithMeWishlistsAsync(_userId))
-                .Where(wishlist => wishlist.OwnerId != _userId && !wishlist.Deleted)
-                .DistinctBy(wishlist => wishlist.PublicId)
-                .ToList();
-            // Sharing can be view-only, so offer only the shared lists this person can add to.
-            var canEditShared = await Task.WhenAll(sharedWishlists.Select(wishlist =>
-                WishlistService.CanUserEditWishlistByPublicIdAsync(wishlist.PublicId, _userId)));
-            _wishlists = ownWishlists
-                .Concat(sharedWishlists.Where((_, index) => canEditShared[index]))
+            // Sharing can be view-only, so offer only the lists this person can add to.
+            var editableWishlists = await WishlistService.GetEditableWishlistsAsync(_userId);
+            _wishlists = editableWishlists
                 .Where(wishlist => !wishlist.Deleted)
                 .DistinctBy(wishlist => wishlist.PublicId)
                 .OrderBy(wishlist => wishlist.OwnerId == _userId ? 0 : 1)

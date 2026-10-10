@@ -113,6 +113,14 @@ public interface IWishlistService
     /// <returns>Collection of shared wishlist models.</returns>
     Task<IEnumerable<WishlistModel>> GetSharedWithMeWishlistsAsync(string userId);
 
+    /// <summary>
+    /// Lists every wishlist a user can add items to: their own, wishlists shared with edit access,
+    /// and collaborative event wishlists for events they belong to.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <returns>Collection of wishlists the user can edit.</returns>
+    Task<IEnumerable<WishlistModel>> GetEditableWishlistsAsync(string userId);
+
     /// <summary>Lists all wishlists owned by the user's friends.</summary>
     /// <param name="userId">The user ID.</param>
     /// <returns>Collection of friend wishlists.</returns>

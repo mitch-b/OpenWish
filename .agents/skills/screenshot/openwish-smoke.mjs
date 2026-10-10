@@ -1484,6 +1484,20 @@ const capturedProductPage = `<!doctype html>
 <body><h1>Trail Lantern</h1><p>$34.99</p></body>
 </html>`;
 
+// Stores with very long metadata must not push the capture address past common request-line limits.
+const longMetadataProductPage = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trail Lantern Deluxe | Shop Example</title>
+<meta property="og:title" content="Trail Lantern Deluxe ${"– Édition spéciale lumière chaude ".repeat(120)}">
+<meta property="og:description" content="${"Lanterne rechargeable très lumineuse, idéale pour le camping. ".repeat(60)}">
+<meta property="og:image" content="https://shop.example/images/${"trail-lantern-".repeat(140)}.svg">
+<meta property="product:price:amount" content="54.99">
+</head>
+<body><h1>Trail Lantern Deluxe</h1></body>
+</html>`;
+
 async function pasteText(locator, text) {
   await locator.evaluate((element, value) => {
     const clipboardData = new DataTransfer();
@@ -1498,7 +1512,11 @@ async function verifyProductCaptureJourney(browser, results) {
     const requestUrl = new URL(route.request().url());
     return requestUrl.pathname.endsWith(".svg")
       ? route.fulfill({ status: 200, contentType: "image/svg+xml", body: capturedProductImage })
-      : route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: capturedProductPage });
+      : route.fulfill({
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: requestUrl.pathname === "/products/trail-lantern-deluxe" ? longMetadataProductPage : capturedProductPage
+      });
   });
   const page = await context.newPage();
   const diagnostics = monitorPage(page);
@@ -1589,6 +1607,22 @@ async function verifyProductCaptureJourney(browser, results) {
       !capturedQuery.get("url")?.startsWith("https://shop.example/products/trail-lantern")) {
     throw new Error(`The bookmarklet did not capture the product details: ${capturePage.url()}`);
   }
+  await storePage.goto("https://shop.example/products/trail-lantern-deluxe");
+  const [longMetadataCapturePage] = await Promise.all([
+    storePage.waitForEvent("popup"),
+    storePage.evaluate(script => (0, eval)(script), bookmarklet.slice("javascript:".length))
+  ]);
+  const longMetadataDiagnostics = monitorPage(longMetadataCapturePage);
+  await longMetadataCapturePage.waitForURL(url => url.origin === baseUrl && url.pathname === "/add");
+  const longMetadataCaptureUrl = new URL(longMetadataCapturePage.url());
+  if (longMetadataCaptureUrl.search.length > 6001 ||
+      longMetadataCaptureUrl.searchParams.get("url") !== "https://shop.example/products/trail-lantern-deluxe" ||
+      !longMetadataCaptureUrl.searchParams.get("title")?.startsWith("Trail Lantern Deluxe") ||
+      longMetadataCaptureUrl.searchParams.get("price") !== "54.99") {
+    throw new Error(`The bookmarklet did not keep a long product page within request limits: ${longMetadataCaptureUrl.search.length} characters.`);
+  }
+  await longMetadataCapturePage.getByRole("heading", { name: /^Trail Lantern Deluxe/ }).waitFor({ state: "visible" });
+  await longMetadataCapturePage.close();
   await storePage.close();
   await capturePage.getByRole("heading", { name: "Trail Lantern" }).waitFor({ state: "visible" });
   await capturePage.getByText("34.99").first().waitFor({ state: "visible" });
@@ -1717,7 +1751,11 @@ async function verifyProductCaptureJourney(browser, results) {
   await screenshot(page, "quick-add-dark.png");
   await page.evaluate(() => localStorage.setItem("theme", "light"));
 
-  for (const [label, pageDiagnostics] of [["Quick add", diagnostics], ["Captured product", captureDiagnostics]]) {
+  for (const [label, pageDiagnostics] of [
+    ["Quick add", diagnostics],
+    ["Captured product", captureDiagnostics],
+    ["Long product capture", longMetadataDiagnostics]
+  ]) {
     if (pageDiagnostics.browserErrors.length > 0) {
       throw new Error(`${label} browser errors: ${pageDiagnostics.browserErrors.join(" | ")}`);
     }
@@ -1754,6 +1792,7 @@ async function verifyProductCaptureJourney(browser, results) {
       "dashboard quick add hands off to wishlist choice",
       "quick add empty-state guidance and bookmarklet setup",
       "bookmarklet captures name, description, price, and image from a store page",
+      "bookmarklet keeps pages with very long metadata within request limits",
       "captured product prefills a new item and saves with its clean link",
       "pasting a product link anywhere on a wishlist starts a new item",
       "shared text pasted into the product field imports the link and name",

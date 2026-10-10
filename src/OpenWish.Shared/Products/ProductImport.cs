@@ -36,15 +36,53 @@ public sealed record ProductImportResult(ProductImportKind Kind, string StoreNam
     };
 }
 
+/// <summary>The link and store filled in before a lookup, so the looked-up page can refine them afterward.</summary>
+public sealed record ProductLinkSeed(string? Url, string? WhereToBuy);
+
 /// <summary>
 /// Applies looked-up product details to a wishlist item without replacing anything the person already entered.
 /// </summary>
 public static class ProductImport
 {
-    public static ProductImportResult Apply(WishlistItemModel item, Uri link, ProductModel? product)
+    /// <summary>
+    /// Fills an empty link and store right away, so they are kept even when the lookup fails or times out.
+    /// Pass the returned seed to <see cref="Apply"/> so the store page's own link can replace the placeholder.
+    /// </summary>
+    public static ProductLinkSeed SeedLink(WishlistItemModel item, Uri link)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(link);
+
+        string? seededUrl = null;
+        string? seededStore = null;
+        if (string.IsNullOrWhiteSpace(item.Url))
+        {
+            item.Url = seededUrl = ProductLink.Clean(link).AbsoluteUri;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.WhereToBuy))
+        {
+            item.WhereToBuy = seededStore = ProductLink.GetStoreName(link);
+        }
+
+        return new ProductLinkSeed(seededUrl, seededStore);
+    }
+
+    public static ProductImportResult Apply(WishlistItemModel item, Uri link, ProductModel? product, ProductLinkSeed? seed = null)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(link);
+
+        // Placeholders from SeedLink give way to the page's details unless the person changed them during the lookup.
+        if (seed?.Url is not null && string.Equals(item.Url, seed.Url, StringComparison.Ordinal))
+        {
+            item.Url = null;
+        }
+
+        if (seed?.WhereToBuy is not null && string.Equals(item.WhereToBuy, seed.WhereToBuy, StringComparison.Ordinal))
+        {
+            item.WhereToBuy = null;
+        }
 
         var storeName = !string.IsNullOrWhiteSpace(product?.StoreName)
             ? product.StoreName.Trim()

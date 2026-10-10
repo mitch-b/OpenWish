@@ -62,4 +62,16 @@ public class ProductBookmarkletTests
             Assert.Contains(field, bookmarklet);
         }
     }
+
+    [Fact]
+    public void Create_KeepsTheCaptureAddressWithinRequestLimits()
+    {
+        var bookmarklet = ProductBookmarklet.Create(new Uri("https://wishes.example/"));
+
+        Assert.InRange(ProductBookmarklet.MaxQueryLength, 1000, 7000);
+        Assert.Contains($"b={ProductBookmarklet.MaxQueryLength}", bookmarklet, StringComparison.Ordinal);
+        // The link and name are added first, so long descriptions or images give way before they do.
+        Assert.Contains("['url','title','price','image','description']", bookmarklet, StringComparison.Ordinal);
+        Assert.Contains("if(String(q).length>b)q.delete(k)", bookmarklet, StringComparison.Ordinal);
+    }
 }

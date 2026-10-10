@@ -125,6 +125,13 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             ?? Enumerable.Empty<WishlistModel>();
     }
 
+    public async Task<IEnumerable<WishlistModel>> GetEditableWishlistsAsync(string userId)
+    {
+        _ = userId;
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/editable")
+            ?? Enumerable.Empty<WishlistModel>();
+    }
+
     public async Task<IEnumerable<WishlistModel>> GetFriendsWishlistsAsync(string userId)
     {
         return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>($"{BaseUrl}/friends")

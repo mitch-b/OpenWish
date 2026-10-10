@@ -151,4 +151,69 @@ public class ProductImportTests
         Assert.Equal(ProductImportKind.LinkOnly, result.Kind);
         Assert.Equal("shop.example", result.StoreName);
     }
+
+    [Fact]
+    public void SeedLink_KeepsTheLinkWhenTheLookupNeverFinishes()
+    {
+        var item = new WishlistItemModel { Name = "Mug" };
+
+        var seed = ProductImport.SeedLink(item, _targetLink);
+
+        Assert.Equal("https://www.target.com/p/ember-mug-2/-/A-87654321", item.Url);
+        Assert.Equal("Target", item.WhereToBuy);
+        Assert.Equal(item.Url, seed.Url);
+        Assert.Equal("Target", seed.WhereToBuy);
+    }
+
+    [Fact]
+    public void SeedLink_LeavesALinkAndStoreThePersonEntered()
+    {
+        var item = new WishlistItemModel { Url = "https://mine.example/mug", WhereToBuy = "Local shop" };
+
+        var seed = ProductImport.SeedLink(item, _targetLink);
+
+        Assert.Null(seed.Url);
+        Assert.Null(seed.WhereToBuy);
+        Assert.Equal("https://mine.example/mug", item.Url);
+        Assert.Equal("Local shop", item.WhereToBuy);
+    }
+
+    [Fact]
+    public void Apply_ReplacesSeededPlaceholdersWithThePagesOwnLinkAndStore()
+    {
+        var shortLink = new Uri("https://amzn.to/3xYzAbC");
+        var item = new WishlistItemModel();
+        var seed = ProductImport.SeedLink(item, shortLink);
+
+        var result = ProductImport.Apply(item, shortLink, new ProductModel
+        {
+            Name = "Echo Dot",
+            Url = "https://www.amazon.com/dp/B09B8V1LZ3",
+            StoreName = "Amazon.com"
+        }, seed);
+
+        Assert.Equal(ProductImportKind.Imported, result.Kind);
+        Assert.Equal("https://www.amazon.com/dp/B09B8V1LZ3", item.Url);
+        Assert.Equal("Amazon.com", item.WhereToBuy);
+    }
+
+    [Fact]
+    public void Apply_KeepsSeededFieldsThePersonChangedDuringTheLookup()
+    {
+        var item = new WishlistItemModel();
+        var seed = ProductImport.SeedLink(item, _targetLink);
+        item.Url = "https://mine.example/mug";
+        item.WhereToBuy = "Local shop";
+
+        ProductImport.Apply(item, _targetLink, new ProductModel
+        {
+            Name = "Ember Mug 2",
+            Url = "https://www.target.com/p/ember-mug-2/-/A-11111111",
+            StoreName = "Target"
+        }, seed);
+
+        Assert.Equal("https://mine.example/mug", item.Url);
+        Assert.Equal("Local shop", item.WhereToBuy);
+        Assert.Equal("Ember Mug 2", item.Name);
+    }
 }

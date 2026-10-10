@@ -81,12 +81,17 @@ public class ProductServiceImportTests
         Assert.Equal(2, handler.Requests.Count);
     }
 
-    [Fact]
-    public async Task TryScrapeProductFromUrl_UsesTheRetryWhenTheStoreRecovers()
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    public async Task TryScrapeProductFromUrl_UsesTheRetryWhenTheStoreRecovers(HttpStatusCode firstStatus)
     {
         var calls = 0;
         var handler = new StubHandler(_ => ++calls == 1
-            ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            ? new HttpResponseMessage(firstStatus)
             : Html("<meta property='og:title' content='Desk Lamp'><meta property='og:price:amount' content='49'>"));
         var service = CreateService(handler);
 
@@ -96,6 +101,19 @@ public class ProductServiceImportTests
         Assert.False(product.FromLinkOnly);
         Assert.Equal("Desk Lamp", product.Name);
         Assert.Equal(49m, product.Price);
+    }
+
+    [Fact]
+    public async Task TryScrapeProductFromUrl_DoesNotRetryAMissingPage()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var service = CreateService(handler);
+
+        var product = await service.TryScrapeProductFromUrl(ProductUrl);
+
+        Assert.NotNull(product);
+        Assert.True(product.FromLinkOnly);
+        Assert.Single(handler.Requests);
     }
 
     [Fact]

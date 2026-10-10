@@ -2,6 +2,15 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.1.40] - 2026-10-10
+
+### Improved
+
+- The large dashboard welcome now appears only until you have a wishlist or an event. New accounts that were invited to an event see that invitation first.
+- Returning visitors get a compact dashboard header with one relevant next step: a pending invitation, a countdown to the next event within 30 days, a friend request, or an all-caught-up summary.
+- Gift exchange countdowns say whether names are drawn and the budget, and never name your match.
+- Dashboard labels use sentence case, and events dated today stay in Upcoming events for the whole day.
+
 ## [0.1.39] - 2026-10-10
 
 ### Added

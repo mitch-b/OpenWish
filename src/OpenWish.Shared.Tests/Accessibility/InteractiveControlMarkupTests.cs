@@ -1284,6 +1284,28 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void Dashboard_ReservesFullWelcomeForFirstRunAndKeepsReturningHeaderCompact()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var styles = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor.css");
+
+        Assert.Contains("DashboardWelcome.Create(", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public DashboardWelcome? Welcome { get; set; }", markup.ReplaceLineEndings("\n"), StringComparison.Ordinal);
+        Assert.Contains("@if (Welcome is null)", markup, StringComparison.Ordinal);
+        Assert.Contains("else if (Welcome.IsFirstRun)", markup, StringComparison.Ordinal);
+        Assert.Contains("<h1 class=\"visually-hidden\">Your dashboard</h1>", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"dashboard-hero dashboard-welcome\" data-welcome=\"@Welcome.Kind\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<h1>@Welcome.Headline</h1>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Welcome Back!", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Friend Requests", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Upcoming Events", markup, StringComparison.Ordinal);
+
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", styles, StringComparison.Ordinal);
+        Assert.Contains("grid-column: 1 / -1;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AccountNavigation_IsLabelledAndResponsive()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");

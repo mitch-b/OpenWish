@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.1.40",
+    "date": "2026-10-10",
+    "title": "A dashboard welcome that keeps up with you",
+    "summary": "The big welcome banner is now just for getting started. After that, the top of your dashboard is a short note about what's next for you.",
+    "highlights": [
+      "New accounts still get the full welcome, and if you were invited to an event it leads with that invitation.",
+      "Once you have a wishlist or an event, a compact header takes its place and leaves more room for your plans.",
+      "The header points to the most useful next step: an invitation to review, a countdown to your next event, or a friend request to answer.",
+      "Gift exchange countdowns mention whether names are drawn and the budget, without revealing who you're shopping for.",
+      "When nothing needs you, the header says you're all caught up and sums up your wishlists or your next event."
+    ]
+  },
+  {
     "version": "0.1.39",
     "date": "2026-10-10",
     "title": "Add gift ideas from any store link",

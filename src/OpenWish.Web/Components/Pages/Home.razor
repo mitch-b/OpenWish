@@ -1,6 +1,7 @@
 ﻿@page "/"
 @attribute [StreamRendering]
 
+@using OpenWish.Shared.Dashboard
 @using OpenWish.Web.Client.Components.Wishlist
 @using OpenWish.Web.Client.Components.Event
 
@@ -17,26 +18,62 @@
 
 <AuthorizeView>
     <Authorized>
-        <section class="dashboard-hero">
-            <div class="dashboard-hero-copy">
-                <p class="welcome-note"><OpenWishIcon Name="stars" /> Welcome Back!</p>
-                <h1>Your gift season, together.</h1>
-                <p>Save ideas, check plans, and keep surprises private.</p>
-                <div class="hero-actions">
-                    <a href="/events/new" class="btn btn-primary btn-lg">
-                        <OpenWishIcon Name="gift" /> Start a gift exchange
-                    </a>
-                    <a href="/wishlists/new" class="btn btn-quiet btn-lg">
-                        <OpenWishIcon Name="plus-lg" /> Create a wishlist
-                    </a>
+        @if (Welcome is null)
+        {
+            <section class="dashboard-hero dashboard-welcome dashboard-welcome-loading">
+                <h1 class="visually-hidden">Your dashboard</h1>
+                <span class="welcome-mark" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
+                <div class="dashboard-welcome-copy" aria-hidden="true">
+                    <span class="welcome-placeholder welcome-placeholder-title"></span>
+                    <span class="welcome-placeholder"></span>
                 </div>
-            </div>
-            <div class="hero-mark" aria-hidden="true">
-                <OpenWishIcon Name="gift" />
-                <span class="hero-spark hero-spark-one"></span>
-                <span class="hero-spark hero-spark-two"></span>
-            </div>
-        </section>
+            </section>
+        }
+        else if (Welcome.IsFirstRun)
+        {
+            <section class="dashboard-hero" data-welcome="@Welcome.Kind">
+                <div class="dashboard-hero-copy">
+                    <p class="welcome-note"><OpenWishIcon Name="stars" /> Welcome to OpenWish</p>
+                    <h1>@Welcome.Headline</h1>
+                    <p>@Welcome.Message</p>
+                    <div class="hero-actions">
+                        @if (Welcome.PrimaryAction is { } primaryAction)
+                        {
+                            <a href="@primaryAction.Href" class="btn btn-primary btn-lg">
+                                <OpenWishIcon Name="@primaryAction.Icon" /> @primaryAction.Text
+                            </a>
+                        }
+                        @if (Welcome.SecondaryAction is { } secondaryAction)
+                        {
+                            <a href="@secondaryAction.Href" class="btn btn-quiet btn-lg">
+                                <OpenWishIcon Name="@secondaryAction.Icon" /> @secondaryAction.Text
+                            </a>
+                        }
+                    </div>
+                </div>
+                <div class="hero-mark" aria-hidden="true">
+                    <OpenWishIcon Name="gift" />
+                    <span class="hero-spark hero-spark-one"></span>
+                    <span class="hero-spark hero-spark-two"></span>
+                </div>
+            </section>
+        }
+        else
+        {
+            <section class="dashboard-hero dashboard-welcome" data-welcome="@Welcome.Kind">
+                <span class="welcome-mark" aria-hidden="true"><OpenWishIcon Name="@Welcome.Icon" /></span>
+                <div class="dashboard-welcome-copy">
+                    <h1>@Welcome.Headline</h1>
+                    <p>@Welcome.Message</p>
+                </div>
+                @if (Welcome.PrimaryAction is { } action)
+                {
+                    <a href="@action.Href" class="btn btn-light dashboard-welcome-action">
+                        @action.Text <OpenWishIcon Name="arrow-right" />
+                    </a>
+                }
+            </section>
+        }
 
         <div class="dashboard-content" aria-busy="@(_isLoading ? "true" : "false")">
         @if (_isLoading)
@@ -136,7 +173,7 @@
                             <a href="/friends" class="attention-item">
                                 <span class="attention-icon attention-warm"><OpenWishIcon Name="person-plus" /></span>
                                 <span class="attention-copy">
-                                    <strong>Friend Requests</strong>
+                                    <strong>Friend requests</strong>
                                     <small>@_pendingFriendRequests.Count() waiting for you</small>
                                 </span>
                                 <span class="count-pill">@_pendingFriendRequests.Count()</span>
@@ -147,7 +184,7 @@
                             <a href="/events" class="attention-item">
                                 <span class="attention-icon attention-cool"><OpenWishIcon Name="calendar-event" /></span>
                                 <span class="attention-copy">
-                                    <strong>Upcoming Events</strong>
+                                    <strong>Upcoming events</strong>
                                     <small>@_upcomingEvents.Count() in the next 30 days</small>
                                 </span>
                                 <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
@@ -271,6 +308,10 @@
     private IEnumerable<FriendRequestModel>? _pendingFriendRequests;
     private IEnumerable<EventUserModel>? _pendingEventInvitations;
 
+    // Carried from prerendering so the welcome doesn't collapse to a placeholder while the circuit reloads data.
+    [PersistentState]
+    public DashboardWelcome? Welcome { get; set; }
+
     private string? _userId;
     private string? _loadError;
     private bool _isLoading = true;
@@ -301,11 +342,13 @@
             }
             finally
             {
+                UpdateWelcome();
                 _isLoading = false;
             }
         }
         else
         {
+            Welcome = DashboardWelcome.Unavailable;
             _isLoading = false;
         }
     }
@@ -329,11 +372,7 @@
                 .OrderByDescending(GetEventActivityTimestamp)
                 .ToList();
 
-            var thirtyDaysFromNow = DateTimeOffset.UtcNow.AddDays(30);
-            _upcomingEvents = allEvents
-                .Where(e => e.Date <= thirtyDaysFromNow && e.Date >= DateTimeOffset.UtcNow)
-                .OrderBy(e => e.Date)
-                .ToList();
+            _upcomingEvents = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).ToList();
         }
     }
 
@@ -353,16 +392,25 @@
         }
     }
 
-
+    private void UpdateWelcome() =>
+        Welcome = DashboardWelcome.Create(
+            _userId,
+            _featuredWishlists,
+            _events,
+            _pendingEventInvitations?.ToList(),
+            _pendingFriendRequests?.ToList(),
+            DateTimeOffset.UtcNow);
 
     private async Task HandleWishlistDeleted(WishlistModel wishlist)
     {
         await LoadFeaturedWishlists();
+        UpdateWelcome();
     }
 
     private async Task HandleEventDeleted(EventModel evt)
     {
         await LoadEvents();
+        UpdateWelcome();
     }
 
     private static DateTimeOffset GetWishlistActivityTimestamp(WishlistModel wishlist)

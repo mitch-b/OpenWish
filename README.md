@@ -11,7 +11,7 @@ profile.
 [Run it yourself](#installation) ·
 [See how it is built](.docs/DEVELOPING.md)
 
-<img src=".docs/images/walkthrough/readme-home.png" alt="Alex's OpenWish dashboard with family gift ideas, an upcoming holiday exchange, and a friend request ready to handle" width="900">
+<img src=".docs/images/walkthrough/readme-home.png" alt="Alex's OpenWish dashboard with a countdown to the holiday exchange, family gift ideas, and a friend request ready to handle" width="900">
 
 ## One gift season, one calm place
 

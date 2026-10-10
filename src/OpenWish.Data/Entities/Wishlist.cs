@@ -2,18 +2,18 @@ namespace OpenWish.Data.Entities;
 
 public class Wishlist : BaseEntity
 {
-    public string Name { get; set; }
+    public required string Name { get; set; }
     public string? Icon { get; set; } // Optional emoji or single character icon
-    public string OwnerId { get; set; } // Nullable if shared directly to event
-    public ApplicationUser Owner { get; set; }
+    public required string OwnerId { get; set; }
+    public ApplicationUser? Owner { get; set; }
     public int? EventId { get; set; } // Nullable if a personal wishlist
-    public Event Event { get; set; }
-    public ICollection<WishlistItem> Items { get; set; } // Items in the wishlist
-    public ICollection<WillPurchase> WillPurchases { get; set; } // Who has committed to buying items
+    public Event? Event { get; set; }
+    public ICollection<WishlistItem>? Items { get; set; } // Items in the wishlist
+    public ICollection<WillPurchase>? WillPurchases { get; set; } // Who has committed to buying items
     public bool IsCollaborative { get; set; } // Indicates if multiple users can add items
     public bool IsPrivate { get; set; } // Indicates if the wishlist is private (only owner can see)
     public bool IsFriendsOnly { get; set; } // When true, only friends with explicit permissions can see (not all friends)
-    public ICollection<WishlistComment> Comments { get; set; } // Comments on the wishlist
-    public ICollection<WishlistReaction> Reactions { get; set; } // Reactions to the wishlist
-    public ICollection<WishlistPermission> Permissions { get; set; } // Permissions for specific users
+    public ICollection<WishlistComment>? Comments { get; set; } // Comments on the wishlist
+    public ICollection<WishlistReaction>? Reactions { get; set; } // Reactions to the wishlist
+    public ICollection<WishlistPermission>? Permissions { get; set; } // Permissions for specific users
 }

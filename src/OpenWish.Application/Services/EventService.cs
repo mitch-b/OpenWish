@@ -1075,7 +1075,7 @@ public class EventService(
         var reservations = await context.ItemReservations
             .AsNoTracking()
             .Include(r => r.WishlistItem)
-                .ThenInclude(i => i.Wishlist)
+                .ThenInclude(i => i.Wishlist!)
                     .ThenInclude(w => w.Owner)
             .Where(r => !r.Deleted &&
                         r.UserId == userId &&

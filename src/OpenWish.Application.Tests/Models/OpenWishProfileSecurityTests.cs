@@ -19,6 +19,7 @@ public class OpenWishProfileSecurityTests
         var entity = new Wishlist
         {
             PublicId = "server-public-id",
+            Name = "Original name",
             OwnerId = "owner-id",
             Deleted = false
         };

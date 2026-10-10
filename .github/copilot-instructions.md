@@ -105,9 +105,11 @@ service discovery, resilience, health, logging, and OpenTelemetry defaults.
   where suitable, `var` for obvious types, `I`-prefixed interfaces, and
   underscore-prefixed private fields. EF migrations are generated code.
 - Read `PRODUCT_DIRECTION.md` and `PLAN.md` before autonomous product work.
-  Routine automation selects open issues labeled `autowork`, delivers one
-  bounded increment, and includes tests, browser evidence, screenshots, and a
-  dated release note.
+  Routine automation alternates polish days (fix jank in one core journey,
+  even without reported bugs) and feature days (owner `autowork` issues, then
+  roadmap items, with a major feature on a regular cadence). Invisible
+  code-health work is not a daily increment on its own. Each increment
+  includes tests, browser evidence, screenshots, and a dated release note.
 
 ## Configuration and secrets
 

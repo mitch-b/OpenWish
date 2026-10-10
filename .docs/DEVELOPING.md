@@ -195,6 +195,12 @@ README walkthrough is regenerated under `.docs/images/walkthrough/`.
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.
 
+Pull requests run the same gate in `.github/workflows/validate.yml`, and the
+Docker image build in `.github/workflows/docker-image.yml`, only when their
+inputs change. Each workflow lists those inputs in its `paths` filter, so
+documentation and process changes skip them. When the gate starts depending
+on a new file outside those paths, add it to the filter.
+
 ## Isolated agent environment
 
 The agent-managed environment is separate from the Aspire development

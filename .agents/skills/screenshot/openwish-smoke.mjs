@@ -260,7 +260,7 @@ async function assertDashboardWelcomeWrapsLongNames(page, welcomeSelector, textS
     sandbox.append(copy);
     document.body.append(sandbox);
     try {
-      const longName = "Grandma-Rosalind's-Extraordinarily-Long-Holiday-Cookie-And-Gift-Exchange-2026";
+      const longName = "GrandmaRosalindsExtraordinarilyLongHolidayCookieAndGiftExchange2026";
       const problems = [];
       const bounds = copy.getBoundingClientRect();
       for (const selector of textSelectors) {
@@ -272,7 +272,10 @@ async function assertDashboardWelcomeWrapsLongNames(page, welcomeSelector, textS
         element.textContent = `${longName} ${element.textContent}`;
         const box = element.getBoundingClientRect();
         if (element.scrollWidth > element.clientWidth + 1 || box.right > bounds.right + 1) {
-          problems.push(`${selector} overflowed (${Math.round(element.scrollWidth)}px in ${Math.round(element.clientWidth)}px)`);
+          problems.push(
+            `${selector} overflowed (${element.scrollWidth}px of text in ${element.clientWidth}px, ` +
+            `right edge ${Math.round(box.right)}px past ${Math.round(bounds.right)}px)`
+          );
         }
       }
       return problems;

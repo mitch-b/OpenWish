@@ -1,10 +1,27 @@
 name: Validate
 
+# Run only when an input to the build, tests, or browser verification changes.
+# These checks are not required by branch protection; if they become required,
+# replace these filters with job-level conditions so skipped runs still report.
 on:
   pull_request:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "compose.verify.yml"
+      - "version.txt"
+      - ".agents/skills/screenshot/**"
+      - ".github/workflows/validate.yml"
   push:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "compose.verify.yml"
+      - "version.txt"
+      - ".agents/skills/screenshot/**"
+      - ".github/workflows/validate.yml"
 
 permissions:
   contents: read

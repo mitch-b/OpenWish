@@ -7,6 +7,10 @@
                 <th>Name</th>
                 <th>Description</th>
                 <th>Price</th>
+                @if (Budget.HasValue)
+                {
+                    <th>Budget</th>
+                }
                 <th>Priority</th>
                 <th>Added</th>
                 <th>Actions</th>
@@ -32,6 +36,12 @@
                     </td>
                     <td data-label="Description">@(string.IsNullOrWhiteSpace(item.Description) ? "Not added" : item.Description)</td>
                     <td data-label="Price">@(item.Price?.ToString("C") ?? "Not added")</td>
+                    @if (Budget.HasValue)
+                    {
+                        <td data-label="Budget">
+                            <span class="@GetBudgetStatusClass(item)">@GetBudgetStatusText(item)</span>
+                        </td>
+                    }
                     <td data-label="Priority">
                         <span class="priority-badge @GetPriorityClass(item.Priority)">
                             @GetPriorityText(item.Priority)
@@ -89,7 +99,7 @@
                 @if (ShowInteractions)
                 {
                     <tr class="interaction-row-expanded" hidden="@(!ExpandedInteractions.Contains(item.Id))">
-                        <td colspan="6" class="interaction-row">
+                        <td colspan="@(Budget.HasValue ? 7 : 6)" class="interaction-row">
                             <div class="interaction-container"
                                  id="item-interactions-@item.Id"
                                  role="region"
@@ -125,6 +135,7 @@
     [Parameter] public string WishlistId { get; set; } = string.Empty;
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
+    [Parameter] public decimal? Budget { get; set; }
 
     private HashSet<int> ExpandedInteractions = new();
 
@@ -184,4 +195,24 @@
         3 => "Low",
         _ => "None"
     };
+
+    private string GetBudgetStatusText(WishlistItemModel item)
+    {
+        if (item.Price is not { } price || Budget is not { } budget)
+        {
+            return "Price not set";
+        }
+
+        return price <= budget ? "Within budget" : $"{price - budget:C} over budget";
+    }
+
+    private string GetBudgetStatusClass(WishlistItemModel item)
+    {
+        if (item.Price is not { } price || Budget is not { } budget)
+        {
+            return "budget-status budget-status-unknown";
+        }
+
+        return price <= budget ? "budget-status budget-status-within" : "budget-status budget-status-over";
+    }
 }

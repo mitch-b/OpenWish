@@ -114,6 +114,30 @@
     color: var(--bs-secondary-color);
 }
 
+.budget-status {
+    display: inline-flex;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.budget-status-within {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.budget-status-over {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.budget-status-unknown {
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+}
+
 .item-name {
     font-weight: 700;
     overflow-wrap: anywhere;

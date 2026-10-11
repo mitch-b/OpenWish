@@ -191,6 +191,33 @@ else
     </div>
     <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
 
+    @if (HasBudget)
+    {
+        <section class="budget-guide" aria-labelledby="budget-guide-title">
+            <div>
+                <h2 id="budget-guide-title">Shopping with a @BudgetDisplay budget</h2>
+                @if (PricedItemCount == 0)
+                {
+                    <p>No ideas have a price yet. Add prices to compare them with this budget.</p>
+                }
+                else
+                {
+                    <p>@WithinBudgetItemCount of @PricedItemCount priced @IdeaLabel(PricedItemCount) fit this budget.</p>
+                }
+            </div>
+            <button id="wishlist-budget-filter"
+                    class="btn @(BudgetFilterActive ? "btn-primary" : "btn-outline-primary")"
+                    type="button"
+                    disabled="@(PricedItemCount == 0)"
+                    aria-pressed="@(BudgetFilterActive ? "true" : "false")"
+                    aria-controls="wishlist-items"
+                    @onclick="ToggleBudgetFilter">
+                <OpenWishIcon Name="currency-dollar" />
+                <span>@(BudgetFilterActive ? "Showing within budget" : "Show within budget")</span>
+            </button>
+        </section>
+    }
+
     @if (_showFilters)
     {
         <div id="wishlist-filters" class="filter-panel">
@@ -282,6 +309,19 @@ else
                             <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
                         }
                     </button>
+                    @if (HasBudget)
+                    {
+                        <button type="button"
+                                class="sort-option @(SortBy == "budget" ? "active" : "")"
+                                aria-pressed="@(SortBy == "budget" ? "true" : "false")"
+                                @onclick="@(() => SortItems("budget"))">
+                            <OpenWishIcon Name="currency-dollar" /> Budget fit
+                            @if (SortBy == "budget")
+                            {
+                                <i class="bi @(SortAscending ? "bi-arrow-up" : "bi-arrow-down")"></i>
+                            }
+                        </button>
+                    }
                     <button type="button"
                             class="sort-option @(SortBy == "price" ? "active" : "")"
                             aria-pressed="@(SortBy == "price" ? "true" : "false")"
@@ -407,6 +447,14 @@ else
                                     @if (item.Price.HasValue)
                                     {
                                         <span class="item-price">@item.Price.Value.ToString("C")</span>
+                                        @if (HasBudget)
+                                        {
+                                            <span class="@GetBudgetStatusClass(item)">@GetBudgetStatusText(item)</span>
+                                        }
+                                    }
+                                    else if (HasBudget)
+                                    {
+                                        <span class="budget-status budget-status-unknown">Price not set</span>
                                     }
                                     @if (!string.IsNullOrEmpty(item.WhereToBuy))
                                     {
@@ -521,6 +569,7 @@ else
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner"
+                                    Budget="ValidBudget"
                                     @ref="_itemListRef" />
                 }
                 else
@@ -530,6 +579,7 @@ else
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner"
+                                    Budget="ValidBudget"
                                     @ref="_itemListRef" />
                 }
             }
@@ -560,6 +610,9 @@ else
     [Parameter]
     public string WishlistId { get; set; } = string.Empty;
 
+    [SupplyParameterFromQuery(Name = "budget")]
+    public decimal? Budget { get; set; }
+
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
     private List<WishlistItemModel> _filteredItems = new();
@@ -581,6 +634,15 @@ else
     private decimal MinPrice { get; set; } = 0;
     private decimal MaxPrice { get; set; } = 10000;
     private decimal PriceCeiling => Math.Max(10000, GetMaxPrice());
+    private const decimal MaximumBudget = 10_000_000m;
+    private bool BudgetFilterActive { get; set; }
+    private bool HasBudget => Budget is >= 0 and <= MaximumBudget;
+    private decimal? ValidBudget => HasBudget ? Budget : null;
+    private string BudgetDisplay => ValidBudget?.ToString("C") ?? string.Empty;
+    private int PricedItemCount => _items.Count(item => item.Price.HasValue);
+    private int WithinBudgetItemCount => HasBudget
+        ? _items.Count(item => item.Price is { } price && price <= Budget.GetValueOrDefault())
+        : 0;
     private int? _expandedItemId = null;
     private WishlistItemList? _itemListRef;
     private int? _pendingInteractionItemId;
@@ -627,6 +689,7 @@ else
             .Where(ShouldDisplayItem)
             .ToList();
         MaxPrice = PriceCeiling;
+        BudgetFilterActive = HasBudget;
         ApplyFiltersAndSort();
     }
 
@@ -667,6 +730,11 @@ else
             filtered = filtered.Where(i => i.Price.HasValue && i.Price >= MinPrice && i.Price <= MaxPrice);
         }
 
+        if (BudgetFilterActive && Budget is { } budget)
+        {
+            filtered = filtered.Where(item => item.Price is { } price && price <= budget);
+        }
+
         // Apply sorting
         filtered = SortBy switch
         {
@@ -681,6 +749,10 @@ else
             "price" => SortAscending
                 ? filtered.OrderBy(i => i.Price ?? decimal.MaxValue)
                 : filtered.OrderByDescending(i => i.Price ?? decimal.MinValue),
+
+            "budget" when Budget is { } sortBudget => SortAscending
+                ? filtered.OrderBy(item => GetBudgetSortOrder(item, sortBudget)).ThenBy(item => item.Price)
+                : filtered.OrderByDescending(item => GetBudgetSortOrder(item, sortBudget)).ThenByDescending(item => item.Price),
 
             "date" => SortAscending
                 ? filtered.OrderBy(i => i.CreatedOn)
@@ -744,6 +816,7 @@ else
         count += PriorityFilters.Count;
         count += StatusFilters.Count;
         if (MinPrice > 0 || MaxPrice < PriceCeiling) count++;
+        if (BudgetFilterActive) count++;
         return count;
     }
 
@@ -754,6 +827,13 @@ else
         StatusFilters.Clear();
         MinPrice = 0;
         MaxPrice = PriceCeiling;
+        BudgetFilterActive = false;
+        ApplyFiltersAndSort();
+    }
+
+    private void ToggleBudgetFilter()
+    {
+        BudgetFilterActive = !BudgetFilterActive;
         ApplyFiltersAndSort();
     }
 
@@ -770,8 +850,38 @@ else
         {
             return "All prices";
         }
+
         return $"{MinPrice:C} - {MaxPrice:C}";
     }
+
+    private static int GetBudgetSortOrder(WishlistItemModel item, decimal budget)
+    {
+        if (item.Price is not { } price)
+        {
+            return 2;
+        }
+
+        return price <= budget ? 0 : 1;
+    }
+
+    private string GetBudgetStatusText(WishlistItemModel item)
+    {
+        if (item.Price is not { } price || Budget is not { } budget)
+        {
+            return "Price not set";
+        }
+
+        return price <= budget ? "Within budget" : $"{price - budget:C} over budget";
+    }
+
+    private string GetBudgetStatusClass(WishlistItemModel item) =>
+        item.Price is { } price && Budget is { } budget
+            ? price <= budget
+                ? "budget-status budget-status-within"
+                : "budget-status budget-status-over"
+            : "budget-status budget-status-unknown";
+
+    private static string IdeaLabel(int count) => count == 1 ? "idea" : "ideas";
 
     private void SortItems(string sortBy)
     {

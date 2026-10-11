@@ -1094,11 +1094,30 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await match.getByText("JordanDemo has 1 gift idea to explore.", { exact: true })
     .waitFor({ state: "visible" });
   await match.getByText("Your match stays private.").waitFor({ state: "visible" });
-  const recipientWishlistLink = match.getByRole("link", { name: "View JordanDemo's wishlist" });
-  if (await recipientWishlistLink.getAttribute("href") !==
-      `/wishlists/${manifest.friendWishlistPublicId}`) {
-    throw new Error("The gift match action did not link to the recipient's wishlist.");
+  const recipientWishlistLink = match.getByRole("link", { name: /Shop within .* budget/ });
+  const recipientWishlistHref = await recipientWishlistLink.getAttribute("href");
+  const recipientWishlistUrl = new URL(recipientWishlistHref ?? "", baseUrl);
+  if (recipientWishlistUrl.pathname !== `/wishlists/${manifest.friendWishlistPublicId}` ||
+      !recipientWishlistUrl.searchParams.has("budget")) {
+    throw new Error("The gift match action did not carry the exchange budget to the recipient's wishlist.");
   }
+  await recipientWishlistLink.click();
+  await page.waitForURL(url =>
+    url.pathname === `/wishlists/${manifest.friendWishlistPublicId}` && url.searchParams.has("budget")
+  );
+  await page.getByRole("heading", { name: /Shopping with a .* budget/ }).waitFor({ state: "visible" });
+  const budgetFilter = page.getByRole("button", { name: "Showing within budget" });
+  if (await budgetFilter.getAttribute("aria-pressed") !== "true") {
+    throw new Error("The recipient wishlist did not start with its exchange budget filter enabled.");
+  }
+  await page.getByText("Within budget", { exact: true }).first().waitFor({ state: "visible" });
+  await budgetFilter.click();
+  await page.getByRole("button", { name: "Show within budget" }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Budget fit" }).click();
+  await page.getByRole("button", { name: "Budget fit", pressed: true }).waitFor({ state: "visible" });
+  await screenshot(page, "wishlist-budget-filter.png");
+  await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
   await assertTextContrast(match.locator(".gift-match-name"), "Gift recipient name");
   await assertVisible(page, "TaylorDemo");
   const refreshReservedItems = page.getByRole("button", { name: "Refresh" });
@@ -2463,7 +2482,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
   const friendMatch = page.locator(".gift-match");
   await friendMatch.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
-  await friendMatch.getByRole("link", { name: "View AlexDemo's wishlist" }).waitFor({ state: "visible" });
+  await friendMatch.getByRole("link", { name: /Shop within .* budget/ }).waitFor({ state: "visible" });
   await friendMatch.getByText("Your match stays private.").waitFor({ state: "visible" });
   await assertVisible(page, "My Reserved Items");
   await assertVisible(page, "Noise-Cancelling Headphones");
@@ -2653,7 +2672,7 @@ async function verifyMobileJourney(browser, manifest, results) {
   await visit(page, `/events/${manifest.eventPublicId}`, "Your gift exchange match", visitedRoutes);
   await assertVisible(page, "JordanDemo");
   const mobileMatchAction = page.locator(".gift-match")
-    .getByRole("link", { name: "View JordanDemo's wishlist" });
+    .getByRole("link", { name: /Shop within .* budget/ });
   await assertMinimumTouchTarget(mobileMatchAction, "Mobile gift match wishlist action");
   await assertResponsiveWidths(page, [
     { width: 320, height: 568 },
@@ -2739,7 +2758,7 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
     { exact: true }
   )
     .waitFor({ state: "visible" });
-  if (await match.getByRole("link", { name: /View JordanDemo's wishlist/ }).count() !== 0) {
+  if (await match.getByRole("link", { name: /Shop within .* budget/ }).count() !== 0) {
     throw new Error("The gift match offered an unattached wishlist as a shopping action.");
   }
   await match.getByText("Your match stays private.").waitFor({ state: "visible" });

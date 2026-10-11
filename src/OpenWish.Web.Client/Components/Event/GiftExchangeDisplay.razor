@@ -1,5 +1,6 @@
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
+@using System.Globalization
 
 @inject IEventService EventService
 @inject ILogger<GiftExchangeDisplay> Logger
@@ -57,17 +58,17 @@
                 else if (_recipientWishlist != null && RecipientItemCount > 0)
                 {
                     <p>@($"{RecipientDisplayName} has {RecipientItemCount} gift {(RecipientItemCount == 1 ? "idea" : "ideas")} to explore.")</p>
-                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-primary gift-match-action">
+                    <a href="@RecipientWishlistUrl" class="btn btn-primary gift-match-action">
                         <OpenWishIcon Name="list-check" />
-                        <span>View @RecipientDisplayName's wishlist</span>
+                        <span>@RecipientWishlistActionLabel</span>
                     </a>
                     <p class="gift-match-guidance">Reserve an idea to avoid buying the same gift as someone else.</p>
                 }
                 else if (_recipientWishlist != null)
                 {
                     <p>@($"{RecipientDisplayName} hasn't added gift ideas to their wishlist yet.")</p>
-                    <a href="/wishlists/@_recipientWishlist.PublicId" class="btn btn-outline-primary gift-match-action">
-                        View @RecipientDisplayName's wishlist
+                    <a href="@RecipientWishlistUrl" class="btn btn-outline-primary gift-match-action">
+                        @RecipientWishlistActionLabel
                     </a>
                 }
                 else
@@ -102,6 +103,16 @@
         ?? "your match";
 
     private int RecipientItemCount => _recipientWishlist is null ? 0 : GetItemCount(_recipientWishlist);
+
+    private string RecipientWishlistUrl => _recipientWishlist is null
+        ? "#event-wishlists"
+        : _giftExchange?.Budget is { } budget
+            ? $"/wishlists/{_recipientWishlist.PublicId}?budget={budget.ToString(CultureInfo.InvariantCulture)}"
+            : $"/wishlists/{_recipientWishlist.PublicId}";
+
+    private string RecipientWishlistActionLabel => _giftExchange?.Budget is { } budget
+        ? $"Shop within {budget:C} budget"
+        : $"View {RecipientDisplayName}'s wishlist";
 
     private static int GetItemCount(WishlistModel wishlist) =>
         wishlist.ItemCount > 0 ? wishlist.ItemCount : wishlist.Items?.Count ?? 0;

@@ -110,6 +110,32 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistDetails_OffersBudgetAwareShoppingControls()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+
+        Assert.Contains("[SupplyParameterFromQuery(Name = \"budget\")]", markup, StringComparison.Ordinal);
+        Assert.Contains("Shopping with a @BudgetDisplay budget", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"wishlist-budget-filter\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"@(BudgetFilterActive ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
+        Assert.Contains("ToggleBudgetFilter", markup, StringComparison.Ordinal);
+        Assert.Contains("BudgetFilterActive = HasBudget;", markup, StringComparison.Ordinal);
+        Assert.Contains("Budget is >= 0 and <= MaximumBudget", markup, StringComparison.Ordinal);
+        Assert.Contains("Budget=\"ValidBudget\"", markup, StringComparison.Ordinal);
+        Assert.Contains("filtered.Where(item => item.Price is { } price && price <= budget)", markup, StringComparison.Ordinal);
+        Assert.Contains("Budget fit", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (HasBudget)", markup, StringComparison.Ordinal);
+        Assert.Contains("GetBudgetSortOrder", markup, StringComparison.Ordinal);
+        Assert.Contains("Within budget", markup, StringComparison.Ordinal);
+        Assert.Contains("Price not set", markup, StringComparison.Ordinal);
+        Assert.Contains("<th>Budget</th>", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("budget-status-within", styles, StringComparison.Ordinal);
+        Assert.Contains("budget-status-over", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistItemEntry_OffersOptionalImportAndClearPrivacyGuidance()
     {
         var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
@@ -1115,7 +1141,13 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Checking shared gift ideas...", markup, StringComparison.Ordinal);
         Assert.Contains("!WishlistsLoaded", markup, StringComparison.Ordinal);
         Assert.Contains("_recipientWishlist != null && RecipientItemCount > 0", markup, StringComparison.Ordinal);
-        Assert.Contains("View @RecipientDisplayName's wishlist", markup, StringComparison.Ordinal);
+        Assert.Contains("RecipientWishlistUrl", markup, StringComparison.Ordinal);
+        Assert.Contains("RecipientWishlistActionLabel", markup, StringComparison.Ordinal);
+        Assert.Contains("?budget={budget.ToString(CultureInfo.InvariantCulture)}", markup, StringComparison.Ordinal);
+        Assert.Contains("Shop within {budget:C} budget", markup, StringComparison.Ordinal);
+        Assert.True(
+            markup.Split("href=\"@RecipientWishlistUrl\"", StringSplitOptions.None).Length >= 3,
+            "Gift-match actions should preserve the budget for populated and empty recipient wishlists.");
         Assert.Contains("hasn't added gift ideas to their wishlist yet.", markup, StringComparison.Ordinal);
         Assert.Contains("hasn't shared a wishlist for this exchange yet.", markup, StringComparison.Ordinal);
         Assert.Contains("OrderByDescending(GetItemCount)", markup, StringComparison.Ordinal);

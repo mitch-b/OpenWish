@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.2.0",
+    "date": "2026-10-11",
+    "title": "Shop within your gift exchange budget",
+    "summary": "Your match's wishlist can now start with ideas that fit the exchange budget, so shoppers can choose a thoughtful gift without doing the math first.",
+    "highlights": [
+      "The gift-match action carries the suggested budget straight to the recipient's wishlist.",
+      "A budget summary shows how many priced ideas fit and starts with those ideas shown.",
+      "One clear control switches between in-budget ideas and the full wishlist.",
+      "Sort by Budget fit to place in-budget ideas first, then ideas over budget and those without a price.",
+      "Each idea says whether it is within budget, how much it exceeds the budget, or that it needs a price."
+    ]
+  },
+  {
     "version": "0.1.40",
     "date": "2026-10-10",
     "title": "A dashboard welcome that keeps up with you",

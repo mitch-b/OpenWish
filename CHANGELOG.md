@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.2.0] - 2026-10-11
+
+### Added
+
+- Gift-exchange shoppers can open their match's wishlist with the suggested
+  budget already applied.
+- A budget summary shows how many priced ideas fit, with a one-tap control to
+  show only those ideas or return to the full list.
+- Wishlists can sort ideas by budget fit, and each idea clearly says whether
+  it is within budget, over budget, or missing a price.
+
 ## [0.1.40] - 2026-10-10
 
 ### Improved

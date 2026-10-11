@@ -1117,6 +1117,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Budget fit" }).click();
   await page.getByRole("button", { name: "Budget fit", pressed: true }).waitFor({ state: "visible" });
   await screenshot(page, "wishlist-budget-filter.png");
+  await page.evaluate(wishlistPublicId => {
+    history.pushState({}, "", `/wishlists/${wishlistPublicId}?budget=not-a-number`);
+    dispatchEvent(new PopStateEvent("popstate"));
+  }, manifest.friendWishlistPublicId);
+  await page.locator(".budget-guide").waitFor({ state: "detached" });
+  if (await page.getByRole("button", { name: "Budget fit" }).count() !== 0) {
+    throw new Error("A malformed budget query was treated as a valid budget.");
+  }
   await visit(page, `/events/${manifest.eventPublicId}`, "Holiday Gift Exchange", visitedRoutes);
   await assertTextContrast(match.locator(".gift-match-name"), "Gift recipient name");
   await assertVisible(page, "TaylorDemo");

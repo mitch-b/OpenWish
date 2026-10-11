@@ -106,11 +106,11 @@
 
     private string RecipientWishlistUrl => _recipientWishlist is null
         ? "#event-wishlists"
-        : _giftExchange?.Budget is { } budget
+        : _giftExchange?.Budget is { } budget && GiftBudget.IsValid(budget)
             ? $"/wishlists/{_recipientWishlist.PublicId}?budget={budget.ToString(CultureInfo.InvariantCulture)}"
             : $"/wishlists/{_recipientWishlist.PublicId}";
 
-    private string RecipientWishlistActionLabel => _giftExchange?.Budget is { } budget
+    private string RecipientWishlistActionLabel => _giftExchange?.Budget is { } budget && GiftBudget.IsValid(budget)
         ? $"Shop within {budget:C} budget"
         : $"View {RecipientDisplayName}'s wishlist";
 

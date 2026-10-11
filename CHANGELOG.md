@@ -13,6 +13,11 @@ All notable user-facing changes to OpenWish are documented here.
 - Wishlists can sort ideas by budget fit, and each idea clearly says whether
   it is within budget, over budget, or missing a price.
 
+### Fixed
+
+- Malformed or out-of-range budget links safely show the regular wishlist
+  instead of disrupting the shopping page.
+
 ## [0.1.40] - 2026-10-10
 
 ### Improved

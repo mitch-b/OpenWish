@@ -9,7 +9,8 @@
       "A budget summary shows how many priced ideas fit and starts with those ideas shown.",
       "One clear control switches between in-budget ideas and the full wishlist.",
       "Sort by Budget fit to place in-budget ideas first, then ideas over budget and those without a price.",
-      "Each idea says whether it is within budget, how much it exceeds the budget, or that it needs a price."
+      "Each idea says whether it is within budget, how much it exceeds the budget, or that it needs a price.",
+      "Malformed or out-of-range budget links safely show the regular wishlist."
     ]
   },
   {

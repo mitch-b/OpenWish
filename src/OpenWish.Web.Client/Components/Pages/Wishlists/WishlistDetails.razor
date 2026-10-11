@@ -611,7 +611,7 @@ else
     public string WishlistId { get; set; } = string.Empty;
 
     [SupplyParameterFromQuery(Name = "budget")]
-    public decimal? Budget { get; set; }
+    public string? BudgetQuery { get; set; }
 
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
@@ -634,14 +634,13 @@ else
     private decimal MinPrice { get; set; } = 0;
     private decimal MaxPrice { get; set; } = 10000;
     private decimal PriceCeiling => Math.Max(10000, GetMaxPrice());
-    private const decimal MaximumBudget = 10_000_000m;
     private bool BudgetFilterActive { get; set; }
-    private bool HasBudget => Budget is >= 0 and <= MaximumBudget;
-    private decimal? ValidBudget => HasBudget ? Budget : null;
+    private decimal? ValidBudget => GiftBudget.Parse(BudgetQuery);
+    private bool HasBudget => ValidBudget.HasValue;
     private string BudgetDisplay => ValidBudget?.ToString("C") ?? string.Empty;
     private int PricedItemCount => _items.Count(item => item.Price.HasValue);
     private int WithinBudgetItemCount => HasBudget
-        ? _items.Count(item => item.Price is { } price && price <= Budget.GetValueOrDefault())
+        ? _items.Count(item => item.Price is { } price && price <= ValidBudget.GetValueOrDefault())
         : 0;
     private int? _expandedItemId = null;
     private WishlistItemList? _itemListRef;
@@ -651,6 +650,7 @@ else
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
     private string? _deleteItemError;
+    private string? _appliedBudgetQuery;
     private readonly string _pasteListenerKey = $"wishlist-details-{Guid.NewGuid():N}";
     private DotNetObjectReference<WishlistDetails>? _pasteListenerReference;
     private bool _isListeningForPaste;
@@ -676,6 +676,17 @@ else
         }
     }
 
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_appliedBudgetQuery, BudgetQuery, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _appliedBudgetQuery = BudgetQuery;
+        ApplyBudgetQuery();
+    }
+
     private async Task LoadItems()
     {
         var requesterId = _currentUserId;
@@ -689,7 +700,18 @@ else
             .Where(ShouldDisplayItem)
             .ToList();
         MaxPrice = PriceCeiling;
-        BudgetFilterActive = HasBudget;
+        ApplyBudgetQuery();
+    }
+
+    private void ApplyBudgetQuery()
+    {
+        BudgetFilterActive = HasBudget && PricedItemCount > 0;
+        if (!HasBudget && SortBy == "budget")
+        {
+            SortBy = "priority";
+            SortAscending = true;
+        }
+
         ApplyFiltersAndSort();
     }
 
@@ -730,7 +752,7 @@ else
             filtered = filtered.Where(i => i.Price.HasValue && i.Price >= MinPrice && i.Price <= MaxPrice);
         }
 
-        if (BudgetFilterActive && Budget is { } budget)
+        if (BudgetFilterActive && ValidBudget is { } budget)
         {
             filtered = filtered.Where(item => item.Price is { } price && price <= budget);
         }
@@ -750,7 +772,7 @@ else
                 ? filtered.OrderBy(i => i.Price ?? decimal.MaxValue)
                 : filtered.OrderByDescending(i => i.Price ?? decimal.MinValue),
 
-            "budget" when Budget is { } sortBudget => SortAscending
+            "budget" when ValidBudget is { } sortBudget => SortAscending
                 ? filtered.OrderBy(item => GetBudgetSortOrder(item, sortBudget)).ThenBy(item => item.Price)
                 : filtered.OrderByDescending(item => GetBudgetSortOrder(item, sortBudget)).ThenByDescending(item => item.Price),
 
@@ -866,7 +888,7 @@ else
 
     private string GetBudgetStatusText(WishlistItemModel item)
     {
-        if (item.Price is not { } price || Budget is not { } budget)
+        if (item.Price is not { } price || ValidBudget is not { } budget)
         {
             return "Price not set";
         }
@@ -875,7 +897,7 @@ else
     }
 
     private string GetBudgetStatusClass(WishlistItemModel item) =>
-        item.Price is { } price && Budget is { } budget
+        item.Price is { } price && ValidBudget is { } budget
             ? price <= budget
                 ? "budget-status budget-status-within"
                 : "budget-status budget-status-over"

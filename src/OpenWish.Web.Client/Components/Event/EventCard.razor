@@ -151,6 +151,12 @@ else
     [Parameter]
     public EventCallback<EventModel> OnDelete { get; set; }
 
+    [Parameter]
+    public int? ParticipantCount { get; set; }
+
+    [Parameter]
+    public int? InvitationCount { get; set; }
+
     private Dialog _deleteDialog = default!;
     private string _deleteDialogTitle = "Delete event";
     private string _deleteDialogMessage = string.Empty;
@@ -163,6 +169,11 @@ else
     {
         get
         {
+            if (ParticipantCount is { } participantCount)
+            {
+                return participantCount;
+            }
+
             var acceptedUserIds = Event?.EventUsers?
                 .Where(participant =>
                     !participant.Deleted &&
@@ -181,7 +192,7 @@ else
         }
     }
     private int PendingInvitationCount =>
-        Event?.EventUsers?.Count(participant =>
+        InvitationCount ?? Event?.EventUsers?.Count(participant =>
             !participant.Deleted &&
             string.Equals(participant.Status, "Pending", StringComparison.OrdinalIgnoreCase)) ?? 0;
 

@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.2.1",
+    "date": "2026-10-12",
+    "title": "A steady dashboard while OpenWish connects",
+    "summary": "Your dashboard stays in place while its interactive controls connect, so you can keep reading and act without a distracting loading flash.",
+    "highlights": [
+      "Quick add stays ready for the next idea you want to save.",
+      "Needs attention keeps invitations, requests, and event status visible.",
+      "Recently updated wishlists remain on screen instead of briefly disappearing.",
+      "Coming up keeps your events and exchanges in place during hydration.",
+      "Browser verification now protects the complete dashboard from returning to a loading state after it renders."
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-10-11",
     "title": "Shop within your gift exchange budget",

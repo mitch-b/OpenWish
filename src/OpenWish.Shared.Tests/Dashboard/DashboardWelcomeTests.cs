@@ -364,6 +364,27 @@ public class DashboardWelcomeTests
         Assert.True(restored!.IsFirstRun);
     }
 
+    [Fact]
+    public void DashboardCards_SurvivePrerenderStatePersistence()
+    {
+        var wishlist = Wishlist(1);
+        var evt = Event("Cookie Swap", _now.AddDays(3), isGiftExchange: true, namesDrawn: true);
+        evt.EventUsers = [new EventUserModel { UserId = "guest", Status = "Pending" }];
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        var wishlists = new[] { DashboardWishlistCard.From(wishlist) };
+        var events = new[] { DashboardEventCard.From(evt) };
+        var json = JsonSerializer.Serialize(new { wishlists, events }, options);
+        var restored = JsonSerializer.Deserialize<DashboardCardState>(json, options);
+
+        Assert.Equal(wishlists, restored!.Wishlists);
+        Assert.Equal(events, restored.Events);
+    }
+
+    private sealed record DashboardCardState(
+        DashboardWishlistCard[] Wishlists,
+        DashboardEventCard[] Events);
+
     private static WishlistModel Wishlist(int itemCount) => new()
     {
         Name = "Ideas",

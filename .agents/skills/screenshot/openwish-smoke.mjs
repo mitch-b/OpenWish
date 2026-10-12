@@ -293,6 +293,8 @@ async function recordDashboardWelcomeStates(page) {
   await page.addInitScript(() => {
     const states = [];
     window.__openWishWelcomeStates = states;
+    const dashboardStates = [];
+    window.__openWishDashboardStates = dashboardStates;
     const record = () => {
       const hero = document.querySelector(".dashboard-hero");
       const state = !hero
@@ -303,13 +305,29 @@ async function recordDashboardWelcomeStates(page) {
       if (states[states.length - 1] !== state) {
         states.push(state);
       }
+
+      const dashboard = document.querySelector(".dashboard-content");
+      const dashboardState = !dashboard
+        ? "missing"
+        : dashboard.getAttribute("aria-busy") === "true"
+          ? "loading"
+          : [
+              dashboard.querySelector(".quick-add-panel") ? "quick-add" : null,
+              dashboard.querySelector(".attention-panel") ? "attention" : null,
+              dashboard.querySelector(".collection-section:nth-child(1)") ? "recent" : null,
+              dashboard.querySelector(".collection-section:nth-child(2)") ? "events" : null
+            ].filter(Boolean).join(",");
+      if (dashboardStates[dashboardStates.length - 1] !== dashboardState) {
+        dashboardStates.push(dashboardState);
+      }
     };
     new MutationObserver(record).observe(document, {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["class", "data-welcome"]
+      attributeFilter: ["class", "data-welcome", "aria-busy"]
     });
+    record();
   });
 
   // Wrapped so the caller can await setup without waiting for the circuit to connect.
@@ -340,6 +358,21 @@ async function assertDashboardWelcomeSurvivesHydration(page, circuit) {
   if (firstSettled < 0 || states.slice(firstSettled).includes("loading")) {
     throw new Error(
       `The dashboard welcome fell back to its loading placeholder after it rendered: ${states.join(" -> ")}.`
+    );
+  }
+}
+
+async function assertDashboardContentSurvivesHydration(page) {
+  const states = await page.evaluate(() => window.__openWishDashboardStates ?? []);
+  const firstLoaded = states.findIndex(state =>
+    state.includes("quick-add") &&
+    state.includes("attention") &&
+    state.includes("recent") &&
+    state.includes("events"));
+
+  if (firstLoaded < 0 || states.slice(firstLoaded).includes("loading")) {
+    throw new Error(
+      `The dashboard content fell back to loading after it rendered: ${states.join(" -> ")}.`
     );
   }
 }
@@ -2092,6 +2125,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const firstRunWelcome = page.locator(".dashboard-hero[data-welcome='FirstRun']");
   await firstRunWelcome.getByText("Welcome to OpenWish").waitFor({ state: "visible" });
   await assertDashboardWelcomeSurvivesHydration(page, circuit);
+  await assertDashboardContentSurvivesHydration(page);
   await firstRunWelcome.getByText("You're invited to Holiday Gift Exchange.", { exact: false })
     .waitFor({ state: "visible" });
   const reviewInvitation = firstRunWelcome.getByRole("link", { name: "Review invitation" });

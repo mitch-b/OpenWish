@@ -2,6 +2,19 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.2.1] - 2026-10-12
+
+### Fixed
+
+- The dashboard no longer briefly returns to loading while interactive controls
+  connect. Quick add, Needs attention, recently updated wishlists, and coming
+  up events stay visible.
+
+### Improved
+
+- Browser verification now watches every dashboard section through hydration,
+  protecting the complete dashboard from a post-render loading flash.
+
 ## [0.2.0] - 2026-10-11
 
 ### Added

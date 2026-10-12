@@ -364,6 +364,21 @@ public class DashboardWelcomeTests
         Assert.True(restored!.IsFirstRun);
     }
 
+    [Fact]
+    public void DashboardModels_SurvivePrerenderStatePersistence()
+    {
+        var wishlists = new[] { Wishlist(1) };
+        var events = new[] { Event("Cookie Swap", _now.AddDays(3)) };
+        var invitations = new[] { Invitation(events[0]) };
+        var requests = new[] { FriendRequest("TaylorDemo") };
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        var json = JsonSerializer.Serialize(new { wishlists, events, invitations, requests }, options);
+
+        Assert.Contains("Cookie Swap", json, StringComparison.Ordinal);
+        Assert.Contains("TaylorDemo", json, StringComparison.Ordinal);
+    }
+
     private static WishlistModel Wishlist(int itemCount) => new()
     {
         Name = "Ideas",

@@ -157,42 +157,42 @@
                         </div>
                     </div>
                     <div class="attention-list">
-                        @if (_pendingEventInvitations?.Any() == true)
+                        @if (PendingEventInvitationCount > 0)
                         {
                             <a href="/events" class="attention-item">
                                 <span class="attention-icon attention-warm"><OpenWishIcon Name="envelope" /></span>
                                 <span class="attention-copy">
                                     <strong>Event invitations</strong>
-                                    <small>@_pendingEventInvitations.Count() waiting for you</small>
+                                    <small>@PendingEventInvitationCount waiting for you</small>
                                 </span>
-                                <span class="count-pill">@_pendingEventInvitations.Count()</span>
+                                <span class="count-pill">@PendingEventInvitationCount</span>
                             </a>
                         }
-                        @if (_pendingFriendRequests?.Any() == true)
+                        @if (PendingFriendRequestCount > 0)
                         {
                             <a href="/friends" class="attention-item">
                                 <span class="attention-icon attention-warm"><OpenWishIcon Name="person-plus" /></span>
                                 <span class="attention-copy">
                                     <strong>Friend requests</strong>
-                                    <small>@_pendingFriendRequests.Count() waiting for you</small>
+                                    <small>@PendingFriendRequestCount waiting for you</small>
                                 </span>
-                                <span class="count-pill">@_pendingFriendRequests.Count()</span>
+                                <span class="count-pill">@PendingFriendRequestCount</span>
                             </a>
                         }
-                        @if (_upcomingEvents?.Any() == true)
+                        @if (UpcomingEventCount > 0)
                         {
                             <a href="/events" class="attention-item">
                                 <span class="attention-icon attention-cool"><OpenWishIcon Name="calendar-event" /></span>
                                 <span class="attention-copy">
                                     <strong>Upcoming events</strong>
-                                    <small>@_upcomingEvents.Count() in the next 30 days</small>
+                                    <small>@UpcomingEventCount in the next 30 days</small>
                                 </span>
                                 <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
                             </a>
                         }
-                        @if (_pendingEventInvitations?.Any() != true &&
-                             _pendingFriendRequests?.Any() != true &&
-                             _upcomingEvents?.Any() != true)
+                        @if (PendingEventInvitationCount == 0 &&
+                             PendingFriendRequestCount == 0 &&
+                             UpcomingEventCount == 0)
                         {
                             <div class="attention-empty">
                                 <span class="attention-icon attention-cool"><OpenWishIcon Name="check-circle" /></span>
@@ -204,7 +204,7 @@
             </div>
         }
 
-        @if (_featuredWishlists != null || _events != null)
+        @if (FeaturedWishlists != null || Events != null)
         {
             <div class="collection-grid">
                 <section class="collection-section">
@@ -215,10 +215,10 @@
                         </div>
                         <a href="/wishlists">View all <OpenWishIcon Name="arrow-right" /></a>
                     </div>
-                    @if (_featuredWishlists?.Any() == true)
+                    @if (FeaturedWishlists?.Any() == true)
                     {
                         <div class="collection-list">
-                            @foreach (var wishlist in _featuredWishlists.Take(3))
+                            @foreach (var wishlist in FeaturedWishlists.Take(3))
                             {
                                 <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
                             }
@@ -243,10 +243,10 @@
                         </div>
                         <a href="/events">View all <OpenWishIcon Name="arrow-right" /></a>
                     </div>
-                    @if (_events?.Any() == true)
+                    @if (Events?.Any() == true)
                     {
                         <div class="collection-list">
-                            @foreach (var evt in _events.Take(3))
+                            @foreach (var evt in Events.Take(3))
                             {
                                 <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
                             }
@@ -302,20 +302,39 @@
 </AuthorizeView>
 
 @code {
-    private List<WishlistModel>? _featuredWishlists;
-    private List<EventModel>? _events;
-    private List<EventModel>? _upcomingEvents;
-    private IEnumerable<FriendRequestModel>? _pendingFriendRequests;
-    private IEnumerable<EventUserModel>? _pendingEventInvitations;
-
     // Carried from prerendering so the welcome doesn't collapse to a placeholder while the circuit reloads data.
     [PersistentState]
     public DashboardWelcome? Welcome { get; set; }
 
+    // Each section keeps its prerendered data while the interactive circuit connects.
+    [PersistentState]
+    public List<WishlistModel>? FeaturedWishlists { get; set; }
+
+    [PersistentState]
+    public List<EventModel>? Events { get; set; }
+
+    [PersistentState]
+    public int? UpcomingEventCount { get; set; }
+
+    [PersistentState]
+    public int? PendingFriendRequestCount { get; set; }
+
+    [PersistentState]
+    public int? PendingEventInvitationCount { get; set; }
+
+    private List<FriendRequestModel>? _pendingFriendRequests;
+    private List<EventUserModel>? _pendingEventInvitations;
     private string? _userId;
     private string? _loadError;
     private bool _isLoading = true;
     private string _quickAddText = string.Empty;
+
+    private bool HasLoadedDashboard =>
+        FeaturedWishlists is not null &&
+        Events is not null &&
+        UpcomingEventCount is not null &&
+        PendingFriendRequestCount is not null &&
+        PendingEventInvitationCount is not null;
 
     private void SubmitQuickAdd()
     {
@@ -328,6 +347,12 @@
         _userId = await UserContextService.GetUserIdAsync();
         if (_userId != null)
         {
+            if (HasLoadedDashboard)
+            {
+                _isLoading = false;
+                return;
+            }
+
             try
             {
                 await LoadFeaturedWishlists();
@@ -357,8 +382,9 @@
     {
         if (_userId is not null)
         {
-            _featuredWishlists = (await WishlistService.GetUserWishlistsAsync(_userId))
+            FeaturedWishlists = (await WishlistService.GetUserWishlistsAsync(_userId))
                 .OrderByDescending(GetWishlistActivityTimestamp)
+                .Take(3)
                 .ToList();
         }
     }
@@ -368,11 +394,12 @@
         if (_userId is not null)
         {
             var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
-            _events = allEvents
+            Events = allEvents
                 .OrderByDescending(GetEventActivityTimestamp)
+                .Take(3)
                 .ToList();
 
-            _upcomingEvents = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).ToList();
+            UpcomingEventCount = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).Count();
         }
     }
 
@@ -380,7 +407,8 @@
     {
         if (_userId is not null)
         {
-            _pendingFriendRequests = await FriendService.GetReceivedFriendRequestsAsync(_userId);
+            _pendingFriendRequests = (await FriendService.GetReceivedFriendRequestsAsync(_userId)).ToList();
+            PendingFriendRequestCount = _pendingFriendRequests.Count;
         }
     }
 
@@ -388,17 +416,18 @@
     {
         if (_userId is not null)
         {
-            _pendingEventInvitations = await EventService.GetPendingInvitationsForUserAsync(_userId);
+            _pendingEventInvitations = (await EventService.GetPendingInvitationsForUserAsync(_userId)).ToList();
+            PendingEventInvitationCount = _pendingEventInvitations.Count;
         }
     }
 
     private void UpdateWelcome() =>
         Welcome = DashboardWelcome.Create(
             _userId,
-            _featuredWishlists,
-            _events,
-            _pendingEventInvitations?.ToList(),
-            _pendingFriendRequests?.ToList(),
+            FeaturedWishlists,
+            Events,
+            _pendingEventInvitations,
+            _pendingFriendRequests,
             DateTimeOffset.UtcNow);
 
     private async Task HandleWishlistDeleted(WishlistModel wishlist)

@@ -20,6 +20,19 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void Dashboard_PersistsEachHydratedContentSection()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+
+        Assert.Contains("[PersistentState]\n    public List<WishlistModel>? FeaturedWishlists { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public List<EventModel>? Events { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public int? UpcomingEventCount { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public int? PendingFriendRequestCount { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public int? PendingEventInvitationCount { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("if (HasLoadedDashboard)", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistIndex_ConnectsTabsAndDiscoveryControlsToTheirContent()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");

@@ -365,19 +365,25 @@ public class DashboardWelcomeTests
     }
 
     [Fact]
-    public void DashboardModels_SurvivePrerenderStatePersistence()
+    public void DashboardCards_SurvivePrerenderStatePersistence()
     {
-        var wishlists = new[] { Wishlist(1) };
-        var events = new[] { Event("Cookie Swap", _now.AddDays(3)) };
-        var invitations = new[] { Invitation(events[0]) };
-        var requests = new[] { FriendRequest("TaylorDemo") };
+        var wishlist = Wishlist(1);
+        var evt = Event("Cookie Swap", _now.AddDays(3), isGiftExchange: true, namesDrawn: true);
+        evt.EventUsers = [new EventUserModel { UserId = "guest", Status = "Pending" }];
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
-        var json = JsonSerializer.Serialize(new { wishlists, events, invitations, requests }, options);
+        var wishlists = new[] { DashboardWishlistCard.From(wishlist) };
+        var events = new[] { DashboardEventCard.From(evt) };
+        var json = JsonSerializer.Serialize(new { wishlists, events }, options);
+        var restored = JsonSerializer.Deserialize<DashboardCardState>(json, options);
 
-        Assert.Contains("Cookie Swap", json, StringComparison.Ordinal);
-        Assert.Contains("TaylorDemo", json, StringComparison.Ordinal);
+        Assert.Equal(wishlists, restored!.Wishlists);
+        Assert.Equal(events, restored.Events);
     }
+
+    private sealed record DashboardCardState(
+        DashboardWishlistCard[] Wishlists,
+        DashboardEventCard[] Events);
 
     private static WishlistModel Wishlist(int itemCount) => new()
     {

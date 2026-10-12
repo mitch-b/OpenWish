@@ -220,7 +220,7 @@
                         <div class="collection-list">
                             @foreach (var wishlist in FeaturedWishlists.Take(3))
                             {
-                                <WishlistCard Wishlist="@wishlist" OnDelete="@HandleWishlistDeleted" />
+                                <WishlistCard Wishlist="@wishlist.ToWishlistModel()" ItemCount="@wishlist.ItemCount" OnDelete="@HandleWishlistDeleted" />
                             }
                         </div>
                     }
@@ -248,7 +248,10 @@
                         <div class="collection-list">
                             @foreach (var evt in Events.Take(3))
                             {
-                                <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                                <EventCard Event="@evt.ToEventModel()"
+                                           ParticipantCount="@evt.AcceptedParticipantCount"
+                                           InvitationCount="@evt.PendingInvitationCount"
+                                           OnDelete="@HandleEventDeleted" />
                             }
                         </div>
                     }
@@ -308,10 +311,10 @@
 
     // Each section keeps its prerendered data while the interactive circuit connects.
     [PersistentState]
-    public List<WishlistModel>? FeaturedWishlists { get; set; }
+    public List<DashboardWishlistCard>? FeaturedWishlists { get; set; }
 
     [PersistentState]
-    public List<EventModel>? Events { get; set; }
+    public List<DashboardEventCard>? Events { get; set; }
 
     [PersistentState]
     public int? UpcomingEventCount { get; set; }
@@ -324,6 +327,8 @@
 
     private List<FriendRequestModel>? _pendingFriendRequests;
     private List<EventUserModel>? _pendingEventInvitations;
+    private List<WishlistModel>? _featuredWishlistsForWelcome;
+    private List<EventModel>? _eventsForWelcome;
     private string? _userId;
     private string? _loadError;
     private bool _isLoading = true;
@@ -382,10 +387,10 @@
     {
         if (_userId is not null)
         {
-            FeaturedWishlists = (await WishlistService.GetUserWishlistsAsync(_userId))
+            _featuredWishlistsForWelcome = (await WishlistService.GetUserWishlistsAsync(_userId))
                 .OrderByDescending(GetWishlistActivityTimestamp)
-                .Take(3)
                 .ToList();
+            FeaturedWishlists = _featuredWishlistsForWelcome.Take(3).Select(DashboardWishlistCard.From).ToList();
         }
     }
 
@@ -394,10 +399,10 @@
         if (_userId is not null)
         {
             var allEvents = (await EventService.GetUserEventsAsync(_userId)).ToList();
-            Events = allEvents
+            _eventsForWelcome = allEvents
                 .OrderByDescending(GetEventActivityTimestamp)
-                .Take(3)
                 .ToList();
+            Events = _eventsForWelcome.Take(3).Select(DashboardEventCard.From).ToList();
 
             UpcomingEventCount = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).Count();
         }
@@ -424,8 +429,8 @@
     private void UpdateWelcome() =>
         Welcome = DashboardWelcome.Create(
             _userId,
-            FeaturedWishlists,
-            Events,
+            _featuredWishlistsForWelcome,
+            _eventsForWelcome,
             _pendingEventInvitations,
             _pendingFriendRequests,
             DateTimeOffset.UtcNow);

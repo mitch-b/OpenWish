@@ -24,8 +24,8 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
 
-        Assert.Contains("[PersistentState]\n    public List<WishlistModel>? FeaturedWishlists { get; set; }", markup, StringComparison.Ordinal);
-        Assert.Contains("[PersistentState]\n    public List<EventModel>? Events { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public List<DashboardWishlistCard>? FeaturedWishlists { get; set; }", markup, StringComparison.Ordinal);
+        Assert.Contains("[PersistentState]\n    public List<DashboardEventCard>? Events { get; set; }", markup, StringComparison.Ordinal);
         Assert.Contains("[PersistentState]\n    public int? UpcomingEventCount { get; set; }", markup, StringComparison.Ordinal);
         Assert.Contains("[PersistentState]\n    public int? PendingFriendRequestCount { get; set; }", markup, StringComparison.Ordinal);
         Assert.Contains("[PersistentState]\n    public int? PendingEventInvitationCount { get; set; }", markup, StringComparison.Ordinal);

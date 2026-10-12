@@ -32,7 +32,7 @@ else
                 </div>
             </div>
             <div class="wishlist-meta">
-                <span>@Wishlist.Items?.Count @(Wishlist.Items?.Count == 1 ? "item" : "items")</span>
+                <span>@DisplayItemCount @(DisplayItemCount == 1 ? "item" : "items")</span>
                 @if (Wishlist.IsCollaborative)
                 {
                     <span><OpenWishIcon Name="people" /> Collaborative</span>
@@ -89,9 +89,12 @@ else
     public EventCallback<WishlistModel> OnDelete { get; set; }
     [Parameter]
     public bool ShowOwner { get; set; } = true;
+    [Parameter]
+    public int? ItemCount { get; set; }
 
     private WishlistDeleteDialog deleteDialog = default!;
     private bool isCurrentUserOwner = false;
+    private int DisplayItemCount => ItemCount ?? Wishlist?.Items?.Count ?? Wishlist?.ItemCount ?? 0;
 
     protected override async Task OnParametersSetAsync()
     {

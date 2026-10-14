@@ -33,6 +33,17 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void Dashboard_PrioritizesFirstWishlistOnlyAfterLoadingAnEmptyCollection()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+
+        Assert.Contains("private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? \"action-tile-primary\" : string.Empty", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? string.Empty : \"action-tile-primary\"", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? \"Create your first wishlist\" : \"New wishlist\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistIndex_ConnectsTabsAndDiscoveryControlsToTheirContent()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
@@ -1606,12 +1617,13 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
-    public void StandaloneItemCreation_ProvidesContextAndSafeNavigation()
+    public void StandaloneItemCreation_ProvidesFirstIdeaContextAndSafeNavigation()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
 
-        Assert.Contains("<PageTitle>Add an item</PageTitle>", markup, StringComparison.Ordinal);
-        Assert.Contains("Title=\"Add an item\"", markup, StringComparison.Ordinal);
+        Assert.Contains("FirstIdea ? \"Add your first idea\" : \"Add an item\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Your wishlist is ready. Add an idea to get it started.", markup, StringComparison.Ordinal);
+        Assert.Contains("[SupplyParameterFromQuery(Name = \"firstIdea\")] public bool FirstIdea", markup, StringComparison.Ordinal);
         Assert.Contains("href=\"/wishlists/@WishlistId\"", markup, StringComparison.Ordinal);
         Assert.Contains("OnCancel=\"@HandleCancel\"", markup, StringComparison.Ordinal);
         Assert.Contains("NavigationManager.NavigateTo($\"/wishlists/{WishlistId}\")", markup, StringComparison.Ordinal);
@@ -1624,7 +1636,9 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("<PageTitle>Create a wishlist</PageTitle>", markup, StringComparison.Ordinal);
         Assert.Contains("Title=\"Create a wishlist\"", markup, StringComparison.Ordinal);
-        Assert.Contains("choose who can see your gift ideas", markup, StringComparison.Ordinal);
+        Assert.Contains("keep it private to start", markup, StringComparison.Ordinal);
+        Assert.Contains("new() { Name = \"\", IsPrivate = true }", markup, StringComparison.Ordinal);
+        Assert.Contains("items/new?firstIdea=true", markup, StringComparison.Ordinal);
         Assert.Contains("Back to wishlists", markup, StringComparison.Ordinal);
     }
 

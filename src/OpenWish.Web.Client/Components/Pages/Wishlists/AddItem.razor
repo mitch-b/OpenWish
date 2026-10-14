@@ -10,11 +10,11 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>Add an item</PageTitle>
+<PageTitle>@(FirstIdea ? "Add your first idea" : "Add an item")</PageTitle>
 
 <div class="container page-shell">
-    <PageHeader Title="Add an item"
-                Description="Save the details you know now. You can refine this gift idea later.">
+    <PageHeader Title="@(FirstIdea ? "Add your first idea" : "Add an item")"
+                Description="@(FirstIdea ? "Start with a name or a product link. You can refine the details later." : "Save the details you know now. You can refine this gift idea later.")">
         <Actions>
             <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
                 <OpenWishIcon Name="arrow-left" /> Back to wishlist
@@ -23,6 +23,12 @@
     </PageHeader>
     <div class="row">
         <div class="col-lg-8">
+        @if (FirstIdea)
+        {
+            <div class="alert alert-success" role="status">
+                Your wishlist is ready. Add an idea to get it started.
+            </div>
+        }
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -53,6 +59,7 @@
     [SupplyParameterFromQuery(Name = "description")] public string? SharedDescription { get; set; }
     [SupplyParameterFromQuery(Name = "price")] public string? SharedPrice { get; set; }
     [SupplyParameterFromQuery(Name = "image")] public string? SharedImage { get; set; }
+    [SupplyParameterFromQuery(Name = "firstIdea")] public bool FirstIdea { get; set; }
 
     protected override void OnParametersSet()
     {

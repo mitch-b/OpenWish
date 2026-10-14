@@ -452,7 +452,7 @@ async function restoreWishlistSharing(page, manifest, friendName) {
       }
     }
   } finally {
-    const allFriendsVisibility = page.getByRole("radio", { name: /^All friends/ });
+    const allFriendsVisibility = page.getByRole("radio", { name: /^Share with all friends/ });
     await allFriendsVisibility.check({ force: true });
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.locator(".status-all").waitFor({ state: "visible" });
@@ -463,7 +463,7 @@ async function verifySpecificFriendManagement(page, manifest, screenshotName) {
   let sharedFriendName;
   try {
     await page.waitForTimeout(2000);
-    const specificFriendsVisibility = page.getByRole("radio", { name: /^Specific friends only/ });
+    const specificFriendsVisibility = page.getByRole("radio", { name: /^Share with specific friends/ });
     await specificFriendsVisibility.check({ force: true });
     await page.getByRole("button", { name: "Save changes" }).click();
 
@@ -1015,17 +1015,19 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
 
   await visit(page, "/wishlists/new", "Create a wishlist", visitedRoutes);
-  await assertVisible(page, "Start with a name and choose who can see your gift ideas.");
+  await assertVisible(page, "Name your list, keep it private to start, then add your first idea.");
   await page.getByRole("link", { name: "Back to wishlists" }).waitFor({ state: "visible" });
   await page.waitForTimeout(2000);
   if (await page.evaluate(() => document.activeElement?.id) !== "name") {
-    throw new Error("The wishlist title field did not retain focus after interactivity started.");
+    throw new Error("The wishlist name field did not retain focus after interactivity started.");
   }
-  const allFriendsVisibility = page.getByRole("radio", { name: /^All friends/ });
+  await assertVisible(page, "For example, Birthday ideas or Gifts for our new home.");
+  const allFriendsVisibility = page.getByRole("radio", { name: /^Share with all friends/ });
   const privateVisibility = page.getByRole("radio", { name: /^Private/ });
-  if (!(await allFriendsVisibility.isChecked())) {
-    throw new Error("All friends was not the default wishlist visibility.");
+  if (!(await privateVisibility.isChecked())) {
+    throw new Error("Private was not the default wishlist visibility.");
   }
+  await screenshot(page, "create-wishlist-private-default.png");
   await privateVisibility.focus();
   const privateVisibilityFocus = await privateVisibility.evaluate(element => {
     const option = element.closest(".visibility-option");
@@ -1035,25 +1037,30 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!privateVisibilityFocus ||
       privateVisibilityFocus.outlineStyle === "none" ||
       privateVisibilityFocus.outlineWidth === "0px") {
-    throw new Error("The focused wishlist visibility choice had no visible focus indicator.");
+    throw new Error("The focused private visibility choice had no visible focus indicator.");
   }
-  await page.keyboard.press("Space");
-  if (!(await privateVisibility.isChecked()) || await allFriendsVisibility.isChecked()) {
+  await allFriendsVisibility.check({ force: true });
+  if (!(await allFriendsVisibility.isChecked()) || await privateVisibility.isChecked()) {
     throw new Error("Wishlist visibility choices were not mutually exclusive.");
   }
   await page.getByRole("button", { name: "Choose an icon" }).click();
   await screenshot(page, "create-wishlist.png");
   await page.getByRole("button", { name: "Wrapped gift" }).click();
-  await allFriendsVisibility.focus();
-  await page.keyboard.press("Space");
   await page.locator("#name").fill("Emoji Test Wishlist");
   await page.getByRole("button", { name: "Create wishlist" }).click();
-  await page.waitForURL(`${baseUrl}/wishlists`);
+  await page.waitForURL(url =>
+    url.pathname.startsWith("/wishlists/") &&
+    url.pathname.endsWith("/items/new") &&
+    url.searchParams.get("firstIdea") === "true"
+  );
+  await page.getByRole("heading", { name: "Add your first idea" }).waitFor({ state: "visible" });
+  await page.getByRole("status").filter({ hasText: "Your wishlist is ready." }).waitFor({ state: "visible" });
+  await screenshot(page, "first-wishlist-add-item.png");
   const createdWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
   const createdWishlists = await createdWishlistsResponse.json();
   const emojiWishlist = createdWishlists.find(wishlist => wishlist.name === "Emoji Test Wishlist");
-  if (emojiWishlist?.icon !== "🎁") {
-    throw new Error("The selected wishlist emoji was not persisted.");
+  if (emojiWishlist?.icon !== "🎁" || emojiWishlist?.isPrivate) {
+    throw new Error("The selected wishlist details were not persisted.");
   }
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
   await assertVisible(page, "Who can see this?");
@@ -2134,6 +2141,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   if (await firstRunWelcome.getByRole("link", { name: "Create a wishlist" }).count() !== 1) {
     throw new Error("The first-run welcome did not offer to create a wishlist.");
+  }
+  const firstDashboardAction = page.locator(".action-grid .action-tile").first();
+  if ((await firstDashboardAction.textContent())?.includes("Create your first wishlist") !== true ||
+      await firstDashboardAction.getAttribute("href") !== "/wishlists/new") {
+    throw new Error("The first-run dashboard did not prioritize creating a first wishlist.");
   }
   await screenshot(page, "home-first-run.png");
   await page.setViewportSize({ width: 390, height: 844 });

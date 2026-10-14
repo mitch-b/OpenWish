@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.2.2",
+    "date": "2026-10-14",
+    "title": "A clearer first wishlist",
+    "summary": "Creating your first wishlist now keeps the next step obvious: keep your ideas private to start, then add the first one right away.",
+    "highlights": [
+      "The dashboard puts Create your first wishlist before exchange setup until you have a list.",
+      "New wishlists are private by default, so you decide when ideas are ready to share.",
+      "Clearer names and examples make wishlist, collaborator, and sharing choices easier to understand.",
+      "After creating a list, OpenWish takes you straight to Add your first idea.",
+      "A clear confirmation tells you the new wishlist is ready and keeps the first idea focused."
+    ]
+  },
+  {
     "version": "0.2.1",
     "date": "2026-10-12",
     "title": "A steady dashboard while OpenWish connects",

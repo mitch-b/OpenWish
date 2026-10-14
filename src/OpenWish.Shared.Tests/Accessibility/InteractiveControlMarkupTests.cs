@@ -33,6 +33,17 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void Dashboard_PrioritizesFirstWishlistOnlyAfterLoadingAnEmptyCollection()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+
+        Assert.Contains("private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? \"action-tile-primary\" : string.Empty", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? string.Empty : \"action-tile-primary\"", markup, StringComparison.Ordinal);
+        Assert.Contains("IsFirstWishlist ? \"Create your first wishlist\" : \"New wishlist\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistIndex_ConnectsTabsAndDiscoveryControlsToTheirContent()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");

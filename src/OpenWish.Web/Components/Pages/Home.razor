@@ -126,12 +126,12 @@
                         </div>
                     </div>
                     <div class="action-grid">
-                        <a href="/wishlists/new" class="action-tile @(HasWishlists ? string.Empty : "action-tile-primary")">
+                        <a href="/wishlists/new" class="action-tile @(IsFirstWishlist ? "action-tile-primary" : string.Empty)">
                             <span class="action-icon"><OpenWishIcon Name="plus-lg" /></span>
-                            <span><strong>@(HasWishlists ? "New wishlist" : "Create your first wishlist")</strong><small>Capture gift ideas</small></span>
+                            <span><strong>@(IsFirstWishlist ? "Create your first wishlist" : "New wishlist")</strong><small>Capture gift ideas</small></span>
                             <OpenWishIcon Name="arrow-right" Class="action-arrow" />
                         </a>
-                        <a href="/events/new" class="action-tile @(HasWishlists ? "action-tile-primary" : string.Empty)">
+                        <a href="/events/new" class="action-tile @(IsFirstWishlist ? string.Empty : "action-tile-primary")">
                             <span class="action-icon"><OpenWishIcon Name="gift" /></span>
                             <span><strong>Gift exchange</strong><small>Set up private assignments</small></span>
                             <OpenWishIcon Name="arrow-right" Class="action-arrow" />
@@ -341,7 +341,7 @@
         PendingFriendRequestCount is not null &&
         PendingEventInvitationCount is not null;
 
-    private bool HasWishlists => FeaturedWishlists?.Count > 0;
+    private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;
 
     private void SubmitQuickAdd()
     {

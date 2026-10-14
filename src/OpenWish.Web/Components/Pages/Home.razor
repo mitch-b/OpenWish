@@ -126,14 +126,14 @@
                         </div>
                     </div>
                     <div class="action-grid">
-                        <a href="/events/new" class="action-tile action-tile-primary">
-                            <span class="action-icon"><OpenWishIcon Name="gift" /></span>
-                            <span><strong>Gift exchange</strong><small>Set up private assignments</small></span>
+                        <a href="/wishlists/new" class="action-tile @(HasWishlists ? string.Empty : "action-tile-primary")">
+                            <span class="action-icon"><OpenWishIcon Name="plus-lg" /></span>
+                            <span><strong>@(HasWishlists ? "New wishlist" : "Create your first wishlist")</strong><small>Capture gift ideas</small></span>
                             <OpenWishIcon Name="arrow-right" Class="action-arrow" />
                         </a>
-                        <a href="/wishlists/new" class="action-tile">
-                            <span class="action-icon"><OpenWishIcon Name="plus-lg" /></span>
-                            <span><strong>New wishlist</strong><small>Capture gift ideas</small></span>
+                        <a href="/events/new" class="action-tile @(HasWishlists ? "action-tile-primary" : string.Empty)">
+                            <span class="action-icon"><OpenWishIcon Name="gift" /></span>
+                            <span><strong>Gift exchange</strong><small>Set up private assignments</small></span>
                             <OpenWishIcon Name="arrow-right" Class="action-arrow" />
                         </a>
                         <a href="/friends" class="action-tile">
@@ -340,6 +340,8 @@
         UpcomingEventCount is not null &&
         PendingFriendRequestCount is not null &&
         PendingEventInvitationCount is not null;
+
+    private bool HasWishlists => FeaturedWishlists?.Count > 0;
 
     private void SubmitQuickAdd()
     {

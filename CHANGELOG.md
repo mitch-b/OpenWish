@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.2.2] - 2026-10-14
+
+### Improved
+
+- People creating their first wishlist now see that action first on the
+  dashboard and move directly into adding their first idea after creating it.
+- New wishlists begin private, with clearer labels and explanations for
+  wishlist names, collaboration, and sharing.
+- The first-idea page confirms that the wishlist is ready and explains the
+  quickest way to start filling it.
+
 ## [0.2.1] - 2026-10-12
 
 ### Fixed

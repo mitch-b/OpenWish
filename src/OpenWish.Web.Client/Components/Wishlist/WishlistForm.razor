@@ -7,11 +7,12 @@
         <ValidationSummary />
 
         <div class="mb-3">
-            <label for="name" class="form-label">Title</label>
+            <label for="name" class="form-label">Wishlist name</label>
             <InputText id="name"
                        class="form-control"
                        autofocus="@AutoFocusName"
                        @bind-Value="@Model!.Name" />
+            <div class="form-text">For example, Birthday ideas or Gifts for our new home.</div>
             <ValidationMessage For="@(() => Model.Name)" />
         </div>
 
@@ -57,8 +58,9 @@
         <div class="mb-3 form-check">
             <InputCheckbox id="isCollaborative" class="form-check-input" @bind-Value="@Model!.IsCollaborative" />
             <label class="form-check-label" for="isCollaborative">
-                Is Collaborative? (allows other invited members to add items to your list)
+            Let invited people add ideas to this list
             </label>
+            <div class="form-text">You can invite collaborators after creating the list.</div>
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
@@ -72,7 +74,7 @@
                            @onchange="@(() => SetVisibility(false, false))" />
                     <div class="visibility-icon"><OpenWishIcon Name="people" /></div>
                     <div class="visibility-content">
-                        <div class="visibility-title">All friends</div>
+                        <div class="visibility-title">Share with all friends</div>
                         <div class="visibility-desc">Everyone in your friend list can see this wishlist.</div>
                     </div>
                     <div class="visibility-check">
@@ -89,8 +91,8 @@
                            @onchange="@(() => SetVisibility(false, true))" />
                     <div class="visibility-icon"><OpenWishIcon Name="person-check" /></div>
                     <div class="visibility-content">
-                        <div class="visibility-title">Specific friends only</div>
-                        <div class="visibility-desc">Hand-pick who gets to see this wishlist.</div>
+                        <div class="visibility-title">Share with specific friends</div>
+                        <div class="visibility-desc">Choose exactly who gets to see this wishlist.</div>
                     </div>
                     <div class="visibility-check">
                         @if (!Model.IsPrivate && Model.IsFriendsOnly)
@@ -107,7 +109,7 @@
                     <div class="visibility-icon"><OpenWishIcon Name="lock" /></div>
                     <div class="visibility-content">
                         <div class="visibility-title">Private</div>
-                        <div class="visibility-desc">Only you can see this wishlist.</div>
+                        <div class="visibility-desc">Only you can see it until you decide to share.</div>
                     </div>
                     <div class="visibility-check">
                         @if (Model.IsPrivate)

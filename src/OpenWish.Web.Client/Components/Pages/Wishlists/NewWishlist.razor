@@ -14,7 +14,7 @@
 
 <div class="container page-shell">
     <PageHeader Title="Create a wishlist"
-                Description="Start with a name and choose who can see your gift ideas.">
+                Description="Name your list, keep it private to start, then add your first idea.">
         <Actions>
             <a href="/wishlists" class="btn btn-outline-secondary">
                 <OpenWishIcon Name="arrow-left" /> Back to wishlists
@@ -38,7 +38,7 @@
 
 
 @code {
-    private readonly WishlistModel? _wishlist = new() { Name = "" };
+    private readonly WishlistModel? _wishlist = new() { Name = "", IsPrivate = true };
     private bool _isSubmitting;
     private string? _errorMessage;
 
@@ -64,8 +64,8 @@
                 return;
             }
 
-            await WishlistService.CreateWishlistAsync(submittedWishlist, userId);
-            NavigationManager.NavigateTo("/wishlists");
+            var createdWishlist = await WishlistService.CreateWishlistAsync(submittedWishlist, userId);
+            NavigationManager.NavigateTo($"/wishlists/{createdWishlist.PublicId}/items/new?firstIdea=true");
         }
         catch (Exception ex)
         {

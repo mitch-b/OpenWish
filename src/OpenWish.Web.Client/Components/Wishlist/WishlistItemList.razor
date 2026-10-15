@@ -23,6 +23,10 @@
                     tabindex="-1">
                     <td data-label="Name">
                         <span class="item-name">@item.Name</span>
+                        @if (item.IsPinned)
+                        {
+                            <span class="most-wanted"><OpenWishIcon Name="star-fill" /> Most wanted</span>
+                        }
                         @if (!string.IsNullOrEmpty(item.Url))
                         {
                             <a href="@item.Url"
@@ -93,6 +97,35 @@
                                     </button>
                                 }
                             </div>
+                            @if (IsOwner)
+                            {
+                                <div class="rank-actions" aria-label="Reorder @item.Name">
+                                    <button class="btn btn-sm @(item.IsPinned ? "btn-primary" : "btn-outline-primary")"
+                                            type="button"
+                                            aria-pressed="@item.IsPinned"
+                                            aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
+                                            @onclick="() => HandleTogglePin(item)">
+                                        <OpenWishIcon Name="star-fill" />
+                                        <span class="rank-action-label">Most wanted</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            type="button"
+                                            disabled="@(!CanMoveItem(item, -1))"
+                                            aria-label="Move @item.Name up"
+                                            @onclick="() => HandleMoveUp(item)">
+                                        <OpenWishIcon Name="arrow-up" />
+                                        <span class="rank-action-label">Move up</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            type="button"
+                                            disabled="@(!CanMoveItem(item, 1))"
+                                            aria-label="Move @item.Name down"
+                                            @onclick="() => HandleMoveDown(item)">
+                                        <OpenWishIcon Name="arrow-down" />
+                                        <span class="rank-action-label">Move down</span>
+                                    </button>
+                                </div>
+                            }
                         </div>
                     </td>
                 </tr>
@@ -131,6 +164,10 @@
     [Parameter] public IEnumerable<WishlistItemModel> Items { get; set; } = Array.Empty<WishlistItemModel>();
     [Parameter] public EventCallback<WishlistItemModel> OnEdit { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnDelete { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnTogglePin { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnMoveUp { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnMoveDown { get; set; }
+    [Parameter] public bool CanReorder { get; set; }
     [Parameter] public bool ShowInteractions { get; set; } = false;
     [Parameter] public string WishlistId { get; set; } = string.Empty;
     [Parameter] public string OwnerId { get; set; } = "";
@@ -164,6 +201,42 @@
         if (OnDelete.HasDelegate)
         {
             await OnDelete.InvokeAsync(item);
+        }
+    }
+
+    private bool CanMoveItem(WishlistItemModel item, int direction)
+    {
+        if (!CanReorder)
+        {
+            return false;
+        }
+
+        var matchingItems = Items.Where(candidate => candidate.IsPinned == item.IsPinned).ToList();
+        var itemIndex = matchingItems.FindIndex(candidate => candidate.Id == item.Id);
+        return itemIndex + direction >= 0 && itemIndex + direction < matchingItems.Count;
+    }
+
+    private async Task HandleTogglePin(WishlistItemModel item)
+    {
+        if (OnTogglePin.HasDelegate)
+        {
+            await OnTogglePin.InvokeAsync(item);
+        }
+    }
+
+    private async Task HandleMoveUp(WishlistItemModel item)
+    {
+        if (CanMoveItem(item, -1) && OnMoveUp.HasDelegate)
+        {
+            await OnMoveUp.InvokeAsync(item);
+        }
+    }
+
+    private async Task HandleMoveDown(WishlistItemModel item)
+    {
+        if (CanMoveItem(item, 1) && OnMoveDown.HasDelegate)
+        {
+            await OnMoveDown.InvokeAsync(item);
         }
     }
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 using OpenWish.Web.Services;
 
@@ -220,6 +221,68 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
 
             var updatedItem = await _wishlistService.UpdateWishlistItemByPublicIdAsync(wishlistPublicId, itemId, item);
             return Ok(updatedItem);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPut("{wishlistPublicId}/items/{itemId}/pin")]
+    public async Task<IActionResult> UpdateWishlistItemPin(
+        string wishlistPublicId,
+        int itemId,
+        [FromBody] UpdateWishlistItemPinRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+            if (wishlist.OwnerId != userId)
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.UpdateWishlistItemPinByPublicIdAsync(
+                wishlistPublicId,
+                itemId,
+                request.IsPinned));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPut("{wishlistPublicId}/items/order")]
+    public async Task<IActionResult> ReorderWishlistItems(
+        string wishlistPublicId,
+        [FromBody] ReorderWishlistItemsRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var wishlist = await _wishlistService.GetWishlistByPublicIdAsync(wishlistPublicId, userId);
+            if (wishlist.OwnerId != userId)
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.ReorderWishlistItemsByPublicIdAsync(wishlistPublicId, request));
         }
         catch (KeyNotFoundException)
         {

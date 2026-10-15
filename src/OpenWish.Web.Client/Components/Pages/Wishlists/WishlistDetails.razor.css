@@ -601,6 +601,22 @@
     flex: 1;
 }
 
+.most-wanted {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--color-accent);
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ranking-help {
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    margin: -0.5rem 0 1rem;
+}
+
 .priority-indicator {
     font-size: 1rem;
     line-height: 1;
@@ -727,6 +743,23 @@
 .btn-icon.btn-danger:hover {
     background: #dc3545;
     border-color: #dc3545;
+}
+
+.btn-icon.is-pinned {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary-bg);
+    color: var(--color-primary-bg);
+}
+
+.rank-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.rank-actions .btn-icon:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
 }
 
 .item-details-expanded {

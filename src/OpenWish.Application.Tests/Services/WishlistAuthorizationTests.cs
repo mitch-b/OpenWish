@@ -6,6 +6,7 @@ using OpenWish.Application.Services;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 using Xunit;
 
@@ -309,6 +310,128 @@ public class WishlistAuthorizationTests
         Assert.Equal(originalPublicId, result.PublicId);
         await using var verificationContext = factory.CreateDbContext();
         Assert.Equal(originalPublicId, (await verificationContext.WishlistItems.SingleAsync()).PublicId);
+    }
+
+    [Fact]
+    public async Task UpdateWishlistItemAsync_DoesNotAllowGenericUpdatesToChangePinning()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var item = new WishlistItem
+        {
+            Name = "Tea infuser",
+            Wishlist = wishlist,
+            IsPinned = true
+        };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            await context.SaveChangesAsync();
+        }
+
+        var updated = await CreateService(factory).UpdateWishlistItemAsync(
+            wishlist.Id,
+            item.Id,
+            new WishlistItemModel { Id = item.Id, Name = "Updated tea infuser", IsPinned = false });
+
+        Assert.True(updated.IsPinned);
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.True((await verificationContext.WishlistItems.SingleAsync()).IsPinned);
+    }
+
+    [Fact]
+    public async Task ReorderWishlistItemsByPublicIdAsync_PersistsExactOwnerOrderAndPinning()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var first = new WishlistItem { Name = "First", Wishlist = wishlist, OrderIndex = 0 };
+        var second = new WishlistItem { Name = "Second", Wishlist = wishlist, OrderIndex = 1 };
+        var privateItem = new WishlistItem
+        {
+            Name = "Private",
+            Wishlist = wishlist,
+            OrderIndex = 2,
+            IsPrivate = true
+        };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.AddRange(first, second, privateItem);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var reordered = await service.ReorderWishlistItemsByPublicIdAsync(
+            wishlist.PublicId,
+            new ReorderWishlistItemsRequest { OrderedItemIds = [second.Id, first.Id, privateItem.Id] });
+
+        Assert.Equal([second.Id, first.Id, privateItem.Id], reordered.Select(item => item.Id));
+
+        var pinned = await service.UpdateWishlistItemPinByPublicIdAsync(wishlist.PublicId, privateItem.Id, true);
+        Assert.True(pinned.IsPinned);
+
+        var shopperItems = await service.GetWishlistItemsByPublicIdAsync(wishlist.PublicId, "shopper");
+        Assert.Equal([second.Id, first.Id], shopperItems.Select(item => item.Id));
+
+        var ownerItems = await service.GetWishlistItemsByPublicIdAsync(wishlist.PublicId, "owner");
+        Assert.Equal([privateItem.Id, second.Id, first.Id], ownerItems.Select(item => item.Id));
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.Equal(0, (await verificationContext.WishlistItems.FindAsync(second.Id))!.OrderIndex);
+        Assert.Equal(1, (await verificationContext.WishlistItems.FindAsync(first.Id))!.OrderIndex);
+        Assert.Equal(2, (await verificationContext.WishlistItems.FindAsync(privateItem.Id))!.OrderIndex);
+    }
+
+    [Fact]
+    public async Task ReorderWishlistItemsByPublicIdAsync_RejectsMissingOrDuplicateActiveItems()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var first = new WishlistItem { Name = "First", Wishlist = wishlist, OrderIndex = 0 };
+        var second = new WishlistItem { Name = "Second", Wishlist = wishlist, OrderIndex = 1 };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.AddRange(first, second);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.ReorderWishlistItemsByPublicIdAsync(
+            wishlist.PublicId,
+            new ReorderWishlistItemsRequest { OrderedItemIds = [first.Id, first.Id] }));
+
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.Equal(
+            [first.Id, second.Id],
+            (await verificationContext.WishlistItems.OrderBy(item => item.OrderIndex).ToListAsync())
+                .Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task ReorderWishlistItemsByPublicIdAsync_PreservesHiddenOwnerItems()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var first = new WishlistItem { Name = "First", Wishlist = wishlist, OrderIndex = 0 };
+        var surprise = new WishlistItem
+        {
+            Name = "Surprise",
+            Wishlist = wishlist,
+            OrderIndex = 1,
+            IsHiddenFromOwner = true
+        };
+        var second = new WishlistItem { Name = "Second", Wishlist = wishlist, OrderIndex = 2 };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.AddRange(first, surprise, second);
+            await context.SaveChangesAsync();
+        }
+
+        var reordered = await CreateService(factory).ReorderWishlistItemsByPublicIdAsync(
+            wishlist.PublicId,
+            new ReorderWishlistItemsRequest { OrderedItemIds = [second.Id, first.Id] });
+
+        Assert.Equal(["Second", "Surprise", "First"], reordered.Select(item => item.Name));
+        var ownerItems = await CreateService(factory).GetWishlistItemsByPublicIdAsync(wishlist.PublicId, "owner");
+        Assert.Equal(["Second", "First"], ownerItems.Select(item => item.Name));
     }
 
     [Fact]

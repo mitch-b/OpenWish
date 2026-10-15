@@ -1258,6 +1258,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("IsHiddenFromOwner")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");
 

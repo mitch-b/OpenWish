@@ -102,6 +102,7 @@
                                 <div class="rank-actions" aria-label="Reorder @item.Name">
                                     <button class="btn btn-sm @(item.IsPinned ? "btn-primary" : "btn-outline-primary")"
                                             type="button"
+                                            disabled="@IsRanking"
                                             aria-pressed="@item.IsPinned"
                                             aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
                                             @onclick="() => HandleTogglePin(item)">
@@ -168,6 +169,7 @@
     [Parameter] public EventCallback<WishlistItemModel> OnMoveUp { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnMoveDown { get; set; }
     [Parameter] public bool CanReorder { get; set; }
+    [Parameter] public bool IsRanking { get; set; }
     [Parameter] public bool ShowInteractions { get; set; } = false;
     [Parameter] public string WishlistId { get; set; } = string.Empty;
     [Parameter] public string OwnerId { get; set; } = "";

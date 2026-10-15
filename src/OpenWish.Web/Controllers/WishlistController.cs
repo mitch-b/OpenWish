@@ -81,10 +81,6 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return NotFound();
         }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
     }
 
     [HttpDelete("{publicId}")]
@@ -135,6 +131,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 
@@ -232,10 +232,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
-    [HttpPut("{wishlistPublicId}/items/{itemId}/pin")]
+    [HttpPut("{wishlistPublicId}/items/{itemPublicId}/pin")]
     public async Task<IActionResult> UpdateWishlistItemPin(
         string wishlistPublicId,
-        int itemId,
+        string itemPublicId,
         [FromBody] UpdateWishlistItemPinRequest request)
     {
         var userId = await _userContextService.GetUserIdAsync();
@@ -254,12 +254,16 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
 
             return Ok(await _wishlistService.UpdateWishlistItemPinByPublicIdAsync(
                 wishlistPublicId,
-                itemId,
+                itemPublicId,
                 request.IsPinned));
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 
@@ -287,6 +291,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
         catch (ArgumentException ex)
         {

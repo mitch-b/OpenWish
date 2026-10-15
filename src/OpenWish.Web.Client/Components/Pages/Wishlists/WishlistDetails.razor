@@ -420,7 +420,7 @@ else
                 <div class="items-grid">
                     @foreach (var item in _filteredItems)
                     {
-                        <div class="wishlist-item-card">
+                        <div @key="item.Id" class="wishlist-item-card">
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
@@ -536,6 +536,7 @@ else
                                 {
                                     <button class="btn-icon @(item.IsPinned ? "is-pinned" : "")"
                                             type="button"
+                                            disabled="@_isRanking"
                                             aria-pressed="@item.IsPinned"
                                             aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
                                             @onclick="() => ToggleItemPinAsync(item)">
@@ -623,6 +624,7 @@ else
                                     OnMoveUp="@(item => MoveItemAsync(item, -1))"
                                     OnMoveDown="@(item => MoveItemAsync(item, 1))"
                                     CanReorder="@CanReorder"
+                                    IsRanking="@_isRanking"
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
@@ -634,6 +636,7 @@ else
                 {
                     <WishlistItemList Items="@_filteredItems"
                                     CanReorder="false"
+                                    IsRanking="false"
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
@@ -708,6 +711,7 @@ else
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
+    private bool _isRanking;
     private string? _deleteItemError;
     private string? _appliedBudgetQuery;
     private readonly string _pasteListenerKey = $"wishlist-details-{Guid.NewGuid():N}";
@@ -720,7 +724,7 @@ else
         MinPrice > 0 ||
         MaxPrice < PriceCeiling ||
         BudgetFilterActive;
-    private bool CanReorder => _isOwner && SortBy == "custom" && !HasActiveFilters;
+    private bool CanReorder => _isOwner && !_isRanking && SortBy == "custom" && !HasActiveFilters;
 
     protected override async Task OnInitializedAsync()
     {
@@ -818,11 +822,12 @@ else
 
         (orderedItems[currentIndex], orderedItems[targetIndex]) = (orderedItems[targetIndex], orderedItems[currentIndex]);
 
+        _isRanking = true;
         try
         {
             var savedItems = await WishlistService.ReorderWishlistItemsByPublicIdAsync(
                 WishlistId,
-                new() { OrderedItemIds = orderedItems.Select(candidate => candidate.Id).ToList() });
+                new() { OrderedItemPublicIds = orderedItems.Select(candidate => candidate.PublicId).ToList() });
             _items = savedItems.Where(ShouldDisplayItem).ToList();
             ApplyFiltersAndSort();
             _feedbackMessage = $"{item.Name} moved {(direction < 0 ? "up" : "down")}.";
@@ -830,18 +835,35 @@ else
         }
         catch (HttpRequestException)
         {
-            _feedbackMessage = "The order could not be saved. Try again.";
-            _feedbackIsError = true;
+            await RefreshItemsAfterRankingFailureAsync("The order could not be saved. Refresh your ideas and try again.");
+        }
+        catch (ArgumentException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("Your ideas changed before this move was saved. They have been refreshed.");
+        }
+        catch (KeyNotFoundException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("That idea is no longer available. Your ideas have been refreshed.");
+        }
+        finally
+        {
+            _isRanking = false;
         }
     }
 
     private async Task ToggleItemPinAsync(WishlistItemModel item)
     {
+        if (_isRanking)
+        {
+            return;
+        }
+
+        _isRanking = true;
         try
         {
             var savedItem = await WishlistService.UpdateWishlistItemPinByPublicIdAsync(
                 WishlistId,
-                item.Id,
+                item.PublicId,
                 !item.IsPinned);
             var itemIndex = _items.FindIndex(candidate => candidate.Id == item.Id);
             if (itemIndex >= 0)
@@ -859,9 +881,39 @@ else
         }
         catch (HttpRequestException)
         {
-            _feedbackMessage = "The most wanted status could not be saved. Try again.";
-            _feedbackIsError = true;
+            await RefreshItemsAfterRankingFailureAsync("The most wanted status could not be saved. Refresh your ideas and try again.");
         }
+        catch (ArgumentException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("Your ideas changed before this update was saved. They have been refreshed.");
+        }
+        catch (KeyNotFoundException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("That idea is no longer available. Your ideas have been refreshed.");
+        }
+        finally
+        {
+            _isRanking = false;
+        }
+    }
+
+    private async Task RefreshItemsAfterRankingFailureAsync(string message)
+    {
+        try
+        {
+            _feedbackMessage = message;
+            await LoadItems();
+        }
+        catch (HttpRequestException)
+        {
+            _feedbackMessage = "The ideas could not be refreshed. Try again.";
+        }
+        catch (KeyNotFoundException)
+        {
+            _feedbackMessage = "This wishlist is no longer available.";
+        }
+
+        _feedbackIsError = true;
     }
 
     private void ApplyFiltersAndSort()

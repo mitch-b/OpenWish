@@ -2278,6 +2278,22 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
   );
   const guestItems = await guestItemsResponse.json();
+  const forbiddenPinResponse = await context.request.put(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/${guestItems[0].publicId}/pin`,
+    { data: { isPinned: true } }
+  );
+  if (forbiddenPinResponse.status() !== 403) {
+    throw new Error(
+      `Non-owner pin request returned ${forbiddenPinResponse.status()}, expected 403.`
+    );
+  }
+  const forbiddenReorderResponse = await context.request.put(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/order`,
+    { data: { orderedItemPublicIds: guestItems.map(item => item.publicId) } }
+  );
+  if (forbiddenReorderResponse.status() !== 403) {
+    throw new Error(`Non-owner reorder request returned ${forbiddenReorderResponse.status()}, expected 403.`);
+  }
   const anonymousReservation = guestItems.flatMap(item => item.reservations ?? [])
     .find(reservation => reservation.isAnonymous);
   if (!anonymousReservation ||

@@ -340,6 +340,28 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task UpdateWishlistItemAsync_PreservesExistingOrderIndex()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var item = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist, OrderIndex = 3 };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            await context.SaveChangesAsync();
+        }
+
+        var updated = await CreateService(factory).UpdateWishlistItemAsync(
+            wishlist.Id,
+            item.Id,
+            new WishlistItemModel { Id = item.Id, Name = "Updated tea infuser" });
+
+        Assert.Equal(3, updated.OrderIndex);
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.Equal(3, (await verificationContext.WishlistItems.SingleAsync()).OrderIndex);
+    }
+
+    [Fact]
     public async Task ReorderWishlistItemsByPublicIdAsync_PersistsExactOwnerOrderAndPinning()
     {
         var factory = CreateFactory();
@@ -362,11 +384,11 @@ public class WishlistAuthorizationTests
         var service = CreateService(factory);
         var reordered = await service.ReorderWishlistItemsByPublicIdAsync(
             wishlist.PublicId,
-            new ReorderWishlistItemsRequest { OrderedItemIds = [second.Id, first.Id, privateItem.Id] });
+            new ReorderWishlistItemsRequest { OrderedItemPublicIds = [second.PublicId, first.PublicId, privateItem.PublicId] });
 
         Assert.Equal([second.Id, first.Id, privateItem.Id], reordered.Select(item => item.Id));
 
-        var pinned = await service.UpdateWishlistItemPinByPublicIdAsync(wishlist.PublicId, privateItem.Id, true);
+        var pinned = await service.UpdateWishlistItemPinByPublicIdAsync(wishlist.PublicId, privateItem.PublicId, true);
         Assert.True(pinned.IsPinned);
 
         var shopperItems = await service.GetWishlistItemsByPublicIdAsync(wishlist.PublicId, "shopper");
@@ -396,7 +418,7 @@ public class WishlistAuthorizationTests
         var service = CreateService(factory);
         await Assert.ThrowsAsync<ArgumentException>(() => service.ReorderWishlistItemsByPublicIdAsync(
             wishlist.PublicId,
-            new ReorderWishlistItemsRequest { OrderedItemIds = [first.Id, first.Id] }));
+            new ReorderWishlistItemsRequest { OrderedItemPublicIds = [first.PublicId, first.PublicId] }));
 
         await using var verificationContext = factory.CreateDbContext();
         Assert.Equal(
@@ -427,11 +449,42 @@ public class WishlistAuthorizationTests
 
         var reordered = await CreateService(factory).ReorderWishlistItemsByPublicIdAsync(
             wishlist.PublicId,
-            new ReorderWishlistItemsRequest { OrderedItemIds = [second.Id, first.Id] });
+            new ReorderWishlistItemsRequest { OrderedItemPublicIds = [second.PublicId, first.PublicId] });
 
-        Assert.Equal(["Second", "Surprise", "First"], reordered.Select(item => item.Name));
+        Assert.Equal(["Second", "First"], reordered.Select(item => item.Name));
+        await using (var verificationContext = factory.CreateDbContext())
+        {
+            Assert.Equal(
+                ["Second", "Surprise", "First"],
+                (await verificationContext.WishlistItems.OrderBy(item => item.OrderIndex).ToListAsync())
+                    .Select(item => item.Name));
+        }
         var ownerItems = await CreateService(factory).GetWishlistItemsByPublicIdAsync(wishlist.PublicId, "owner");
         Assert.Equal(["Second", "First"], ownerItems.Select(item => item.Name));
+    }
+
+    [Fact]
+    public async Task UpdateWishlistItemPinByPublicIdAsync_RejectsHiddenOwnerItem()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var surprise = new WishlistItem
+        {
+            Name = "Surprise",
+            Wishlist = wishlist,
+            IsHiddenFromOwner = true
+        };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(surprise);
+            await context.SaveChangesAsync();
+        }
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            CreateService(factory).UpdateWishlistItemPinByPublicIdAsync(wishlist.PublicId, surprise.PublicId, true));
+
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.False((await verificationContext.WishlistItems.SingleAsync()).IsPinned);
     }
 
     [Fact]

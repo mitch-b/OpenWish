@@ -315,11 +315,11 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
 
     public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
         string wishlistPublicId,
-        int itemId,
+        string itemPublicId,
         bool isPinned)
     {
         var response = await _httpClient.PutAsJsonAsync(
-            $"{BaseUrl}/{wishlistPublicId}/items/{itemId}/pin",
+            $"{BaseUrl}/{wishlistPublicId}/items/{itemPublicId}/pin",
             new UpdateWishlistItemPinRequest { IsPinned = isPinned });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<WishlistItemModel>()

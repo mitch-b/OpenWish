@@ -1122,7 +1122,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
         string wishlistPublicId,
-        int itemId,
+        string itemPublicId,
         bool isPinned)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -1131,8 +1131,12 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
         var item = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.WishlistId == wishlist.Id && i.Id == itemId && !i.Deleted)
-            ?? throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistPublicId}");
+            .FirstOrDefaultAsync(i =>
+                i.WishlistId == wishlist.Id &&
+                i.PublicId == itemPublicId &&
+                !i.Deleted &&
+                !i.IsHiddenFromOwner)
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
 
         item.IsPinned = isPinned;
         item.UpdatedOn = DateTimeOffset.UtcNow;
@@ -1155,42 +1159,43 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var activeItems = await context.WishlistItems
             .Where(item => item.WishlistId == wishlist.Id && !item.Deleted)
             .ToListAsync();
-        var orderedItemIds = request.OrderedItemIds;
+        var orderedItemPublicIds = request.OrderedItemPublicIds;
         var ownerVisibleItems = activeItems
             .Where(item => !item.IsHiddenFromOwner)
             .ToList();
 
-        if (orderedItemIds.Count != ownerVisibleItems.Count ||
-            orderedItemIds.Distinct().Count() != orderedItemIds.Count ||
-            !ownerVisibleItems.Select(item => item.Id).ToHashSet().SetEquals(orderedItemIds))
+        if (orderedItemPublicIds.Count != ownerVisibleItems.Count ||
+            orderedItemPublicIds.Distinct().Count() != orderedItemPublicIds.Count ||
+            !ownerVisibleItems.Select(item => item.PublicId).ToHashSet().SetEquals(orderedItemPublicIds))
         {
             throw new ArgumentException("The requested order must contain every visible wishlist item exactly once.", nameof(request));
         }
 
-        var requestedItemsById = ownerVisibleItems.ToDictionary(item => item.Id);
-        var requestedItems = orderedItemIds.Select(itemId => requestedItemsById[itemId]).ToList();
+        var requestedItemsById = ownerVisibleItems.ToDictionary(item => item.PublicId);
+        var requestedItems = orderedItemPublicIds.Select(itemPublicId => requestedItemsById[itemPublicId]).ToList();
         var existingOrder = activeItems
             .OrderByDescending(item => item.IsPinned)
             .ThenBy(item => item.OrderIndex)
             .ToList();
-        var reorderedItems = new Queue<WishlistItem>(requestedItems);
+        var requestedItemQueue = new Queue<WishlistItem>(requestedItems);
         var utcNow = DateTimeOffset.UtcNow;
         for (var index = 0; index < existingOrder.Count; index++)
         {
             var item = existingOrder[index].IsHiddenFromOwner
                 ? existingOrder[index]
-                : reorderedItems.Dequeue();
+                : requestedItemQueue.Dequeue();
             item.OrderIndex = index;
             item.UpdatedOn = utcNow;
         }
 
         await context.SaveChangesAsync();
-        return await MapWishlistItemsAsync(
+        var reorderedItems = await MapWishlistItemsAsync(
             context,
             context.WishlistItems
                 .Where(item => item.WishlistId == wishlist.Id && !item.Deleted)
                 .OrderByDescending(item => item.IsPinned)
                 .ThenBy(item => item.OrderIndex));
+        return FilterWishlistItemsForViewer(reorderedItems, wishlist.OwnerId, wishlist.OwnerId);
     }
 
     public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)

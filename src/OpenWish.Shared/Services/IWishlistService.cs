@@ -224,7 +224,7 @@ public interface IWishlistService
     Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item);
 
     /// <summary>Sets whether an item is highlighted as one of the wishlist owner's most wanted ideas.</summary>
-    Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, int itemId, bool isPinned);
+    Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, string itemPublicId, bool isPinned);
 
     /// <summary>Persists the complete custom order of all active items in a wishlist.</summary>
     Task<IEnumerable<WishlistItemModel>> ReorderWishlistItemsByPublicIdAsync(

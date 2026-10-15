@@ -143,6 +143,16 @@
     overflow-wrap: anywhere;
 }
 
+.most-wanted {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    color: var(--color-accent);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
 .wishlist-external-link {
     display: inline-flex;
     align-items: center;
@@ -218,6 +228,19 @@
 .edit-actions {
     display: flex;
     gap: 0.25rem;
+}
+
+.rank-actions {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.rank-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2.75rem;
 }
 
 .interaction-row {

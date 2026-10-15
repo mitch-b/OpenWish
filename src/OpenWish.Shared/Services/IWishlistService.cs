@@ -1,4 +1,5 @@
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 
 namespace OpenWish.Shared.Services;
 
@@ -221,6 +222,14 @@ public interface IWishlistService
     /// <param name="item">The updated item model.</param>
     /// <returns>The updated item model.</returns>
     Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item);
+
+    /// <summary>Sets whether an item is highlighted as one of the wishlist owner's most wanted ideas.</summary>
+    Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, string itemPublicId, bool isPinned);
+
+    /// <summary>Persists the complete custom order of all active items in a wishlist.</summary>
+    Task<IEnumerable<WishlistItemModel>> ReorderWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        ReorderWishlistItemsRequest request);
 
     /// <summary>Adds a comment to a wishlist item by internal IDs.</summary>
     /// <param name="wishlistId">The internal wishlist ID.</param>

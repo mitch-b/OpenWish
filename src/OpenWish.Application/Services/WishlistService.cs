@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
@@ -478,7 +479,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         var query = context.WishlistItems
             .Where(i => i.WishlistId == wishlistId && !i.Deleted)
-            .OrderBy(i => i.OrderIndex);
+            .OrderByDescending(i => i.IsPinned)
+            .ThenBy(i => i.OrderIndex);
 
         return await MapWishlistItemsAsync(context, query);
     }
@@ -1062,7 +1064,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         var query = context.WishlistItems
             .Where(i => i.WishlistId == wishlist.Id && !i.Deleted)
-            .OrderBy(i => i.OrderIndex);
+            .OrderByDescending(i => i.IsPinned)
+            .ThenBy(i => i.OrderIndex);
 
         var items = await MapWishlistItemsAsync(context, query, wishlist.OwnerId, requestingUserId);
         return FilterWishlistItemsForViewer(items, wishlist.OwnerId, requestingUserId);
@@ -1115,6 +1118,84 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
 
         return await UpdateWishlistItemAsync(wishlist.Id, itemId, item);
+    }
+
+    public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        bool isPinned)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        var item = await context.WishlistItems
+            .FirstOrDefaultAsync(i =>
+                i.WishlistId == wishlist.Id &&
+                i.PublicId == itemPublicId &&
+                !i.Deleted &&
+                !i.IsHiddenFromOwner)
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        item.IsPinned = isPinned;
+        item.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+
+        return _mapper.Map<WishlistItemModel>(item);
+    }
+
+    public async Task<IEnumerable<WishlistItemModel>> ReorderWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        ReorderWishlistItemsRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        var activeItems = await context.WishlistItems
+            .Where(item => item.WishlistId == wishlist.Id && !item.Deleted)
+            .ToListAsync();
+        var orderedItemPublicIds = request.OrderedItemPublicIds;
+        var ownerVisibleItems = activeItems
+            .Where(item => !item.IsHiddenFromOwner)
+            .ToList();
+
+        if (orderedItemPublicIds.Count != ownerVisibleItems.Count ||
+            orderedItemPublicIds.Distinct().Count() != orderedItemPublicIds.Count ||
+            !ownerVisibleItems.Select(item => item.PublicId).ToHashSet().SetEquals(orderedItemPublicIds))
+        {
+            throw new ArgumentException("The requested order must contain every visible wishlist item exactly once.", nameof(request));
+        }
+
+        var requestedItemsById = ownerVisibleItems.ToDictionary(item => item.PublicId);
+        var requestedItems = orderedItemPublicIds.Select(itemPublicId => requestedItemsById[itemPublicId]).ToList();
+        var existingOrder = activeItems
+            .OrderByDescending(item => item.IsPinned)
+            .ThenBy(item => item.OrderIndex)
+            .ToList();
+        var requestedItemQueue = new Queue<WishlistItem>(requestedItems);
+        var utcNow = DateTimeOffset.UtcNow;
+        for (var index = 0; index < existingOrder.Count; index++)
+        {
+            var item = existingOrder[index].IsHiddenFromOwner
+                ? existingOrder[index]
+                : requestedItemQueue.Dequeue();
+            item.OrderIndex = index;
+            item.UpdatedOn = utcNow;
+        }
+
+        await context.SaveChangesAsync();
+        var reorderedItems = await MapWishlistItemsAsync(
+            context,
+            context.WishlistItems
+                .Where(item => item.WishlistId == wishlist.Id && !item.Deleted)
+                .OrderByDescending(item => item.IsPinned)
+                .ThenBy(item => item.OrderIndex));
+        return FilterWishlistItemsForViewer(reorderedItems, wishlist.OwnerId, wishlist.OwnerId);
     }
 
     public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)

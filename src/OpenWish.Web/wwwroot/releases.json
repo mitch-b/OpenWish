@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-10-15",
+    "title": "Put your most wanted ideas first",
+    "summary": "Wishlists now follow the order you choose, so the people shopping for you can start with the ideas that matter most.",
+    "highlights": [
+      "Mark an idea as most wanted to keep it at the top of your wishlist.",
+      "Move ideas up or down from either grid or list view to make the order feel right.",
+      "Every move is saved right away, including when you use a keyboard.",
+      "Shoppers see your chosen order and most-wanted ideas without seeing any owner controls.",
+      "You can still switch to priority, price, budget, name, or date sorting whenever you need a different view."
+    ]
+  },
+  {
     "version": "0.2.2",
     "date": "2026-10-14",
     "title": "A clearer first wishlist",

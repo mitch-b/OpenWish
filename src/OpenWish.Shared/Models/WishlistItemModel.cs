@@ -17,5 +17,6 @@ public class WishlistItemModel : BaseEntityModel
     public ICollection<ItemCommentModel> Comments { get; set; } = [];
     public ICollection<ItemReservationModel> Reservations { get; set; } = [];
     public int? OrderIndex { get; set; } // Determines the order of items in the wishlist
+    public bool IsPinned { get; set; }
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
 }

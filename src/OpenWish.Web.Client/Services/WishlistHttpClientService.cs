@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 
 namespace OpenWish.Web.Client.Services;
@@ -310,6 +311,29 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
             ?? throw new InvalidOperationException("Unable to deserialize updated item.");
+    }
+
+    public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        bool isPinned)
+    {
+        var response = await _httpClient.PutAsJsonAsync(
+            $"{BaseUrl}/{wishlistPublicId}/items/{itemPublicId}/pin",
+            new UpdateWishlistItemPinRequest { IsPinned = isPinned });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated item.");
+    }
+
+    public async Task<IEnumerable<WishlistItemModel>> ReorderWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        ReorderWishlistItemsRequest request)
+    {
+        var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/order", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<IEnumerable<WishlistItemModel>>()
+            ?? Enumerable.Empty<WishlistItemModel>();
     }
 
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)

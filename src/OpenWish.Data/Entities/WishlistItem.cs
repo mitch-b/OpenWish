@@ -15,6 +15,7 @@ public class WishlistItem : BaseEntity
     public ICollection<Comment>? Comments { get; set; } // Comments on the item
     public ICollection<ItemReaction>? Reactions { get; set; } // Reactions to the item
     public int? OrderIndex { get; set; } // Determines the order of items in the wishlist
+    public bool IsPinned { get; set; }
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
     public string? CreationRequestHash { get; set; }
 }

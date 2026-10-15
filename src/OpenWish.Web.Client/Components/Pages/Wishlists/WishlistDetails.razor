@@ -190,6 +190,19 @@ else
         </div>
     </div>
     <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
+    @if (_isOwner)
+    {
+        <p id="wishlist-ranking-help" class="ranking-help" role="status">
+            @if (CanReorder)
+            {
+                <span>Use the most wanted and move controls to organize your ideas. Pinned ideas stay at the top.</span>
+            }
+            else
+            {
+                <span>Choose owner order and clear filters to rearrange ideas.</span>
+            }
+        </p>
+    }
 
     @if (HasBudget)
     {
@@ -300,6 +313,12 @@ else
                 <span id="wishlist-sort-label" class="filter-label">Sort by</span>
                 <div class="sort-options">
                     <button type="button"
+                            class="sort-option @(SortBy == "custom" ? "active" : "")"
+                            aria-pressed="@(SortBy == "custom" ? "true" : "false")"
+                            @onclick="@(() => SortItems("custom"))">
+                        <OpenWishIcon Name="list-ol" /> Owner order
+                    </button>
+                    <button type="button"
                             class="sort-option @(SortBy == "priority" ? "active" : "")"
                             aria-pressed="@(SortBy == "priority" ? "true" : "false")"
                             @onclick="@(() => SortItems("priority"))">
@@ -401,7 +420,7 @@ else
                 <div class="items-grid">
                     @foreach (var item in _filteredItems)
                     {
-                        <div class="wishlist-item-card">
+                        <div @key="item.Id" class="wishlist-item-card">
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
@@ -430,6 +449,10 @@ else
                             <div class="item-content">
                                 <div class="item-header">
                                     <h3 class="item-title">@item.Name</h3>
+                                    @if (item.IsPinned)
+                                    {
+                                        <span class="most-wanted"><OpenWishIcon Name="star-fill" /> Most wanted</span>
+                                    }
                                     @if (item.Priority.HasValue)
                                     {
                                         <span class="priority-indicator priority-@item.Priority.Value">
@@ -509,6 +532,38 @@ else
                                         <OpenWishIcon Name="trash" />
                                     </button>
                                 }
+                                @if (_isOwner)
+                                {
+                                    <button class="btn-icon @(item.IsPinned ? "is-pinned" : "")"
+                                            type="button"
+                                            disabled="@_isRanking"
+                                            aria-pressed="@item.IsPinned"
+                                            aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
+                                            @onclick="() => ToggleItemPinAsync(item)">
+                                        <OpenWishIcon Name="star-fill" />
+                                        <span class="rank-action-label">Most wanted</span>
+                                    </button>
+                                    <div class="rank-actions" aria-label="Reorder @item.Name">
+                                        <button class="btn-icon"
+                                                type="button"
+                                                disabled="@(!CanMoveItem(item, -1))"
+                                                aria-describedby="wishlist-ranking-help"
+                                                aria-label="Move @item.Name up"
+                                                @onclick="() => MoveItemAsync(item, -1)">
+                                            <OpenWishIcon Name="arrow-up" />
+                                            <span class="rank-action-label">Move up</span>
+                                        </button>
+                                        <button class="btn-icon"
+                                                type="button"
+                                                disabled="@(!CanMoveItem(item, 1))"
+                                                aria-describedby="wishlist-ranking-help"
+                                                aria-label="Move @item.Name down"
+                                                @onclick="() => MoveItemAsync(item, 1)">
+                                            <OpenWishIcon Name="arrow-down" />
+                                            <span class="rank-action-label">Move down</span>
+                                        </button>
+                                    </div>
+                                }
                                 <button class="btn-icon"
                                         type="button"
                                         aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
@@ -565,6 +620,11 @@ else
                     <WishlistItemList Items="@_filteredItems"
                                     OnEdit="@HandleItemEditClick"
                                     OnDelete="@ShowItemDeleteDialogAsync"
+                                    OnTogglePin="@ToggleItemPinAsync"
+                                    OnMoveUp="@(item => MoveItemAsync(item, -1))"
+                                    OnMoveDown="@(item => MoveItemAsync(item, 1))"
+                                    CanReorder="@CanReorder"
+                                    IsRanking="@_isRanking"
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
@@ -575,6 +635,8 @@ else
                 else
                 {
                     <WishlistItemList Items="@_filteredItems"
+                                    CanReorder="false"
+                                    IsRanking="false"
                                     ShowInteractions="true"
                                     WishlistId="@WishlistId"
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
@@ -624,7 +686,7 @@ else
     private bool _isOwner;
     private string FilteredItemCountMessage =>
         $"{_filteredItems.Count} of {_items.Count} wishlist {(_items.Count == 1 ? "item" : "items")} shown.";
-    private string SortBy { get; set; } = "priority";
+    private string SortBy { get; set; } = "custom";
     private bool SortAscending { get; set; } = true;
     private string ViewMode { get; set; } = "list"; // "grid" or "list"
     private string SearchQuery { get; set; } = "";
@@ -649,11 +711,20 @@ else
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
+    private bool _isRanking;
     private string? _deleteItemError;
     private string? _appliedBudgetQuery;
     private readonly string _pasteListenerKey = $"wishlist-details-{Guid.NewGuid():N}";
     private DotNetObjectReference<WishlistDetails>? _pasteListenerReference;
     private bool _isListeningForPaste;
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(SearchQuery) ||
+        PriorityFilters.Count > 0 ||
+        StatusFilters.Count > 0 ||
+        MinPrice > 0 ||
+        MaxPrice < PriceCeiling ||
+        BudgetFilterActive;
+    private bool CanReorder => _isOwner && !_isRanking && SortBy == "custom" && !HasActiveFilters;
 
     protected override async Task OnInitializedAsync()
     {
@@ -708,11 +779,141 @@ else
         BudgetFilterActive = HasBudget && PricedItemCount > 0;
         if (!HasBudget && SortBy == "budget")
         {
-            SortBy = "priority";
+            SortBy = "custom";
             SortAscending = true;
         }
 
         ApplyFiltersAndSort();
+    }
+
+    private bool CanMoveItem(WishlistItemModel item, int direction)
+    {
+        if (!CanReorder)
+        {
+            return false;
+        }
+
+        var matchingItems = _filteredItems
+            .Where(candidate => candidate.IsPinned == item.IsPinned)
+            .ToList();
+        var itemIndex = matchingItems.FindIndex(candidate => candidate.Id == item.Id);
+        return itemIndex + direction >= 0 && itemIndex + direction < matchingItems.Count;
+    }
+
+    private async Task MoveItemAsync(WishlistItemModel item, int direction)
+    {
+        if (!CanMoveItem(item, direction))
+        {
+            return;
+        }
+
+        var orderedItems = _items
+            .OrderByDescending(candidate => candidate.IsPinned)
+            .ThenBy(candidate => candidate.OrderIndex)
+            .ToList();
+        var matchingIndexes = orderedItems
+            .Select((candidate, index) => new { candidate, index })
+            .Where(entry => entry.candidate.IsPinned == item.IsPinned)
+            .Select(entry => entry.index)
+            .ToList();
+        var currentIndex = orderedItems.FindIndex(candidate => candidate.Id == item.Id);
+        var matchingIndex = matchingIndexes.IndexOf(currentIndex);
+        var targetIndex = matchingIndexes[matchingIndex + direction];
+
+        (orderedItems[currentIndex], orderedItems[targetIndex]) = (orderedItems[targetIndex], orderedItems[currentIndex]);
+
+        _isRanking = true;
+        try
+        {
+            var savedItems = await WishlistService.ReorderWishlistItemsByPublicIdAsync(
+                WishlistId,
+                new() { OrderedItemPublicIds = orderedItems.Select(candidate => candidate.PublicId).ToList() });
+            _items = savedItems.Where(ShouldDisplayItem).ToList();
+            ApplyFiltersAndSort();
+            _feedbackMessage = $"{item.Name} moved {(direction < 0 ? "up" : "down")}.";
+            _feedbackIsError = false;
+        }
+        catch (HttpRequestException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("The order could not be saved. Refresh your ideas and try again.");
+        }
+        catch (ArgumentException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("Your ideas changed before this move was saved. They have been refreshed.");
+        }
+        catch (KeyNotFoundException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("That idea is no longer available. Your ideas have been refreshed.");
+        }
+        finally
+        {
+            _isRanking = false;
+        }
+    }
+
+    private async Task ToggleItemPinAsync(WishlistItemModel item)
+    {
+        if (_isRanking)
+        {
+            return;
+        }
+
+        _isRanking = true;
+        try
+        {
+            var savedItem = await WishlistService.UpdateWishlistItemPinByPublicIdAsync(
+                WishlistId,
+                item.PublicId,
+                !item.IsPinned);
+            var itemIndex = _items.FindIndex(candidate => candidate.Id == item.Id);
+            if (itemIndex >= 0)
+            {
+                savedItem.Comments = _items[itemIndex].Comments;
+                savedItem.Reservations = _items[itemIndex].Reservations;
+                _items[itemIndex] = savedItem;
+            }
+
+            ApplyFiltersAndSort();
+            _feedbackMessage = savedItem.IsPinned
+                ? $"{savedItem.Name} marked as most wanted."
+                : $"{savedItem.Name} removed from most wanted.";
+            _feedbackIsError = false;
+        }
+        catch (HttpRequestException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("The most wanted status could not be saved. Refresh your ideas and try again.");
+        }
+        catch (ArgumentException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("Your ideas changed before this update was saved. They have been refreshed.");
+        }
+        catch (KeyNotFoundException)
+        {
+            await RefreshItemsAfterRankingFailureAsync("That idea is no longer available. Your ideas have been refreshed.");
+        }
+        finally
+        {
+            _isRanking = false;
+        }
+    }
+
+    private async Task RefreshItemsAfterRankingFailureAsync(string message)
+    {
+        try
+        {
+            _feedbackMessage = message;
+            await LoadItems();
+        }
+        catch (HttpRequestException)
+        {
+            _feedbackMessage = "The ideas could not be refreshed. Try again.";
+        }
+        catch (KeyNotFoundException)
+        {
+            _feedbackMessage = "This wishlist is no longer available.";
+        }
+
+        _feedbackIsError = true;
     }
 
     private void ApplyFiltersAndSort()
@@ -760,6 +961,10 @@ else
         // Apply sorting
         filtered = SortBy switch
         {
+            "custom" => filtered
+                .OrderByDescending(i => i.IsPinned)
+                .ThenBy(i => i.OrderIndex),
+
             "name" => SortAscending
                 ? filtered.OrderBy(i => i.Name)
                 : filtered.OrderByDescending(i => i.Name),
@@ -907,6 +1112,14 @@ else
 
     private void SortItems(string sortBy)
     {
+        if (sortBy == "custom")
+        {
+            SortBy = "custom";
+            SortAscending = true;
+            ApplyFiltersAndSort();
+            return;
+        }
+
         if (SortBy == sortBy)
         {
             // Toggle sort direction

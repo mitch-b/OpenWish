@@ -816,6 +816,38 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Price", pressed: true })
     .waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Owner order" }).click();
+  await page.getByRole("button", { name: "Owner order", pressed: true })
+    .waitFor({ state: "visible" });
+
+  const markMostWanted = page.getByRole("button", {
+    name: "Mark Noise-Cancelling Headphones as most wanted"
+  });
+  await markMostWanted.click();
+  await page.getByRole("alert")
+    .filter({ hasText: "Noise-Cancelling Headphones marked as most wanted." })
+    .waitFor({ state: "visible" });
+  await page.getByText("Most wanted", { exact: true }).first().waitFor({ state: "visible" });
+
+  const moveParkPassUp = page.getByRole("button", { name: "Move National Park Pass up" });
+  await moveParkPassUp.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("alert")
+    .filter({ hasText: "National Park Pass moved up." })
+    .waitFor({ state: "visible" });
+
+  let rankedItemsResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  if (!rankedItemsResponse.ok()) {
+    throw new Error(`Pinned wishlist item API returned ${rankedItemsResponse.status()}.`);
+  }
+  let rankedItems = await rankedItemsResponse.json();
+  if (!rankedItems[0]?.isPinned ||
+      rankedItems.map(item => item.name).join("|") !==
+        "Noise-Cancelling Headphones|National Park Pass|Cast-Iron Dutch Oven") {
+    throw new Error("The owner order did not preserve a pin and keyboard move.");
+  }
 
   const productLink = page.getByRole("link", {
     name: "View Noise-Cancelling Headphones product (opens in a new tab)"
@@ -832,6 +864,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("link", {
     name: "View Noise-Cancelling Headphones product (opens in a new tab)"
   }).waitFor({ state: "visible" });
+  const moveDutchOvenUp = page.getByRole("button", { name: "Move Cast-Iron Dutch Oven up" });
+  await moveDutchOvenUp.focus();
+  await page.keyboard.press(" ");
+  await page.getByRole("alert")
+    .filter({ hasText: "Cast-Iron Dutch Oven moved up." })
+    .waitFor({ state: "visible" });
+  rankedItemsResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  rankedItems = await rankedItemsResponse.json();
+  if (rankedItems.map(item => item.name).join("|") !==
+      "Noise-Cancelling Headphones|Cast-Iron Dutch Oven|National Park Pass") {
+    throw new Error("The list-view keyboard move did not persist the owner order.");
+  }
   const gridView = page.getByRole("button", { name: "Grid view" });
   await gridView.click();
   await page.getByRole("button", { name: "Grid view", pressed: true })
@@ -839,6 +885,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await filtersButton.click();
   await page.getByRole("button", { name: "Filters", expanded: false })
     .waitFor({ state: "visible" });
+  await page.locator(".items-grid").screenshot({
+    path: path.join(walkthroughDirectory, "wishlist-ranking.png")
+  });
   await screenshot(page, "wishlist-details.png");
   await screenshot(page, "readme-wishlist.png", false);
   await page.setViewportSize({ width: 900, height: 1000 });
@@ -2229,6 +2278,22 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
   );
   const guestItems = await guestItemsResponse.json();
+  const forbiddenPinResponse = await context.request.put(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/${guestItems[0].publicId}/pin`,
+    { data: { isPinned: true } }
+  );
+  if (forbiddenPinResponse.status() !== 403) {
+    throw new Error(
+      `Non-owner pin request returned ${forbiddenPinResponse.status()}, expected 403.`
+    );
+  }
+  const forbiddenReorderResponse = await context.request.put(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items/order`,
+    { data: { orderedItemPublicIds: guestItems.map(item => item.publicId) } }
+  );
+  if (forbiddenReorderResponse.status() !== 403) {
+    throw new Error(`Non-owner reorder request returned ${forbiddenReorderResponse.status()}, expected 403.`);
+  }
   const anonymousReservation = guestItems.flatMap(item => item.reservations ?? [])
     .find(reservation => reservation.isAnonymous);
   if (!anonymousReservation ||
@@ -2302,6 +2367,26 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}`, "Family Gift Ideas", visitedRoutes);
   await assertVisible(page, "Reserved");
+  const rankedSeedItems = guestItems
+    .filter(item => [
+      "Noise-Cancelling Headphones",
+      "Cast-Iron Dutch Oven",
+      "National Park Pass"
+    ].includes(item.name))
+    .map(item => item.name)
+    .join("|");
+  if (rankedSeedItems !==
+      "Noise-Cancelling Headphones|Cast-Iron Dutch Oven|National Park Pass") {
+    throw new Error(
+      `A shopper did not receive the owner's saved wishlist order: ${rankedSeedItems}.`
+    );
+  }
+  if (await page.getByRole("button", {
+    name: "Remove Noise-Cancelling Headphones from most wanted"
+  }).count() !== 0) {
+    throw new Error("A shopper received an owner-only most-wanted control.");
+  }
+  await page.getByText("Most wanted", { exact: true }).first().waitFor({ state: "visible" });
   const guestVisibleCount = Number(await page.locator(".stats-dashboard .stat-value").first().textContent());
   await page.getByRole("button", { name: "Filters" }).click();
   await page.getByRole("button", { name: "Reserved", exact: true }).click();
@@ -2671,6 +2756,17 @@ async function verifyMobileJourney(browser, manifest, results) {
     page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
     "Mobile list item edit action"
   );
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Remove Noise-Cancelling Headphones from most wanted" }),
+    "Mobile most-wanted action"
+  );
+  await assertMinimumTouchTarget(
+    page.getByRole("button", { name: "Move Cast-Iron Dutch Oven up" }),
+    "Mobile move-up action"
+  );
+  await page.locator(".table-responsive").screenshot({
+    path: path.join(walkthroughDirectory, "wishlist-ranking-mobile.png")
+  });
   const mobileDeleteItem = page.getByRole("button", { name: "Delete Noise-Cancelling Headphones" });
   await mobileDeleteItem.click();
   const mobileItemDeleteDialog = page.getByRole("dialog", { name: "Delete item" });

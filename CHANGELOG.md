@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.3.0] - 2026-10-15
+
+### Added
+
+- Wishlist owners can mark their most wanted ideas so they remain at the top
+  of the order shared with shoppers.
+- Owners can move ideas up or down in both grid and list views; those changes
+  persist for everyone who can see the wishlist.
+- The move controls work with a keyboard and clearly identify the item they
+  affect.
+- Wishlists now start in the owner's intentional order, while the existing
+  priority, price, budget, name, and date sort choices remain available.
+- Shoppers see the owner's ranked order and most-wanted marker but never
+  receive owner-only ranking controls.
+
 ## [0.2.2] - 2026-10-14
 
 ### Improved

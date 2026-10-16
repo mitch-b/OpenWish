@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.3.1",
+    "date": "2026-10-16",
+    "title": "Keep your wishlist filters in view",
+    "summary": "Finding the right idea is clearer: OpenWish now shows exactly what is filtering a wishlist and lets you remove any choice in one tap.",
+    "highlights": [
+      "See the current result count and every active search or filter without reopening the filter panel.",
+      "Remove a search, priority, availability, comment, price, or budget choice directly from the active-filter row.",
+      "No-match guidance repeats your search and offers one clear action to return to all ideas.",
+      "Long searches wrap on phones, so the recovery action stays on screen.",
+      "Clearer reset labels distinguish the filter-panel reset from showing every idea again.",
+      "Item controls wrap cleanly on phones so actions stay reachable on narrow screens."
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-10-15",
     "title": "Put your most wanted ideas first",

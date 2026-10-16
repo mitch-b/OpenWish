@@ -190,6 +190,57 @@ else
         </div>
     </div>
     <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
+    @if (HasActiveFilters)
+    {
+        <section class="applied-filters" aria-labelledby="applied-filters-title">
+            <div class="applied-filters-heading">
+                <div>
+                    <h2 id="applied-filters-title">Showing a filtered view</h2>
+                    <p>@FilteredItemCountMessage</p>
+                </div>
+                <button class="btn btn-outline-secondary" type="button" @onclick="ClearAllFilters">
+                    <OpenWishIcon Name="x-circle" /> Clear all
+                </button>
+            </div>
+            <div class="applied-filter-list" aria-label="Active filters">
+                @if (!string.IsNullOrWhiteSpace(SearchQuery))
+                {
+                    <button class="applied-filter" type="button" @onclick="ClearSearch">
+                        Search: @SearchQuery <OpenWishIcon Name="x-lg" />
+                        <span class="visually-hidden">Remove search filter</span>
+                    </button>
+                }
+                @foreach (var priority in PriorityFilters.Order())
+                {
+                    <button class="applied-filter" type="button" @onclick="@(() => ToggleFilter(PriorityFilters, priority))">
+                        Priority: @GetPriorityText(int.Parse(priority)) <OpenWishIcon Name="x-lg" />
+                        <span class="visually-hidden">Remove priority filter</span>
+                    </button>
+                }
+                @foreach (var status in StatusFilters.Order())
+                {
+                    <button class="applied-filter" type="button" @onclick="@(() => ToggleFilter(StatusFilters, status))">
+                        @GetStatusFilterLabel(status) <OpenWishIcon Name="x-lg" />
+                        <span class="visually-hidden">Remove status filter</span>
+                    </button>
+                }
+                @if (MinPrice > 0 || MaxPrice < PriceCeiling)
+                {
+                    <button class="applied-filter" type="button" @onclick="ClearPriceRange">
+                        Price: @GetPriceRangeLabel() <OpenWishIcon Name="x-lg" />
+                        <span class="visually-hidden">Remove price filter</span>
+                    </button>
+                }
+                @if (BudgetFilterActive)
+                {
+                    <button class="applied-filter" type="button" @onclick="ToggleBudgetFilter">
+                        Within budget <OpenWishIcon Name="x-lg" />
+                        <span class="visually-hidden">Remove budget filter</span>
+                    </button>
+                }
+            </div>
+        </section>
+    }
     @if (_isOwner)
     {
         <p id="wishlist-ranking-help" class="ranking-help" role="status">
@@ -375,7 +426,7 @@ else
             </div>
 
             <div class="filter-actions">
-                <button class="btn btn-link" type="button" @onclick="ClearAllFilters">Clear all</button>
+                <button class="btn btn-link" type="button" @onclick="ClearAllFilters">Clear all filters</button>
                 <span class="filter-results">Showing @_filteredItems.Count of @_items.Count items</span>
             </div>
         </div>
@@ -408,9 +459,16 @@ else
                     {
                         <div class="empty-icon"><OpenWishIcon Name="search" /></div>
                         <h2>No matching ideas</h2>
-                        <p>Try a different search or clear your filters.</p>
+                        @if (!string.IsNullOrWhiteSpace(SearchQuery))
+                        {
+                            <p>Nothing matches "@SearchQuery". Try another search or remove a filter.</p>
+                        }
+                        else
+                        {
+                            <p>Try removing a filter to see more ideas.</p>
+                        }
                         <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
-                            <OpenWishIcon Name="x-circle" /> Clear filters
+                            <OpenWishIcon Name="x-circle" /> Show all ideas
                         </button>
                     }
                 </div>
@@ -1025,6 +1083,13 @@ else
         ApplyFiltersAndSort();
     }
 
+    private void ClearPriceRange()
+    {
+        MinPrice = 0;
+        MaxPrice = PriceCeiling;
+        ApplyFiltersAndSort();
+    }
+
     private void ApplyMinimumPrice()
     {
         MaxPrice = Math.Max(MinPrice, MaxPrice);
@@ -1080,6 +1145,14 @@ else
 
         return $"{MinPrice:C} - {MaxPrice:C}";
     }
+
+    private static string GetStatusFilterLabel(string status) => status switch
+    {
+        "reserved" => "Reserved",
+        "unreserved" => "Available",
+        "commented" => "Has comments",
+        _ => status
+    };
 
     private static int GetBudgetSortOrder(WishlistItemModel item, decimal budget)
     {

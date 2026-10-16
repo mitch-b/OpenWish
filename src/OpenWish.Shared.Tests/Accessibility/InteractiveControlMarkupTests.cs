@@ -152,6 +152,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("private void ClearPriceRange()", markup, StringComparison.Ordinal);
         Assert.Contains("private static string GetStatusFilterLabel", markup, StringComparison.Ordinal);
         Assert.Contains(".applied-filter-list", styles, StringComparison.Ordinal);
+        Assert.Contains(".applied-filter", styles, StringComparison.Ordinal);
+        Assert.Contains("max-width: 100%;", styles, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", styles, StringComparison.Ordinal);
         Assert.Contains(".coordination-action", styles, StringComparison.Ordinal);
     }
 

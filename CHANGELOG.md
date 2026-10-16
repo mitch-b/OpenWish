@@ -12,6 +12,8 @@ All notable user-facing changes to OpenWish are documented here.
   be removed directly without reopening the filter panel.
 - Empty search results repeat the search phrase and provide a direct route
   back to every idea.
+- Long product identifiers in filters and no-match guidance wrap on phones,
+  keeping the recovery action visible without horizontal scrolling.
 - Filter actions use clearer labels, so the local filter-panel reset and the
   full reset are easy to distinguish.
 - Wishlist item actions wrap cleanly on phones, keeping gift coordination and

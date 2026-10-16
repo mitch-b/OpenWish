@@ -804,6 +804,13 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("heading", { name: "Showing a filtered view" }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Remove search filter" }).click();
   await page.getByRole("button", { name: "Clear wishlist item search" }).waitFor({ state: "detached" });
+  const longSearchTerm = "unbroken-product-identifier-abcdefghijklmnopqrstuvwxyz-0123456789-abcdefghijklmnopqrstuvwxyz";
+  await page.setViewportSize({ width: 390, height: 844 });
+  await itemSearch.fill(longSearchTerm);
+  await page.getByRole("heading", { name: "No matching ideas" }).waitFor({ state: "visible" });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await page.getByRole("button", { name: "Show all ideas" }).click();
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   const filtersButton = page.getByRole("button", { name: "Filters", exact: true });
   await filtersButton.click();

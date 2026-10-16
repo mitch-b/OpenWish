@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.3.1] - 2026-10-16
+
+### Improved
+
+- Wishlist filtering now keeps the current result count and applied choices
+  visible, so it is clear why fewer ideas are shown.
+- Each search, priority, availability, comment, price, and budget choice can
+  be removed directly without reopening the filter panel.
+- Empty search results repeat the search phrase and provide a direct route
+  back to every idea.
+- Filter actions use clearer labels, so the local filter-panel reset and the
+  full reset are easy to distinguish.
+- Wishlist item actions wrap cleanly on phones, keeping gift coordination and
+  owner controls reachable without horizontal overflow.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

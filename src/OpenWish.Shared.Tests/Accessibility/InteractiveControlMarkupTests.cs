@@ -134,6 +134,28 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistDetails_KeepsActiveFiltersVisibleAndEasyToRemove()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+
+        Assert.Contains("id=\"applied-filters-title\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Showing a filtered view", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"applied-filter-list\" aria-label=\"Active filters\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Search: @SearchQuery", markup, StringComparison.Ordinal);
+        Assert.Contains("Remove search filter", markup, StringComparison.Ordinal);
+        Assert.Contains("GetStatusFilterLabel(status)", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"ClearPriceRange\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Nothing matches \"@SearchQuery\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Show all ideas", markup, StringComparison.Ordinal);
+        Assert.Contains("Clear all filters", markup, StringComparison.Ordinal);
+        Assert.Contains("private void ClearPriceRange()", markup, StringComparison.Ordinal);
+        Assert.Contains("private static string GetStatusFilterLabel", markup, StringComparison.Ordinal);
+        Assert.Contains(".applied-filter-list", styles, StringComparison.Ordinal);
+        Assert.Contains(".coordination-action", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistDetails_OffersBudgetAwareShoppingControls()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");

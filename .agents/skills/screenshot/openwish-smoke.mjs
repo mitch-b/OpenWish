@@ -801,21 +801,27 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await itemSearch.fill("Dutch Oven");
   await page.getByRole("status").filter({ hasText: "1 of 3 wishlist items shown." })
     .waitFor({ state: "attached" });
-  await page.getByRole("button", { name: "Clear wishlist item search" }).click();
+  await page.getByRole("heading", { name: "Showing a filtered view" }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Remove search filter" }).click();
+  await page.getByRole("button", { name: "Clear wishlist item search" }).waitFor({ state: "detached" });
 
-  const filtersButton = page.getByRole("button", { name: "Filters" });
+  const filtersButton = page.getByRole("button", { name: "Filters", exact: true });
   await filtersButton.click();
-  await page.getByRole("button", { name: "Filters", expanded: true })
+  await page.getByRole("button", { name: "Filters", exact: true, expanded: true })
     .waitFor({ state: "visible" });
-  const highPriorityFilter = page.getByRole("button", { name: "High" });
+  const highPriorityFilter = page.locator("#wishlist-filters").getByRole("button", { name: "High" });
   await highPriorityFilter.click();
-  await page.getByRole("button", { name: "High", pressed: true })
+  await page.locator("#wishlist-filters").getByRole("button", { name: "High", pressed: true })
     .waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Remove priority filter" }).click();
+  await page.locator("#wishlist-filters").getByRole("button", { name: "High", pressed: false })
+    .waitFor({ state: "visible" });
+  await highPriorityFilter.click();
   const priceSort = page.getByRole("button", { name: "Price" });
   await priceSort.click();
   await page.getByRole("button", { name: "Price", pressed: true })
     .waitFor({ state: "visible" });
-  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Clear all", exact: true }).click();
   await page.getByRole("button", { name: "Owner order" }).click();
   await page.getByRole("button", { name: "Owner order", pressed: true })
     .waitFor({ state: "visible" });
@@ -883,7 +889,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Grid view", pressed: true })
     .waitFor({ state: "visible" });
   await filtersButton.click();
-  await page.getByRole("button", { name: "Filters", expanded: false })
+  await page.getByRole("button", { name: "Filters", exact: true, expanded: false })
     .waitFor({ state: "visible" });
   await page.locator(".items-grid").screenshot({
     path: path.join(walkthroughDirectory, "wishlist-ranking.png")
@@ -1202,7 +1208,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByText("Within budget", { exact: true }).first().waitFor({ state: "visible" });
   await budgetFilter.click();
   await page.getByRole("button", { name: "Show within budget" }).waitFor({ state: "visible" });
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("button", { name: "Budget fit" }).click();
   await page.getByRole("button", { name: "Budget fit", pressed: true }).waitFor({ state: "visible" });
   await screenshot(page, "wishlist-budget-filter.png");
@@ -2388,15 +2394,15 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   }
   await page.getByText("Most wanted", { exact: true }).first().waitFor({ state: "visible" });
   const guestVisibleCount = Number(await page.locator(".stats-dashboard .stat-value").first().textContent());
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("button", { name: "Reserved", exact: true }).click();
   await page.getByRole("button", { name: "Available", exact: true }).click();
   await page.getByRole("status").filter({
     hasText: `${guestVisibleCount} of ${guestVisibleCount} wishlist items shown.`
   })
     .waitFor({ state: "attached" });
-  await page.getByRole("button", { name: "Clear all" }).click();
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Clear all", exact: true }).click();
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("button", { name: "Grid view" }).click();
   const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
   await screenshot(page, "wishlist-shopper-grid.png");
@@ -2737,7 +2743,7 @@ async function verifyMobileJourney(browser, manifest, results) {
     mobileViewToggle.getByRole("button", { name: "List view" }),
     "Mobile list-view action"
   );
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await assertMinimumTouchTarget(
     page.getByRole("button", { name: "High" }),
     "Mobile priority filter"
@@ -2746,7 +2752,7 @@ async function verifyMobileJourney(browser, manifest, results) {
     page.getByRole("button", { name: "Price" }),
     "Mobile sort action"
   );
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await assertMinimumTouchTarget(
     page.getByRole("button", { name: "Edit Noise-Cancelling Headphones" }),
     "Mobile grid item edit action"

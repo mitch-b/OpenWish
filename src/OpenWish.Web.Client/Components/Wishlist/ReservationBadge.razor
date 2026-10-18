@@ -1,0 +1,17 @@
+@using OpenWish.Shared.Models
+
+@if (!IsOwner && Item.Reservations.Count > 0)
+{
+    <span class="reservation-badge @(IsMine ? "reservation-badge-mine" : "")">
+        <OpenWishIcon Name="check-circle-fill" /> @(IsMine ? "Reserved by you" : "Reserved")
+    </span>
+}
+
+@code {
+    [Parameter] public WishlistItemModel Item { get; set; } = new();
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public bool IsOwner { get; set; }
+
+    private bool IsMine => !string.IsNullOrEmpty(CurrentUserId) &&
+        Item.Reservations.Any(r => r.UserId == CurrentUserId);
+}

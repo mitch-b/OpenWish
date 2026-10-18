@@ -33,7 +33,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <strong>You have reserved this item.</strong>
-                            <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
+                            <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MMM d, yyyy")</div>
                         </div>
                         <button class="btn btn-sm btn-outline-danger"
                                 @ref="_cancelReservationButton"
@@ -55,7 +55,7 @@
                         {
                             <strong>Reserved by @(_reservation.User?.UserName ?? "Unknown User")</strong>
                         }
-                        <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MM/dd/yyyy")</div>
+                        <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MMM d, yyyy")</div>
                     </div>
                 }
             </div>
@@ -132,6 +132,13 @@
     [Parameter]
     public string OwnerId { get; set; } = string.Empty;
 
+    [Parameter]
+    public EventCallback OnReservationChanged { get; set; }
+
+    // Identifies the reservation the parent list currently knows about, so the panel reloads when it differs from its own.
+    [Parameter]
+    public string? ReservationVersion { get; set; }
+
     private bool _loading = true;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
@@ -153,8 +160,21 @@
     private ItemReservationModel _reservation = new ItemReservationModel();
     private string? _currentUserId;
 
+    private string? _loadedKey;
+
     protected override async Task OnParametersSetAsync()
     {
+        var key = $"{WishlistId}/{ItemId}";
+        if (key == _loadedKey)
+        {
+            var current = _isReserved ? _reservation.PublicId : string.Empty;
+            if (ReservationVersion is null || ReservationVersion == current || _loading || _isUpdating)
+            {
+                return;
+            }
+        }
+
+        _loadedKey = key;
         await CheckReservation();
     }
 
@@ -269,7 +289,9 @@
                 
                 if (result)
                 {
-                    if (await CheckReservation())
+                    var refreshed = await CheckReservation();
+                    await OnReservationChanged.InvokeAsync();
+                    if (refreshed)
                     {
                         _statusMessage = "Item reserved. Other shoppers can see that it is taken.";
                     }
@@ -282,8 +304,11 @@
                 }
                 else
                 {
+                    await CheckReservation();
+                    await OnReservationChanged.InvokeAsync();
                     _error = true;
-                    _errorMessage = "This item has already been reserved by someone else.";
+                    _errorMessage = "Someone else reserved this item first. It is now marked as reserved.";
+                    _focusErrorAlert = true;
                 }
             }
             else
@@ -333,6 +358,7 @@
                 var canceled = await WishlistService.CancelReservationByPublicIdAsync(WishlistId, ItemId, _currentUserId);
                 _showCancelConfirmation = false;
                 var refreshed = await CheckReservation();
+                await OnReservationChanged.InvokeAsync();
                 if (canceled && refreshed)
                 {
                     _statusMessage = "Reservation released.";

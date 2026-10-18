@@ -1,5 +1,19 @@
 [
   {
+    "version": "0.3.2",
+    "date": "2026-10-18",
+    "title": "See what you have reserved at a glance",
+    "summary": "Shopping from a friend's wishlist now shows which gifts are yours, keeps counts current as you reserve or release, and handles two people grabbing the same idea gracefully.",
+    "highlights": [
+      "Ideas you reserved are labeled \"Reserved by you\" in both grid and list views.",
+      "A new \"Reserved by you\" count and filter bring your own picks together in one tap.",
+      "Reserving or releasing an idea updates the badges and counts right away, without reloading.",
+      "If someone else reserves an idea first, the idea updates to show it is taken instead of leaving you at a dead end.",
+      "Gift buttons say what they do (Reserve gift, Your reservation, Comment on gift).",
+      "Reservation dates use the same readable format as the rest of the app."
+    ]
+  },
+  {
     "version": "0.3.1",
     "date": "2026-10-16",
     "title": "Keep your wishlist filters in view",

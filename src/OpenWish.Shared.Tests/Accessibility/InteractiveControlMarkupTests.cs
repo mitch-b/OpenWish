@@ -123,7 +123,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Copy link", markup, StringComparison.Ordinal);
         Assert.Contains("<button class=\"stat-card stat-action\"", markup, StringComparison.Ordinal);
         Assert.Contains("No ideas shared yet", markup, StringComparison.Ordinal);
-        Assert.Contains("Coordinate gift", markup, StringComparison.Ordinal);
+        Assert.Contains("GetCoordinationLabel(item)", markup, StringComparison.Ordinal);
         Assert.Contains("OpenItemCoordination(item.Id)", markup, StringComparison.Ordinal);
         Assert.Contains("MaxPrice = PriceCeiling;", markup, StringComparison.Ordinal);
         Assert.Contains("StatusFilters.Contains(\"reserved\") != StatusFilters.Contains(\"unreserved\")", markup, StringComparison.Ordinal);
@@ -131,6 +131,28 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Math.Min(MinPrice, MaxPrice)", markup, StringComparison.Ordinal);
         Assert.Contains("class=\"fab\"", markup, StringComparison.Ordinal);
         Assert.Contains("position: static;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistDetails_ShowsShoppersTheirOwnReservationsAndKeepsCountsCurrent()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var list = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        var badge = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ReservationBadge.razor");
+        var reservation = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ItemReservation.razor");
+
+        Assert.Contains("Reserved by you", details, StringComparison.Ordinal);
+        Assert.Contains("StatusFilters.Contains(\"mine\")", details, StringComparison.Ordinal);
+        Assert.Contains("OnReservationChanged=\"@RefreshReservationsAsync\"", details, StringComparison.Ordinal);
+        Assert.Contains("<ReservationBadge", list, StringComparison.Ordinal);
+        Assert.Contains("!IsOwner && Item.Reservations.Count > 0", badge, StringComparison.Ordinal);
+        Assert.Contains("OnReservationChanged.InvokeAsync()", reservation, StringComparison.Ordinal);
+        Assert.Contains("Someone else reserved this item first", reservation, StringComparison.Ordinal);
+        Assert.Contains("key == _loadedKey", reservation, StringComparison.Ordinal);
+        Assert.DoesNotContain("MM/dd/yyyy", reservation, StringComparison.Ordinal);
+        Assert.Contains("ReservationVersion", reservation, StringComparison.Ordinal);
+        Assert.Contains("ReservationVersion=\"@GetReservationVersion(item)\"", list, StringComparison.Ordinal);
+        Assert.Contains("item.Reservations = reservationsById", details, StringComparison.Ordinal);
     }
 
     [Fact]

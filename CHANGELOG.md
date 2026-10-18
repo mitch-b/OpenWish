@@ -2,6 +2,19 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.3.2] - 2026-10-18
+
+### Improved
+
+- Shoppers see "Reserved by you" on the ideas they reserved, in both grid and
+  list views, and list view now shows reservation status at all.
+- A "Reserved by you" count and filter gather a shopper's own picks.
+- Reserving or releasing an idea updates badges and counts immediately, and
+  reservation panels no longer reload when unrelated page state changes.
+- When someone else reserves an idea first, it updates to show it is taken.
+- Gift buttons name their action, and reservation dates use the app's
+  readable date format.
+
 ## [0.3.1] - 2026-10-16
 
 ### Improved

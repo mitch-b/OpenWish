@@ -150,6 +150,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Someone else reserved this item first", reservation, StringComparison.Ordinal);
         Assert.Contains("key == _loadedKey", reservation, StringComparison.Ordinal);
         Assert.DoesNotContain("MM/dd/yyyy", reservation, StringComparison.Ordinal);
+        Assert.Contains("ReservationVersion", reservation, StringComparison.Ordinal);
+        Assert.Contains("ReservationVersion=\"@GetReservationVersion(item)\"", list, StringComparison.Ordinal);
+        Assert.Contains("item.Reservations = reservationsById", details, StringComparison.Ordinal);
     }
 
     [Fact]

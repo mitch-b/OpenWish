@@ -135,6 +135,10 @@
     [Parameter]
     public EventCallback OnReservationChanged { get; set; }
 
+    // Identifies the reservation the parent list currently knows about, so the panel reloads when it differs from its own.
+    [Parameter]
+    public string? ReservationVersion { get; set; }
+
     private bool _loading = true;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
@@ -163,7 +167,11 @@
         var key = $"{WishlistId}/{ItemId}";
         if (key == _loadedKey)
         {
-            return;
+            var current = _isReserved ? _reservation.PublicId : string.Empty;
+            if (ReservationVersion is null || ReservationVersion == current || _loading || _isUpdating)
+            {
+                return;
+            }
         }
 
         _loadedKey = key;

@@ -1094,6 +1094,8 @@ else
             {
                 item.Reservations = reservationsById.TryGetValue(item.Id, out var reservations) ? reservations : [];
             }
+
+            ApplyFiltersAndSort();
         }
         catch (HttpRequestException)
         {

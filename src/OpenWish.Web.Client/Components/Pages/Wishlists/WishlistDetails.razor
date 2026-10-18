@@ -121,6 +121,17 @@ else
                     <div class="stat-label">Reserved</div>
                 </div>
             </div>
+            <button class="stat-card stat-action"
+                    type="button"
+                    aria-label="Show items reserved by you"
+                    aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
+                    @onclick='() => ToggleFilter(StatusFilters, "mine")'>
+                <div class="stat-icon"><OpenWishIcon Name="gift" /></div>
+                <div class="stat-content">
+                    <div class="stat-value">@GetMyReservedCount()</div>
+                    <div class="stat-label">Reserved by you</div>
+                </div>
+            </button>
         }
         <button class="stat-card stat-action"
                 type="button"
@@ -326,6 +337,12 @@ else
                                 @onclick='() => ToggleFilter(StatusFilters, "unreserved")'>
                             <OpenWishIcon Name="circle" /> Available
                         </button>
+                        <button type="button"
+                                class="filter-chip @(StatusFilters.Contains("mine") ? "active" : "")"
+                                aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
+                                @onclick='() => ToggleFilter(StatusFilters, "mine")'>
+                            <OpenWishIcon Name="gift" /> Reserved by you
+                        </button>
                     }
                     <button type="button"
                             class="filter-chip @(StatusFilters.Contains("commented") ? "active" : "")"
@@ -486,7 +503,7 @@ else
                                     @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
-                                            <OpenWishIcon Name="check-circle-fill" /> Reserved
+                                            <OpenWishIcon Name="check-circle-fill" /> @(IsReservedByCurrentUser(item) ? "Reserved by you" : "Reserved")
                                         </div>
                                     }
                                 </div>
@@ -498,7 +515,7 @@ else
                                     @if (!_isOwner && item.Reservations.Any())
                                     {
                                         <div class="item-badge reserved">
-                                            <OpenWishIcon Name="check-circle-fill" /> Reserved
+                                            <OpenWishIcon Name="check-circle-fill" /> @(IsReservedByCurrentUser(item) ? "Reserved by you" : "Reserved")
                                         </div>
                                     }
                                 </div>
@@ -571,7 +588,7 @@ else
                                     <button class="btn-icon coordination-action"
                                             type="button"
                                             @onclick="() => OpenItemCoordination(item.Id)">
-                                        <OpenWishIcon Name="gift" /> Coordinate gift
+                                        <OpenWishIcon Name="gift" /> @GetCoordinationLabel(item)
                                     </button>
                                 }
                                 @if (_canEdit)
@@ -657,7 +674,7 @@ else
                                             <h4><OpenWishIcon Name="people" /> Social</h4>
                                             @if (!_isOwner && item.Reservations.Any())
                                             {
-                                                <p class="detail-info"><OpenWishIcon Name="check-circle" /> This item has been reserved</p>
+                                                <p class="detail-info"><OpenWishIcon Name="check-circle" /> @(IsReservedByCurrentUser(item) ? "You have reserved this item" : "This item has been reserved")</p>
                                             }
                                             @if (item.Comments.Any())
                                             {
@@ -688,6 +705,8 @@ else
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner"
                                     Budget="ValidBudget"
+                                    CurrentUserId="@_currentUserId"
+                                    OnReservationChanged="@RefreshReservationsAsync"
                                     @ref="_itemListRef" />
                 }
                 else
@@ -700,6 +719,8 @@ else
                                     OwnerId="@(_wishlist?.OwnerId ?? "")"
                                     IsOwner="@_isOwner"
                                     Budget="ValidBudget"
+                                    CurrentUserId="@_currentUserId"
+                                    OnReservationChanged="@RefreshReservationsAsync"
                                     @ref="_itemListRef" />
                 }
             }
@@ -1000,6 +1021,10 @@ else
             var showReserved = StatusFilters.Contains("reserved");
             filtered = filtered.Where(i => i.Reservations.Any() == showReserved);
         }
+        if (StatusFilters.Contains("mine"))
+        {
+            filtered = filtered.Where(IsReservedByCurrentUser);
+        }
         if (StatusFilters.Contains("commented"))
         {
             filtered = filtered.Where(i => i.Comments.Any());
@@ -1052,6 +1077,38 @@ else
     private int GetReservedCount()
     {
         return _items.Count(i => i.Reservations.Any());
+    }
+
+    private bool IsReservedByCurrentUser(WishlistItemModel item) =>
+        !string.IsNullOrEmpty(_currentUserId) && item.Reservations.Any(r => r.UserId == _currentUserId);
+
+    private int GetMyReservedCount() => _items.Count(IsReservedByCurrentUser);
+
+    private async Task RefreshReservationsAsync()
+    {
+        try
+        {
+            var fresh = await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId, _currentUserId);
+            var reservationsById = fresh.ToDictionary(i => i.Id, i => i.Reservations);
+            foreach (var item in _items)
+            {
+                item.Reservations = reservationsById.TryGetValue(item.Id, out var reservations) ? reservations : [];
+            }
+        }
+        catch (HttpRequestException)
+        {
+            // The reservation panel already shows the verified state; counts catch up on the next load.
+        }
+    }
+
+    private string GetCoordinationLabel(WishlistItemModel item)
+    {
+        if (IsReservedByCurrentUser(item))
+        {
+            return "Your reservation";
+        }
+
+        return item.Reservations.Any() ? "Comment on gift" : "Reserve gift";
     }
 
     private int GetCommentCount()
@@ -1150,6 +1207,7 @@ else
     {
         "reserved" => "Reserved",
         "unreserved" => "Available",
+        "mine" => "Reserved by you",
         "commented" => "Has comments",
         _ => status
     };

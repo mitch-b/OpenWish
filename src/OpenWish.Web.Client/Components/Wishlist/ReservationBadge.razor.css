@@ -1,0 +1,22 @@
+.reservation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.reservation-badge-mine {
+    background: rgba(25, 135, 84, 0.16);
+    color: #0f5132;
+}
+
+:root[data-theme="dark"] .reservation-badge-mine {
+    color: #75d6a5;
+}

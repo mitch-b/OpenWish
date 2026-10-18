@@ -23,6 +23,7 @@
                     tabindex="-1">
                     <td data-label="Name">
                         <span class="item-name">@item.Name</span>
+                        <ReservationBadge Item="item" CurrentUserId="@CurrentUserId" IsOwner="IsOwner" />
                         @if (item.IsPinned)
                         {
                             <span class="most-wanted"><OpenWishIcon Name="star-fill" /> Most wanted</span>
@@ -142,7 +143,7 @@
                                 {
                                     <div class="interaction-section">
                                         <h6><OpenWishIcon Name="gift" /> Reservation</h6>
-                                        <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" />
+                                        <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" OnReservationChanged="OnReservationChanged" />
                                     </div>
                                 }
                                 @if (ExpandedInteractions.Contains(item.Id))
@@ -175,6 +176,8 @@
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
     [Parameter] public decimal? Budget { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public EventCallback OnReservationChanged { get; set; }
 
     private HashSet<int> ExpandedInteractions = new();
 

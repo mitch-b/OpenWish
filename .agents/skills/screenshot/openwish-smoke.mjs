@@ -2414,7 +2414,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
   await screenshot(page, "wishlist-shopper-grid.png");
   await screenshot(page, "readme-shopper.png", false);
-  await guestGridCard.getByRole("button", { name: "Coordinate gift" }).click();
+  await guestGridCard.getByRole("button", { name: "Reserve gift" }).click();
   await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
   await page.getByRole("region", {
     name: "Gift coordination for Cast-Iron Dutch Oven"
@@ -2493,6 +2493,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await giftCoordination.getByRole("status").filter({
     hasText: "Item reserved. Other shoppers can see that it is taken."
   }).waitFor({ state: "attached" });
+  await dutchOvenRow.getByText("Reserved by you", { exact: true }).waitFor({ state: "visible" });
+  const myReservedStat = page.getByRole("button", { name: "Show items reserved by you" });
+  if ((await myReservedStat.locator(".stat-value").textContent())?.trim() !== "1") {
+    throw new Error("The shopper's reserved count did not update after reserving.");
+  }
   const cancelReservation = giftCoordination.getByRole("button", { name: "Cancel reservation" });
   await cancelReservation.click();
   const reservationDialog = giftCoordination.getByRole("alertdialog", { name: "Release this reservation?" });
@@ -2522,6 +2527,10 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await giftCoordination.getByRole("button", { name: "Release reservation" }).click();
   await giftCoordination.getByRole("status").filter({ hasText: "Reservation released." })
     .waitFor({ state: "attached" });
+  await dutchOvenRow.getByText("Reserved by you", { exact: true }).waitFor({ state: "detached" });
+  if ((await myReservedStat.locator(".stat-value").textContent())?.trim() !== "0") {
+    throw new Error("The shopper's reserved count did not update after releasing.");
+  }
   if (!(await giftCoordination.getByRole("button", { name: "Reserve this item" })
     .evaluate(element => element === document.activeElement))) {
     throw new Error("Releasing a reservation did not focus the available reservation action.");

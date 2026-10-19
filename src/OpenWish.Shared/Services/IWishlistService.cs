@@ -224,6 +224,12 @@ public interface IWishlistService
     Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item);
 
     /// <summary>Sets whether an item is highlighted as one of the wishlist owner's most wanted ideas.</summary>
+    /// <summary>
+    /// Confirms the owner still wants an idea, which refreshes its last-updated time so it stops being flagged as stale.
+    /// Only the wishlist owner may confirm.
+    /// </summary>
+    Task<WishlistItemModel> ConfirmWishlistItemStillWantedByPublicIdAsync(string wishlistPublicId, string itemPublicId, string requestingUserId);
+
     Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, string itemPublicId, bool isPinned);
 
     /// <summary>Persists the complete custom order of all active items in a wishlist.</summary>

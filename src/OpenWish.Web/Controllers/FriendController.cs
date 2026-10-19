@@ -34,6 +34,19 @@ public class FriendController : ControllerBase
         return Ok(friends);
     }
 
+    [HttpGet("suggestions")]
+    public async Task<IActionResult> GetSuggestions([FromQuery] int maxResults = 5)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var suggestions = await _friendService.GetFriendSuggestionsAsync(userId, Math.Clamp(maxResults, 1, 20));
+        return Ok(suggestions);
+    }
+
     [HttpGet("check/{otherUserId}")]
     public async Task<IActionResult> CheckFriendship(string otherUserId)
     {

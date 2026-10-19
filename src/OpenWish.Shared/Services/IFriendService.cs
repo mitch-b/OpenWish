@@ -106,4 +106,10 @@ public interface IFriendService
     /// <param name="maxResults">Maximum number of results to return.</param>
     /// <returns>Collection of matching user models.</returns>
     Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10);
+
+    /// <summary>
+    /// Suggests people the user already shares events or wishlists with and is not yet connected to.
+    /// Never draws from an instance-wide directory and never includes email addresses.
+    /// </summary>
+    Task<IEnumerable<FriendSuggestionModel>> GetFriendSuggestionsAsync(string userId, int maxResults = 5);
 }

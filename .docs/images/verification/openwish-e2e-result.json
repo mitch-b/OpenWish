@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/d081544d-ba14-4469-9d37-d60c18bb79d9/manage",
+        "/events/b46d19a2-f65e-47c2-97c3-8bcf5066c3d5/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -160,6 +160,16 @@
       ],
       "assertions": [
         "case-insensitive, whitespace-trimmed existing-user invitation creates a sent friend request"
+      ]
+    },
+    {
+      "scenario": "feature-day-outcomes",
+      "assertions": [
+        "new-account checklist renders, dismisses, and stays dismissed",
+        "friend suggestions list co-participants without emails and send a real request",
+        "exchange reveal is organizer-only, member-visible, hidden from outsiders, and locks reset",
+        "owner confirms a stale idea; non-owners are refused",
+        "grid cards coordinate gifts inline without leaving grid view"
       ]
     },
     {

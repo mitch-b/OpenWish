@@ -1,0 +1,140 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+@inject ILogger<ExchangeReveal> Logger
+
+@if (RevealedOn.HasValue || IsOwner)
+{
+    <section class="exchange-reveal card shadow-sm mb-4" aria-labelledby="exchange-reveal-title" aria-busy="@(_busy ? "true" : "false")" data-testid="exchange-reveal">
+        <div class="card-body">
+            <h2 id="exchange-reveal-title" class="h4">
+                <OpenWishIcon Name="gift" /> Who drew whom
+            </h2>
+
+            @if (RevealedOn.HasValue)
+            {
+                <p class="text-muted">The organizer revealed the assignments on @RevealedOn.Value.ToLocalTime().ToString("MMMM d, yyyy").</p>
+                @if (_loading)
+                {
+                    <div role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading assignments...</div>
+                }
+                else if (_errorMessage is not null)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <p class="mb-2">@_errorMessage</p>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadPairings">Try again</button>
+                    </div>
+                }
+                else
+                {
+                    <ul class="reveal-list">
+                        @foreach (var pairing in _pairings)
+                        {
+                            <li><strong>@pairing.GiverName</strong> <span class="reveal-arrow" aria-label="drew">&rarr;</span> <strong>@pairing.ReceiverName</strong></li>
+                        }
+                    </ul>
+                }
+            }
+            else if (!IsPast)
+            {
+                <p class="text-muted mb-0">After the event on @EventDate.ToString("MMM d, yyyy"), you can reveal who drew whom to everyone.</p>
+            }
+            else
+            {
+                <p class="text-muted">The event has passed. Reveal who drew whom so everyone can see how the exchange played out. Until then, every match stays private.</p>
+                @if (_errorMessage is not null)
+                {
+                    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                }
+                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="Reveal">
+                    @if (_busy)
+                    {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <span>Revealing...</span>
+                    }
+                    else
+                    {
+                        <span><OpenWishIcon Name="eye" /> Reveal assignments</span>
+                    }
+                </button>
+                <p class="text-muted small mt-2 mb-0">This is permanent and the exchange can no longer be reset.</p>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public string EventId { get; set; } = string.Empty;
+    [Parameter] public DateTimeOffset EventDate { get; set; }
+    [Parameter] public bool IsOwner { get; set; }
+    [Parameter] public DateTimeOffset? RevealedOn { get; set; }
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnRevealed { get; set; }
+
+    private List<RevealedPairingModel> _pairings = [];
+    private bool _loading;
+    private bool _busy;
+    private string? _errorMessage;
+    private bool? _loadedForRevealed;
+
+    private bool IsPast => EventDate <= DateTimeOffset.UtcNow;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var revealed = RevealedOn.HasValue;
+        if (revealed && _loadedForRevealed != true)
+        {
+            _loadedForRevealed = true;
+            await LoadPairings();
+        }
+        else if (!revealed)
+        {
+            _loadedForRevealed = false;
+        }
+    }
+
+    private async Task LoadPairings()
+    {
+        _loading = true;
+        _errorMessage = null;
+        try
+        {
+            _pairings = (await EventService.GetRevealedPairingsByPublicIdAsync(EventId, CurrentUserId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load revealed pairings for event {EventPublicId}", EventId);
+            _errorMessage = "We couldn't load the assignments. Try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task Reveal()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _errorMessage = null;
+        try
+        {
+            await EventService.RevealGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
+            await OnRevealed.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to reveal the gift exchange for event {EventPublicId}", EventId);
+            _errorMessage = "We couldn't reveal the assignments. Try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

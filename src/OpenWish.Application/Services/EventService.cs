@@ -1449,6 +1449,11 @@ public class EventService(
             throw new InvalidOperationException("No gift exchange to reset - names have not been drawn yet.");
         }
 
+        if (eventEntity.AssignmentsRevealedOn.HasValue)
+        {
+            throw new InvalidOperationException("The assignments were already revealed, so the gift exchange can no longer be reset.");
+        }
+
         // Delete all gift exchange records
         var giftExchanges = await context.GiftExchanges
             .Where(ge => ge.EventId == eventId)
@@ -1768,6 +1773,79 @@ public class EventService(
             .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId && !ge.Deleted);
 
         return giftExchange == null ? null : _mapper.Map<GiftExchangeModel>(giftExchange);
+    }
+
+    public async Task<EventModel> RevealGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        ValidateEventCreatorPermission(eventEntity, ownerId);
+
+        if (!eventEntity.IsGiftExchange || !eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("There are no drawn names to reveal.");
+        }
+
+        if (eventEntity.Date > DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("Assignments can be revealed once the event date has passed.");
+        }
+
+        if (!eventEntity.AssignmentsRevealedOn.HasValue)
+        {
+            eventEntity.AssignmentsRevealedOn = DateTimeOffset.UtcNow;
+            eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync();
+        }
+
+        return await GetEventAsync(eventEntity.Id);
+    }
+
+    public async Task<IEnumerable<RevealedPairingModel>> GetRevealedPairingsByPublicIdAsync(string eventPublicId, string userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var eventEntity = await context.Events
+            .AsNoTracking()
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        if (!IsEventMember(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event.");
+        }
+
+        if (!eventEntity.AssignmentsRevealedOn.HasValue)
+        {
+            return [];
+        }
+
+        var pairings = await context.GiftExchanges
+            .AsNoTracking()
+            .Where(ge => ge.EventId == eventEntity.Id && !ge.Deleted)
+            .Select(ge => new
+            {
+                GiverName = ge.Giver != null ? ge.Giver.UserName : null,
+                ReceiverName = ge.Receiver != null ? ge.Receiver.UserName : null
+            })
+            .ToListAsync();
+
+        // Guests invited only by email have no username, and an email must never be shared with the group.
+        return pairings
+            .Select(p => new RevealedPairingModel(
+                string.IsNullOrWhiteSpace(p.GiverName) ? "Invited guest" : p.GiverName,
+                string.IsNullOrWhiteSpace(p.ReceiverName) ? "Invited guest" : p.ReceiverName))
+            .OrderBy(p => p.GiverName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public async Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId)

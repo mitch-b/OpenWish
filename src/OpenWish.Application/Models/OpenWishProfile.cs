@@ -35,6 +35,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.WishlistId, opt => opt.Ignore())
             .ReverseMap();
         CreateMap<EventModel, Event>()
+            .ForMember(dest => dest.AssignmentsRevealedOn, opt => opt.Ignore())
             .ForMember(dest => dest.PublicId, opt => opt.Ignore())
             .ForMember(dest => dest.Deleted, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())

@@ -123,6 +123,16 @@ else
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
+                @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
+                {
+                    <ExchangeReveal EventId="@EventId"
+                                    CurrentUserId="@(_currentUserId ?? string.Empty)"
+                                    EventDate="@_event.Date"
+                                    IsOwner="@_isOwner"
+                                    RevealedOn="@_event.AssignmentsRevealedOn"
+                                    OnRevealed="HandleNamesDrawn" />
+                }
+
                 <div class="card shadow-sm event-overview-card">
                     <div class="card-body">
                         <h2 class="h4 mb-3">Event overview</h2>

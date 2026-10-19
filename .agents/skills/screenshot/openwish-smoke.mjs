@@ -2415,13 +2415,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await screenshot(page, "wishlist-shopper-grid.png");
   await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Reserve gift" }).click();
-  await page.getByRole("button", { name: "List view", pressed: true }).waitFor({ state: "visible" });
-  await page.getByRole("region", {
-    name: "Gift coordination for Cast-Iron Dutch Oven"
-  }).waitFor({ state: "visible" });
-  await page.getByRole("button", {
-    name: "Hide gift options for Cast-Iron Dutch Oven"
-  }).click();
+  await guestGridCard.locator(".item-coordination").waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
+  await guestGridCard.getByRole("button", { name: "Hide gift details" }).click();
+  await guestGridCard.locator(".item-coordination").waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "List view" }).click();
   const privateCollaboratorItemName = `Private collaborator item ${Date.now()}`;
   await page.getByRole("button", { name: "Add item" }).first().click();
   const privateItemDialog = page.getByRole("dialog", { name: "Add item" });
@@ -2678,6 +2676,234 @@ async function verifyFriendJourney(browser, manifest, results) {
     assertions: ["case-insensitive, whitespace-trimmed existing-user invitation creates a sent friend request"]
   });
   await context.close();
+}
+
+async function verifyFeatureDayJourney(browser, manifest, results) {
+  const assertions = [];
+  const pastEventId = "demo-summer-cookout-swap";
+
+  // C4: a brand-new account sees a dismissible checklist that stays dismissed.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "friend2", "playwright-friend2@openwish.local");
+    const checklistApi = await context.request.get(`${baseUrl}/api/dashboard/checklist`);
+    if (!checklistApi.ok()) {
+      throw new Error(`Checklist API returned ${checklistApi.status()}.`);
+    }
+    const checklist = await checklistApi.json();
+    if (checklist.isDismissed || checklist.hasWishlist) {
+      throw new Error(`Unexpected new-account checklist: ${JSON.stringify(checklist)}`);
+    }
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    const panel = page.getByTestId("first-run-checklist");
+    await panel.waitFor({ state: "visible" });
+    if (await panel.locator("[data-step]").count() !== 4) {
+      throw new Error("The checklist did not render its four steps.");
+    }
+    await screenshot(page, "first-run-checklist.png");
+    await panel.getByRole("button", { name: "Dismiss the get started checklist" }).click();
+    await panel.waitFor({ state: "detached" });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator("main").first().waitFor({ state: "visible" });
+    await page.waitForTimeout(1500);
+    if (await page.getByTestId("first-run-checklist").count() !== 0) {
+      throw new Error("A dismissed checklist came back after reload.");
+    }
+    const after = await (await context.request.get(`${baseUrl}/api/dashboard/checklist`)).json();
+    if (!after.isDismissed) {
+      throw new Error("Checklist dismissal was not persisted.");
+    }
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Checklist diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    assertions.push("new-account checklist renders, dismisses, and stays dismissed");
+    await context.close();
+  }
+
+  // C3: a co-participant who is not a friend is suggested and can be asked.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "friend", friendEmail);
+    const suggestionsApi = await context.request.get(`${baseUrl}/api/friends/suggestions`);
+    if (!suggestionsApi.ok()) {
+      throw new Error(`Suggestions API returned ${suggestionsApi.status()}.`);
+    }
+    const suggestions = await suggestionsApi.json();
+    if (JSON.stringify(suggestions).includes("@")) {
+      throw new Error("Friend suggestions disclosed an email address.");
+    }
+    if (suggestions.some(suggestion => suggestion.userName === "AlexDemo")) {
+      throw new Error("An existing friend was suggested.");
+    }
+    const casey = suggestions.find(suggestion => suggestion.userName === "CaseyDemo");
+    if (!casey) {
+      throw new Error(`CaseyDemo was not suggested: ${JSON.stringify(suggestions)}`);
+    }
+    await page.goto(`${baseUrl}/friends`, { waitUntil: "domcontentloaded" });
+    const panel = page.getByTestId("friend-suggestions");
+    await panel.waitFor({ state: "visible" });
+    await panel.getByText("CaseyDemo").waitFor({ state: "visible" });
+    await screenshot(page, "friend-suggestions.png");
+    await panel.getByRole("button", { name: "Send friend request to CaseyDemo" }).click();
+    await panel.getByText("Friend request sent to CaseyDemo.").waitFor({ state: "visible" });
+    if (await panel.getByRole("button", { name: "Send friend request to CaseyDemo" }).count() !== 0) {
+      throw new Error("A suggestion stayed actionable after its request was sent.");
+    }
+    const sent = await (await context.request.get(`${baseUrl}/api/friends/requests/sent`)).json();
+    if (!sent.some(request => request.receiver?.userName === "CaseyDemo")) {
+      throw new Error("Suggesting a friend did not create a friend request.");
+    }
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Suggestion diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    assertions.push("friend suggestions list co-participants without emails and send a real request");
+    await context.close();
+  }
+
+  // D4: only the organizer can reveal; members then see names, outsiders never do.
+  {
+    const ownerContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const friendContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+    const guestContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const ownerPage = await ownerContext.newPage();
+    const friendPage = await friendContext.newPage();
+    const ownerDiagnostics = monitorPage(ownerPage);
+    const friendDiagnostics = monitorPage(friendPage);
+    await login(ownerContext, "owner", ownerEmail);
+    await login(friendContext, "friend", friendEmail);
+    await login(guestContext, "guest", guestEmail);
+
+    const friendBefore = await friendContext.request.get(`${baseUrl}/api/events/${pastEventId}/revealed-pairings`);
+    if (!friendBefore.ok() || (await friendBefore.json()).length !== 0) {
+      throw new Error("Pairings were visible before the organizer revealed them.");
+    }
+    const friendReveal = await friendContext.request.post(`${baseUrl}/api/events/${pastEventId}/reveal-gift-exchange`);
+    if (friendReveal.status() !== 403) {
+      throw new Error("A participant revealed the exchange.");
+    }
+    const guestPairings = await guestContext.request.get(`${baseUrl}/api/events/${pastEventId}/revealed-pairings`);
+    if (guestPairings.status() !== 403) {
+      throw new Error("A non-member could request revealed pairings.");
+    }
+
+    await friendPage.goto(`${baseUrl}/events/${pastEventId}`, { waitUntil: "domcontentloaded" });
+    await assertVisible(friendPage, "Summer Cookout Swap");
+    if (await friendPage.getByTestId("exchange-reveal").count() !== 0) {
+      throw new Error("A participant saw the organizer reveal panel before the reveal.");
+    }
+
+    await ownerPage.goto(`${baseUrl}/events/${pastEventId}`, { waitUntil: "domcontentloaded" });
+    const reveal = ownerPage.getByTestId("exchange-reveal");
+    await reveal.waitFor({ state: "visible" });
+    await screenshot(ownerPage, "exchange-reveal-ready.png");
+    await reveal.getByRole("button", { name: "Reveal assignments" }).click();
+    await reveal.getByText("AlexDemo").first().waitFor({ state: "visible" });
+    await reveal.getByText("JordanDemo").first().waitFor({ state: "visible" });
+    if ((await reveal.textContent()).includes("@")) {
+      throw new Error("The revealed pairings disclosed an email address.");
+    }
+    await screenshot(ownerPage, "exchange-revealed.png");
+
+    await friendPage.reload({ waitUntil: "domcontentloaded" });
+    const friendReveal2 = friendPage.getByTestId("exchange-reveal");
+    await friendReveal2.waitFor({ state: "visible" });
+    await friendReveal2.getByText("JordanDemo").first().waitFor({ state: "visible" });
+    if (await friendReveal2.getByRole("button", { name: "Reveal assignments" }).count() !== 0) {
+      throw new Error("A participant was offered the reveal button.");
+    }
+    await screenshot(friendPage, "exchange-revealed-mobile.png");
+
+    const guestAfter = await guestContext.request.get(`${baseUrl}/api/events/${pastEventId}/revealed-pairings`);
+    if (guestAfter.status() !== 403) {
+      throw new Error("A non-member could see pairings after the reveal.");
+    }
+    const resetAfter = await ownerContext.request.post(`${baseUrl}/api/events/${pastEventId}/reset-gift-exchange`);
+    if (resetAfter.ok()) {
+      throw new Error("A revealed exchange could still be reset.");
+    }
+    for (const diagnostics of [ownerDiagnostics, friendDiagnostics]) {
+      if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+        throw new Error(`Reveal diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+      }
+    }
+    assertions.push("exchange reveal is organizer-only, member-visible, hidden from outsiders, and locks reset");
+    await ownerContext.close();
+    await friendContext.close();
+    await guestContext.close();
+  }
+
+  // B5-lite and J4: stale ideas are owner-only; grid coordination stays in grid view.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "owner", ownerEmail);
+    const privateRoute = `/wishlists/${manifest.privateWishlistPublicId}`;
+    await page.goto(`${baseUrl}${privateRoute}`, { waitUntil: "domcontentloaded" });
+    const stale = page.getByTestId("stale-ideas");
+    await stale.waitFor({ state: "visible" });
+    await stale.getByText("A quiet weekend away").waitFor({ state: "visible" });
+    await screenshot(page, "stale-ideas.png");
+
+    const strangerContext = await browser.newContext();
+    await login(strangerContext, "guest", guestEmail);
+    const forbidden = await strangerContext.request.post(
+      `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}/items/demo-private-item/still-wanted`);
+    if (forbidden.status() !== 403) {
+      throw new Error("A non-owner confirmed an idea.");
+    }
+    await strangerContext.close();
+
+    await stale.getByRole("button", { name: "Keep A quiet weekend away" }).click();
+    await stale.waitFor({ state: "detached" });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await assertVisible(page, "A quiet weekend away");
+    if (await page.getByTestId("stale-ideas").count() !== 0) {
+      throw new Error("A confirmed idea was flagged as stale again.");
+    }
+
+    await page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "domcontentloaded" });
+    if (await page.getByTestId("stale-ideas").count() !== 0) {
+      throw new Error("Fresh ideas were flagged as stale.");
+    }
+    await page.close();
+    await context.close();
+    assertions.push("owner confirms a stale idea; non-owners are refused");
+  }
+
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "friend", friendEmail);
+    await page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "domcontentloaded" });
+    await assertVisible(page, "Noise-Cancelling Headphones");
+    await page.getByRole("button", { name: "Grid view" }).first().click();
+    await page.locator(".wishlist-content.grid-view").waitFor({ state: "visible" });
+    const toggle = page.locator(".wishlist-content.grid-view button[aria-controls^='item-coordination-']").first();
+    await toggle.click();
+    await page.locator(".item-coordination").first().waitFor({ state: "visible" });
+    if (await page.locator(".wishlist-content.list-view").count() !== 0) {
+      throw new Error("Grid coordination switched the page back to list view.");
+    }
+    if (await toggle.getAttribute("aria-expanded") !== "true") {
+      throw new Error("The grid coordination toggle did not report expanded.");
+    }
+    await screenshot(page, "grid-inline-coordination.png");
+    await toggle.click();
+    await page.locator(".item-coordination").first().waitFor({ state: "detached" });
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Grid diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    assertions.push("grid cards coordinate gifts inline without leaving grid view");
+    await context.close();
+  }
+
+  results.push({ scenario: "feature-day-outcomes", assertions });
 }
 
 async function verifyMobileJourney(browser, manifest, results) {
@@ -2983,6 +3209,7 @@ try {
   await verifyProductCaptureJourney(browser, results);
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);
+  await verifyFeatureDayJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
   await verifyUnsharedMatchWishlist(browser, manifest, results);
 

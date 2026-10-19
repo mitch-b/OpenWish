@@ -9,6 +9,7 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
+@inject IDashboardService DashboardService
 @inject ILogger<Home> Logger
 @inject NavigationManager NavigationManager
 
@@ -116,6 +117,41 @@
                     Then choose a wishlist. <a href="/add">More ways to add, like sharing from your phone</a>
                 </p>
             </form>
+
+            @if (Checklist is { IsVisible: true } checklist)
+            {
+                <section class="checklist-panel" aria-labelledby="checklist-title" data-testid="first-run-checklist">
+                    <div class="checklist-header">
+                        <div>
+                            <h2 id="checklist-title">Get started</h2>
+                            <p>@checklist.CompletedCount of @checklist.Steps.Count done</p>
+                        </div>
+                        <button type="button"
+                                class="btn btn-quiet btn-sm"
+                                disabled="@_isDismissingChecklist"
+                                aria-label="Dismiss the get started checklist"
+                                @onclick="DismissChecklist">
+                            Dismiss
+                        </button>
+                    </div>
+                    <ol class="checklist-steps">
+                        @foreach (var step in checklist.Steps)
+                        {
+                            <li class="checklist-step @(step.IsDone ? "checklist-step-done" : string.Empty)" data-step="@step.Key" data-done="@(step.IsDone ? "true" : "false")">
+                                <span class="checklist-check" aria-hidden="true"><OpenWishIcon Name="@(step.IsDone ? "check-circle" : "gift")" /></span>
+                                <span class="checklist-copy">
+                                    <strong>@step.Title</strong>
+                                    <small>@(step.IsDone ? "Done" : step.Description)</small>
+                                </span>
+                                @if (!step.IsDone)
+                                {
+                                    <a href="@step.Href" class="btn btn-outline-primary btn-sm">@step.ActionText</a>
+                                }
+                            </li>
+                        }
+                    </ol>
+                </section>
+            }
 
             <div class="dashboard-grid">
                 <section class="action-panel">
@@ -317,6 +353,9 @@
     public List<DashboardEventCard>? Events { get; set; }
 
     [PersistentState]
+    public FirstRunChecklist? Checklist { get; set; }
+
+    [PersistentState]
     public int? UpcomingEventCount { get; set; }
 
     [PersistentState]
@@ -333,9 +372,11 @@
     private string? _loadError;
     private bool _isLoading = true;
     private string _quickAddText = string.Empty;
+    private bool _isDismissingChecklist;
 
     private bool HasLoadedDashboard =>
         FeaturedWishlists is not null &&
+        Checklist is not null &&
         Events is not null &&
         UpcomingEventCount is not null &&
         PendingFriendRequestCount is not null &&
@@ -366,6 +407,7 @@
                 await LoadEvents();
                 await LoadFriendRequests();
                 await LoadPendingEventInvitations();
+                await LoadChecklist();
             }
             catch (Exception ex)
             {
@@ -382,6 +424,44 @@
         {
             Welcome = DashboardWelcome.Unavailable;
             _isLoading = false;
+        }
+    }
+
+    private async Task LoadChecklist()
+    {
+        try
+        {
+            Checklist = _userId is null ? null : await DashboardService.GetFirstRunChecklistAsync(_userId);
+        }
+        catch (Exception ex)
+        {
+            // The checklist is optional; a failure must not block the dashboard.
+            Logger.LogWarning(ex, "Unable to load the first-run checklist for user {UserId}.", _userId);
+            Checklist = FirstRunChecklist.Hidden;
+        }
+    }
+
+    private async Task DismissChecklist()
+    {
+        if (_userId is null || _isDismissingChecklist)
+        {
+            return;
+        }
+
+        _isDismissingChecklist = true;
+        try
+        {
+            await DashboardService.DismissFirstRunChecklistAsync(_userId);
+            Checklist = FirstRunChecklist.Hidden;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Unable to dismiss the first-run checklist for user {UserId}.", _userId);
+            _loadError = "The checklist could not be dismissed. Try again.";
+        }
+        finally
+        {
+            _isDismissingChecklist = false;
         }
     }
 

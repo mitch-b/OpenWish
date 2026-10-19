@@ -19,9 +19,11 @@
                 </div>
             </div>
             
+            <FriendSuggestions OnRequestSent="HandleRequestSent" />
+
             <div class="card friends-panel mb-4">
                 <div class="card-body">
-                    <FriendRequestList OnFriendshipsChanged="HandleFriendshipsChanged" />
+                    <FriendRequestList @key="_requestListVersion" OnFriendshipsChanged="HandleFriendshipsChanged" />
                 </div>
             </div>
         </div>
@@ -38,6 +40,12 @@
 
 @code {
     private int _friendListVersion;
+    private int _requestListVersion;
+
+    private void HandleRequestSent()
+    {
+        _requestListVersion++;
+    }
 
     private void HandleFriendshipsChanged()
     {

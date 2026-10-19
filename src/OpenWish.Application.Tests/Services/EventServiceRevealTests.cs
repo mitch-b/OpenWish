@@ -73,7 +73,33 @@ public class EventServiceRevealTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ResetGiftExchangeAsync(eventId, "host"));
     }
 
-    private static async Task<(EventService Service, string Database)> CreateServiceAsync(int daysFromNow, bool drawn = true)
+    [Fact]
+    public async Task Reveal_NeverSharesEmailValuedUsernames()
+    {
+        var (service, _) = await CreateServiceAsync(daysFromNow: -2, memberUserName: "member@example.com");
+        await service.RevealGiftExchangeByPublicIdAsync("event", "host");
+
+        var pairings = (await service.GetRevealedPairingsByPublicIdAsync("event", "host")).ToList();
+
+        Assert.DoesNotContain(pairings, p => p.GiverName.Contains('@') || p.ReceiverName.Contains('@'));
+        Assert.Contains(pairings, p => p.GiverName == "Invited guest" && p.ReceiverName == "host");
+    }
+
+    [Fact]
+    public async Task Draw_IsBlockedOnceRevealedEvenIfTheDrawDateIsCleared()
+    {
+        var (service, database) = await CreateServiceAsync(daysFromNow: -2);
+        await service.RevealGiftExchangeByPublicIdAsync("event", "host");
+        var model = await service.GetEventByPublicIdAsync("event", "host");
+        model.NamesDrawnOn = null;
+
+        await service.UpdateEventAsync(model.Id, model, "host");
+
+        Assert.NotNull((await service.GetEventByPublicIdAsync("event", "host")).NamesDrawnOn);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.DrawNamesAsync(model.Id, "host"));
+    }
+
+    private static async Task<(EventService Service, string Database)> CreateServiceAsync(int daysFromNow, bool drawn = true, string memberUserName = "member")
     {
         var databaseName = Guid.NewGuid().ToString();
         var services = new ServiceCollection();
@@ -83,7 +109,7 @@ public class EventServiceRevealTests
         await using (var seed = provider.GetRequiredService<ApplicationDbContext>())
         {
             var host = new ApplicationUser { Id = "host", UserName = "host", Email = "host@example.com" };
-            var member = new ApplicationUser { Id = "member", UserName = "member", Email = "member@example.com" };
+            var member = new ApplicationUser { Id = "member", UserName = memberUserName, Email = "member@example.com" };
             seed.Users.AddRange(host, member, new ApplicationUser { Id = "outsider", UserName = "outsider" });
             var evt = new Event
             {

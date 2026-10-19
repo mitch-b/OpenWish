@@ -25,6 +25,29 @@ public class DashboardServiceTests
     }
 
     [Fact]
+    public async Task GetFirstRunChecklistAsync_IgnoresSurprisesHiddenFromTheOwner()
+    {
+        var factory = new TestContextFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            var me = new ApplicationUser { Id = "me", UserName = "me" };
+            seed.Users.Add(me);
+            seed.Wishlists.Add(new Wishlist
+            {
+                Name = "Mine",
+                Owner = me,
+                OwnerId = "me",
+                Items = [new WishlistItem { Name = "Surprise", IsHiddenFromOwner = true }]
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var checklist = await new DashboardService(factory).GetFirstRunChecklistAsync("me");
+
+        Assert.False(checklist.HasIdea);
+    }
+
+    [Fact]
     public async Task GetFirstRunChecklistAsync_MarksStepsDoneFromOwnActivityOnly()
     {
         var factory = new TestContextFactory();

@@ -2821,6 +2821,18 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (guestAfter.status() !== 403) {
       throw new Error("A non-member could see pairings after the reveal.");
     }
+    const raced = await Promise.all([
+      ownerContext.request.post(`${baseUrl}/api/events/${pastEventId}/reveal-gift-exchange`),
+      ownerContext.request.post(`${baseUrl}/api/events/${pastEventId}/reset-gift-exchange`),
+      ownerContext.request.post(`${baseUrl}/api/events/${pastEventId}/reveal-gift-exchange`)
+    ]);
+    if (raced[0].status() !== 200 || raced[2].status() !== 200 || raced[1].ok()) {
+      throw new Error(`Concurrent reveal/reset returned ${raced.map(r => r.status()).join(",")}.`);
+    }
+    const racedPairings = await (await friendContext.request.get(`${baseUrl}/api/events/${pastEventId}/revealed-pairings`)).json();
+    if (racedPairings.length !== 2) {
+      throw new Error("Concurrent reveal and reset lost the revealed pairings.");
+    }
     const resetAfter = await ownerContext.request.post(`${baseUrl}/api/events/${pastEventId}/reset-gift-exchange`);
     if (resetAfter.ok()) {
       throw new Error("A revealed exchange could still be reset.");

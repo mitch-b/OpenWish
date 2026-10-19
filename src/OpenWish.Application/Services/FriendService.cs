@@ -88,12 +88,12 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         foreach (var mate in eventMates.Concat(organizers).OrderByDescending(m => m.Date))
         {
-            if (mate.UserId is null || string.IsNullOrWhiteSpace(mate.UserName) || excluded.Contains(mate.UserId))
+            if (mate.UserId is null || excluded.Contains(mate.UserId))
             {
                 continue;
             }
 
-            candidates.TryAdd(mate.UserId, (mate.UserName, $"Both in {mate.EventName}"));
+            candidates.TryAdd(mate.UserId, (PublicDisplayName.From(mate.UserName, "OpenWish member"), $"Both in {mate.EventName}"));
         }
 
         var myWishlistIds = await context.Wishlists
@@ -119,12 +119,12 @@ public class FriendService(IServiceScopeFactory scopeFactory,
 
         foreach (var mate in collaborators.Concat(owners))
         {
-            if (string.IsNullOrWhiteSpace(mate.UserId) || string.IsNullOrWhiteSpace(mate.UserName) || excluded.Contains(mate.UserId))
+            if (string.IsNullOrWhiteSpace(mate.UserId) || excluded.Contains(mate.UserId))
             {
                 continue;
             }
 
-            candidates.TryAdd(mate.UserId, (mate.UserName, $"Shares {mate.WishlistName}"));
+            candidates.TryAdd(mate.UserId, (PublicDisplayName.From(mate.UserName, "OpenWish member"), $"Shares {mate.WishlistName}"));
         }
 
         return candidates

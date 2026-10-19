@@ -31,3 +31,14 @@ public class WishlistFreshnessTests
         Assert.Empty(WishlistFreshness.GetStaleItems([hidden], _now));
     }
 }
+public class PublicDisplayNameTests
+{
+    [Theory]
+    [InlineData("Casey", "Casey")]
+    [InlineData("  Casey ", "Casey")]
+    [InlineData("casey@example.com", "Someone")]
+    [InlineData("", "Someone")]
+    [InlineData(null, "Someone")]
+    public void From_NeverReturnsEmailsOrBlanks(string? userName, string expected) =>
+        Assert.Equal(expected, PublicDisplayName.From(userName, "Someone"));
+}

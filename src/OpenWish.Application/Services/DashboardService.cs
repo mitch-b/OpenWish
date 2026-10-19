@@ -24,7 +24,7 @@ public class DashboardService(IDbContextFactory<ApplicationDbContext> contextFac
         }
 
         var hasWishlist = await context.Wishlists.AnyAsync(w => !w.Deleted && w.OwnerId == userId);
-        var hasIdea = await context.WishlistItems.AnyAsync(i => !i.Deleted && !i.Wishlist!.Deleted && i.Wishlist.OwnerId == userId);
+        var hasIdea = await context.WishlistItems.AnyAsync(i => !i.Deleted && !i.IsHiddenFromOwner && !i.Wishlist!.Deleted && i.Wishlist.OwnerId == userId);
         var hasFriend = await context.Friends.AnyAsync(f => !f.Deleted && (f.UserId == userId || f.FriendUserId == userId));
         var hasEvent = await context.Events.AnyAsync(e => !e.Deleted && e.CreatedBy.Id == userId)
             || await context.EventUsers.AnyAsync(eu => !eu.Deleted && eu.UserId == userId && eu.Status == "Accepted" && !eu.Event!.Deleted);

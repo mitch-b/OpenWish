@@ -531,7 +531,7 @@ public class FriendServiceRequestTests
         {
             var me = new ApplicationUser { Id = "me", UserName = "me", Email = "me@example.com" };
             var friend = new ApplicationUser { Id = "friend", UserName = "friend", Email = "friend@example.com" };
-            var mate = new ApplicationUser { Id = "mate", UserName = "mate", Email = "mate@example.com" };
+            var mate = new ApplicationUser { Id = "mate", UserName = "mate@example.com", Email = "mate@example.com" };
             var host = new ApplicationUser { Id = "host", UserName = "host", Email = "host@example.com" };
             var pending = new ApplicationUser { Id = "pending", UserName = "pending" };
             var collaborator = new ApplicationUser { Id = "collab", UserName = "collab" };
@@ -564,6 +564,8 @@ public class FriendServiceRequestTests
 
         Assert.Equal(["collab", "host", "mate"], suggestions.Select(s => s.UserId).ToArray());
         Assert.Equal("Both in Holiday", suggestions.Single(s => s.UserId == "mate").Reason);
+        Assert.Equal("OpenWish member", suggestions.Single(s => s.UserId == "mate").UserName);
+        Assert.DoesNotContain(suggestions, s => s.UserName.Contains('@'));
         Assert.Equal("Shares Garden", suggestions.Single(s => s.UserId == "collab").Reason);
         Assert.DoesNotContain(suggestions, s => s.UserId is "stranger" or "friend" or "pending" or "removed" or "me");
         Assert.Single(await service.GetFriendSuggestionsAsync("me", 1));

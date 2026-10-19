@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -1323,6 +1324,11 @@ public class EventService(
             throw new InvalidOperationException("This event is not configured as a gift exchange.");
         }
 
+        if (eventEntity.AssignmentsRevealedOn.HasValue)
+        {
+            throw new InvalidOperationException("The assignments were already revealed, so the names can no longer be drawn again.");
+        }
+
         if (eventEntity.NamesDrawnOn.HasValue)
         {
             throw new InvalidOperationException("Names have already been drawn for this event.");
@@ -1424,10 +1430,24 @@ public class EventService(
         return await DrawNamesAsync(eventEntity.Id, ownerId);
     }
 
+    // Serializes reveal and reset on the event row so neither can act on a stale check.
+    private static async Task<IDbContextTransaction?> LockEventRowAsync(ApplicationDbContext context, int eventId)
+    {
+        if (!context.Database.IsRelational())
+        {
+            return null;
+        }
+
+        var transaction = await context.Database.BeginTransactionAsync();
+        await context.Database.ExecuteSqlInterpolatedAsync($"SELECT \"Id\" FROM \"Events\" WHERE \"Id\" = {eventId} FOR UPDATE");
+        return transaction;
+    }
+
     public async Task<EventModel> ResetGiftExchangeAsync(int eventId, string ownerId)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var lockTransaction = await LockEventRowAsync(context, eventId);
 
         var eventEntity = await context.Events
             .Include(e => e.CreatedBy)
@@ -1465,6 +1485,10 @@ public class EventService(
         eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
+        if (lockTransaction is not null)
+        {
+            await lockTransaction.CommitAsync();
+        }
 
         // Send notifications to participants whose assignments were reset.
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
@@ -1780,10 +1804,16 @@ public class EventService(
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        var eventId = await context.Events
+            .Where(e => e.PublicId == eventPublicId && !e.Deleted)
+            .Select(e => (int?)e.Id)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+        await using var lockTransaction = await LockEventRowAsync(context, eventId);
+
         var eventEntity = await context.Events
             .Include(e => e.CreatedBy)
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
-            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+            .FirstAsync(e => e.Id == eventId);
 
         ValidateEventCreatorPermission(eventEntity, ownerId);
 
@@ -1802,6 +1832,11 @@ public class EventService(
             eventEntity.AssignmentsRevealedOn = DateTimeOffset.UtcNow;
             eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
             await context.SaveChangesAsync();
+        }
+
+        if (lockTransaction is not null)
+        {
+            await lockTransaction.CommitAsync();
         }
 
         return await GetEventAsync(eventEntity.Id);
@@ -1842,8 +1877,8 @@ public class EventService(
         // Guests invited only by email have no username, and an email must never be shared with the group.
         return pairings
             .Select(p => new RevealedPairingModel(
-                string.IsNullOrWhiteSpace(p.GiverName) ? "Invited guest" : p.GiverName,
-                string.IsNullOrWhiteSpace(p.ReceiverName) ? "Invited guest" : p.ReceiverName))
+                PublicDisplayName.From(p.GiverName, "Invited guest"),
+                PublicDisplayName.From(p.ReceiverName, "Invited guest")))
             .OrderBy(p => p.GiverName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

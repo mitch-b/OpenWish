@@ -124,7 +124,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<button class=\"stat-card stat-action\"", markup, StringComparison.Ordinal);
         Assert.Contains("No ideas shared yet", markup, StringComparison.Ordinal);
         Assert.Contains("GetCoordinationLabel(item)", markup, StringComparison.Ordinal);
-        Assert.Contains("OpenItemCoordination(item.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("ToggleGridCoordination(item.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"item-coordination-", markup, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"stale-ideas\"", markup, StringComparison.Ordinal);
         Assert.Contains("MaxPrice = PriceCeiling;", markup, StringComparison.Ordinal);
         Assert.Contains("StatusFilters.Contains(\"reserved\") != StatusFilters.Contains(\"unreserved\")", markup, StringComparison.Ordinal);
         Assert.Contains("Math.Max(MinPrice, MaxPrice)", markup, StringComparison.Ordinal);

@@ -15,6 +15,12 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
             ?? Array.Empty<ApplicationUserModel>();
     }
 
+    public async Task<IEnumerable<FriendSuggestionModel>> GetFriendSuggestionsAsync(string userId, int maxResults = 5)
+    {
+        return await _httpClient.GetFromJsonAsync<IEnumerable<FriendSuggestionModel>>($"{BaseUrl}/suggestions?maxResults={maxResults}")
+            ?? Array.Empty<FriendSuggestionModel>();
+    }
+
     public async Task<bool> AreFriendsAsync(string userId, string otherUserId)
     {
         return await _httpClient.GetFromJsonAsync<bool>($"{BaseUrl}/check/{otherUserId}");

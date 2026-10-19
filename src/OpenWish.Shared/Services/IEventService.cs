@@ -261,6 +261,15 @@ public interface IEventService
     /// <returns>The gift exchange model with recipient info, or null if exchange not yet drawn or user not assigned.</returns>
     Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId);
 
+    /// <summary>
+    /// Lets the organizer share who drew whom with the group once the occasion date has passed.
+    /// Revealing is permanent: the exchange can no longer be reset.
+    /// </summary>
+    Task<EventModel> RevealGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId);
+
+    /// <summary>Gets who drew whom for a member of the event; empty until the organizer reveals the exchange.</summary>
+    Task<IEnumerable<RevealedPairingModel>> GetRevealedPairingsByPublicIdAsync(string eventPublicId, string userId);
+
     /// <summary>Retrieves the current user's gift exchange assignment by public event ID.</summary>
     /// <param name="eventPublicId">The public event identifier.</param>
     /// <param name="userId">The user ID requesting their assignment.</param>

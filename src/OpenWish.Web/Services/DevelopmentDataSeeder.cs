@@ -19,6 +19,7 @@ public sealed class DevelopmentDataSeeder(
     private const string PrivateWishlistPublicId = "demo-private-ideas";
     private const string FriendWishlistPublicId = "demo-jordan-favorites";
     private const string EventPublicId = "demo-holiday-gift-exchange";
+    private const string PastEventPublicId = "demo-summer-cookout-swap";
 
     private static readonly IReadOnlyDictionary<string, DevelopmentUser> _developmentUsers =
         new Dictionary<string, DevelopmentUser>(StringComparer.OrdinalIgnoreCase)
@@ -102,7 +103,7 @@ public sealed class DevelopmentDataSeeder(
             .Select(entity => entity.Id)
             .ToListAsync(cancellationToken);
         var seededEventDatabaseIds = await context.Events
-            .Where(entity => entity.PublicId == EventPublicId)
+            .Where(entity => entity.PublicId == EventPublicId || entity.PublicId == PastEventPublicId)
             .Select(entity => entity.Id)
             .ToListAsync(cancellationToken);
 
@@ -167,7 +168,7 @@ public sealed class DevelopmentDataSeeder(
             .Where(entity => seededWishlistIds.Contains(entity.PublicId))
             .ExecuteDeleteAsync(cancellationToken);
         await context.Events
-            .Where(entity => entity.PublicId == EventPublicId)
+            .Where(entity => entity.PublicId == EventPublicId || entity.PublicId == PastEventPublicId)
             .ExecuteDeleteAsync(cancellationToken);
         await context.FriendRequests
             .Where(entity =>
@@ -199,6 +200,64 @@ public sealed class DevelopmentDataSeeder(
             Tags = "Family,Holiday",
             CreatedBy = owner
         };
+
+        var pastEvent = new Event
+        {
+            PublicId = PastEventPublicId,
+            Name = "Summer Cookout Swap",
+            Description = "A finished exchange, ready for the organizer to reveal who had whom.",
+            Date = now.AddDays(-2),
+            Budget = 40m,
+            IsGiftExchange = true,
+            GiftExchangeStyle = "GiftExchange",
+            NamesDrawnOn = now.AddDays(-20),
+            Tags = "Friends,Summer",
+            CreatedBy = owner
+        };
+        pastEvent.EventUsers.Add(new EventUser
+        {
+            PublicId = "demo-past-friend-event-user",
+            Event = pastEvent,
+            User = friend,
+            UserId = friend.Id,
+            InvitationDate = now.AddDays(-30),
+            Status = "Accepted",
+            IsAccepted = true,
+            Role = "Participant"
+        });
+        pastEvent.EventUsers.Add(new EventUser
+        {
+            PublicId = "demo-past-second-friend-event-user",
+            Event = pastEvent,
+            User = secondFriend,
+            UserId = secondFriend.Id,
+            InvitationDate = now.AddDays(-30),
+            Status = "Accepted",
+            IsAccepted = true,
+            Role = "Participant"
+        });
+        pastEvent.GiftExchanges.Add(new GiftExchange
+        {
+            PublicId = "demo-past-owner-gift-exchange",
+            Event = pastEvent,
+            Giver = owner,
+            GiverId = owner.Id,
+            Receiver = friend,
+            ReceiverId = friend.Id,
+            ReceiverPreferences = "Anything for the grill.",
+            Budget = pastEvent.Budget
+        });
+        pastEvent.GiftExchanges.Add(new GiftExchange
+        {
+            PublicId = "demo-past-friend-gift-exchange",
+            Event = pastEvent,
+            Giver = friend,
+            GiverId = friend.Id,
+            Receiver = owner,
+            ReceiverId = owner.Id,
+            ReceiverPreferences = "Local snacks and board games.",
+            Budget = pastEvent.Budget
+        });
 
         var wishlist = new Wishlist
         {
@@ -284,6 +343,7 @@ public sealed class DevelopmentDataSeeder(
             PublicId = "demo-private-item",
             Name = "A quiet weekend away",
             Description = "A private reminder visible only to the list owner.",
+            UpdatedOn = now.AddDays(-400),
             Priority = 1,
             OrderIndex = 0,
             Wishlist = privateWishlist,
@@ -497,7 +557,7 @@ public sealed class DevelopmentDataSeeder(
                 Wishlist = privateWishlist
             });
 
-        context.AddRange(eventEntity, wishlist, privateWishlist, friendWishlist);
+        context.AddRange(eventEntity, pastEvent, wishlist, privateWishlist, friendWishlist);
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 

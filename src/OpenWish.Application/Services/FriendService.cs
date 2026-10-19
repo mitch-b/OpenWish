@@ -41,6 +41,99 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         return _mapper.Map<IEnumerable<ApplicationUserModel>>(friends);
     }
 
+    public async Task<IEnumerable<FriendSuggestionModel>> GetFriendSuggestionsAsync(string userId, int maxResults = 5)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
+        if (maxResults < 1)
+        {
+            return [];
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var excluded = new HashSet<string>(StringComparer.Ordinal) { userId };
+        excluded.UnionWith(await context.Friends
+            .Where(f => !f.Deleted && (f.UserId == userId || f.FriendUserId == userId))
+            .Select(f => f.UserId == userId ? f.FriendUserId : f.UserId)
+            .ToListAsync());
+        excluded.UnionWith(await context.FriendRequests
+            .Where(r => !r.Deleted && r.Status == "Pending" && (r.RequesterId == userId || r.ReceiverId == userId))
+            .Select(r => r.RequesterId == userId ? r.ReceiverId : r.RequesterId)
+            .ToListAsync());
+
+        // Only people in the same live event or on the same wishlist, never a directory search.
+        var myEventIds = await context.EventUsers
+            .Where(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId && !eu.Event!.Deleted)
+            .Select(eu => eu.EventId)
+            .ToListAsync();
+        var ownEventIds = await context.Events
+            .Where(e => !e.Deleted && e.CreatedBy.Id == userId)
+            .Select(e => e.Id)
+            .ToListAsync();
+        var eventIds = myEventIds.Union(ownEventIds).ToList();
+
+        var candidates = new Dictionary<string, (string UserName, string Reason)>(StringComparer.Ordinal);
+
+        var eventMates = await context.EventUsers
+            .AsNoTracking()
+            .Where(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId != null && eventIds.Contains(eu.EventId))
+            .Select(eu => new { eu.UserId, eu.User!.UserName, EventName = eu.Event!.Name, eu.Event.Date })
+            .ToListAsync();
+        var organizers = await context.Events
+            .AsNoTracking()
+            .Where(e => !e.Deleted && eventIds.Contains(e.Id))
+            .Select(e => new { UserId = e.CreatedBy.Id, e.CreatedBy.UserName, EventName = e.Name, e.Date })
+            .ToListAsync();
+
+        foreach (var mate in eventMates.Concat(organizers).OrderByDescending(m => m.Date))
+        {
+            if (mate.UserId is null || excluded.Contains(mate.UserId))
+            {
+                continue;
+            }
+
+            candidates.TryAdd(mate.UserId, (PublicDisplayName.From(mate.UserName, "OpenWish member"), $"Both in {mate.EventName}"));
+        }
+
+        var myWishlistIds = await context.Wishlists
+            .Where(w => !w.Deleted && w.OwnerId == userId)
+            .Select(w => w.Id)
+            .ToListAsync();
+        var sharedWishlistIds = await context.WishlistPermissions
+            .Where(p => !p.Deleted && p.UserId == userId && p.InvitationToken == null)
+            .Select(p => p.WishlistId)
+            .ToListAsync();
+        var wishlistIds = myWishlistIds.Union(sharedWishlistIds).ToList();
+
+        var collaborators = await context.WishlistPermissions
+            .AsNoTracking()
+            .Where(p => !p.Deleted && p.InvitationToken == null && wishlistIds.Contains(p.WishlistId) && !p.Wishlist!.Deleted)
+            .Select(p => new { p.UserId, p.User!.UserName, WishlistName = p.Wishlist!.Name })
+            .ToListAsync();
+        var owners = await context.Wishlists
+            .AsNoTracking()
+            .Where(w => !w.Deleted && sharedWishlistIds.Contains(w.Id))
+            .Select(w => new { UserId = w.OwnerId, w.Owner!.UserName, WishlistName = w.Name })
+            .ToListAsync();
+
+        foreach (var mate in collaborators.Concat(owners))
+        {
+            if (string.IsNullOrWhiteSpace(mate.UserId) || excluded.Contains(mate.UserId))
+            {
+                continue;
+            }
+
+            candidates.TryAdd(mate.UserId, (PublicDisplayName.From(mate.UserName, "OpenWish member"), $"Shares {mate.WishlistName}"));
+        }
+
+        return candidates
+            .OrderBy(c => c.Value.UserName, StringComparer.OrdinalIgnoreCase)
+            .Take(maxResults)
+            .Select(c => new FriendSuggestionModel { UserId = c.Key, UserName = c.Value.UserName, Reason = c.Value.Reason })
+            .ToList();
+    }
+
     public async Task<bool> AreFriendsAsync(string userId, string otherUserId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));

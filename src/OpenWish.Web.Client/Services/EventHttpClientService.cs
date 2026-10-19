@@ -312,6 +312,20 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
             ?? throw new InvalidOperationException("Unable to deserialize event.");
     }
 
+    public async Task<EventModel> RevealGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/reveal-gift-exchange", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize event.");
+    }
+
+    public async Task<IEnumerable<RevealedPairingModel>> GetRevealedPairingsByPublicIdAsync(string eventPublicId, string userId)
+    {
+        return await httpClient.GetFromJsonAsync<IEnumerable<RevealedPairingModel>>($"api/events/{eventPublicId}/revealed-pairings")
+            ?? [];
+    }
+
     public async Task<GiftExchangeModel?> GetMyGiftExchangeAsync(int eventId, string userId)
     {
         throw new NotImplementedException("Use GetMyGiftExchangeByPublicIdAsync instead");

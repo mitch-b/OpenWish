@@ -449,6 +449,47 @@ else
         </div>
     }
 
+    @if (_isOwner && _staleItems.Count > 0)
+    {
+        <section class="stale-panel" aria-labelledby="stale-title" data-testid="stale-ideas">
+            <h2 id="stale-title" class="h5">Still want these?</h2>
+            <p class="stale-intro">
+                @(_staleItems.Count == 1 ? "This idea hasn't" : $"These {_staleItems.Count} ideas haven't") changed in over six months. Keep what you still want and remove the rest so shoppers see current ideas.
+            </p>
+            <ul class="stale-list">
+                @foreach (var staleItem in _staleItems.Take(3))
+                {
+                    <li class="stale-row" data-stale-item="@staleItem.PublicId">
+                        <span class="stale-copy">
+                            <strong>@staleItem.Name</strong>
+                            <small>Last updated @staleItem.UpdatedOn.ToString("MMM d, yyyy")</small>
+                        </span>
+                        <span class="stale-actions">
+                            <button type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    disabled="@(_confirmingItemId is not null)"
+                                    aria-label="Keep @staleItem.Name"
+                                    @onclick="() => ConfirmStillWantedAsync(staleItem)">
+                                @(_confirmingItemId == staleItem.PublicId ? "Keeping..." : "Still want it")
+                            </button>
+                            <button type="button"
+                                    class="btn btn-outline-danger btn-sm"
+                                    disabled="@(_confirmingItemId is not null)"
+                                    aria-label="Remove @staleItem.Name"
+                                    @onclick="() => ShowItemDeleteDialogAsync(staleItem)">
+                                Remove
+                            </button>
+                        </span>
+                    </li>
+                }
+            </ul>
+            @if (_staleItems.Count > 3)
+            {
+                <p class="stale-more">+ @(_staleItems.Count - 3) more after these</p>
+            }
+        </section>
+    }
+
     <div id="wishlist-items" class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
@@ -495,7 +536,7 @@ else
                 <div class="items-grid">
                     @foreach (var item in _filteredItems)
                     {
-                        <div @key="item.Id" class="wishlist-item-card">
+                        <div @key="item.Id" class="wishlist-item-card @(_gridCoordinationItemId == item.Id ? "is-coordinating" : string.Empty)">
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
@@ -587,8 +628,10 @@ else
                                 {
                                     <button class="btn-icon coordination-action"
                                             type="button"
-                                            @onclick="() => OpenItemCoordination(item.Id)">
-                                        <OpenWishIcon Name="gift" /> @GetCoordinationLabel(item)
+                                            aria-expanded="@(_gridCoordinationItemId == item.Id ? "true" : "false")"
+                                            aria-controls="item-coordination-@item.Id"
+                                            @onclick="() => ToggleGridCoordination(item.Id)">
+                                        <OpenWishIcon Name="@(_gridCoordinationItemId == item.Id ? "chevron-up" : "gift")" /> @(_gridCoordinationItemId == item.Id ? "Hide gift details" : GetCoordinationLabel(item))
                                     </button>
                                 }
                                 @if (_canEdit)
@@ -648,6 +691,21 @@ else
                                     <OpenWishIcon Name="three-dots" />
                                 </button>
                             </div>
+
+                            @if (!_isOwner && _gridCoordinationItemId == item.Id)
+                            {
+                                <div id="item-coordination-@item.Id"
+                                     class="item-coordination"
+                                     role="region"
+                                     aria-label="Reservation and comments for @item.Name">
+                                    <ItemReservation WishlistId="@WishlistId"
+                                                     ItemId="@item.Id"
+                                                     OwnerId="@(_wishlist?.OwnerId ?? string.Empty)"
+                                                     ReservationVersion="@(item.Reservations.FirstOrDefault()?.PublicId ?? string.Empty)"
+                                                     OnReservationChanged="@RefreshReservationsAsync" />
+                                    <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="false" />
+                                </div>
+                            }
 
                             @if (_expandedItemId == item.Id)
                             {
@@ -786,6 +844,7 @@ else
     private int? _expandedItemId = null;
     private WishlistItemList? _itemListRef;
     private int? _pendingInteractionItemId;
+    private int? _gridCoordinationItemId;
     private string _feedbackMessage = string.Empty;
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
@@ -927,6 +986,45 @@ else
         finally
         {
             _isRanking = false;
+        }
+    }
+
+    private IReadOnlyList<WishlistItemModel> _staleItems =>
+        _items is null ? [] : WishlistFreshness.GetStaleItems(_items, DateTimeOffset.UtcNow);
+
+    private string? _confirmingItemId;
+
+    private async Task ConfirmStillWantedAsync(WishlistItemModel item)
+    {
+        if (_confirmingItemId is not null || string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            return;
+        }
+
+        _confirmingItemId = item.PublicId;
+        try
+        {
+            var savedItem = await WishlistService.ConfirmWishlistItemStillWantedByPublicIdAsync(WishlistId, item.PublicId, _currentUserId);
+            var itemIndex = _items.FindIndex(candidate => candidate.Id == item.Id);
+            if (itemIndex >= 0)
+            {
+                savedItem.Comments = _items[itemIndex].Comments;
+                savedItem.Reservations = _items[itemIndex].Reservations;
+                _items[itemIndex] = savedItem;
+            }
+
+            ApplyFiltersAndSort();
+            _feedbackMessage = $"Kept {savedItem.Name} on your list.";
+            _feedbackIsError = false;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _feedbackMessage = $"We couldn't confirm {item.Name}. Refresh the page and try again.";
+            _feedbackIsError = true;
+        }
+        finally
+        {
+            _confirmingItemId = null;
         }
     }
 
@@ -1519,11 +1617,8 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private void OpenItemCoordination(int itemId)
-    {
-        ViewMode = "list";
-        _pendingInteractionItemId = itemId;
-    }
+    private void ToggleGridCoordination(int itemId) =>
+        _gridCoordinationItemId = _gridCoordinationItemId == itemId ? null : itemId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

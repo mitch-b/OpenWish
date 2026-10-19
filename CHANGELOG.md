@@ -2,6 +2,22 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.4.0] - 2026-10-19
+
+### Added
+
+- A dismissible get-started checklist on a new account's dashboard.
+- "People you may know" suggestions on the Friends page, limited to people you
+  already share an event or wishlist with.
+- Organizers can reveal who drew whom once a gift exchange date has passed;
+  members then see the names and the draw can no longer be reset.
+- Owners are asked "Still want these?" about ideas unchanged for six months.
+
+### Improved
+
+- The gift button on grid cards opens reservation and comments inline instead
+  of switching the page to list view.
+
 ## [0.3.2] - 2026-10-18
 
 ### Improved

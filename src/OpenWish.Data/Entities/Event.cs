@@ -23,6 +23,7 @@ public class Event : BaseEntity
     public string GiftExchangeStyle { get; set; } = "GiftExchange";
     public ICollection<GiftExchange> GiftExchanges { get; set; } // Gift Exchange pairings for the event
     public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
+    public DateTimeOffset? AssignmentsRevealedOn { get; set; } // Set when the organizer shares who drew whom after the occasion
     public string? Tags { get; set; } // Event-specific tags
     public ICollection<CustomPairingRule> PairingRules { get; set; } // Custom rules for pairing participants
 }

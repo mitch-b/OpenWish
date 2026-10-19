@@ -223,6 +223,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("ChecklistDismissedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -405,6 +408,9 @@ namespace OpenWish.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTimeOffset?>("AssignmentsRevealedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal?>("Budget")
                         .HasColumnType("decimal(11,2)");
 
@@ -430,6 +436,7 @@ namespace OpenWish.Data.Migrations
 
                     b.Property<string>("GiftExchangeStyle")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasDefaultValue("GiftExchange");

@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.4.0",
+    "date": "2026-10-19",
+    "title": "Get started, find friends, and reveal the exchange",
+    "summary": "New accounts get a friendly checklist, the Friends page suggests people you already share things with, organizers can reveal a finished gift exchange, and owners can tidy stale ideas.",
+    "highlights": [
+      "A dismissible get-started checklist guides a new dashboard through a wishlist, an idea, a friend, and an event.",
+      "People you may know: suggestions come only from events and wishlists you already share, with a one-tap Add friend.",
+      "After the event date, organizers can reveal who drew whom; members then see names and the draw is locked.",
+      "Still want these? Owners can keep or remove ideas that have not changed in six months.",
+      "Grid cards now open reservation and comments inline instead of jumping to list view."
+    ]
+  }, {
     "version": "0.3.2",
     "date": "2026-10-18",
     "title": "See what you have reserved at a glance",

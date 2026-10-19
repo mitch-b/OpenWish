@@ -23,6 +23,12 @@
                 </div>
                 <p class="text-muted">Each participant can open this event to see only the person they're shopping for.</p>
 
+                @if (Event.AssignmentsRevealedOn.HasValue)
+                {
+                    <p class="text-muted mt-4 mb-0">Assignments were revealed to the group on @Event.AssignmentsRevealedOn.Value.ToLocalTime().ToString("MMMM d, yyyy"), so the exchange can no longer be reset.</p>
+                }
+                else
+                {
                 <div class="mt-4">
                     <h5 class="text-danger">Reset gift exchange</h5>
                     <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
@@ -83,6 +89,7 @@
                         </div>
                     }
                 </div>
+                }
             }
             else
             {

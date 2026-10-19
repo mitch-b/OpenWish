@@ -602,6 +602,54 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpPost("{eventPublicId}/reveal-gift-exchange")]
+    public async Task<ActionResult<EventModel>> RevealGiftExchange(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            return Ok(await _eventService.RevealGiftExchangeByPublicIdAsync(eventPublicId, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpGet("{eventPublicId}/revealed-pairings")]
+    public async Task<ActionResult<IEnumerable<RevealedPairingModel>>> GetRevealedPairings(string eventPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            return Ok(await _eventService.GetRevealedPairingsByPublicIdAsync(eventPublicId, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+        }
+    }
+
     [HttpGet("{eventPublicId}/my-gift-exchange")]
     public async Task<ActionResult<GiftExchangeModel>> GetMyGiftExchange(string eventPublicId)
     {

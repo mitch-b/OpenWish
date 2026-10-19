@@ -1,0 +1,112 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendService FriendService
+@inject IUserContextService UserContextService
+@inject ILogger<FriendSuggestions> Logger
+
+@if (_suggestions.Count > 0 || _statusMessage is not null)
+{
+    <div class="card friends-panel mb-4" data-testid="friend-suggestions">
+        <div class="card-body" aria-busy="@(_sendingTo is not null ? "true" : "false")">
+            <div class="social-heading">
+                <span class="social-heading-icon"><OpenWishIcon Name="people" /></span>
+                <div>
+                    <h2>People you already share with</h2>
+                    <p>From your events and wishlists. Nobody outside them is suggested.</p>
+                </div>
+            </div>
+
+            @if (_suggestions.Count > 0)
+            {
+                <ul class="list-group suggestion-list">
+                    @foreach (var suggestion in _suggestions)
+                    {
+                        <li class="list-group-item request-row">
+                            <div class="request-identity">
+                                <span class="request-avatar"><OpenWishIcon Name="person-circle" /></span>
+                                <div class="suggestion-copy">
+                                    <strong>@suggestion.UserName</strong>
+                                    <small>@suggestion.Reason</small>
+                                </div>
+                            </div>
+                            <button class="btn btn-outline-primary btn-sm"
+                                    type="button"
+                                    disabled="@(_sendingTo is not null)"
+                                    aria-label="Send friend request to @suggestion.UserName"
+                                    @onclick="() => SendRequest(suggestion)">
+                                <OpenWishIcon Name="person-plus" />
+                                @(_sendingTo == suggestion.UserId ? "Sending..." : "Add friend")
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (_statusMessage is not null)
+            {
+                <div class="alert alert-success mt-3 mb-0" role="status" aria-live="polite">@_statusMessage</div>
+            }
+            @if (_errorMessage is not null)
+            {
+                <div class="alert alert-danger mt-3 mb-0" role="alert">@_errorMessage</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public EventCallback OnRequestSent { get; set; }
+
+    private List<FriendSuggestionModel> _suggestions = [];
+    private string? _userId;
+    private string? _sendingTo;
+    private string? _statusMessage;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _userId = await UserContextService.GetUserIdAsync();
+            if (_userId is not null)
+            {
+                _suggestions = (await FriendService.GetFriendSuggestionsAsync(_userId)).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Suggestions are optional; the rest of the page works without them.
+            Logger.LogWarning(ex, "Friend suggestions could not be loaded.");
+        }
+    }
+
+    private async Task SendRequest(FriendSuggestionModel suggestion)
+    {
+        if (_userId is null || _sendingTo is not null)
+        {
+            return;
+        }
+
+        _sendingTo = suggestion.UserId;
+        _statusMessage = null;
+        _errorMessage = null;
+        try
+        {
+            await FriendService.SendFriendRequestAsync(_userId, suggestion.UserId);
+            _suggestions.Remove(suggestion);
+            _statusMessage = $"Friend request sent to {suggestion.UserName}.";
+            await OnRequestSent.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Friend request from a suggestion failed.");
+            _errorMessage = $"We couldn't send a request to {suggestion.UserName}. Try again.";
+        }
+        finally
+        {
+            _sendingTo = null;
+        }
+    }
+}

@@ -488,6 +488,32 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task ConfirmWishlistItemStillWantedByPublicIdAsync_RefreshesTheIdeaForTheOwnerOnly()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var oldDate = DateTimeOffset.UtcNow.AddDays(-400);
+        var item = new WishlistItem { Name = "Old idea", Wishlist = wishlist, UpdatedOn = oldDate };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            await context.SaveChangesAsync();
+        }
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService(factory).ConfirmWishlistItemStillWantedByPublicIdAsync(wishlist.PublicId, item.PublicId, "someone-else"));
+        await using (var unchanged = factory.CreateDbContext())
+        {
+            Assert.Equal(oldDate, (await unchanged.WishlistItems.SingleAsync()).UpdatedOn);
+        }
+
+        var saved = await CreateService(factory).ConfirmWishlistItemStillWantedByPublicIdAsync(wishlist.PublicId, item.PublicId, "owner");
+
+        Assert.True(saved.UpdatedOn > DateTimeOffset.UtcNow.AddMinutes(-1));
+        Assert.Empty(WishlistFreshness.GetStaleItems([saved], DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
     public async Task RemoveItemFromWishlistAsync_ReconcilesAlreadyDeletedItem()
     {
         var factory = CreateFactory();

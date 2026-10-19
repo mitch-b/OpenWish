@@ -10,6 +10,8 @@ public class ApplicationUser : IdentityUser
     public ICollection<PublicWishlist> PublicWishlists { get; set; } = [];
     public ICollection<EventUser> EventUsers { get; set; } = [];
 
+    public DateTimeOffset? ChecklistDismissedOn { get; set; }
+
     // Social features
     public ICollection<Friend> Friends { get; set; } = [];
     public ICollection<FriendRequest> SentFriendRequests { get; set; } = [];

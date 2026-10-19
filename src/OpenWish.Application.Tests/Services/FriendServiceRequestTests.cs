@@ -523,6 +523,55 @@ public class FriendServiceRequestTests
         Assert.Equal(originalDate, invite.UpdatedOn);
     }
 
+    [Fact]
+    public async Task GetFriendSuggestionsAsync_SuggestsOnlyCoParticipantsAndCollaboratorsWhoAreNotConnected()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var seed = CreateContext(databaseName))
+        {
+            var me = new ApplicationUser { Id = "me", UserName = "me", Email = "me@example.com" };
+            var friend = new ApplicationUser { Id = "friend", UserName = "friend", Email = "friend@example.com" };
+            var mate = new ApplicationUser { Id = "mate", UserName = "mate@example.com", Email = "mate@example.com" };
+            var host = new ApplicationUser { Id = "host", UserName = "host", Email = "host@example.com" };
+            var pending = new ApplicationUser { Id = "pending", UserName = "pending" };
+            var collaborator = new ApplicationUser { Id = "collab", UserName = "collab" };
+            var stranger = new ApplicationUser { Id = "stranger", UserName = "stranger" };
+            var removed = new ApplicationUser { Id = "removed", UserName = "removed" };
+            seed.Users.AddRange(me, friend, mate, host, pending, collaborator, stranger, removed);
+
+            var evt = new Event { Name = "Holiday", CreatedBy = host, Date = DateTimeOffset.UtcNow.AddDays(10) };
+            evt.EventUsers.Add(new EventUser { User = me, Status = "Accepted", IsAccepted = true });
+            evt.EventUsers.Add(new EventUser { User = friend, Status = "Accepted", IsAccepted = true });
+            evt.EventUsers.Add(new EventUser { User = mate, Status = "Accepted", IsAccepted = true });
+            evt.EventUsers.Add(new EventUser { User = pending, Status = "Accepted", IsAccepted = true });
+            evt.EventUsers.Add(new EventUser { User = removed, Status = "Accepted", IsAccepted = true, Deleted = true });
+            seed.Events.Add(evt);
+
+            var wishlist = new Wishlist { Name = "Garden", Owner = me, OwnerId = "me" };
+            seed.Wishlists.Add(wishlist);
+            seed.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, User = collaborator, PermissionType = "Edit" });
+
+            seed.Friends.Add(new Friend { UserId = "me", FriendUserId = "friend" });
+            seed.Friends.Add(new Friend { UserId = "friend", FriendUserId = "me" });
+            seed.FriendRequests.Add(new FriendRequest { RequesterId = "pending", ReceiverId = "me", Status = "Pending" });
+            await seed.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+
+        var suggestions = (await service.GetFriendSuggestionsAsync("me")).ToList();
+
+        Assert.Equal(["collab", "host", "mate"], suggestions.Select(s => s.UserId).ToArray());
+        Assert.Equal("Both in Holiday", suggestions.Single(s => s.UserId == "mate").Reason);
+        Assert.Equal("OpenWish member", suggestions.Single(s => s.UserId == "mate").UserName);
+        Assert.DoesNotContain(suggestions, s => s.UserName.Contains('@'));
+        Assert.Equal("Shares Garden", suggestions.Single(s => s.UserId == "collab").Reason);
+        Assert.DoesNotContain(suggestions, s => s.UserId is "stranger" or "friend" or "pending" or "removed" or "me");
+        Assert.Single(await service.GetFriendSuggestionsAsync("me", 1));
+        Assert.Empty(await service.GetFriendSuggestionsAsync("stranger"));
+    }
+
     private static ApplicationDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName)

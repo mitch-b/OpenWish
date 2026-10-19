@@ -1120,6 +1120,35 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await UpdateWishlistItemAsync(wishlist.Id, itemId, item);
     }
 
+    public async Task<WishlistItemModel> ConfirmWishlistItemStillWantedByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        string requestingUserId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        if (!string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can confirm an idea.");
+        }
+
+        var item = await context.WishlistItems
+            .FirstOrDefaultAsync(i =>
+                i.WishlistId == wishlist.Id &&
+                i.PublicId == itemPublicId &&
+                !i.Deleted &&
+                !i.IsHiddenFromOwner)
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        item.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+
+        return _mapper.Map<WishlistItemModel>(item);
+    }
+
     public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
         string wishlistPublicId,
         string itemPublicId,

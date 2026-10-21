@@ -30,6 +30,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ItemReservation> ItemReservations { get; set; }
     public DbSet<ActivityLog> ActivityLogs { get; set; }
 
+    // Connected apps
+    public DbSet<IntegrationConnection> IntegrationConnections { get; set; }
+    public DbSet<IntegrationConnectionWishlist> IntegrationConnectionWishlists { get; set; }
+    public DbSet<IntegrationAuthorizationCode> IntegrationAuthorizationCodes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -98,6 +103,109 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<WishlistItem>()
             .HasIndex(wli => new { wli.WishlistId, wli.PublicId })
             .IsUnique();
+
+        modelBuilder.Entity<WishlistItem>()
+            .Property(wli => wli.SourceAppName)
+            .HasMaxLength(80);
+
+        modelBuilder.Entity<WishlistItem>()
+            .Property(wli => wli.ExternalId)
+            .HasMaxLength(200);
+
+        modelBuilder.Entity<WishlistItem>()
+            .HasOne(wli => wli.SourceConnection)
+            .WithMany()
+            .HasForeignKey(wli => wli.SourceConnectionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // An app's external identifier names one active idea for that person.
+        modelBuilder.Entity<WishlistItem>()
+            .HasIndex(wli => new { wli.SourceConnectionId, wli.ExternalId })
+            .IsUnique()
+            .HasFilter("\"Deleted\" = false AND \"SourceConnectionId\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
+
+        // Connected apps
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasIndex(c => c.PublicId)
+            .IsUnique();
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasIndex(c => new { c.UserId, c.ClientId })
+            .IsUnique();
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasIndex(c => c.AccessTokenHash)
+            .IsUnique()
+            .HasFilter("\"AccessTokenHash\" IS NOT NULL");
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .Property(c => c.ClientId)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .Property(c => c.AppName)
+            .HasMaxLength(80);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .Property(c => c.AccessTokenHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasOne(c => c.DefaultWishlist)
+            .WithMany()
+            .HasForeignKey(c => c.DefaultWishlistId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<IntegrationConnectionWishlist>()
+            .HasKey(cw => new { cw.IntegrationConnectionId, cw.WishlistId });
+
+        modelBuilder.Entity<IntegrationConnectionWishlist>()
+            .HasOne(cw => cw.IntegrationConnection)
+            .WithMany(c => c.AllowedWishlists)
+            .HasForeignKey(cw => cw.IntegrationConnectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<IntegrationConnectionWishlist>()
+            .HasOne(cw => cw.Wishlist)
+            .WithMany()
+            .HasForeignKey(cw => cw.WishlistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .HasIndex(code => code.CodeHash)
+            .IsUnique();
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .Property(code => code.CodeHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .Property(code => code.ClientId)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .Property(code => code.RedirectUri)
+            .HasMaxLength(2048);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .Property(code => code.CodeChallenge)
+            .HasMaxLength(128);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .Property(code => code.GrantedWishlistIds)
+            .HasMaxLength(2048);
+
+        modelBuilder.Entity<IntegrationAuthorizationCode>()
+            .HasOne(code => code.User)
+            .WithMany()
+            .HasForeignKey(code => code.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<WishlistComment>()
             .HasOne(wc => wc.User)

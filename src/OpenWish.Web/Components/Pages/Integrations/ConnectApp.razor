@@ -1,0 +1,336 @@
+@page "/oauth/authorize"
+@attribute [Authorize]
+@attribute [ExcludeFromInteractiveRouting]
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Identity
+@using OpenWish.Application.Integrations
+@using OpenWish.Data.Entities
+@using OpenWish.Shared.Integrations
+
+@inject IntegrationAppRegistry Registry
+@inject IIntegrationConnectionService ConnectionService
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavigationManager
+@inject ILogger<ConnectApp> Logger
+
+<PageTitle>@(app is null ? "Connect an app" : $"Connect {app.DisplayName}")</PageTitle>
+
+<div class="consent-page">
+    @if (fatalError is not null)
+    {
+        <header class="consent-heading">
+            <span class="consent-mark consent-mark-warning"><OpenWishIcon Name="exclamation-triangle" /></span>
+            <div>
+                <h1>This connection can't continue</h1>
+                <p>@fatalError</p>
+            </div>
+        </header>
+        <p class="consent-help">Nothing was shared. Go back to the app you came from and try again, or ask the person who runs this OpenWish to check its connected-app settings.</p>
+        <a class="btn btn-primary" href="/">Go to OpenWish</a>
+    }
+    else if (app is not null && consent is not null)
+    {
+        <header class="consent-heading">
+            <div class="consent-pair" aria-hidden="true">
+                <span class="consent-mark"><OpenWishIcon Name="gift" /></span>
+                <span class="consent-link"><OpenWishIcon Name="arrow-left-right" /></span>
+                <span class="consent-mark consent-mark-app">@IntegrationDisplay.Monogram(app.DisplayName)</span>
+            </div>
+            <div>
+                <h1>Connect @app.DisplayName</h1>
+                <p>
+                    @if (consent.IsReconnecting)
+                    {
+                        <text>@app.DisplayName is already connected. Approving again replaces its old access and keeps the ideas it added.</text>
+                    }
+                    else
+                    {
+                        <text>@app.DisplayName wants to add gift ideas to your OpenWish lists.</text>
+                    }
+                </p>
+                @if (!string.IsNullOrWhiteSpace(app.Description))
+                {
+                    <p class="consent-app-description">@app.Description</p>
+                }
+            </div>
+        </header>
+
+        <form method="post" @formname="consent-approve" @onsubmit="ApproveAsync" class="consent-form" novalidate>
+            <AntiforgeryToken />
+
+            @if (formError is not null)
+            {
+                <div class="alert alert-danger" role="alert" id="consent-error">@formError</div>
+            }
+
+            <fieldset class="consent-section" aria-describedby="consent-lists-help">
+                <legend>Lists @app.DisplayName can add to</legend>
+                <p id="consent-lists-help" class="consent-help">New ideas go to the first list you choose. You can change this anytime.</p>
+
+                @if (consent.Wishlists.Count > 0)
+                {
+                    <ul class="consent-lists" role="list">
+                        @foreach (var wishlist in consent.Wishlists)
+                        {
+                            var inputId = $"consent-list-{wishlist.PublicId}";
+                            <li>
+                                <label class="consent-list" for="@inputId">
+                                    <input class="form-check-input" type="checkbox" id="@inputId" name="wishlist" value="@wishlist.PublicId" checked="@selectedIds.Contains(wishlist.PublicId)" />
+                                    <span class="consent-list-icon" aria-hidden="true">
+                                        @if (string.IsNullOrWhiteSpace(wishlist.Icon))
+                                        {
+                                            <OpenWishIcon Name="list-ul" />
+                                        }
+                                        else
+                                        {
+                                            @wishlist.Icon
+                                        }
+                                    </span>
+                                    <span class="consent-list-text">
+                                        <span class="consent-list-name">@wishlist.Name</span>
+                                        <span class="consent-list-meta">@ListMeta(wishlist)</span>
+                                    </span>
+                                    @if (wishlist.IsDefault)
+                                    {
+                                        <span class="consent-list-badge">Current default</span>
+                                    }
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="consent-new-list">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="consent-new-list" name="createList" value="true" checked="@createList" />
+                        <label class="form-check-label" for="consent-new-list">Start a new list for these ideas</label>
+                    </div>
+                    <label class="form-label" for="consent-new-list-name">New list name</label>
+                    <input class="form-control" id="consent-new-list-name" name="newListName" value="@newListName" maxlength="@IntegrationConnectionService.NewWishlistNameMaxLength" autocomplete="off" placeholder="Christmas @DateTime.UtcNow.Year" aria-describedby="consent-new-list-help" />
+                    <div id="consent-new-list-help" class="form-text">A new list starts private and becomes where new ideas go. Share it from OpenWish when you're ready.</div>
+                </div>
+            </fieldset>
+
+            <section class="consent-section consent-permissions" aria-labelledby="consent-permissions-title">
+                <h2 id="consent-permissions-title">What @app.DisplayName can do</h2>
+                <ul role="list">
+                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>See the names of the lists you choose</span></li>
+                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>Add ideas to those lists, and edit or remove the ideas it added</span></li>
+                    <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>It can't see who reserved or bought anything, comments, your other ideas, or your friends</span></li>
+                </ul>
+                <p class="consent-help mb-0">Disconnect anytime from <strong>Account settings</strong> &gt; <strong>Connected apps</strong>. Ideas it added stay on your lists.</p>
+            </section>
+
+            <div class="consent-actions">
+                <button type="submit" class="btn btn-outline-secondary" form="consent-deny-form">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="consent-approve">
+                    <OpenWishIcon Name="link-45deg" /> @(consent.IsReconnecting ? "Reconnect" : "Connect") @app.DisplayName
+                </button>
+            </div>
+            <p class="consent-signed-in">Signed in as @signedInAs. You'll return to @RedirectHost when you're done.</p>
+        </form>
+
+        @* Cancel lives in its own form so Enter in the list-name field always approves. *@
+        <form method="post" @formname="consent-deny" @onsubmit="Deny" id="consent-deny-form" hidden>
+            <AntiforgeryToken />
+        </form>
+    }
+</div>
+
+@code {
+    private IntegrationApp? app;
+    private ConsentState? consent;
+    private string? fatalError;
+    private string? formError;
+    private string? userId;
+    private string signedInAs = "you";
+    private HashSet<string> selectedIds = new(StringComparer.Ordinal);
+    private bool createList;
+    private string? newListName;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "response_type")]
+    private string? ResponseType { get; set; }
+
+    [SupplyParameterFromQuery(Name = "client_id")]
+    private string? ClientId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "redirect_uri")]
+    private string? RedirectUri { get; set; }
+
+    [SupplyParameterFromQuery(Name = "state")]
+    private string? State { get; set; }
+
+    [SupplyParameterFromQuery(Name = "scope")]
+    private string? Scope { get; set; }
+
+    [SupplyParameterFromQuery(Name = "code_challenge")]
+    private string? CodeChallenge { get; set; }
+
+    [SupplyParameterFromQuery(Name = "code_challenge_method")]
+    private string? CodeChallengeMethod { get; set; }
+
+    private string RedirectHost => Uri.TryCreate(RedirectUri, UriKind.Absolute, out var uri) ? uri.Authority : "the app";
+
+    protected override async Task OnInitializedAsync()
+    {
+        app = Registry.Find(ClientId);
+        if (app is null)
+        {
+            fatalError = "The app that sent you here isn't registered with this OpenWish.";
+            return;
+        }
+
+        if (!IntegrationAppRegistry.IsRegisteredRedirect(app, RedirectUri))
+        {
+            Logger.LogWarning("Rejected an authorization request for {ClientId} with an unregistered redirect URI.", app.ClientId);
+            fatalError = $"{app.DisplayName} asked to send you back to an address this OpenWish doesn't recognize.";
+            return;
+        }
+
+        // The redirect target is trusted from here on, so protocol errors go back to the app (RFC 6749 section 4.1.2.1).
+        var protocolError = ValidateRequest();
+        if (protocolError is not null)
+        {
+            RedirectToApp(new() { ["error"] = protocolError.Value.Error, ["error_description"] = protocolError.Value.Description });
+            return;
+        }
+
+        var user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            fatalError = "Sign in again to continue.";
+            return;
+        }
+
+        userId = user.Id;
+        signedInAs = PublicDisplayName.From(user.UserName, user.Email ?? "you");
+        consent = await ConnectionService.GetConsentStateAsync(user.Id, app.ClientId);
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            var allowed = consent.Wishlists.Where(w => w.IsAllowed).Select(w => w.PublicId).ToList();
+            if (allowed.Count == 0 && consent.Wishlists.Count > 0)
+            {
+                allowed.Add(consent.Wishlists[0].PublicId);
+            }
+
+            selectedIds = new HashSet<string>(allowed, StringComparer.Ordinal);
+            createList = consent.Wishlists.Count == 0;
+            newListName = createList ? $"Ideas from {app.DisplayName}" : null;
+        }
+    }
+
+    private async Task ApproveAsync()
+    {
+        if (app is null || consent is null || userId is null)
+        {
+            return;
+        }
+
+        var form = HttpContext.Request.Form;
+        selectedIds = new HashSet<string>(
+            form["wishlist"].Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!),
+            StringComparer.Ordinal);
+        createList = string.Equals(form["createList"], "true", StringComparison.Ordinal);
+        newListName = form["newListName"].ToString().Trim();
+
+        if (createList && string.IsNullOrEmpty(newListName))
+        {
+            formError = "Name the new list, or clear \"Start a new list\".";
+            return;
+        }
+
+        // Keep the on-screen order so "the first list you choose" is predictable.
+        var ordered = consent.Wishlists
+            .Where(w => selectedIds.Contains(w.PublicId))
+            .Select(w => w.PublicId)
+            .ToList();
+        var result = await ConnectionService.ApproveAsync(userId, new AuthorizationApproval(
+            app.ClientId,
+            RedirectUri!,
+            CodeChallenge,
+            ordered,
+            ordered.FirstOrDefault(),
+            createList ? newListName : null));
+
+        if (result.Code is not null)
+        {
+            Logger.LogInformation("A user approved {ClientId} for {Count} wishlist(s).", app.ClientId, ordered.Count + (createList ? 1 : 0));
+            RedirectToApp(new() { ["code"] = result.Code });
+            return;
+        }
+
+        formError = result.Error switch
+        {
+            AuthorizationApprovalError.NoWishlistSelected => "Choose at least one list, or start a new one.",
+            AuthorizationApprovalError.WishlistNotFound => "One of those lists is no longer available. Review your choices and try again.",
+            AuthorizationApprovalError.InvalidNewWishlistName => $"Use a list name of {IntegrationConnectionService.NewWishlistNameMaxLength} characters or fewer.",
+            _ => "Something went wrong. Try again."
+        };
+    }
+
+    private void Deny()
+    {
+        if (app is null || consent is null)
+        {
+            return;
+        }
+
+        Logger.LogInformation("A user declined to connect {ClientId}.", app.ClientId);
+        RedirectToApp(new() { ["error"] = "access_denied" });
+    }
+
+    private (string Error, string Description)? ValidateRequest()
+    {
+        if (!string.Equals(ResponseType, "code", StringComparison.Ordinal))
+        {
+            return ("unsupported_response_type", "Only response_type=code is supported.");
+        }
+
+        if (string.IsNullOrEmpty(State))
+        {
+            return ("invalid_request", "state is required.");
+        }
+
+        if (!string.IsNullOrEmpty(Scope) &&
+            Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(scope => scope != IntegrationScopes.WishlistItems))
+        {
+            return ("invalid_scope", $"Only the {IntegrationScopes.WishlistItems} scope is supported.");
+        }
+
+        if (!string.IsNullOrEmpty(CodeChallenge) &&
+            (!string.Equals(CodeChallengeMethod, "S256", StringComparison.Ordinal) ||
+                CodeChallenge.Length is < 43 or > 128))
+        {
+            return ("invalid_request", "Use a code_challenge of 43-128 characters with code_challenge_method=S256.");
+        }
+
+        if (string.IsNullOrEmpty(CodeChallenge) && !string.IsNullOrEmpty(CodeChallengeMethod))
+        {
+            return ("invalid_request", "code_challenge_method was sent without a code_challenge.");
+        }
+
+        return null;
+    }
+
+    private void RedirectToApp(Dictionary<string, string?> parameters)
+    {
+        if (!string.IsNullOrEmpty(State))
+        {
+            parameters["state"] = State;
+        }
+
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString(RedirectUri!, parameters));
+    }
+
+    private static string ListMeta(ConsentWishlistOption wishlist)
+    {
+        var count = wishlist.ItemCount == 1 ? "1 idea" : $"{wishlist.ItemCount} ideas";
+        return wishlist.EventName is null ? count : $"{count}, for {wishlist.EventName}";
+    }
+}

@@ -718,6 +718,158 @@ namespace OpenWish.Data.Migrations
                     b.ToTable("GiftExchanges");
                 });
 
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationAuthorizationCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CodeChallenge")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset?>("ConsumedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DefaultWishlistId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("ExpiresOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GrantedWishlistIds")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("RedirectUri")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("IntegrationAuthorizationCodes");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("AppName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("timezone('utc', now())");
+
+                    b.Property<int?>("DefaultWishlistId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastUsedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset?>("RevokedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTimeOffset?>("TokenIssuedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedOn")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("timezone('utc', now())");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessTokenHash")
+                        .IsUnique()
+                        .HasFilter("\"AccessTokenHash\" IS NOT NULL");
+
+                    b.HasIndex("DefaultWishlistId");
+
+                    b.HasIndex("PublicId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "ClientId")
+                        .IsUnique();
+
+                    b.ToTable("IntegrationConnections");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnectionWishlist", b =>
+                {
+                    b.Property<int>("IntegrationConnectionId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WishlistId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("IntegrationConnectionId", "WishlistId");
+
+                    b.HasIndex("WishlistId");
+
+                    b.ToTable("IntegrationConnectionWishlists");
+                });
+
             modelBuilder.Entity("OpenWish.Data.Entities.ItemComment", b =>
                 {
                     b.Property<int>("Id")
@@ -1259,6 +1411,10 @@ namespace OpenWish.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<string>("Image")
                         .HasColumnType("text");
 
@@ -1298,6 +1454,13 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
+                    b.Property<string>("SourceAppName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int?>("SourceConnectionId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("UpdatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -1315,6 +1478,10 @@ namespace OpenWish.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PublicWishlistId");
+
+                    b.HasIndex("SourceConnectionId", "ExternalId")
+                        .IsUnique()
+                        .HasFilter("\"Deleted\" = false AND \"SourceConnectionId\" IS NOT NULL AND \"ExternalId\" IS NOT NULL");
 
                     b.HasIndex("WishlistId", "PublicId")
                         .IsUnique();
@@ -1649,6 +1816,54 @@ namespace OpenWish.Data.Migrations
                     b.Navigation("Receiver");
                 });
 
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationAuthorizationCode", b =>
+                {
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnection", b =>
+                {
+                    b.HasOne("OpenWish.Data.Entities.Wishlist", "DefaultWishlist")
+                        .WithMany()
+                        .HasForeignKey("DefaultWishlistId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DefaultWishlist");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnectionWishlist", b =>
+                {
+                    b.HasOne("OpenWish.Data.Entities.IntegrationConnection", "IntegrationConnection")
+                        .WithMany("AllowedWishlists")
+                        .HasForeignKey("IntegrationConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OpenWish.Data.Entities.Wishlist", "Wishlist")
+                        .WithMany()
+                        .HasForeignKey("WishlistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("IntegrationConnection");
+
+                    b.Navigation("Wishlist");
+                });
+
             modelBuilder.Entity("OpenWish.Data.Entities.ItemComment", b =>
                 {
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "User")
@@ -1818,11 +2033,18 @@ namespace OpenWish.Data.Migrations
                         .WithMany("Items")
                         .HasForeignKey("PublicWishlistId");
 
+                    b.HasOne("OpenWish.Data.Entities.IntegrationConnection", "SourceConnection")
+                        .WithMany()
+                        .HasForeignKey("SourceConnectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("OpenWish.Data.Entities.Wishlist", "Wishlist")
                         .WithMany("Items")
                         .HasForeignKey("WishlistId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("SourceConnection");
 
                     b.Navigation("Wishlist");
                 });
@@ -1897,6 +2119,11 @@ namespace OpenWish.Data.Migrations
                     b.Navigation("GiftExchanges");
 
                     b.Navigation("PairingRules");
+                });
+
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnection", b =>
+                {
+                    b.Navigation("AllowedWishlists");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.PublicWishlist", b =>

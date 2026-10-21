@@ -38,6 +38,7 @@
                                 <OpenWishIcon Name="box-arrow-up-right" />
                             </a>
                         }
+                        <ItemSourceBadge AppName="@item.SourceAppName" />
                     </td>
                     <td data-label="Description">@(string.IsNullOrWhiteSpace(item.Description) ? "Not added" : item.Description)</td>
                     <td data-label="Price">@(item.Price?.ToString("C") ?? "Not added")</td>

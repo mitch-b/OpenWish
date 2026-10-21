@@ -40,6 +40,27 @@ public class OpenWishProfileSecurityTests
     }
 
     [Fact]
+    public void MapWishlistItemUpdate_PreservesConnectedAppProvenance()
+    {
+        var entity = new WishlistItem
+        {
+            Name = "Wool coat",
+            SourceConnectionId = 7,
+            SourceAppName = "Studio Notebook",
+            ExternalId = "coat-1"
+        };
+        var model = new WishlistItemModel { Name = "Wool coat, charcoal", SourceAppName = "Spoofed app" };
+
+        _mapper.Map(model, entity);
+
+        Assert.Equal("Wool coat, charcoal", entity.Name);
+        Assert.Equal(7, entity.SourceConnectionId);
+        Assert.Equal("Studio Notebook", entity.SourceAppName);
+        Assert.Equal("coat-1", entity.ExternalId);
+        Assert.Equal("Studio Notebook", _mapper.Map<WishlistItemModel>(entity).SourceAppName);
+    }
+
+    [Fact]
     public void MapEventUpdate_PreservesServerOwnedFields()
     {
         var entity = new Event

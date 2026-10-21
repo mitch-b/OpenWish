@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/6cabb1a3-b68f-4fbb-bdbc-5d4369d8a099/manage",
+        "/events/575ff2bb-f289-415b-a78a-ac964e224f30/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -194,6 +194,17 @@
       "loginStatus": 200,
       "assertions": [
         "recipient without an attached wishlist has no dead-end shopping action"
+      ]
+    },
+    {
+      "scenario": "connected-app",
+      "loginStatus": 200,
+      "assertions": [
+        "app connects through consent, state, PKCE, and a server-side code exchange",
+        "app logs, edits, and removes ideas without seeing reservations",
+        "ideas show their source app, and editing one explains the sync",
+        "a non-member cannot read the private list the app writes to",
+        "disconnecting revokes the token and keeps the ideas"
       ]
     }
   ]

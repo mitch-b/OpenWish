@@ -54,6 +54,25 @@ The AppHost forwards both values to `OpenWish.Web`. Google login remains
 disabled when either value is missing. Restart the AppHost after changing
 these secrets.
 
+## Optional connected apps
+
+Register a connected app for local testing in the AppHost user secrets. The
+AppHost forwards every `OpenWishSettings:Integrations` value to the web app:
+
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:ClientId" "studio"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:ClientSecret" "<at-least-32-random-characters>"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:DisplayName" "Studio Notebook"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:RedirectUris:0" "http://localhost:3001/api/integrations/openwish/callback"
+```
+
+See [Connected apps](INTEGRATIONS.md) for the OAuth flow and API contract.
+`OpenWish.Web.Tests` exercises that contract end to end against PostgreSQL. It
+starts a disposable container, so Docker must be running for `dotnet test`;
+set `OPENWISH_TEST_POSTGRES` to a connection string to reuse an existing
+server instead.
+
 ## Optional OpenTelemetry export
 
 OpenWish records ASP.NET Core and outbound HTTP traces plus runtime, ASP.NET

@@ -19,4 +19,5 @@ public class WishlistItemModel : BaseEntityModel
     public int? OrderIndex { get; set; } // Determines the order of items in the wishlist
     public bool IsPinned { get; set; }
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
+    public string? SourceAppName { get; set; } // Connected app that added the idea, if any; set by the server only
 }

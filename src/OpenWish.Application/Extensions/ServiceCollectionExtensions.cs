@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenWish.Application.Integrations;
 using OpenWish.Application.Models;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Application.Products;
@@ -69,6 +70,11 @@ public static class ServiceCollectionExtensions
         // Social features
         services.AddScoped<IFriendService, FriendService>();
         services.AddScoped<INotificationService, NotificationService>();
+
+        // Connected apps
+        services.AddSingleton<IntegrationAppRegistry>();
+        services.AddScoped<IIntegrationConnectionService, IntegrationConnectionService>();
+        services.AddScoped<IIntegrationItemService, IntegrationItemService>();
 
         services.AddAutoMapper(_ => { }, typeof(OpenWishProfile).Assembly);
 

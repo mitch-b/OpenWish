@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import http from "node:http";
 import path from "node:path";
 
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
@@ -3189,6 +3190,308 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
   await context.close();
 }
 
+// A real HTTP server on loopback inside the verifier container plays the third-party app.
+const fakeAppPort = 4455;
+const connectedApp = {
+  clientId: "studio-demo",
+  clientSecret: "verification-only-studio-secret-0123456789",
+  name: "Studio Notebook",
+  origin: `http://127.0.0.1:${fakeAppPort}`,
+  redirectUri: `http://127.0.0.1:${fakeAppPort}/openwish/callback`
+};
+
+const studioCoatImage = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect width="120" height="120" rx="18" fill="#f3ece3"/>
+<path d="M44 20h32l14 18-6 62H36l-6-62z" fill="#b98a5e"/>
+<path d="M60 22v78" stroke="#8a6440" stroke-width="3"/>
+<circle cx="66" cy="52" r="3" fill="#5c4026"/><circle cx="66" cy="68" r="3" fill="#5c4026"/>
+</svg>`;
+
+function fakeAppPage(heading, body) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${heading}</title></head>
+<body style="font-family:sans-serif;margin:3rem"><h1>${heading}</h1>${body}</body></html>`;
+}
+
+// Calls the integration API exactly as a third-party server would: bearer token only, no cookies.
+async function connectedAppApi(token, method, route, body) {
+  const response = await fetch(`${baseUrl}/api/integrations/v1/${route}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body ? { "Content-Type": "application/json" } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await response.text();
+  return {
+    status: response.status,
+    text,
+    json: text ? JSON.parse(text) : null,
+    wwwAuthenticate: response.headers.get("www-authenticate") ?? ""
+  };
+}
+
+function buildAuthorizeUrl(state, challenge) {
+  return `${baseUrl}/oauth/authorize?${new URLSearchParams({
+    response_type: "code",
+    client_id: connectedApp.clientId,
+    redirect_uri: connectedApp.redirectUri,
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    scope: "wishlist.items"
+  })}`;
+}
+
+async function startFakeConnectedApp(flow) {
+  const server = http.createServer(async (request, response) => {
+    const requestUrl = new URL(request.url ?? "/", connectedApp.origin);
+    const send = (status, contentType, body) => {
+      response.writeHead(status, { "Content-Type": contentType });
+      response.end(body);
+    };
+
+    if (requestUrl.pathname.endsWith(".svg")) {
+      return send(200, "image/svg+xml", studioCoatImage);
+    }
+
+    if (requestUrl.pathname === "/openwish/callback") {
+      const connected = await flow.onCallback(requestUrl);
+      return send(
+        200,
+        "text/html; charset=utf-8",
+        fakeAppPage(connected ? "Connected to OpenWish" : "OpenWish connection failed", "<p>You can close this tab.</p>"));
+    }
+
+    return send(
+      200,
+      "text/html; charset=utf-8",
+      fakeAppPage(connectedApp.name, `<p>Your wardrobe wishlist.</p><a href="${flow.authorizeUrl}">Connect OpenWish</a>`));
+  });
+  await new Promise(resolve => server.listen(fakeAppPort, "127.0.0.1", resolve));
+  return server;
+}
+
+async function verifyConnectedAppJourney(browser, results) {
+  const assertions = [];
+  const listName = "Winter wardrobe";
+  const state = crypto.randomBytes(16).toString("base64url");
+  const verifier = crypto.randomBytes(48).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+  const authorizeUrl = buildAuthorizeUrl(state, challenge);
+  let token = null;
+  let callbackProblem = null;
+
+  const fakeApp = await startFakeConnectedApp({
+    authorizeUrl,
+    onCallback: async callbackUrl => {
+      if (callbackUrl.searchParams.get("state") !== state) {
+        callbackProblem = "The callback state did not match.";
+        return false;
+      }
+
+      const response = await fetch(`${baseUrl}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code: callbackUrl.searchParams.get("code") ?? "",
+          redirect_uri: connectedApp.redirectUri,
+          client_id: connectedApp.clientId,
+          client_secret: connectedApp.clientSecret,
+          code_verifier: verifier
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        callbackProblem = `Token exchange failed: ${JSON.stringify(payload)}`;
+        return false;
+      }
+
+      token = payload;
+      return true;
+    }
+  });
+
+  try {
+    await verifyConnectedAppFlow(browser, results, { assertions, listName, challenge, getToken: () => token, getProblem: () => callbackProblem });
+  } finally {
+    await new Promise(resolve => fakeApp.close(resolve));
+  }
+}
+
+async function verifyConnectedAppFlow(browser, results, { assertions, listName, challenge, getToken, getProblem }) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const loginStatus = await login(context, "owner", ownerEmail);
+
+  // The person starts in the other app, approves in OpenWish, and lands back in the app.
+  await page.goto(`${connectedApp.origin}/`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Connect OpenWish" }).click();
+  await page.waitForURL(url => url.pathname === "/oauth/authorize");
+  await page.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
+  await assertVisible(page, "It can't see who reserved or bought anything");
+  const listChoices = page.getByRole("group", { name: `Lists ${connectedApp.name} can add to` });
+  for (const checked of await listChoices.locator('input[name="wishlist"]:checked').all()) {
+    await checked.uncheck();
+  }
+  await page.getByLabel("Start a new list for these ideas").check();
+  await page.getByLabel("New list name").fill(listName);
+  const approve = page.getByRole("button", { name: `Connect ${connectedApp.name}` });
+  await assertMinimumTouchTarget(approve, "consent approve button");
+  await screenshot(page, "connect-app-consent.png", true);
+  await approve.click();
+  await page.waitForURL(url => url.origin === connectedApp.origin && url.pathname === "/openwish/callback");
+  await page.getByRole("heading", { name: "Connected to OpenWish" }).waitFor({ state: "visible" });
+  const token = getToken();
+  if (getProblem() || !token?.access_token?.startsWith("owi_")) {
+    throw new Error(getProblem() ?? "The connected app did not receive an access token.");
+  }
+  assertions.push("app connects through consent, state, PKCE, and a server-side code exchange");
+
+  const me = await connectedAppApi(token.access_token, "GET", "me");
+  const allowedList = me.json?.wishlists?.[0];
+  if (me.status !== 200 || me.json.wishlists.length !== 1 || allowedList.name !== listName || !allowedList.isDefault) {
+    throw new Error(`Unexpected connected profile: ${me.text}`);
+  }
+
+  // The app logs, edits, and removes ideas for the person.
+  const coat = await connectedAppApi(token.access_token, "PUT", "items/external/piece-coat", {
+    name: "Camel wool coat",
+    description: "Single-breasted, size S",
+    url: `${connectedApp.origin}/pieces/coat`,
+    imageUrl: `${connectedApp.origin}/images/coat.svg`,
+    price: 348,
+    whereToBuy: "Maison Example",
+    priority: 1
+  });
+  const scarf = await connectedAppApi(token.access_token, "PUT", "items/external/piece-scarf", {
+    name: "Silk twill scarf",
+    description: "Navy and cream",
+    price: 95,
+    priority: 2
+  });
+  const gloves = await connectedAppApi(token.access_token, "POST", "items", {
+    name: "Leather gloves",
+    externalId: "piece-gloves",
+    price: 120
+  });
+  if (coat.status !== 201 || scarf.status !== 201 || gloves.status !== 201) {
+    throw new Error(`Logging ideas failed: ${coat.status} ${scarf.status} ${gloves.status}`);
+  }
+  const coatUpdate = await connectedAppApi(token.access_token, "PUT", "items/external/piece-coat", {
+    name: "Camel wool coat",
+    description: "Single-breasted, size S",
+    url: `${connectedApp.origin}/pieces/coat`,
+    imageUrl: `${connectedApp.origin}/images/coat.svg`,
+    price: 298,
+    whereToBuy: "Maison Example"
+  });
+  if (coatUpdate.status !== 200 || coatUpdate.json.id !== coat.json.id || coatUpdate.json.priority !== 1) {
+    throw new Error(`Editing an idea failed: ${coatUpdate.text}`);
+  }
+  const glovesRemoval = await connectedAppApi(token.access_token, "DELETE", "items/external/piece-gloves");
+  if (glovesRemoval.status !== 204) {
+    throw new Error(`Removing an idea returned ${glovesRemoval.status}.`);
+  }
+  const appItems = await connectedAppApi(token.access_token, "GET", "items");
+  if (appItems.json.length !== 2 || /reserv/i.test(appItems.text)) {
+    throw new Error(`The app's idea list was unexpected or exposed reservations: ${appItems.text}`);
+  }
+  assertions.push("app logs, edits, and removes ideas without seeing reservations");
+
+  // OpenWish shows where each idea came from.
+  await visit(page, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await page.getByRole("button", { name: "Grid view" }).click();
+  await page.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
+  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
+  if (await page.getByText("From Studio Notebook").count() < 2) {
+    throw new Error("Each idea the app added should show where it came from.");
+  }
+  await assertVisible(page, "$298.00");
+  if (await page.getByText("Leather gloves").count() !== 0) {
+    throw new Error("An idea the app removed is still on the list.");
+  }
+  await screenshot(page, "connected-app-ideas.png");
+
+  await page.getByRole("button", { name: "Edit Camel wool coat" }).first().click();
+  const dialog = page.getByRole("dialog", { name: "Edit item" });
+  await dialog.getByText("keeps this idea in sync").waitFor({ state: "visible" });
+  await screenshot(page, "connected-app-edit-note.png");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await dialog.waitFor({ state: "detached" });
+  assertions.push("ideas show their source app, and editing one explains the sync");
+
+  await visit(page, "/Account/Manage/ConnectedApps", "Connected apps", []);
+  const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
+  await connection.getByText("2 ideas added").waitFor({ state: "visible" });
+  await connection.getByLabel(listName).waitFor({ state: "visible" });
+  if (!(await connection.getByLabel(listName).isChecked())) {
+    throw new Error("The connected app's list was not shown as allowed.");
+  }
+  await screenshot(page, "connected-apps.png", true);
+
+  // A friend cannot open the new private list the app writes to.
+  const friendContext = await browser.newContext();
+  await login(friendContext, "friend", friendEmail);
+  const friendView = await friendContext.request.get(`${baseUrl}/api/wishlists/${allowedList.id}/items`);
+  if (friendView.ok()) {
+    throw new Error("A friend could read the private list a connected app created.");
+  }
+  await friendContext.close();
+  assertions.push("a non-member cannot read the private list the app writes to");
+
+  await connection.getByRole("link", { name: "Disconnect" }).click();
+  await page.getByRole("heading", { name: `Disconnect ${connectedApp.name}?` }).waitFor({ state: "visible" });
+  await screenshot(page, "connected-app-disconnect.png");
+  await page.getByRole("button", { name: `Disconnect ${connectedApp.name}` }).click();
+  await assertVisible(page, `Disconnected ${connectedApp.name}.`);
+  const afterDisconnect = await connectedAppApi(token.access_token, "GET", "me");
+  if (afterDisconnect.status !== 401 || !afterDisconnect.wwwAuthenticate.includes("invalid_token")) {
+    throw new Error(`A disconnected app could still call OpenWish: ${afterDisconnect.status}`);
+  }
+  await visit(page, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
+  assertions.push("disconnecting revokes the token and keeps the ideas");
+
+  if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Connected app browser errors: ${diagnostics.browserErrors.join(" | ")} ` +
+      `${diagnostics.failedResponses.join(" | ")}`
+    );
+  }
+  await context.close();
+
+  // Phone layout for the consent screen and the list with source badges.
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const mobilePage = await mobileContext.newPage();
+  const mobileDiagnostics = monitorPage(mobilePage);
+  await login(mobileContext, "owner", ownerEmail);
+  await mobilePage.goto(buildAuthorizeUrl("mobile-preview", challenge), { waitUntil: "domcontentloaded" });
+  await mobilePage.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
+  await assertResponsiveWidths(mobilePage, [{ width: 390, height: 844 }]);
+  await screenshot(mobilePage, "connect-app-consent-mobile.png", true);
+  await visit(mobilePage, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await mobilePage.getByRole("button", { name: "Grid view" }).click();
+  await mobilePage.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
+  const mobileCoat = mobilePage.locator(".wishlist-item-card").filter({ hasText: "Camel wool coat" });
+  await mobileCoat.getByText("From Studio Notebook").waitFor({ state: "visible" });
+  await assertResponsiveWidths(mobilePage, [{ width: 390, height: 844 }]);
+  await mobileCoat.scrollIntoViewIfNeeded();
+  await mobilePage.waitForTimeout(300);
+  await mobileCoat.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas-mobile.png") });
+  if (mobileDiagnostics.browserErrors.length > 0 || mobileDiagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Connected app mobile errors: ${mobileDiagnostics.browserErrors.join(" | ")} ` +
+      `${mobileDiagnostics.failedResponses.join(" | ")}`
+    );
+  }
+  await mobileContext.close();
+
+  results.push({ scenario: "connected-app", loginStatus, assertions });
+}
+
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
@@ -3224,6 +3527,7 @@ try {
   await verifyFeatureDayJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
   await verifyUnsharedMatchWishlist(browser, manifest, results);
+  await verifyConnectedAppJourney(browser, results);
 
   await fs.writeFile(
     path.join(evidenceDirectory, "openwish-e2e-result.json"),

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 var sqlHostName = "sql";
@@ -44,6 +46,15 @@ foreach (var (configurationKey, environmentName) in new[]
     if (builder.Configuration[configurationKey] is { Length: > 0 } settingValue)
     {
         web.WithEnvironment(environmentName, settingValue);
+    }
+}
+
+// Connected apps registered in AppHost user secrets (see .docs/INTEGRATIONS.md).
+foreach (var (configurationKey, settingValue) in builder.Configuration.GetSection("OpenWishSettings:Integrations").AsEnumerable())
+{
+    if (settingValue is { Length: > 0 })
+    {
+        web.WithEnvironment(configurationKey.Replace(":", "__", StringComparison.Ordinal), settingValue);
     }
 }
 

@@ -153,6 +153,12 @@
     font-weight: 700;
 }
 
+td ::deep .item-source {
+    display: flex;
+    width: fit-content;
+    margin-top: 0.4rem;
+}
+
 .wishlist-external-link {
     display: inline-flex;
     align-items: center;

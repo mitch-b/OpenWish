@@ -24,6 +24,13 @@
                         disabled="@IsBusy"></button>
             </div>
             <div class="modal-body">
+                @if (Model?.Id > 0 && !string.IsNullOrWhiteSpace(Model.SourceAppName))
+                {
+                    <div class="item-source-note" id="wishlist-item-source-note">
+                        <ItemSourceBadge AppName="@Model.SourceAppName" />
+                        <span>@Model.SourceAppName keeps this idea in sync, so changes made there replace the details here. Privacy and ranking stay yours.</span>
+                    </div>
+                }
                 <div class="url-import-section mb-4">
                     <ProductLinkImporter Model="@Model"
                                          InputId="product-url-import-modal"

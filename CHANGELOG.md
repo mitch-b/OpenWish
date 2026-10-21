@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.5.0] - 2026-10-20
+
+### Added
+
+- Connected apps: people can let an app registered by their OpenWish host add,
+  update, and remove gift ideas on the lists they choose, using a standard
+  OAuth 2.0 consent screen with PKCE.
+- Ideas added by an app show a "From {app}" badge, and the edit dialog explains
+  that the app keeps the idea in sync.
+- Account settings > Connected apps shows each connection's lists, last use,
+  and idea count, with list changes and disconnect.
+- Operators register apps with `OpenWishSettings__Integrations__Apps__N__*`
+  settings; see `.docs/INTEGRATIONS.md` for the contract.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added

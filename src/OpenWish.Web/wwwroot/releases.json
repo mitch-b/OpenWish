@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-10-20",
+    "title": "Bring ideas in from the apps you already use",
+    "summary": "Connect an app your OpenWish host has set up, choose the lists it can use, and the ideas you mark there appear on your wishlist, stay current, and leave when you remove them.",
+    "highlights": [
+      "Connect from inside the other app: one OpenWish screen shows what it can and cannot do and lets you pick lists or start a new private one.",
+      "Ideas an app adds show a \"From\" badge with the app's name, and editing one explains that the app keeps it in sync.",
+      "Account settings has a new Connected apps page to change lists, choose where new ideas go, or disconnect.",
+      "Disconnecting stops the app right away and keeps the ideas it added.",
+      "Connected apps never see reservations, purchases, comments, your other ideas, or your friends."
+    ]
+  },
+  {
     "version": "0.4.0",
     "date": "2026-10-19",
     "title": "Get started, find friends, and reveal the exchange",

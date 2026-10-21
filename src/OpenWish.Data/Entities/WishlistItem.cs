@@ -18,4 +18,10 @@ public class WishlistItem : BaseEntity
     public bool IsPinned { get; set; }
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
     public string? CreationRequestHash { get; set; }
+
+    // Set when a connected app added the idea; the name is a snapshot so it survives disconnecting.
+    public int? SourceConnectionId { get; set; }
+    public IntegrationConnection? SourceConnection { get; set; }
+    public string? SourceAppName { get; set; }
+    public string? ExternalId { get; set; }
 }

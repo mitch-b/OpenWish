@@ -8,4 +8,5 @@ public record OpenWishSettings
     public string? BaseUri { get; set; } = null!;
     public bool OwnDatabaseUpgrades { get; set; }
     public bool EnableDevelopmentLogin { get; set; }
+    public IntegrationSettings? Integrations { get; set; }
 }

@@ -577,6 +577,13 @@ else
                                     }
                                 </div>
 
+                                @if (!string.IsNullOrWhiteSpace(item.SourceAppName))
+                                {
+                                    <div class="item-source-row">
+                                        <ItemSourceBadge AppName="@item.SourceAppName" />
+                                    </div>
+                                }
+
                                 @if (!string.IsNullOrEmpty(item.Description))
                                 {
                                     <p class="item-description">@item.Description</p>
@@ -1403,6 +1410,7 @@ else
             Priority = item.Priority,
             IsPrivate = item.IsPrivate,
             Image = item.Image,
+            SourceAppName = item.SourceAppName,
             WishlistId = _wishlist?.Id ?? 0 // Keep the integer ID for the model
         };
         _itemModal?.Show(_modalItem);

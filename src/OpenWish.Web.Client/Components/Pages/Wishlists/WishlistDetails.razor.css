@@ -671,6 +671,10 @@
     white-space: nowrap;
 }
 
+.item-source-row {
+    margin: -0.25rem 0 0.6rem;
+}
+
 .ranking-help {
     color: var(--color-text-muted);
     font-size: 0.88rem;

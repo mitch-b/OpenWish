@@ -77,7 +77,8 @@ public sealed class IntegrationItemRequest : IValidatableObject
     [MaxLength(WhereToBuyMaxLength)]
     public string? WhereToBuy { get; set; }
 
-    [Range(1, 3)]
+    /// <summary>1 high, 2 medium, 3 low. Null or absent keeps the current priority on update; 0 clears it.</summary>
+    [Range(0, 3)]
     public int? Priority { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -212,14 +212,17 @@ Request body for `POST` and `PUT`:
 
 - `name` is required (200 characters). `description` allows 4,000;
   `externalId` and `whereToBuy` allow 200.
-- `url` and `imageUrl` must be absolute `http` or `https` URLs. Friends'
-  browsers load `imageUrl` directly, so send only public image addresses.
+- `url` and `imageUrl` must be absolute `http` or `https` URLs. OpenWish does
+  not fetch them, but friends' browsers load `imageUrl` directly, so send only
+  public image addresses.
 - `price` has at most two decimal places and no currency. `priority` is `1`
-  (high), `2` (medium), `3` (low), or omitted.
-- Without `wishlistId`, a new idea goes to the person's default list. On
-  `PUT`, a `wishlistId` moves the idea to another allowed list.
+  (high), `2` (medium), `3` (low), or omitted. On `PUT`, a missing or `null`
+  priority keeps the current one and `0` clears it.
+- Without `wishlistId`, a new idea goes to the person's default list for your
+  app, including when `PUT /items/external/{externalId}` creates it. On `PUT`, a
+  `wishlistId` moves the idea to another allowed list.
 - `PUT` replaces the name, description, links, price, and store; a missing
-  value clears it. A missing `priority` keeps the current priority.
+  value clears it.
 - `externalId` is your stable identifier. It is unique among your active
   ideas for that person, so `PUT /items/external/{externalId}` is a safe,
   repeatable sync operation.
@@ -253,7 +256,20 @@ then about two per second.
 People can delete an idea, or the whole list it is on, in OpenWish. The idea
 then disappears from `GET /items`, and the next
 `PUT /items/external/{externalId}` adds it again on an allowed list, so sync
-only in response to a person's action in your app.
+only in response to a person's action in your app. For background edits, prefer
+`PUT /items/{id}` and treat `404` as "the person removed it" so you don't
+recreate ideas they deleted.
+
+### Practical tips
+
+- Register a separate `ClientId` for each environment of your app, such as
+  staging and production. Ideas and `externalId` values belong to the app and
+  person, so two environments sharing one `ClientId` would manage each other's
+  ideas.
+- OpenWish returns the person to your callback with a cross-site redirect.
+  Browsers do not send `SameSite=Strict` cookies on that request, so either use
+  `SameSite=Lax` for the session cookie your callback reads, or have the
+  callback bounce once through a same-site page before checking `state`.
 
 ### 4. Disconnect from your app
 

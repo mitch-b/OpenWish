@@ -91,6 +91,18 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         Assert.Equal(119.50m, ownerView.Price);
         Assert.Equal(1, ownerView.Priority);
 
+        // Priority 0 clears it explicitly.
+        var cleared = await api.PutAsJsonAsync($"items/{item.Id}", new IntegrationItemRequest
+        {
+            Name = "Cashmere crewneck in navy",
+            Url = "https://shop.example.com/crewneck-navy",
+            Price = 119.50m,
+            Priority = 0
+        }, _json);
+        Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
+        Assert.Null((await cleared.Content.ReadFromJsonAsync<IntegrationItemModel>(_json))!.Priority);
+        Assert.Null(Assert.Single(await browser.GetItemsAsync(list.PublicId)).Priority);
+
         // A plain POST lands on the default list.
         var posted = await api.PostAsJsonAsync("items", new IntegrationItemRequest { Name = "Silk scarf", Priority = 3 }, _json);
         Assert.Equal(HttpStatusCode.Created, posted.StatusCode);

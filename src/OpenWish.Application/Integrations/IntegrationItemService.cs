@@ -205,7 +205,7 @@ public class IntegrationItemService(
             SourceConnectionId = caller.ConnectionId,
             SourceAppName = caller.AppName,
             ExternalId = externalId,
-            Priority = request.Priority,
+            Priority = request.Priority is > 0 ? request.Priority : null,
             OrderIndex = await NextOrderIndexAsync(context, target.Id),
             CreatedOn = now,
             UpdatedOn = now
@@ -267,7 +267,7 @@ public class IntegrationItemService(
         ApplyContent(item, request);
         if (request.Priority.HasValue)
         {
-            item.Priority = request.Priority;
+            item.Priority = request.Priority > 0 ? request.Priority : null;
         }
 
         item.SourceAppName = caller.AppName;

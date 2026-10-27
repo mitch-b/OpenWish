@@ -347,6 +347,46 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             ?? Enumerable.Empty<WishlistItemModel>();
     }
 
+    public async Task<WishlistItemBatchResult> TransferWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        TransferWishlistItemsRequest request,
+        string requestingUserId)
+    {
+        _ = requestingUserId;
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/transfer", request);
+        await EnsureBatchSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<WishlistItemBatchResult>()
+            ?? throw new InvalidOperationException("Unable to deserialize the result.");
+    }
+
+    public async Task<WishlistItemBatchResult> BulkUpdateWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        BulkUpdateWishlistItemsRequest request,
+        string requestingUserId)
+    {
+        _ = requestingUserId;
+        var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/{wishlistPublicId}/items/bulk", request);
+        await EnsureBatchSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<WishlistItemBatchResult>()
+            ?? throw new InvalidOperationException("Unable to deserialize the result.");
+    }
+
+    private static async Task EnsureBatchSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detail = response.StatusCode == System.Net.HttpStatusCode.BadRequest
+            ? await response.Content.ReadAsStringAsync()
+            : string.Empty;
+        throw new HttpRequestException(
+            string.IsNullOrWhiteSpace(detail) ? "That change could not be saved. Refresh and try again." : detail.Trim('"'),
+            null,
+            response.StatusCode);
+    }
+
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, int itemId, string userId, string text)
     {
         _ = userId;

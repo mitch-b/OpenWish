@@ -2887,6 +2887,107 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     assertions.push("owner confirms a stale idea; non-owners are refused");
   }
 
+  // B3: owners move, copy, and bulk edit ideas; non-owners are refused.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "owner", ownerEmail);
+    const mainId = manifest.wishlistPublicId;
+    const otherId = manifest.privateWishlistPublicId;
+    const parkPassCount = async (id) => {
+      const response = await context.request.get(`${baseUrl}/api/wishlists/${id}/items`);
+      if (!response.ok()) {
+        throw new Error(`Items request for ${id} failed with ${response.status()}.`);
+      }
+      return (await response.json()).filter((item) => item.name === "National Park Pass");
+    };
+    const organize = async (listId, selectLast) => {
+      await page.goto(`${baseUrl}/wishlists/${listId}`, { waitUntil: "domcontentloaded" });
+      await page.locator("#organize-toggle").click();
+      await page.locator("#organize-body").waitFor({ state: "visible" });
+      const boxes = page.locator(".organize-list li", { hasText: "National Park Pass" }).getByRole("checkbox");
+      await (selectLast ? boxes.last() : boxes.first()).check();
+    };
+    const notice = (text) => page.getByRole("alert").filter({ hasText: text }).waitFor({ state: "visible" });
+    const otherName = await page.goto(`${baseUrl}/wishlists/${otherId}`, { waitUntil: "domcontentloaded" })
+      .then(() => page.locator("h1").first().innerText());
+
+    // Copy to another list.
+    await organize(mainId, false);
+    await page.locator("#organize-target").selectOption(otherId);
+    await screenshot(page, "organize-ideas.png");
+    await page.locator("#organize-copy").click();
+    await notice(`Copied 1 idea to ${otherName}.`);
+    if ((await parkPassCount(mainId)).length !== 1 || (await parkPassCount(otherId)).length !== 1) {
+      throw new Error("Copying left the wrong number of National Park Pass ideas.");
+    }
+
+    // Set priority and most wanted on the copy.
+    await organize(otherId, false);
+    await page.locator("#organize-priority").selectOption("1");
+    await page.locator("#organize-set-priority").click();
+    await notice("Set 1 idea to high priority.");
+    await organize(otherId, false);
+    await page.locator("#organize-pin").click();
+    await notice("Marked 1 idea as most wanted.");
+    const [copy] = await parkPassCount(otherId);
+    if (copy.priority !== 1 || copy.isPinned !== true) {
+      throw new Error("Bulk priority and most wanted were not saved.");
+    }
+
+    // Move the copy back to the main list.
+    await organize(otherId, false);
+    await page.locator("#organize-target").selectOption(mainId);
+    await page.locator("#organize-move").click();
+    await notice("Moved 1 idea to");
+    if ((await parkPassCount(mainId)).length !== 2 || (await parkPassCount(otherId)).length !== 0) {
+      throw new Error("Moving did not transfer the idea.");
+    }
+
+    // Remove the extra copy after confirmation.
+    await organize(mainId, true);
+    await page.locator("#organize-remove").click();
+    await screenshot(page, "organize-remove-confirm.png");
+    await page.locator("#organize-remove-confirm").click();
+    await notice("Removed 1 idea.");
+    if ((await parkPassCount(mainId)).length !== 1) {
+      throw new Error("Bulk removal did not remove exactly one idea.");
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await organize(mainId, false);
+    await screenshot(page, "organize-ideas-mobile.png");
+
+    const friendContext = await browser.newContext();
+    await login(friendContext, "friend", friendEmail);
+    const [parkPass] = await parkPassCount(mainId);
+    const transferResponse = await friendContext.request.post(`${baseUrl}/api/wishlists/${mainId}/items/transfer`, {
+      data: { itemPublicIds: [parkPass.publicId], targetWishlistPublicId: otherId, copy: false }
+    });
+    const bulkResponse = await friendContext.request.post(`${baseUrl}/api/wishlists/${mainId}/items/bulk`, {
+      data: { itemPublicIds: [parkPass.publicId], action: "Remove" }
+    });
+    if (transferResponse.status() !== 403 || bulkResponse.status() !== 403) {
+      throw new Error(`Non-owner organize calls returned ${transferResponse.status()} and ${bulkResponse.status()}.`);
+    }
+    await page.goto(`${baseUrl}/wishlists/${mainId}`, { waitUntil: "domcontentloaded" });
+    const friendPage = await friendContext.newPage();
+    await friendPage.goto(`${baseUrl}/wishlists/${mainId}`, { waitUntil: "domcontentloaded" });
+    await assertVisible(friendPage, "Noise-Cancelling Headphones");
+    if (await friendPage.locator("#organize-toggle").count() !== 0) {
+      throw new Error("A non-owner saw the organize controls.");
+    }
+    await friendContext.close();
+
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Organize diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    await page.close();
+    await context.close();
+    assertions.push("owner copies, moves, prioritizes, and removes ideas in bulk; non-owners are refused");
+  }
+
   {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();

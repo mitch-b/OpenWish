@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-10-27",
+    "title": "Organize many ideas at once",
+    "summary": "Wishlist owners can select several ideas and move, copy, re-prioritize, mark as most wanted, or remove them together.",
+    "highlights": [
+      "Move ideas to another of your wishlists; reservations and comments stay with them.",
+      "Copy ideas to any of your wishlists as fresh ideas, without reservations or comments.",
+      "Set priority for several ideas in one step.",
+      "Mark or clear most wanted for several ideas at once.",
+      "Remove several ideas together after a clear confirmation."
+    ]
+  }, {
     "version": "0.4.0",
     "date": "2026-10-19",
     "title": "Get started, find friends, and reveal the exchange",

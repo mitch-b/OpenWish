@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/6cabb1a3-b68f-4fbb-bdbc-5d4369d8a099/manage",
+        "/events/330bf19a-a315-48d8-8357-fe47a060c79d/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -169,6 +169,7 @@
         "friend suggestions list co-participants without emails and send a real request",
         "exchange reveal is organizer-only, member-visible, hidden from outsiders, and locks reset",
         "owner confirms a stale idea; non-owners are refused",
+        "owner copies, moves, prioritizes, and removes ideas in bulk; non-owners are refused",
         "grid cards coordinate gifts inline without leaving grid view"
       ]
     },

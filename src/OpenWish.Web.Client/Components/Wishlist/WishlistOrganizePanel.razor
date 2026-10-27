@@ -1,0 +1,349 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.RequestModels
+@using OpenWish.Shared.Services
+
+@inject IWishlistService WishlistService
+
+<section class="organize" aria-labelledby="organize-title" data-testid="organize-panel">
+    <div class="organize-header">
+        <div>
+            <h2 id="organize-title" class="h5">Organize ideas</h2>
+            <p class="organize-intro">Select ideas to move or copy them to another list, set a priority, or tidy up in one step.</p>
+        </div>
+        <button id="organize-toggle"
+                type="button"
+                class="btn @(_isOpen ? "btn-primary" : "btn-outline-primary")"
+                aria-expanded="@(_isOpen ? "true" : "false")"
+                aria-controls="organize-body"
+                disabled="@(Items.Count == 0)"
+                @onclick="Toggle">
+            <OpenWishIcon Name="list-check" /> @(_isOpen ? "Done" : "Select ideas")
+        </button>
+    </div>
+
+    @if (_isOpen)
+    {
+        <div id="organize-body" class="organize-body">
+            <div class="organize-select-all">
+                <input id="organize-select-all"
+                       type="checkbox"
+                       class="form-check-input"
+                       checked="@AllSelected"
+                       disabled="@_isBusy"
+                       @onchange="ToggleAll" />
+                <label for="organize-select-all">Select all @Items.Count @(Items.Count == 1 ? "idea" : "ideas")</label>
+                <span class="organize-count" role="status" aria-live="polite">@_selected.Count selected</span>
+            </div>
+
+            <ul class="organize-list">
+                @foreach (var item in Items)
+                {
+                    <li @key="item.PublicId">
+                        <input id="organize-item-@item.PublicId"
+                               type="checkbox"
+                               class="form-check-input"
+                               checked="@_selected.Contains(item.PublicId)"
+                               disabled="@_isBusy"
+                               @onchange="args => ToggleItem(item.PublicId, args.Value is true)" />
+                        <label for="organize-item-@item.PublicId">
+                            <span class="organize-name">@item.Name</span>
+                            @if (item.IsPinned)
+                            {
+                                <span class="organize-tag">Most wanted</span>
+                            }
+                            @if (item.Priority.HasValue)
+                            {
+                                <span class="organize-tag">@PriorityText(item.Priority.Value) priority</span>
+                            }
+                        </label>
+                    </li>
+                }
+            </ul>
+
+            <div class="organize-actions" role="group" aria-label="Actions for selected ideas">
+                <div class="organize-action">
+                    <label for="organize-target">Move or copy to</label>
+                    <div class="organize-inline">
+                        <select id="organize-target" class="form-select" disabled="@_isBusy" @bind="_targetId">
+                            <option value="">Choose a list</option>
+                            @foreach (var list in Lists)
+                            {
+                                <option value="@list.PublicId">@list.Name@(list.PublicId == WishlistId ? " (this list)" : string.Empty)</option>
+                            }
+                        </select>
+                        <button id="organize-move"
+                                type="button"
+                                class="btn btn-outline-primary"
+                                disabled="@(!CanTransfer(copy: false))"
+                                @onclick="() => TransferAsync(false)">
+                            Move
+                        </button>
+                        <button id="organize-copy"
+                                type="button"
+                                class="btn btn-outline-primary"
+                                disabled="@(!CanTransfer(copy: true))"
+                                @onclick="() => TransferAsync(true)">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="organize-action">
+                    <label for="organize-priority">Priority</label>
+                    <div class="organize-inline">
+                        <select id="organize-priority" class="form-select" disabled="@_isBusy" @bind="_priority">
+                            <option value="1">High</option>
+                            <option value="2">Medium</option>
+                            <option value="3">Low</option>
+                        </select>
+                        <button id="organize-set-priority"
+                                type="button"
+                                class="btn btn-outline-primary"
+                                disabled="@(_selected.Count == 0 || _isBusy)"
+                                @onclick="() => UpdateAsync(BulkWishlistItemAction.SetPriority)">
+                            Set priority
+                        </button>
+                    </div>
+                </div>
+
+                <div class="organize-action">
+                    <span class="organize-label">Most wanted</span>
+                    <div class="organize-inline">
+                        <button id="organize-pin"
+                                type="button"
+                                class="btn btn-outline-primary"
+                                disabled="@(_selected.Count == 0 || _isBusy)"
+                                @onclick="() => UpdateAsync(BulkWishlistItemAction.MarkMostWanted)">
+                            Mark
+                        </button>
+                        <button id="organize-unpin"
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                disabled="@(_selected.Count == 0 || _isBusy)"
+                                @onclick="() => UpdateAsync(BulkWishlistItemAction.ClearMostWanted)">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="organize-action">
+                    <span class="organize-label">Remove</span>
+                    @if (_confirmingRemove)
+                    {
+                        <div class="organize-inline" role="alert">
+                            <span>Remove @_selected.Count @(_selected.Count == 1 ? "idea" : "ideas") permanently?</span>
+                            <button id="organize-remove-confirm"
+                                    type="button"
+                                    class="btn btn-danger"
+                                    disabled="@_isBusy"
+                                    @onclick="() => UpdateAsync(BulkWishlistItemAction.Remove)">
+                                Yes, remove
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" disabled="@_isBusy" @onclick="() => _confirmingRemove = false">
+                                Keep them
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="organize-inline">
+                            <button id="organize-remove"
+                                    type="button"
+                                    class="btn btn-outline-danger"
+                                    disabled="@(_selected.Count == 0 || _isBusy)"
+                                    @onclick="() => _confirmingRemove = true">
+                                Remove selected
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="organize-error" role="alert">@_error</p>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string WishlistId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string CurrentUserId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<WishlistItemModel> Items { get; set; } = [];
+
+    [Parameter]
+    public EventCallback<string> OnChanged { get; set; }
+
+    private readonly HashSet<string> _selected = [];
+    private List<WishlistModel> Lists { get; set; } = [];
+    private bool _isOpen;
+    private bool _isBusy;
+    private bool _confirmingRemove;
+    private string _targetId = string.Empty;
+    private string _priority = "1";
+    private string? _error;
+
+    private bool AllSelected => Items.Count > 0 && Items.All(item => _selected.Contains(item.PublicId));
+
+    protected override void OnParametersSet()
+    {
+        _selected.RemoveWhere(id => Items.All(item => item.PublicId != id));
+        if (_selected.Count == 0)
+        {
+            _confirmingRemove = false;
+        }
+    }
+
+    private async Task Toggle()
+    {
+        _isOpen = !_isOpen;
+        _error = null;
+        _confirmingRemove = false;
+        if (!_isOpen)
+        {
+            _selected.Clear();
+            return;
+        }
+
+        if (Lists.Count == 0)
+        {
+            try
+            {
+                Lists = (await WishlistService.GetUserWishlistsAsync(CurrentUserId))
+                    .Where(list => list.OwnerId == CurrentUserId)
+                    .OrderBy(list => list.Name)
+                    .ToList();
+            }
+            catch (Exception ex) when (ex is HttpRequestException or UnauthorizedAccessException)
+            {
+                _error = "Your other lists could not be loaded. You can still change priority or remove ideas.";
+            }
+        }
+    }
+
+    private void ToggleAll(ChangeEventArgs args)
+    {
+        _selected.Clear();
+        if (args.Value is true)
+        {
+            foreach (var item in Items)
+            {
+                _selected.Add(item.PublicId);
+            }
+        }
+
+        _confirmingRemove = false;
+    }
+
+    private void ToggleItem(string publicId, bool isSelected)
+    {
+        if (isSelected)
+        {
+            _selected.Add(publicId);
+        }
+        else
+        {
+            _selected.Remove(publicId);
+            _confirmingRemove &= _selected.Count > 0;
+        }
+    }
+
+    private bool CanTransfer(bool copy) =>
+        !_isBusy &&
+        _selected.Count > 0 &&
+        !string.IsNullOrEmpty(_targetId) &&
+        (copy || _targetId != WishlistId);
+
+    private async Task TransferAsync(bool copy)
+    {
+        if (!CanTransfer(copy))
+        {
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            var result = await WishlistService.TransferWishlistItemsByPublicIdAsync(
+                WishlistId,
+                new TransferWishlistItemsRequest
+                {
+                    ItemPublicIds = _selected.ToList(),
+                    TargetWishlistPublicId = _targetId,
+                    Copy = copy
+                },
+                CurrentUserId);
+            return $"{(copy ? "Copied" : "Moved")} {Count(result.AffectedCount)} to {result.TargetWishlistName}.";
+        });
+    }
+
+    private async Task UpdateAsync(BulkWishlistItemAction action)
+    {
+        if (_selected.Count == 0 || _isBusy)
+        {
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            var result = await WishlistService.BulkUpdateWishlistItemsByPublicIdAsync(
+                WishlistId,
+                new BulkUpdateWishlistItemsRequest
+                {
+                    ItemPublicIds = _selected.ToList(),
+                    Action = action,
+                    Priority = action == BulkWishlistItemAction.SetPriority ? int.Parse(_priority) : null
+                },
+                CurrentUserId);
+            var count = Count(result.AffectedCount);
+            return action switch
+            {
+                BulkWishlistItemAction.SetPriority => $"Set {count} to {PriorityText(int.Parse(_priority)).ToLowerInvariant()} priority.",
+                BulkWishlistItemAction.MarkMostWanted => $"Marked {count} as most wanted.",
+                BulkWishlistItemAction.ClearMostWanted => $"Cleared most wanted on {count}.",
+                _ => $"Removed {count}."
+            };
+        });
+    }
+
+    private async Task RunAsync(Func<Task<string>> operation)
+    {
+        _isBusy = true;
+        _error = null;
+        try
+        {
+            var message = await operation();
+            _selected.Clear();
+            _confirmingRemove = false;
+            await OnChanged.InvokeAsync(message);
+        }
+        catch (Exception ex) when (ex is ArgumentException or HttpRequestException { StatusCode: System.Net.HttpStatusCode.BadRequest })
+        {
+            _error = ex.Message;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _error = "That change could not be saved. Refresh your ideas and try again.";
+            _selected.Clear();
+            await OnChanged.InvokeAsync(string.Empty);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static string Count(int count) => $"{count} {(count == 1 ? "idea" : "ideas")}";
+
+    private static string PriorityText(int priority) => priority switch
+    {
+        1 => "High",
+        2 => "Medium",
+        _ => "Low"
+    };
+}

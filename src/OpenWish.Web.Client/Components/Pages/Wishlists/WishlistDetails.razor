@@ -266,6 +266,14 @@ else
         </p>
     }
 
+    @if (_isOwner && !string.IsNullOrEmpty(_currentUserId))
+    {
+        <WishlistOrganizePanel WishlistId="@WishlistId"
+                               CurrentUserId="@_currentUserId"
+                               Items="@(_items.Where(item => !item.IsHiddenFromOwner).ToList())"
+                               OnChanged="@HandleOrganizeChangedAsync" />
+    }
+
     @if (HasBudget)
     {
         <section class="budget-guide" aria-labelledby="budget-guide-title">
@@ -1025,6 +1033,21 @@ else
         finally
         {
             _confirmingItemId = null;
+        }
+    }
+
+    private async Task HandleOrganizeChangedAsync(string message)
+    {
+        await LoadItems();
+        if (string.IsNullOrEmpty(message))
+        {
+            _feedbackMessage = "Your ideas changed before that was saved. They have been refreshed.";
+            _feedbackIsError = true;
+        }
+        else
+        {
+            _feedbackMessage = message;
+            _feedbackIsError = false;
         }
     }
 

@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.5.0] - 2026-10-27
+
+### Added
+
+- Owners can select several ideas on a wishlist and organize them together
+  from a new "Organize ideas" panel.
+- Move ideas to another of your wishlists, or copy them (copies start fresh,
+  without reservations or comments).
+- Set priority, mark or clear most wanted, or remove many ideas at once, with a
+  confirmation before removal.
+
 ## [0.4.0] - 2026-10-19
 
 ### Added

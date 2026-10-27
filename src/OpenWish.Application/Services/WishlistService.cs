@@ -1227,6 +1227,222 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return FilterWishlistItemsForViewer(reorderedItems, wishlist.OwnerId, wishlist.OwnerId);
     }
 
+    public async Task<WishlistItemBatchResult> TransferWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        TransferWishlistItemsRequest request,
+        string requestingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var itemPublicIds = NormalizeBatchItemIds(request.ItemPublicIds);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var source = await GetOwnedWishlistAsync(context, wishlistPublicId, requestingUserId);
+        var target = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == request.TargetWishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {request.TargetWishlistPublicId} not found");
+        if (!string.Equals(target.OwnerId, requestingUserId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Ideas can only be moved or copied into your own wishlists.");
+        }
+
+        if (!request.Copy && target.Id == source.Id)
+        {
+            throw new ArgumentException("Choose a different wishlist to move ideas into.", nameof(request));
+        }
+
+        var items = await GetOwnerVisibleItemsAsync(context, source.Id, itemPublicIds);
+        var nextOrderIndex = ((await context.WishlistItems
+            .Where(i => i.WishlistId == target.Id && !i.Deleted)
+            .MaxAsync(i => i.OrderIndex)) ?? -1) + 1;
+        var utcNow = DateTimeOffset.UtcNow;
+
+        foreach (var item in items.OrderBy(i => i.OrderIndex))
+        {
+            if (request.Copy)
+            {
+                context.WishlistItems.Add(new WishlistItem
+                {
+                    Name = target.Id == source.Id ? $"{item.Name} (copy)" : item.Name,
+                    Url = item.Url,
+                    Image = item.Image,
+                    Description = item.Description,
+                    Price = item.Price,
+                    WhereToBuy = item.WhereToBuy,
+                    WishlistId = target.Id,
+                    IsPrivate = item.IsPrivate,
+                    Priority = item.Priority,
+                    OrderIndex = nextOrderIndex++,
+                    CreatedOn = utcNow,
+                    UpdatedOn = utcNow
+                });
+            }
+            else
+            {
+                item.WishlistId = target.Id;
+                item.IsPinned = false;
+                item.OrderIndex = nextOrderIndex++;
+                item.UpdatedOn = utcNow;
+            }
+        }
+
+        if (!request.Copy)
+        {
+            // Activity about a moved idea must follow it so source-list viewers cannot read it.
+            var movedIds = items.Select(i => i.Id).ToList();
+            var activities = await context.ActivityLogs
+                .Where(a => a.WishlistItemId != null && movedIds.Contains(a.WishlistItemId.Value) && !a.Deleted)
+                .ToListAsync();
+            foreach (var activity in activities)
+            {
+                activity.WishlistId = target.Id;
+                activity.UpdatedOn = utcNow;
+            }
+        }
+
+        await context.SaveChangesAsync();
+        return new WishlistItemBatchResult { AffectedCount = items.Count, TargetWishlistName = target.Name };
+    }
+
+    public async Task<WishlistItemBatchResult> BulkUpdateWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        BulkUpdateWishlistItemsRequest request,
+        string requestingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var itemPublicIds = NormalizeBatchItemIds(request.ItemPublicIds);
+        if (request.Action == BulkWishlistItemAction.SetPriority && request.Priority is not (null or >= 1 and <= 3))
+        {
+            throw new ArgumentException("Priority must be 1, 2, or 3.", nameof(request));
+        }
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await GetOwnedWishlistAsync(context, wishlistPublicId, requestingUserId);
+        var items = await GetOwnerVisibleItemsAsync(context, wishlist.Id, itemPublicIds);
+
+        if (request.Action == BulkWishlistItemAction.Remove)
+        {
+            await RemoveItemsAsync(context, wishlist, items);
+            return new WishlistItemBatchResult { AffectedCount = items.Count };
+        }
+
+        var utcNow = DateTimeOffset.UtcNow;
+        foreach (var item in items)
+        {
+            switch (request.Action)
+            {
+                case BulkWishlistItemAction.SetPriority:
+                    item.Priority = request.Priority;
+                    break;
+                case BulkWishlistItemAction.MarkMostWanted:
+                    item.IsPinned = true;
+                    break;
+                case BulkWishlistItemAction.ClearMostWanted:
+                    item.IsPinned = false;
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported action.", nameof(request));
+            }
+
+            item.UpdatedOn = utcNow;
+        }
+
+        await context.SaveChangesAsync();
+        return new WishlistItemBatchResult { AffectedCount = items.Count };
+    }
+
+    private async Task RemoveItemsAsync(ApplicationDbContext context, Wishlist wishlist, List<WishlistItem> items)
+    {
+        var itemIds = items.Select(i => i.Id).ToList();
+        var utcNow = DateTimeOffset.UtcNow;
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+
+        await context.WishlistItems.Where(i => itemIds.Contains(i.Id) && !i.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Deleted, _ => true).SetProperty(i => i.UpdatedOn, _ => utcNow));
+        await context.ItemReservations.Where(r => itemIds.Contains(r.WishlistItemId) && !r.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Deleted, _ => true).SetProperty(r => r.UpdatedOn, _ => utcNow));
+        await context.ItemComments.Where(c => itemIds.Contains(c.WishlistItemId) && !c.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.Deleted, _ => true).SetProperty(c => c.UpdatedOn, _ => utcNow));
+        await context.ItemReactions.Where(r => itemIds.Contains(r.WishlistItemId) && !r.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Deleted, _ => true).SetProperty(r => r.UpdatedOn, _ => utcNow));
+        await context.WillPurchases.Where(wp => itemIds.Contains(wp.WishlistItemId) && !wp.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(wp => wp.Deleted, _ => true).SetProperty(wp => wp.UpdatedOn, _ => utcNow));
+
+        foreach (var item in items)
+        {
+            context.ActivityLogs.Add(new ActivityLog
+            {
+                UserId = wishlist.OwnerId,
+                ActivityType = "ItemRemoved",
+                Description = $"Removed item: {item.Name} from wishlist {wishlist.Name}",
+                WishlistId = wishlist.Id,
+                WishlistItemId = item.Id,
+                CreatedOn = utcNow,
+                UpdatedOn = utcNow
+            });
+        }
+
+        await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
+    }
+
+    private static List<string> NormalizeBatchItemIds(IEnumerable<string> itemPublicIds)
+    {
+        var ids = itemPublicIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            throw new ArgumentException("Select at least one idea.");
+        }
+
+        if (ids.Count > 100)
+        {
+            throw new ArgumentException("Select no more than 100 ideas at a time.");
+        }
+
+        return ids;
+    }
+
+    private static async Task<Wishlist> GetOwnedWishlistAsync(
+        ApplicationDbContext context,
+        string wishlistPublicId,
+        string requestingUserId)
+    {
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        if (!string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can organize its ideas.");
+        }
+
+        return wishlist;
+    }
+
+    private static async Task<List<WishlistItem>> GetOwnerVisibleItemsAsync(
+        ApplicationDbContext context,
+        int wishlistId,
+        List<string> itemPublicIds)
+    {
+        var items = await context.WishlistItems
+            .Where(i => i.WishlistId == wishlistId &&
+                        !i.Deleted &&
+                        !i.IsHiddenFromOwner &&
+                        itemPublicIds.Contains(i.PublicId))
+            .ToListAsync();
+
+        if (items.Count != itemPublicIds.Count)
+        {
+            throw new KeyNotFoundException("One or more selected ideas were not found in this wishlist.");
+        }
+
+        return items;
+    }
+
     public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

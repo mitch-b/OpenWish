@@ -237,6 +237,18 @@ public interface IWishlistService
         string wishlistPublicId,
         ReorderWishlistItemsRequest request);
 
+    /// <summary>Moves or copies the owner's ideas into another wishlist the same owner has.</summary>
+    Task<WishlistItemBatchResult> TransferWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        TransferWishlistItemsRequest request,
+        string requestingUserId);
+
+    /// <summary>Sets the priority, most-wanted state, or removes several of the owner's ideas at once.</summary>
+    Task<WishlistItemBatchResult> BulkUpdateWishlistItemsByPublicIdAsync(
+        string wishlistPublicId,
+        BulkUpdateWishlistItemsRequest request,
+        string requestingUserId);
+
     /// <summary>Adds a comment to a wishlist item by internal IDs.</summary>
     /// <param name="wishlistId">The internal wishlist ID.</param>
     /// <param name="itemId">The internal item ID.</param>

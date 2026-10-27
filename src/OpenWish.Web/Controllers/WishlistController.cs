@@ -325,6 +325,64 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
+    [HttpPost("{wishlistPublicId}/items/transfer")]
+    public async Task<IActionResult> TransferWishlistItems(
+        string wishlistPublicId,
+        [FromBody] TransferWishlistItemsRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _wishlistService.TransferWishlistItemsByPublicIdAsync(wishlistPublicId, request, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("{wishlistPublicId}/items/bulk")]
+    public async Task<IActionResult> BulkUpdateWishlistItems(
+        string wishlistPublicId,
+        [FromBody] BulkUpdateWishlistItemsRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _wishlistService.BulkUpdateWishlistItemsByPublicIdAsync(wishlistPublicId, request, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpDelete("{wishlistPublicId}/items/{itemId}")]
     public async Task<IActionResult> RemoveItemFromWishlist(string wishlistPublicId, int itemId)
     {

@@ -1,0 +1,120 @@
+.organize {
+    margin-bottom: 1.25rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.organize-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.organize-intro {
+    margin: 0.25rem 0 0;
+    color: var(--color-text-muted);
+}
+
+.organize-body {
+    margin-top: 1rem;
+}
+
+.organize-select-all {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--color-border-muted);
+}
+
+.organize-count {
+    margin-left: auto;
+    color: var(--color-text-muted);
+}
+
+.organize-list {
+    display: grid;
+    max-height: 18rem;
+    margin: 0;
+    padding: 0.5rem 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.organize-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+}
+
+.organize-list label {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+}
+
+.organize-name {
+    overflow-wrap: anywhere;
+}
+
+.organize-tag {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+    font-size: 0.8rem;
+}
+
+.organize-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.organize-action label,
+.organize-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.organize-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.organize-inline .form-select {
+    flex: 1 1 8rem;
+    min-width: 0;
+}
+
+.organize .btn,
+.organize .form-select {
+    min-height: 2.75rem;
+}
+
+.organize .form-check-input {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+.organize-error {
+    margin: 0.75rem 0 0;
+    color: var(--bs-danger, #b02a37);
+}

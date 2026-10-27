@@ -31,8 +31,8 @@
                        checked="@AllSelected"
                        disabled="@_isBusy"
                        @onchange="ToggleAll" />
-                <label for="organize-select-all">Select all @Items.Count @(Items.Count == 1 ? "idea" : "ideas")</label>
-                <span class="organize-count" role="status" aria-live="polite">@_selected.Count selected</span>
+                <label for="organize-select-all">@(Items.Count > MaxBatch ? $"Select first {MaxBatch} ideas" : $"Select all {Items.Count} {(Items.Count == 1 ? "idea" : "ideas")}")</label>
+                <span class="organize-count" role="status" aria-live="polite">@_selected.Count selected@(_selected.Count >= MaxBatch ? $" (limit {MaxBatch} at a time)" : string.Empty)</span>
             </div>
 
             <ul class="organize-list">
@@ -43,7 +43,7 @@
                                type="checkbox"
                                class="form-check-input"
                                checked="@_selected.Contains(item.PublicId)"
-                               disabled="@_isBusy"
+                               disabled="@(_isBusy || (!_selected.Contains(item.PublicId) && _selected.Count >= MaxBatch))"
                                @onchange="args => ToggleItem(item.PublicId, args.Value is true)" />
                         <label for="organize-item-@item.PublicId">
                             <span class="organize-name">@item.Name</span>
@@ -189,7 +189,9 @@
     private string _priority = "1";
     private string? _error;
 
-    private bool AllSelected => Items.Count > 0 && Items.All(item => _selected.Contains(item.PublicId));
+    private const int MaxBatch = 100;
+
+    private bool AllSelected => Items.Count > 0 && Items.Take(MaxBatch).All(item => _selected.Contains(item.PublicId));
 
     protected override void OnParametersSet()
     {
@@ -232,7 +234,7 @@
         _selected.Clear();
         if (args.Value is true)
         {
-            foreach (var item in Items)
+            foreach (var item in Items.Take(MaxBatch))
             {
                 _selected.Add(item.PublicId);
             }
@@ -245,6 +247,11 @@
     {
         if (isSelected)
         {
+            if (_selected.Count >= MaxBatch)
+            {
+                return;
+            }
+
             _selected.Add(publicId);
         }
         else

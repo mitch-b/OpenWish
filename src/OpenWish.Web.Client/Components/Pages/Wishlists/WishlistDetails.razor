@@ -1038,7 +1038,19 @@ else
 
     private async Task HandleOrganizeChangedAsync(string message)
     {
-        await LoadItems();
+        try
+        {
+            await LoadItems();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _feedbackMessage = string.IsNullOrEmpty(message)
+                ? "We couldn't refresh your ideas. Reload the page to see their current state."
+                : $"{message} We couldn't refresh the list, so reload the page to see the latest.";
+            _feedbackIsError = string.IsNullOrEmpty(message);
+            return;
+        }
+
         if (string.IsNullOrEmpty(message))
         {
             _feedbackMessage = "Your ideas changed before that was saved. They have been refreshed.";

@@ -11,7 +11,8 @@ All notable user-facing changes to OpenWish are documented here.
 - Move ideas to another of your wishlists, or copy them (copies start fresh,
   without reservations or comments).
 - Set priority, mark or clear most wanted, or remove many ideas at once, with a
-  confirmation before removal.
+  confirmation before removal. Up to 100 ideas can be organized at a time, and
+  a moved idea's activity moves with it.
 
 ## [0.4.0] - 2026-10-19
 

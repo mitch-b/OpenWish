@@ -1285,6 +1285,20 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             }
         }
 
+        if (!request.Copy)
+        {
+            // Activity about a moved idea must follow it so source-list viewers cannot read it.
+            var movedIds = items.Select(i => i.Id).ToList();
+            var activities = await context.ActivityLogs
+                .Where(a => a.WishlistItemId != null && movedIds.Contains(a.WishlistItemId.Value) && !a.Deleted)
+                .ToListAsync();
+            foreach (var activity in activities)
+            {
+                activity.WishlistId = target.Id;
+                activity.UpdatedOn = utcNow;
+            }
+        }
+
         await context.SaveChangesAsync();
         return new WishlistItemBatchResult { AffectedCount = items.Count, TargetWishlistName = target.Name };
     }
@@ -1307,11 +1321,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         if (request.Action == BulkWishlistItemAction.Remove)
         {
-            foreach (var item in items)
-            {
-                await RemoveItemFromWishlistAsync(wishlist.Id, item.Id);
-            }
-
+            await RemoveItemsAsync(context, wishlist, items);
             return new WishlistItemBatchResult { AffectedCount = items.Count };
         }
 
@@ -1338,6 +1348,46 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         await context.SaveChangesAsync();
         return new WishlistItemBatchResult { AffectedCount = items.Count };
+    }
+
+    private async Task RemoveItemsAsync(ApplicationDbContext context, Wishlist wishlist, List<WishlistItem> items)
+    {
+        var itemIds = items.Select(i => i.Id).ToList();
+        var utcNow = DateTimeOffset.UtcNow;
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+
+        await context.WishlistItems.Where(i => itemIds.Contains(i.Id) && !i.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Deleted, _ => true).SetProperty(i => i.UpdatedOn, _ => utcNow));
+        await context.ItemReservations.Where(r => itemIds.Contains(r.WishlistItemId) && !r.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Deleted, _ => true).SetProperty(r => r.UpdatedOn, _ => utcNow));
+        await context.ItemComments.Where(c => itemIds.Contains(c.WishlistItemId) && !c.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(c => c.Deleted, _ => true).SetProperty(c => c.UpdatedOn, _ => utcNow));
+        await context.ItemReactions.Where(r => itemIds.Contains(r.WishlistItemId) && !r.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.Deleted, _ => true).SetProperty(r => r.UpdatedOn, _ => utcNow));
+        await context.WillPurchases.Where(wp => itemIds.Contains(wp.WishlistItemId) && !wp.Deleted)
+            .ExecuteUpdateAsync(s => s.SetProperty(wp => wp.Deleted, _ => true).SetProperty(wp => wp.UpdatedOn, _ => utcNow));
+
+        foreach (var item in items)
+        {
+            context.ActivityLogs.Add(new ActivityLog
+            {
+                UserId = wishlist.OwnerId,
+                ActivityType = "ItemRemoved",
+                Description = $"Removed item: {item.Name} from wishlist {wishlist.Name}",
+                WishlistId = wishlist.Id,
+                WishlistItemId = item.Id,
+                CreatedOn = utcNow,
+                UpdatedOn = utcNow
+            });
+        }
+
+        await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
     }
 
     private static List<string> NormalizeBatchItemIds(IEnumerable<string> itemPublicIds)

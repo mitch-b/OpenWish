@@ -19,6 +19,34 @@ public class WishlistBatchOrganizeTests
         NullLoggerFactory.Instance).CreateMapper();
 
     [Fact]
+    public async Task Transfer_MoveRescopesActivityToTheTargetList()
+    {
+        var (factory, source, target, items) = await SeedAsync();
+        await using (var seed = factory.CreateDbContext())
+        {
+            seed.ActivityLogs.Add(new ActivityLog
+            {
+                UserId = "owner",
+                ActivityType = "ItemUpdated",
+                Description = "x",
+                WishlistId = source.Id,
+                WishlistItemId = items[0].Id
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        await service.TransferWishlistItemsByPublicIdAsync(
+            source.PublicId,
+            new TransferWishlistItemsRequest { ItemPublicIds = [items[0].PublicId], TargetWishlistPublicId = target.PublicId },
+            "owner");
+        await using (var context = factory.CreateDbContext())
+        {
+            Assert.Equal(target.Id, (await context.ActivityLogs.SingleAsync(a => a.ActivityType == "ItemUpdated")).WishlistId);
+        }
+    }
+
+    [Fact]
     public async Task Transfer_MovesIdeasToTheEndOfAnotherOwnedList()
     {
         var (factory, source, target, items) = await SeedAsync();

@@ -3040,7 +3040,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (JSON.stringify(plan).includes("@")) {
       throw new Error("The gift plan disclosed an email address.");
     }
-    await page.goto(`${baseUrl}/gift-plan`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    const toBuyAttention = page.getByTestId("attention-gifts-to-buy");
+    await toBuyAttention.waitFor({ state: "visible" });
+    await toBuyAttention.getByText("1 gift on your gift plan").waitFor({ state: "visible" });
+    await screenshot(page, "dashboard-gifts-to-buy.png");
+    await toBuyAttention.click();
+    await page.waitForURL(/\/gift-plan$/);
     const planPage = page.getByTestId("gift-plan");
     await planPage.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
@@ -3073,6 +3079,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
 
     const ownerContext = await browser.newContext();
     await login(ownerContext, "owner", ownerEmail);
+    const ownerPage = await ownerContext.newPage();
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("main").first().waitFor({ state: "visible" });
+    await ownerPage.waitForTimeout(1500);
+    if (await ownerPage.getByTestId("attention-gifts-to-buy").count() !== 0) {
+      throw new Error("The wishlist owner saw a gift reminder for someone else's reservation.");
+    }
     const ownerPlan = await (await ownerContext.request.get(`${baseUrl}/api/gift-plan`)).json();
     if (ownerPlan.recipients.some(recipient => recipient.items.some(item => item.itemName === "Noise-Cancelling Headphones"))) {
       throw new Error("The wishlist owner could see a shopper's gift plan.");

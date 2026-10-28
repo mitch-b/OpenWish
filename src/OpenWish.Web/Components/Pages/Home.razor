@@ -10,6 +10,7 @@
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
 @inject IDashboardService DashboardService
+@inject IGiftPlanService GiftPlanService
 @inject ILogger<Home> Logger
 @inject NavigationManager NavigationManager
 
@@ -226,9 +227,21 @@
                                 <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
                             </a>
                         }
+                        @if (GiftsToBuyCount > 0)
+                        {
+                            <a href="/gift-plan" class="attention-item" data-testid="attention-gifts-to-buy">
+                                <span class="attention-icon attention-cool"><OpenWishIcon Name="card-checklist" /></span>
+                                <span class="attention-copy">
+                                    <strong>Gifts still to buy</strong>
+                                    <small>@GiftsToBuyCount @(GiftsToBuyCount == 1 ? "gift" : "gifts") on your gift plan</small>
+                                </span>
+                                <span class="count-pill">@GiftsToBuyCount</span>
+                            </a>
+                        }
                         @if (PendingEventInvitationCount == 0 &&
                              PendingFriendRequestCount == 0 &&
-                             UpcomingEventCount == 0)
+                             UpcomingEventCount == 0 &&
+                             GiftsToBuyCount == 0)
                         {
                             <div class="attention-empty">
                                 <span class="attention-icon attention-cool"><OpenWishIcon Name="check-circle" /></span>
@@ -364,6 +377,9 @@
     [PersistentState]
     public int? PendingEventInvitationCount { get; set; }
 
+    [PersistentState]
+    public int? GiftsToBuyCount { get; set; }
+
     private List<FriendRequestModel>? _pendingFriendRequests;
     private List<EventUserModel>? _pendingEventInvitations;
     private List<WishlistModel>? _featuredWishlistsForWelcome;
@@ -380,7 +396,8 @@
         Events is not null &&
         UpcomingEventCount is not null &&
         PendingFriendRequestCount is not null &&
-        PendingEventInvitationCount is not null;
+        PendingEventInvitationCount is not null &&
+        GiftsToBuyCount is not null;
 
     private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;
 
@@ -408,6 +425,7 @@
                 await LoadFriendRequests();
                 await LoadPendingEventInvitations();
                 await LoadChecklist();
+                await LoadGiftsToBuy();
             }
             catch (Exception ex)
             {
@@ -424,6 +442,20 @@
         {
             Welcome = DashboardWelcome.Unavailable;
             _isLoading = false;
+        }
+    }
+
+    private async Task LoadGiftsToBuy()
+    {
+        try
+        {
+            GiftsToBuyCount = _userId is null ? 0 : (await GiftPlanService.GetGiftPlanAsync(_userId)).ToBuyCount;
+        }
+        catch (Exception ex)
+        {
+            // The reminder is optional; a failure must not block the dashboard.
+            Logger.LogWarning(ex, "Unable to load the gift plan for user {UserId}.", _userId);
+            GiftsToBuyCount = 0;
         }
     }
 

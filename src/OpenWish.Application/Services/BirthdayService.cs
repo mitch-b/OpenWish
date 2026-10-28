@@ -70,39 +70,27 @@ public class BirthdayService(IDbContextFactory<ApplicationDbContext> contextFact
             .ThenBy(f => f.Friend.UserName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var results = new List<UpcomingBirthdayModel>();
-        foreach (var entry in upcoming)
-        {
-            results.Add(new UpcomingBirthdayModel
-            {
-                UserName = PublicDisplayName.From(entry.Friend.UserName, "A friend"),
-                Month = entry.Friend.Month,
-                Day = entry.Friend.Day,
-                DaysUntil = entry.DaysUntil,
-                WishlistPublicId = await FindOpenableWishlistAsync(context, entry.Friend.Id, userId)
-            });
-        }
-
-        return results;
-    }
-
-    private static async Task<string?> FindOpenableWishlistAsync(ApplicationDbContext context, string ownerId, string viewerId)
-    {
+        var shown = upcoming.Select(e => e.Friend.Id).ToList();
         var candidates = await context.Wishlists
             .AsNoTracking()
-            .Where(w => !w.Deleted && w.OwnerId == ownerId)
+            .Where(w => !w.Deleted && shown.Contains(w.OwnerId))
             .OrderBy(w => w.CreatedOn)
-            .Select(w => new { w.Id, w.PublicId })
+            .Select(w => new { w.Id, w.PublicId, w.OwnerId })
             .ToListAsync();
+        var accessible = await WishlistService.GetAccessibleWishlistIdsAsync(
+            context, userId, candidates.Select(c => c.Id).ToList());
+        var firstOpenable = candidates
+            .Where(c => accessible.Contains(c.Id))
+            .GroupBy(c => c.OwnerId)
+            .ToDictionary(g => g.Key, g => g.First().PublicId);
 
-        foreach (var candidate in candidates)
+        return upcoming.Select(entry => new UpcomingBirthdayModel
         {
-            if (await WishlistService.CanUserAccessWishlistInternalAsync(context, candidate.Id, viewerId))
-            {
-                return candidate.PublicId;
-            }
-        }
-
-        return null;
+            UserName = PublicDisplayName.From(entry.Friend.UserName, "A friend"),
+            Month = entry.Friend.Month,
+            Day = entry.Friend.Day,
+            DaysUntil = entry.DaysUntil,
+            WishlistPublicId = firstOpenable.GetValueOrDefault(entry.Friend.Id)
+        }).ToList();
     }
 }

@@ -81,7 +81,7 @@
 
             @foreach (var recipient in _plan.Recipients)
             {
-                <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="recipient.RecipientName">
+                <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="RecipientKey(recipient)">
                     <header class="plan-recipient-header">
                         <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
                         <p>
@@ -214,6 +214,9 @@
 
     private static string UnpricedText(int count) => count == 1 ? "1 gift has no price" : $"{count} gifts have no price";
 
+    // Display names can repeat (for example "Shared event list"), so key on the first list instead.
+    private static string RecipientKey(GiftPlanRecipientModel recipient) => recipient.Items[0].WishlistPublicId;
+
     private static string RecipientId(GiftPlanRecipientModel recipient) =>
-        "plan-recipient-" + new string(recipient.RecipientName.Where(char.IsLetterOrDigit).ToArray());
+        "plan-recipient-" + new string(RecipientKey(recipient).Where(char.IsLetterOrDigit).ToArray());
 }

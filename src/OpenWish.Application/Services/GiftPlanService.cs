@@ -33,24 +33,24 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 Item = r.WishlistItem!,
                 Wishlist = r.WishlistItem!.Wishlist!,
                 OwnerName = r.WishlistItem.Wishlist.Owner != null ? r.WishlistItem.Wishlist.Owner.UserName : null,
-                EventName = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted
+                // Event details are private to event members, like WishlistService.AttachEventSummary.
+                EventName = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
+                    (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
+                     r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
                     ? r.WishlistItem.Wishlist.Event.Name : null,
-                EventPublicId = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted
+                EventPublicId = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
+                    (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
+                     r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
                     ? r.WishlistItem.Wishlist.Event.PublicId : null
             })
             .ToListAsync();
 
-        var accessible = new Dictionary<int, bool>();
+        var accessible = await WishlistService.GetAccessibleWishlistIdsAsync(
+            context, userId, reservations.Select(r => r.Wishlist.Id).Distinct().ToList());
         var visible = new List<(string OwnerKey, string RecipientName, GiftPlanItemModel Item)>();
         foreach (var row in reservations.OrderBy(r => r.ReservationDate))
         {
-            if (!accessible.TryGetValue(row.Wishlist.Id, out var canOpen))
-            {
-                canOpen = await WishlistService.CanUserAccessWishlistInternalAsync(context, row.Wishlist.Id, userId);
-                accessible[row.Wishlist.Id] = canOpen;
-            }
-
-            if (!canOpen)
+            if (!accessible.Contains(row.Wishlist.Id))
             {
                 continue;
             }
@@ -110,7 +110,6 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         reservation.PurchasedOn = isPurchased ? reservation.PurchasedOn ?? DateTimeOffset.UtcNow : null;
-        reservation.UpdatedOn = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync();
     }
 }

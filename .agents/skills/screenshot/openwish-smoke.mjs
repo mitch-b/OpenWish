@@ -3150,6 +3150,14 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (mine.sizes !== "Shirt L") {
       throw new Error(`Gift hints were not saved: ${JSON.stringify(mine)}`);
     }
+    await ownerPage.locator("#birthday-month").selectOption("4");
+    await ownerPage.locator("#birthday-day").selectOption("31");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("That date doesn't exist").waitFor({ state: "visible" });
+    if (await ownerPage.locator("#gift-sizes").inputValue() !== "Shirt L") {
+      throw new Error("A failed birthday submit blanked the saved gift hints.");
+    }
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
     await ownerPage.locator("#gift-sizes").fill("");
     await ownerPage.locator("#save-gift-hints").click();
     await ownerPage.getByText("Your gift hints have been saved.").waitFor({ state: "visible" });

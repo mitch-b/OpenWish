@@ -17,6 +17,8 @@
 <StatusMessage Message="@_message" />
 <p class="text-muted">Help friends choose well. Everything here is optional and shown only to your friends.</p>
 
+@if (Input is not null && Hints is not null)
+{
 <div class="row">
     <div class="col-xl-6">
         <EditForm Model="Input" FormName="birthday" OnValidSubmit="SaveBirthdayAsync" method="post">
@@ -74,6 +76,7 @@
         </EditForm>
     </div>
 </div>
+}
 
 @code {
     private string? _message;
@@ -83,23 +86,24 @@
     private HttpContext HttpContext { get; set; } = default!;
 
     [SupplyParameterFromForm(FormName = "birthday")]
-    private BirthdayInput Input { get; set; } = new();
+    private BirthdayInput Input { get; set; } = default!;
 
     [SupplyParameterFromForm(FormName = "gift-hints")]
-    private GiftProfileModel Hints { get; set; } = new();
+    private GiftProfileModel Hints { get; set; } = default!;
 
     protected override async Task OnInitializedAsync()
     {
         _user = await UserManager.GetUserAsync(HttpContext.User)
             ?? throw new InvalidOperationException("The signed-in user could not be loaded.");
 
-        if (HttpContext.Request.Method == HttpMethods.Get)
+        // Only the submitted form is bound on a POST; load the other from storage so it keeps its saved values.
+        if (Input is null)
         {
             var birthday = await BirthdayService.GetBirthdayAsync(_user.Id);
-            Input.Month = birthday.Month ?? 0;
-            Input.Day = birthday.Day ?? 0;
-            Hints = await GiftProfileService.GetMyProfileAsync(_user.Id);
+            Input = new BirthdayInput { Month = birthday.Month ?? 0, Day = birthday.Day ?? 0 };
         }
+
+        Hints ??= await GiftProfileService.GetMyProfileAsync(_user.Id);
     }
 
     private async Task SaveBirthdayAsync()

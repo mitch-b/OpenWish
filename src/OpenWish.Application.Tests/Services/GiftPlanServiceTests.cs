@@ -166,6 +166,62 @@ public class GiftPlanServiceTests
             () => new GiftPlanService(factory).SetGiftPurchasedAsync("me", wishlistId, itemId, true));
     }
 
+    [Fact]
+    public async Task GetGiftPlanAsync_HidesEventDetailsFromNonMembersWhoCanStillOpenTheList()
+    {
+        var factory = CreateFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan", "casey");
+            var secret = new Event { Name = "Surprise party", CreatedBy = jordan, Date = DateTimeOffset.UtcNow.AddDays(5) };
+            var shared = new Event { Name = "Family swap", CreatedBy = casey, Date = DateTimeOffset.UtcNow.AddDays(5) };
+            shared.EventUsers.Add(new EventUser { UserId = "me", Status = "Accepted" });
+            var hidden = new WishlistItem { Name = "Hidden event", Wishlist = new Wishlist { Name = "A", OwnerId = jordan.Id, Event = secret } };
+            var member = new WishlistItem { Name = "Member event", Wishlist = new Wishlist { Name = "B", OwnerId = casey.Id, Event = shared } };
+            seed.WishlistItems.AddRange(hidden, member);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.AddRange(Reserve(hidden, me.Id), Reserve(member, me.Id));
+            await seed.SaveChangesAsync();
+        }
+
+        var items = (await new GiftPlanService(factory).GetGiftPlanAsync("me")).Recipients.SelectMany(r => r.Items).ToList();
+
+        var hiddenItem = Assert.Single(items, i => i.ItemName == "Hidden event");
+        Assert.Null(hiddenItem.EventName);
+        Assert.Null(hiddenItem.EventPublicId);
+        Assert.Equal("Family swap", Assert.Single(items, i => i.ItemName == "Member event").EventName);
+    }
+
+    [Fact]
+    public async Task SetGiftPurchasedAsync_DoesNotTouchSharedReservationTimestamps()
+    {
+        var factory = CreateFactory();
+        var original = DateTimeOffset.UtcNow.AddDays(-3);
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var item = new WishlistItem { Name = "Scarf", Wishlist = new Wishlist { Name = "List", OwnerId = jordan.Id } };
+            seed.WishlistItems.Add(item);
+            await seed.SaveChangesAsync();
+            var reservation = Reserve(item, me.Id);
+            reservation.UpdatedOn = original;
+            seed.ItemReservations.Add(reservation);
+            await seed.SaveChangesAsync();
+        }
+
+        await using var read = factory.CreateDbContext();
+        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var listId = plan.Recipients[0].Items[0].WishlistPublicId;
+        var itemId = plan.Recipients[0].Items[0].ItemPublicId;
+        await new GiftPlanService(factory).SetGiftPurchasedAsync("me", listId, itemId, true);
+
+        var stored = await read.ItemReservations.AsNoTracking().SingleAsync();
+        Assert.NotNull(stored.PurchasedOn);
+        Assert.Equal(original, stored.UpdatedOn);
+    }
+
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
     {
         var users = (

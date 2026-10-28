@@ -8,7 +8,7 @@ namespace OpenWish.Application.Tests.Services;
 
 public class BirthdayServiceTests
 {
-    private static readonly DateTimeOffset Today = new(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _today = new(2026, 10, 28, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task GetUpcomingBirthdaysAsync_ReturnsOnlyFriendsInsideTheWindowSoonestFirst()
@@ -82,7 +82,7 @@ public class BirthdayServiceTests
     }
 
     private static BirthdayService Service(TestFactory factory) =>
-        new(factory, new FixedTimeProvider(Today));
+        new(factory, new FixedTimeProvider(_today));
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
     {

@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/ae258972-347e-433d-9a08-66051a747775/manage",
+        "/events/a3f8db5a-ef46-4910-a038-fa748a009998/manage",
         "/friends",
         "/events/demo-holiday-gift-exchange",
         "/wishlists",
@@ -170,7 +170,10 @@
         "exchange reveal is organizer-only, member-visible, hidden from outsiders, and locks reset",
         "owner confirms a stale idea; non-owners are refused",
         "owner copies, moves, prioritizes, and removes ideas in bulk; non-owners are refused",
-        "grid cards coordinate gifts inline without leaving grid view"
+        "grid cards coordinate gifts inline without leaving grid view",
+        "gift hints appear on a friend's wishlist only for friends; non-friends and owners get 404 and the account form saves and clears them",
+        "friends' upcoming birthdays (month and day only) show on the dashboard within 30 days; the account form saves and clears one",
+        "gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them"
       ]
     },
     {

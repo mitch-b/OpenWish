@@ -103,6 +103,69 @@ public class GiftPlanServiceTests
         Assert.Equal(0m, plan.Total);
     }
 
+    [Fact]
+    public async Task SetGiftPurchasedAsync_MarksAndClearsOnlyTheCallersOwnReservation()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            AddFriends(seed, "other", "jordan");
+            var list = new Wishlist { Name = "List", OwnerId = jordan.Id };
+            var mine = new WishlistItem { Name = "Mine", Price = 10m, Wishlist = list };
+            var theirs = new WishlistItem { Name = "Theirs", Price = 20m, Wishlist = list };
+            seed.WishlistItems.AddRange(mine, theirs);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.AddRange(Reserve(mine, me.Id), Reserve(theirs, other.Id));
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+        }
+
+        var service = new GiftPlanService(factory);
+        var minePublicId = (await service.GetGiftPlanAsync("me")).Recipients[0].Items[0].ItemPublicId;
+
+        await service.SetGiftPurchasedAsync("me", wishlistId, minePublicId, true);
+        var bought = await service.GetGiftPlanAsync("me");
+        Assert.Equal(1, bought.PurchasedCount);
+        Assert.Equal(0, bought.ToBuyCount);
+        Assert.Equal(0m, bought.ToBuyTotal);
+
+        await service.SetGiftPurchasedAsync("me", wishlistId, minePublicId, false);
+        var cleared = await service.GetGiftPlanAsync("me");
+        Assert.Equal(1, cleared.ToBuyCount);
+        Assert.Equal(10m, cleared.ToBuyTotal);
+
+        var theirPublicId = (await new GiftPlanService(factory).GetGiftPlanAsync("other")).Recipients[0].Items[0].ItemPublicId;
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SetGiftPurchasedAsync("me", wishlistId, theirPublicId, true));
+        await using var verify = factory.CreateDbContext();
+        Assert.All(verify.ItemReservations.Where(r => r.UserId == "other"), r => Assert.Null(r.PurchasedOn));
+    }
+
+    [Fact]
+    public async Task SetGiftPurchasedAsync_RejectsGiftsTheCallerCanNoLongerOpen()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        string itemId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, _) = AddUsers(seed);
+            var list = new Wishlist { Name = "Closed", OwnerId = jordan.Id, IsPrivate = true };
+            var item = new WishlistItem { Name = "Gift", Wishlist = list };
+            seed.WishlistItems.Add(item);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.Add(Reserve(item, me.Id));
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+            itemId = item.PublicId;
+        }
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => new GiftPlanService(factory).SetGiftPurchasedAsync("me", wishlistId, itemId, true));
+    }
+
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
     {
         var users = (

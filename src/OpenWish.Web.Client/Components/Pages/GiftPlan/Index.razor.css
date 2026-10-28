@@ -40,7 +40,15 @@
     font-weight: 700;
 }
 
-.plan-summary dd.plan-note {
+.plan-summary dd.plan-item-main small.plan-bought {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-success-text, var(--color-text-muted));
+    font-weight: 600;
+}
+
+.plan-note {
     font-size: 0.82rem;
     font-weight: 400;
 }

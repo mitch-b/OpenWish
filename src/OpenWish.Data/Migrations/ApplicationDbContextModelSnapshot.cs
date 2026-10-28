@@ -847,6 +847,9 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("text")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<DateTimeOffset?>("PurchasedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset>("ReservationDate")
                         .HasColumnType("timestamp with time zone");
 

@@ -29,6 +29,7 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             .Select(r => new
             {
                 r.ReservationDate,
+                r.PurchasedOn,
                 Item = r.WishlistItem!,
                 Wishlist = r.WishlistItem!.Wishlist!,
                 OwnerName = r.WishlistItem.Wishlist.Owner != null ? r.WishlistItem.Wishlist.Owner.UserName : null,
@@ -68,7 +69,8 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                     WishlistPublicId = row.Wishlist.PublicId,
                     EventName = row.EventName,
                     EventPublicId = row.EventPublicId,
-                    ReservedOn = row.ReservationDate
+                    ReservedOn = row.ReservationDate,
+                    PurchasedOn = row.PurchasedOn
                 }));
         }
 
@@ -83,5 +85,32 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             .ToList();
 
         return new GiftPlanModel { Recipients = recipients };
+    }
+
+    public async Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var reservation = await context.ItemReservations
+            .Include(r => r.WishlistItem)
+            .FirstOrDefaultAsync(r => !r.Deleted &&
+                                      r.UserId == userId &&
+                                      r.WishlistItem != null &&
+                                      !r.WishlistItem.Deleted &&
+                                      r.WishlistItem.PublicId == itemPublicId &&
+                                      r.WishlistItem.Wishlist != null &&
+                                      !r.WishlistItem.Wishlist.Deleted &&
+                                      r.WishlistItem.Wishlist.PublicId == wishlistPublicId)
+            ?? throw new KeyNotFoundException("You have not reserved that gift.");
+
+        if (!await WishlistService.CanUserAccessWishlistInternalAsync(context, reservation.WishlistItem!.WishlistId, userId))
+        {
+            throw new KeyNotFoundException("You have not reserved that gift.");
+        }
+
+        reservation.PurchasedOn = isPurchased ? reservation.PurchasedOn ?? DateTimeOffset.UtcNow : null;
+        reservation.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
     }
 }

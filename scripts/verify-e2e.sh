@@ -211,6 +211,7 @@ test -s "$walkthrough_directory/exchange-revealed-mobile.png"
 test -s "$walkthrough_directory/stale-ideas.png"
 test -s "$walkthrough_directory/grid-inline-coordination.png"
 test -s "$walkthrough_directory/gift-plan.png"
+test -s "$walkthrough_directory/gift-plan-bought.png"
 test -s "$walkthrough_directory/gift-plan-mobile.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 

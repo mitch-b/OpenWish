@@ -15,10 +15,19 @@
 
 <div class="container page-shell gift-plan" data-testid="gift-plan">
     <PageHeader Title="My gift plan"
-                Description="Every gift you've reserved, by person. Only you can see this page." />
+                Description="Every gift you've reserved, by person, and what is still to buy. Only you can see this page." />
 
     <section aria-labelledby="gift-plan-heading" aria-busy="@(_isLoading ? "true" : "false")">
         <h2 id="gift-plan-heading" class="visually-hidden">Gifts you've reserved</h2>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <p class="visually-hidden" role="status" aria-live="polite">@_statusMessage</p>
+        }
+        @if (_actionError is not null)
+        {
+            <div class="alert alert-danger" role="alert">@_actionError</div>
+        }
 
         @if (_loadError is not null)
         {
@@ -51,12 +60,18 @@
                     <dd data-testid="gift-plan-count">@_plan.ItemCount</dd>
                 </div>
                 <div>
+                    <dt>Still to buy</dt>
+                    <dd data-testid="gift-plan-to-buy">@_plan.ToBuyCount</dd>
+                    <dd class="plan-note">@_plan.PurchasedCount bought</dd>
+                </div>
+                <div>
                     <dt>People</dt>
                     <dd>@_plan.Recipients.Count</dd>
                 </div>
                 <div>
                     <dt>Estimated total</dt>
                     <dd data-testid="gift-plan-total">@_plan.Total.ToString("C")</dd>
+                    <dd class="plan-note">@_plan.ToBuyTotal.ToString("C") still to buy</dd>
                     @if (_plan.UnpricedCount > 0)
                     {
                         <dd class="plan-note">@UnpricedText(_plan.UnpricedCount)</dd>
@@ -72,6 +87,7 @@
                         <p>
                             @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
                             &middot; @recipient.Total.ToString("C")
+                            &middot; @recipient.ToBuyCount to buy
                             @if (recipient.UnpricedCount > 0)
                             {
                                 <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
@@ -92,8 +108,22 @@
                                         }
                                     </small>
                                     <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                    @if (item.PurchasedOn is { } purchasedOn)
+                                    {
+                                        <small class="plan-bought" data-testid="gift-plan-bought">
+                                            <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d, yyyy")
+                                        </small>
+                                    }
                                 </div>
                                 <div class="plan-item-side">
+                                    <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
+                                            type="button"
+                                            data-testid="gift-plan-toggle"
+                                            disabled="@(_busyKey is not null)"
+                                            @onclick="() => TogglePurchasedAsync(item)">
+                                        @(_busyKey == KeyOf(item) ? "Saving..." : item.IsPurchased ? "Not bought yet" : "Mark as bought")
+                                        <span class="visually-hidden"> for @item.ItemName</span>
+                                    </button>
                                     <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
                                     @if (!string.IsNullOrWhiteSpace(item.Url))
                                     {
@@ -119,8 +149,42 @@
     private GiftPlanModel? _plan;
     private bool _isLoading = true;
     private string? _loadError;
+    private string? _actionError;
+    private string? _statusMessage;
+    private string? _busyKey;
+    private string? _userId;
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    private static string KeyOf(GiftPlanItemModel item) => $"{item.WishlistPublicId}/{item.ItemPublicId}";
+
+    private async Task TogglePurchasedAsync(GiftPlanItemModel item)
+    {
+        if (_busyKey is not null || _userId is null)
+        {
+            return;
+        }
+
+        var markBought = !item.IsPurchased;
+        _busyKey = KeyOf(item);
+        _actionError = null;
+        _statusMessage = null;
+        try
+        {
+            await GiftPlanService.SetGiftPurchasedAsync(_userId, item.WishlistPublicId, item.ItemPublicId, markBought);
+            _plan = await GiftPlanService.GetGiftPlanAsync(_userId);
+            _statusMessage = markBought ? $"{item.ItemName} marked as bought." : $"{item.ItemName} moved back to still to buy.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Updating a gift's bought status failed.");
+            _actionError = $"We couldn't update {item.ItemName}. Try again.";
+        }
+        finally
+        {
+            _busyKey = null;
+        }
+    }
 
     private async Task LoadAsync()
     {
@@ -128,14 +192,14 @@
         _loadError = null;
         try
         {
-            var userId = await UserContextService.GetUserIdAsync();
-            if (string.IsNullOrWhiteSpace(userId))
+            _userId ??= await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(_userId))
             {
                 _loadError = "Sign in again to see your gift plan.";
                 return;
             }
 
-            _plan = await GiftPlanService.GetGiftPlanAsync(userId);
+            _plan = await GiftPlanService.GetGiftPlanAsync(_userId);
         }
         catch (Exception ex)
         {

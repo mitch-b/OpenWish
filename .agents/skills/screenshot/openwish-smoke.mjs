@@ -3046,6 +3046,26 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-total").filter({ hasText: "249.99" }).waitFor({ state: "visible" });
     await screenshot(page, "gift-plan.png");
+    const headphonesRow = planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" });
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).click();
+    await headphonesRow.getByTestId("gift-plan-bought").waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-to-buy").filter({ hasText: "0" }).waitFor({ state: "visible" });
+    const afterBuy = await (await context.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (!afterBuy.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.purchasedOn)) {
+      throw new Error("Marking a gift as bought was not saved.");
+    }
+    await screenshot(page, "gift-plan-bought.png");
+    const notReserver = await browser.newContext();
+    await login(notReserver, "owner", ownerEmail);
+    const forbiddenToggle = await notReserver.request.put(
+      `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/purchased`,
+      { data: { isPurchased: true } });
+    if (forbiddenToggle.status() !== 404) {
+      throw new Error(`A non-reserver changed a gift's bought status (${forbiddenToggle.status()}).`);
+    }
+    await notReserver.close();
+    await headphonesRow.getByRole("button", { name: /Not bought yet/ }).click();
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).waitFor({ state: "visible" });
     await page.setViewportSize({ width: 390, height: 844 });
     await planPage.getByTestId("gift-plan-item").first().waitFor({ state: "visible" });
     await assertNoHorizontalScroll(page, "gift plan");

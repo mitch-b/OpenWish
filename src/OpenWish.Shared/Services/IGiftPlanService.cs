@@ -10,4 +10,11 @@ public interface IGiftPlanService
     /// returned, and never for wishlists the caller can no longer open.
     /// </summary>
     Task<GiftPlanModel> GetGiftPlanAsync(string userId);
+
+    /// <summary>
+    /// Marks the caller's own reservation as bought, or back to still-to-buy. Throws
+    /// <see cref="KeyNotFoundException"/> unless the caller holds an active reservation on a
+    /// wishlist they can still open.
+    /// </summary>
+    Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased);
 }

@@ -11,6 +11,7 @@
 @inject IFriendService FriendService
 @inject IDashboardService DashboardService
 @inject IGiftPlanService GiftPlanService
+@inject IBirthdayService BirthdayService
 @inject ILogger<Home> Logger
 @inject NavigationManager NavigationManager
 
@@ -151,6 +152,30 @@
                             </li>
                         }
                     </ol>
+                </section>
+            }
+
+            @if (UpcomingBirthdays is { Count: > 0 })
+            {
+                <section class="birthday-panel" aria-labelledby="birthday-title" data-testid="upcoming-birthdays">
+                    <h2 id="birthday-title">Birthdays coming up</h2>
+                    <ul class="birthday-list">
+                        @foreach (var birthday in UpcomingBirthdays)
+                        {
+                            <li data-testid="upcoming-birthday">
+                                <span class="birthday-copy">
+                                    <strong>@birthday.UserName</strong>
+                                    <small>@BirthdayCalendar.Format(birthday.Month, birthday.Day) &middot; @BirthdayCountdown(birthday.DaysUntil)</small>
+                                </span>
+                                @if (birthday.WishlistPublicId is not null)
+                                {
+                                    <a class="btn btn-outline-primary btn-sm" href="/wishlists/@birthday.WishlistPublicId">
+                                        View list<span class="visually-hidden"> for @birthday.UserName</span>
+                                    </a>
+                                }
+                            </li>
+                        }
+                    </ul>
                 </section>
             }
 
@@ -380,6 +405,9 @@
     [PersistentState]
     public int? GiftsToBuyCount { get; set; }
 
+    [PersistentState]
+    public List<UpcomingBirthdayModel>? UpcomingBirthdays { get; set; }
+
     private List<FriendRequestModel>? _pendingFriendRequests;
     private List<EventUserModel>? _pendingEventInvitations;
     private List<WishlistModel>? _featuredWishlistsForWelcome;
@@ -397,7 +425,8 @@
         UpcomingEventCount is not null &&
         PendingFriendRequestCount is not null &&
         PendingEventInvitationCount is not null &&
-        GiftsToBuyCount is not null;
+        GiftsToBuyCount is not null &&
+        UpcomingBirthdays is not null;
 
     private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;
 
@@ -426,6 +455,7 @@
                 await LoadPendingEventInvitations();
                 await LoadChecklist();
                 await LoadGiftsToBuy();
+                await LoadUpcomingBirthdays();
             }
             catch (Exception ex)
             {
@@ -442,6 +472,27 @@
         {
             Welcome = DashboardWelcome.Unavailable;
             _isLoading = false;
+        }
+    }
+
+    private static string BirthdayCountdown(int daysUntil) => daysUntil switch
+    {
+        0 => "today",
+        1 => "tomorrow",
+        _ => $"in {daysUntil} days"
+    };
+
+    private async Task LoadUpcomingBirthdays()
+    {
+        try
+        {
+            UpcomingBirthdays = _userId is null ? [] : (await BirthdayService.GetUpcomingBirthdaysAsync(_userId)).Take(3).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Birthdays are optional; a failure must not block the dashboard.
+            Logger.LogWarning(ex, "Unable to load upcoming birthdays for user {UserId}.", _userId);
+            UpcomingBirthdays = [];
         }
     }
 

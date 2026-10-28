@@ -3090,8 +3090,42 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (ownerPlan.recipients.some(recipient => recipient.items.some(item => item.itemName === "Noise-Cancelling Headphones"))) {
       throw new Error("The wishlist owner could see a shopper's gift plan.");
     }
+    const birthdayPanel = ownerPage.getByTestId("upcoming-birthdays");
+    await birthdayPanel.waitFor({ state: "visible" });
+    await birthdayPanel.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).waitFor({ state: "visible" });
+    if (await birthdayPanel.getByText("CaseyDemo").count() !== 0) {
+      throw new Error("A birthday outside the 30-day window appeared on the dashboard.");
+    }
+    await screenshot(ownerPage, "dashboard-birthdays.png");
+    const upcoming = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/upcoming`)).json();
+    if (upcoming.length !== 1 || upcoming[0].userName !== "JordanDemo" || "year" in upcoming[0] || "email" in upcoming[0]) {
+      throw new Error(`Unexpected upcoming birthdays payload: ${JSON.stringify(upcoming)}`);
+    }
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("#birthday-month").selectOption("12");
+    await ownerPage.locator("#birthday-day").selectOption("25");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("Your birthday has been saved.").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "account-birthday.png");
+    const saved = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/me`)).json();
+    if (saved.month !== 12 || saved.day !== 25) {
+      throw new Error(`Birthday was not saved: ${JSON.stringify(saved)}`);
+    }
+    await ownerPage.locator("#birthday-month").selectOption("0");
+    await ownerPage.locator("#birthday-day").selectOption("0");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("Your birthday is no longer shared.").waitFor({ state: "visible" });
+    await ownerPage.setViewportSize({ width: 390, height: 844 });
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await birthdayPanel.waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(ownerPage, "dashboard birthdays");
+    await screenshot(ownerPage, "dashboard-birthdays-mobile.png");
     await ownerContext.close();
     const anonymous = await browser.newContext();
+    const anonymousBirthdays = await anonymous.request.get(`${baseUrl}/api/birthdays/upcoming`, { maxRedirects: 0 });
+    if (anonymousBirthdays.ok()) {
+      throw new Error("An anonymous visitor could request upcoming birthdays.");
+    }
     const anonymousResponse = await anonymous.request.get(`${baseUrl}/api/gift-plan`, { maxRedirects: 0 });
     if (anonymousResponse.ok()) {
       throw new Error("An anonymous visitor could request a gift plan.");
@@ -3100,6 +3134,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
       throw new Error(`Gift plan diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
+    assertions.push("friends' upcoming birthdays (month and day only) show on the dashboard within 30 days; the account form saves and clears one");
     assertions.push("gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them");
     await context.close();
   }

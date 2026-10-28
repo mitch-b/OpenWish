@@ -223,6 +223,12 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("BirthdayDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BirthdayMonth")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("ChecklistDismissedOn")
                         .HasColumnType("timestamp with time zone");
 

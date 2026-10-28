@@ -187,6 +187,13 @@ public sealed class DevelopmentDataSeeder(
         var secondFriend = await context.Users.SingleAsync(user => user.Id == secondFriendIdentity.Id, cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
+        var birthday = DateOnly.FromDateTime(now.UtcDateTime).AddDays(9);
+        friend.BirthdayMonth = birthday.Month;
+        friend.BirthdayDay = birthday.Day;
+        var distantBirthday = birthday.AddMonths(6);
+        secondFriend.BirthdayMonth = distantBirthday.Month;
+        secondFriend.BirthdayDay = distantBirthday.Day;
+
         var eventEntity = new Event
         {
             PublicId = EventPublicId,

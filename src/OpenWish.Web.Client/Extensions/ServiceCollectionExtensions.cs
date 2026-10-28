@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventService, EventHttpClientService>();
         services.AddScoped<IProductService, ProductHttpClientService>();
         services.AddScoped<IDashboardService, DashboardHttpClientService>();
+        services.AddScoped<IGiftPlanService, GiftPlanHttpClientService>();
 
         // Social features
         services.AddScoped<IFriendService, FriendHttpClientService>();

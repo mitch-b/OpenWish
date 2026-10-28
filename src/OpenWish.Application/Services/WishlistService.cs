@@ -740,7 +740,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await CanUserAccessWishlistInternalAsync(context, wishlistId, userId);
     }
 
-    private static async Task<bool> CanUserAccessWishlistInternalAsync(ApplicationDbContext context, int wishlistId, string userId)
+    internal static async Task<bool> CanUserAccessWishlistInternalAsync(ApplicationDbContext context, int wishlistId, string userId)
     {
         var wishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted);

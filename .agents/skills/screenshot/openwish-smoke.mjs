@@ -2678,6 +2678,12 @@ async function verifyFriendJourney(browser, manifest, results) {
   await context.close();
 }
 
+async function assertNoHorizontalScroll(page, description) {
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error(`The ${description} page has horizontal overflow.`);
+  }
+}
+
 async function verifyFeatureDayJourney(browser, manifest, results) {
   const assertions = [];
   const pastEventId = "demo-summer-cookout-swap";
@@ -3013,6 +3019,55 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       throw new Error(`Grid diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
     assertions.push("grid cards coordinate gifts inline without leaving grid view");
+    await context.close();
+  }
+
+  // A1: a shopper sees only their own reservations, grouped by recipient.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "friend", friendEmail);
+    const planApi = await context.request.get(`${baseUrl}/api/gift-plan`);
+    if (!planApi.ok()) {
+      throw new Error(`Gift plan API returned ${planApi.status()}.`);
+    }
+    const plan = await planApi.json();
+    const alexGroup = plan.recipients.find(recipient => recipient.recipientName === "AlexDemo");
+    if (!alexGroup || !alexGroup.items.some(item => item.itemName === "Noise-Cancelling Headphones")) {
+      throw new Error(`The gift plan is missing the reserved headphones: ${JSON.stringify(plan)}`);
+    }
+    if (JSON.stringify(plan).includes("@")) {
+      throw new Error("The gift plan disclosed an email address.");
+    }
+    await page.goto(`${baseUrl}/gift-plan`, { waitUntil: "domcontentloaded" });
+    const planPage = page.getByTestId("gift-plan");
+    await planPage.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-total").filter({ hasText: "249.99" }).waitFor({ state: "visible" });
+    await screenshot(page, "gift-plan.png");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await planPage.getByTestId("gift-plan-item").first().waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(page, "gift plan");
+    await screenshot(page, "gift-plan-mobile.png");
+
+    const ownerContext = await browser.newContext();
+    await login(ownerContext, "owner", ownerEmail);
+    const ownerPlan = await (await ownerContext.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (ownerPlan.recipients.some(recipient => recipient.items.some(item => item.itemName === "Noise-Cancelling Headphones"))) {
+      throw new Error("The wishlist owner could see a shopper's gift plan.");
+    }
+    await ownerContext.close();
+    const anonymous = await browser.newContext();
+    const anonymousResponse = await anonymous.request.get(`${baseUrl}/api/gift-plan`, { maxRedirects: 0 });
+    if (anonymousResponse.ok()) {
+      throw new Error("An anonymous visitor could request a gift plan.");
+    }
+    await anonymous.close();
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Gift plan diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    assertions.push("gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them");
     await context.close();
   }
 

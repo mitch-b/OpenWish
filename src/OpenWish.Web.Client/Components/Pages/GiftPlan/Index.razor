@@ -1,0 +1,155 @@
+@page "/gift-plan"
+@attribute [Authorize]
+
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Shared
+
+@inject IGiftPlanService GiftPlanService
+@inject IUserContextService UserContextService
+@inject ILogger<Index> Logger
+
+@rendermode InteractiveAuto
+
+<PageTitle>My gift plan</PageTitle>
+
+<div class="container page-shell gift-plan" data-testid="gift-plan">
+    <PageHeader Title="My gift plan"
+                Description="Every gift you've reserved, by person. Only you can see this page." />
+
+    <section aria-labelledby="gift-plan-heading" aria-busy="@(_isLoading ? "true" : "false")">
+        <h2 id="gift-plan-heading" class="visually-hidden">Gifts you've reserved</h2>
+
+        @if (_loadError is not null)
+        {
+            <div class="alert alert-danger" role="alert">
+                <p class="mb-2">@_loadError</p>
+                <button class="btn btn-outline-danger btn-sm" type="button" disabled="@_isLoading" @onclick="LoadAsync">Try again</button>
+            </div>
+        }
+        else if (_plan is null)
+        {
+            <div class="text-center" role="status">
+                <div class="spinner-border text-primary" aria-hidden="true"></div>
+                <div class="mt-2">Loading your gift plan...</div>
+            </div>
+        }
+        else if (_plan.ItemCount == 0)
+        {
+            <div class="empty-state text-center" data-testid="gift-plan-empty">
+                <OpenWishIcon Name="gift" Class="empty-state-icon" />
+                <h2>Nothing reserved yet</h2>
+                <p class="lead">Reserve an idea on a friend's wishlist and it will show up here, grouped by person.</p>
+                <a href="/wishlists" class="btn btn-primary btn-lg mt-3">Browse wishlists</a>
+            </div>
+        }
+        else
+        {
+            <dl class="plan-summary" data-testid="gift-plan-summary">
+                <div>
+                    <dt>Gifts reserved</dt>
+                    <dd data-testid="gift-plan-count">@_plan.ItemCount</dd>
+                </div>
+                <div>
+                    <dt>People</dt>
+                    <dd>@_plan.Recipients.Count</dd>
+                </div>
+                <div>
+                    <dt>Estimated total</dt>
+                    <dd data-testid="gift-plan-total">@_plan.Total.ToString("C")</dd>
+                    @if (_plan.UnpricedCount > 0)
+                    {
+                        <dd class="plan-note">@UnpricedText(_plan.UnpricedCount)</dd>
+                    }
+                </div>
+            </dl>
+
+            @foreach (var recipient in _plan.Recipients)
+            {
+                <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="recipient.RecipientName">
+                    <header class="plan-recipient-header">
+                        <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
+                        <p>
+                            @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
+                            &middot; @recipient.Total.ToString("C")
+                            @if (recipient.UnpricedCount > 0)
+                            {
+                                <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
+                            }
+                        </p>
+                    </header>
+                    <ul class="plan-items">
+                        @foreach (var item in recipient.Items)
+                        {
+                            <li class="plan-item" data-testid="gift-plan-item" @key="@($"{item.WishlistPublicId}/{item.ItemPublicId}")">
+                                <div class="plan-item-main">
+                                    <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
+                                    <small>
+                                        @item.WishlistName
+                                        @if (item.EventName is not null)
+                                        {
+                                            <span> &middot; <a href="/events/@item.EventPublicId">@item.EventName</a></span>
+                                        }
+                                    </small>
+                                    <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                </div>
+                                <div class="plan-item-side">
+                                    <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.Url))
+                                    {
+                                        <a class="btn btn-outline-primary btn-sm"
+                                           href="@item.Url"
+                                           target="_blank"
+                                           rel="noopener noreferrer nofollow"
+                                           aria-label="Open store page for @item.ItemName (opens in a new tab)">
+                                            <OpenWishIcon Name="box-arrow-up-right" /> Store
+                                        </a>
+                                    }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+        }
+    </section>
+</div>
+
+@code {
+    private GiftPlanModel? _plan;
+    private bool _isLoading = true;
+    private string? _loadError;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        _loadError = null;
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _loadError = "Sign in again to see your gift plan.";
+                return;
+            }
+
+            _plan = await GiftPlanService.GetGiftPlanAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load the gift plan.");
+            _loadError = "Your gift plan could not be loaded. Try again.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string UnpricedText(int count) => count == 1 ? "1 gift has no price" : $"{count} gifts have no price";
+
+    private static string RecipientId(GiftPlanRecipientModel recipient) =>
+        "plan-recipient-" + new string(recipient.RecipientName.Where(char.IsLetterOrDigit).ToArray());
+}

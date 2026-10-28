@@ -1,0 +1,137 @@
+.page-shell {
+    padding-top: 0.5rem;
+}
+
+.empty-state {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    padding: 2rem 1rem;
+    color: var(--color-text);
+}
+
+.empty-state-icon {
+    width: 3rem;
+    height: 3rem;
+    color: var(--color-primary-bg);
+    margin-bottom: 1rem;
+}
+
+.plan-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+}
+
+.plan-summary dt {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.plan-summary dd {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.plan-summary dd.plan-note {
+    font-size: 0.82rem;
+    font-weight: 400;
+}
+
+.plan-note {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.plan-recipient {
+    margin-bottom: 1.5rem;
+}
+
+.plan-recipient-header {
+    margin-bottom: 0.5rem;
+}
+
+.plan-recipient-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    overflow-wrap: anywhere;
+}
+
+.plan-recipient-header p {
+    margin: 0.15rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.plan-items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+}
+
+.plan-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1.1rem;
+}
+
+.plan-item + .plan-item {
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.plan-item-main {
+    display: grid;
+    min-width: 0;
+}
+
+.plan-item-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.plan-item-main small {
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.plan-item-side {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.plan-price {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.plan-item-side .btn {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+@media (max-width: 575.98px) {
+    .plan-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .plan-item-side {
+        justify-content: space-between;
+    }
+}

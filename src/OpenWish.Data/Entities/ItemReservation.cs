@@ -10,4 +10,7 @@ public class ItemReservation : BaseEntity
 
     public DateTimeOffset ReservationDate { get; set; }
     public bool IsAnonymous { get; set; }
+
+    /// <summary>Set when the reserver has bought the gift. Never shown to the list owner or other shoppers.</summary>
+    public DateTimeOffset? PurchasedOn { get; set; }
 }

@@ -104,6 +104,11 @@ else
         </div>
     }
 
+    @if (!_isOwner && _wishlist is not null && !string.IsNullOrEmpty(_currentUserId))
+    {
+        <GiftProfilePanel WishlistPublicId="@_wishlist.PublicId" ViewerId="@_currentUserId" />
+    }
+
     <div class="stats-dashboard">
         <div class="stat-card">
             <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>

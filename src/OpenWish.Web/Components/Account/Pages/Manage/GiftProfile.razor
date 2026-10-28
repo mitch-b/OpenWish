@@ -1,0 +1,151 @@
+@page "/Account/Manage/GiftProfile"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using OpenWish.Data.Entities
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IBirthdayService BirthdayService
+@inject IGiftProfileService GiftProfileService
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Gift profile</PageTitle>
+
+<h3>Gift profile</h3>
+<StatusMessage Message="@_message" />
+<p class="text-muted">Help friends choose well. Everything here is optional and shown only to your friends.</p>
+
+@if (Input is not null && Hints is not null)
+{
+<div class="row">
+    <div class="col-xl-6">
+        <EditForm Model="Input" FormName="birthday" OnValidSubmit="SaveBirthdayAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <h4 class="h5">Birthday</h4>
+            <p id="birthday-help" class="form-text">Share just the month and day, never the year. Friends see it on their dashboard shortly before.</p>
+            <div class="row g-2 mb-3">
+                <div class="col-8 form-floating">
+                    <InputSelect @bind-Value="Input.Month" id="birthday-month" class="form-select" aria-describedby="birthday-help">
+                        <option value="0">Not shared</option>
+                        @for (var month = 1; month <= 12; month++)
+                        {
+                            <option value="@month">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                        }
+                    </InputSelect>
+                    <label for="birthday-month">Month</label>
+                </div>
+                <div class="col-4 form-floating">
+                    <InputSelect @bind-Value="Input.Day" id="birthday-day" class="form-select" aria-describedby="birthday-help">
+                        <option value="0">-</option>
+                        @for (var day = 1; day <= 31; day++)
+                        {
+                            <option value="@day">@day</option>
+                        }
+                    </InputSelect>
+                    <label for="birthday-day">Day</label>
+                </div>
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-birthday">Save birthday</button>
+        </EditForm>
+    </div>
+    <div class="col-xl-6">
+        <EditForm Model="Hints" FormName="gift-hints" OnValidSubmit="SaveHintsAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <h4 class="h5">Gift hints</h4>
+            <p id="hints-help" class="form-text">Shown on your lists to friends only.</p>
+            <div class="form-floating mb-3">
+                <InputTextArea @bind-Value="Hints.Sizes" id="gift-sizes" class="form-control" style="height: 6rem" placeholder="Sizes" aria-describedby="hints-help" />
+                <label for="gift-sizes">Sizes (clothing, shoes, rings)</label>
+                <ValidationMessage For="() => Hints.Sizes" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputTextArea @bind-Value="Hints.Favorites" id="gift-favorites" class="form-control" style="height: 6rem" placeholder="Favorites" aria-describedby="hints-help" />
+                <label for="gift-favorites">Favorite colors, brands, shops</label>
+                <ValidationMessage For="() => Hints.Favorites" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputTextArea @bind-Value="Hints.Avoid" id="gift-avoid" class="form-control" style="height: 6rem" placeholder="Avoid" aria-describedby="hints-help" />
+                <label for="gift-avoid">Please avoid (allergies, duplicates)</label>
+                <ValidationMessage For="() => Hints.Avoid" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-gift-hints">Save gift hints</button>
+        </EditForm>
+    </div>
+</div>
+}
+
+@code {
+    private string? _message;
+    private ApplicationUser _user = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "birthday")]
+    private BirthdayInput Input { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "gift-hints")]
+    private GiftProfileModel Hints { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = await UserManager.GetUserAsync(HttpContext.User)
+            ?? throw new InvalidOperationException("The signed-in user could not be loaded.");
+
+        // Only the submitted form is bound on a POST; load the other from storage so it keeps its saved values.
+        if (Input is null)
+        {
+            var birthday = await BirthdayService.GetBirthdayAsync(_user.Id);
+            Input = new BirthdayInput { Month = birthday.Month ?? 0, Day = birthday.Day ?? 0 };
+        }
+
+        Hints ??= await GiftProfileService.GetMyProfileAsync(_user.Id);
+    }
+
+    private async Task SaveBirthdayAsync()
+    {
+        int? month = Input.Month == 0 ? null : Input.Month;
+        int? day = Input.Day == 0 ? null : Input.Day;
+        try
+        {
+            await BirthdayService.SetBirthdayAsync(_user.Id, month, day);
+        }
+        catch (ArgumentException ex)
+        {
+            _message = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToCurrentPageWithStatus(
+            month is null ? "Your birthday is no longer shared." : "Your birthday has been saved.",
+            HttpContext);
+    }
+
+    private async Task SaveHintsAsync()
+    {
+        try
+        {
+            await GiftProfileService.SetMyProfileAsync(_user.Id, Hints);
+        }
+        catch (ArgumentException ex)
+        {
+            _message = $"Error: {ex.Message}";
+            return;
+        }
+
+        RedirectManager.RedirectToCurrentPageWithStatus("Your gift hints have been saved.", HttpContext);
+    }
+
+    private sealed class BirthdayInput
+    {
+        [Range(0, 12)]
+        public int Month { get; set; }
+
+        [Range(0, 31)]
+        public int Day { get; set; }
+    }
+}

@@ -2,6 +2,18 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.6.0] - 2026-10-28
+
+### Added
+
+- A "Gift plan" page listing the gifts you reserved, grouped by recipient with
+  totals, plus a per-gift "Mark as bought" toggle that stays private to you.
+- A dashboard reminder for gifts still to buy.
+- Optional birthdays (month and day only) shared with friends; upcoming
+  friend birthdays appear on the dashboard within 30 days.
+- Optional gift hints (sizes, favorites, things to avoid) shown on your
+  wishlists to friends only, edited under Account > Gift profile.
+
 ## [0.5.0] - 2026-10-27
 
 ### Added

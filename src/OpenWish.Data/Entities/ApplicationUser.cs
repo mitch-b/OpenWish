@@ -12,6 +12,15 @@ public class ApplicationUser : IdentityUser
 
     public DateTimeOffset? ChecklistDismissedOn { get; set; }
 
+    // Optional birthday (no year), visible only to friends
+    public int? BirthdayMonth { get; set; }
+    public int? BirthdayDay { get; set; }
+
+    // Optional gift hints, visible only to friends
+    public string? GiftSizes { get; set; }
+    public string? GiftFavorites { get; set; }
+    public string? GiftAvoid { get; set; }
+
     // Social features
     public ICollection<Friend> Friends { get; set; } = [];
     public ICollection<FriendRequest> SentFriendRequests { get; set; } = [];

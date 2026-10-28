@@ -223,6 +223,12 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("BirthdayDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BirthdayMonth")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset?>("ChecklistDismissedOn")
                         .HasColumnType("timestamp with time zone");
 
@@ -236,6 +242,15 @@ namespace OpenWish.Data.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("GiftAvoid")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GiftFavorites")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GiftSizes")
+                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -846,6 +861,9 @@ namespace OpenWish.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset?>("PurchasedOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("ReservationDate")
                         .HasColumnType("timestamp with time zone");

@@ -2678,6 +2678,12 @@ async function verifyFriendJourney(browser, manifest, results) {
   await context.close();
 }
 
+async function assertNoHorizontalScroll(page, description) {
+  if (await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)) {
+    throw new Error(`The ${description} page has horizontal overflow.`);
+  }
+}
+
 async function verifyFeatureDayJourney(browser, manifest, results) {
   const assertions = [];
   const pastEventId = "demo-summer-cookout-swap";
@@ -3013,6 +3019,165 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       throw new Error(`Grid diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
     assertions.push("grid cards coordinate gifts inline without leaving grid view");
+    await context.close();
+  }
+
+  // A1: a shopper sees only their own reservations, grouped by recipient.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, "friend", friendEmail);
+    const planApi = await context.request.get(`${baseUrl}/api/gift-plan`);
+    if (!planApi.ok()) {
+      throw new Error(`Gift plan API returned ${planApi.status()}.`);
+    }
+    const plan = await planApi.json();
+    const alexGroup = plan.recipients.find(recipient => recipient.recipientName === "AlexDemo");
+    if (!alexGroup || !alexGroup.items.some(item => item.itemName === "Noise-Cancelling Headphones")) {
+      throw new Error(`The gift plan is missing the reserved headphones: ${JSON.stringify(plan)}`);
+    }
+    if (JSON.stringify(plan).includes("@")) {
+      throw new Error("The gift plan disclosed an email address.");
+    }
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    const toBuyAttention = page.getByTestId("attention-gifts-to-buy");
+    await toBuyAttention.waitFor({ state: "visible" });
+    await toBuyAttention.getByText("1 gift on your gift plan").waitFor({ state: "visible" });
+    await screenshot(page, "dashboard-gifts-to-buy.png");
+    await toBuyAttention.click();
+    await page.waitForURL(/\/gift-plan$/);
+    const planPage = page.getByTestId("gift-plan");
+    await planPage.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-total").filter({ hasText: "249.99" }).waitFor({ state: "visible" });
+    await screenshot(page, "gift-plan.png");
+    const headphonesRow = planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" });
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).click();
+    await headphonesRow.getByTestId("gift-plan-bought").waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-to-buy").filter({ hasText: "0" }).waitFor({ state: "visible" });
+    const afterBuy = await (await context.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (!afterBuy.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.purchasedOn)) {
+      throw new Error("Marking a gift as bought was not saved.");
+    }
+    await screenshot(page, "gift-plan-bought.png");
+    const notReserver = await browser.newContext();
+    await login(notReserver, "owner", ownerEmail);
+    const forbiddenToggle = await notReserver.request.put(
+      `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/purchased`,
+      { data: { isPurchased: true } });
+    if (forbiddenToggle.status() !== 404) {
+      throw new Error(`A non-reserver changed a gift's bought status (${forbiddenToggle.status()}).`);
+    }
+    await notReserver.close();
+    await headphonesRow.getByRole("button", { name: /Not bought yet/ }).click();
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).waitFor({ state: "visible" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await planPage.getByTestId("gift-plan-item").first().waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(page, "gift plan");
+    await screenshot(page, "gift-plan-mobile.png");
+
+    const ownerContext = await browser.newContext();
+    await login(ownerContext, "owner", ownerEmail);
+    const ownerPage = await ownerContext.newPage();
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("main").first().waitFor({ state: "visible" });
+    await ownerPage.waitForTimeout(1500);
+    if (await ownerPage.getByTestId("attention-gifts-to-buy").count() !== 0) {
+      throw new Error("The wishlist owner saw a gift reminder for someone else's reservation.");
+    }
+    const ownerPlan = await (await ownerContext.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (ownerPlan.recipients.some(recipient => recipient.items.some(item => item.itemName === "Noise-Cancelling Headphones"))) {
+      throw new Error("The wishlist owner could see a shopper's gift plan.");
+    }
+    const birthdayPanel = ownerPage.getByTestId("upcoming-birthdays");
+    await birthdayPanel.waitFor({ state: "visible" });
+    await birthdayPanel.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).waitFor({ state: "visible" });
+    if (await birthdayPanel.getByText("CaseyDemo").count() !== 0) {
+      throw new Error("A birthday outside the 30-day window appeared on the dashboard.");
+    }
+    await screenshot(ownerPage, "dashboard-birthdays.png");
+    const upcoming = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/upcoming`)).json();
+    if (upcoming.length !== 1 || upcoming[0].userName !== "JordanDemo" || "year" in upcoming[0] || "email" in upcoming[0]) {
+      throw new Error(`Unexpected upcoming birthdays payload: ${JSON.stringify(upcoming)}`);
+    }
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("#birthday-month").selectOption("12");
+    await ownerPage.locator("#birthday-day").selectOption("25");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("Your birthday has been saved.").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "account-birthday.png");
+    const saved = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/me`)).json();
+    if (saved.month !== 12 || saved.day !== 25) {
+      throw new Error(`Birthday was not saved: ${JSON.stringify(saved)}`);
+    }
+    await ownerPage.locator("#birthday-month").selectOption("0");
+    await ownerPage.locator("#birthday-day").selectOption("0");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("Your birthday is no longer shared.").waitFor({ state: "visible" });
+    await ownerPage.setViewportSize({ width: 390, height: 844 });
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await birthdayPanel.waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(ownerPage, "dashboard birthdays");
+    await screenshot(ownerPage, "dashboard-birthdays-mobile.png");
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    const hints = ownerPage.getByTestId("gift-profile");
+    await hints.waitFor({ state: "visible" });
+    await hints.getByText("Peanuts and scented candles").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "wishlist-gift-hints.png");
+    await ownerPage.setViewportSize({ width: 390, height: 844 });
+    await assertNoHorizontalScroll(ownerPage, "wishlist gift hints");
+    await screenshot(ownerPage, "wishlist-gift-hints-mobile.png");
+    const ownHints = await ownerContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-family-gift-ideas`);
+    if (ownHints.status() !== 404) {
+      throw new Error(`An owner was served their own gift hints panel data (${ownHints.status()}).`);
+    }
+    const guestContext = await browser.newContext();
+    await login(guestContext, "guest", guestEmail);
+    const guestHints = await guestContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-jordan-favorites`);
+    if (guestHints.status() !== 404) {
+      throw new Error(`A non-friend could read gift hints (${guestHints.status()}).`);
+    }
+    await guestContext.close();
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("#gift-sizes").fill("Shirt L");
+    await ownerPage.locator("#save-gift-hints").click();
+    await ownerPage.getByText("Your gift hints have been saved.").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "account-gift-hints.png");
+    const mine = await (await ownerContext.request.get(`${baseUrl}/api/gift-profile/me`)).json();
+    if (mine.sizes !== "Shirt L") {
+      throw new Error(`Gift hints were not saved: ${JSON.stringify(mine)}`);
+    }
+    await ownerPage.locator("#birthday-month").selectOption("4");
+    await ownerPage.locator("#birthday-day").selectOption("31");
+    await ownerPage.locator("#save-birthday").click();
+    await ownerPage.getByText("That date doesn't exist").waitFor({ state: "visible" });
+    if (await ownerPage.locator("#gift-sizes").inputValue() !== "Shirt L") {
+      throw new Error("A failed birthday submit blanked the saved gift hints.");
+    }
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("#gift-sizes").fill("");
+    await ownerPage.locator("#save-gift-hints").click();
+    await ownerPage.getByText("Your gift hints have been saved.").waitFor({ state: "visible" });
+    await ownerContext.close();
+    const anonymous = await browser.newContext();
+    const anonymousBirthdays = await anonymous.request.get(`${baseUrl}/api/birthdays/upcoming`, { maxRedirects: 0 });
+    if (anonymousBirthdays.ok()) {
+      throw new Error("An anonymous visitor could request upcoming birthdays.");
+    }
+    const anonymousResponse = await anonymous.request.get(`${baseUrl}/api/gift-plan`, { maxRedirects: 0 });
+    if (anonymousResponse.ok()) {
+      throw new Error("An anonymous visitor could request a gift plan.");
+    }
+    await anonymous.close();
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(`Gift plan diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+    assertions.push("gift hints appear on a friend's wishlist only for friends; non-friends and owners get 404 and the account form saves and clears them");
+    assertions.push("friends' upcoming birthdays (month and day only) show on the dashboard within 30 days; the account form saves and clears one");
+    assertions.push("gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them");
     await context.close();
   }
 

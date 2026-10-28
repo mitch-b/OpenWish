@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-10-28",
+    "title": "Plan your gifts, remember birthdays, share hints",
+    "summary": "A gift plan tracks what you promised to buy, friends' birthdays show up before they arrive, and optional gift hints help friends choose well.",
+    "highlights": [
+      "Gift plan: every gift you reserved, grouped by recipient with totals.",
+      "Mark reserved gifts as bought; only you see it.",
+      "Dashboard reminder for gifts still to buy and birthdays in the next 30 days.",
+      "Optional birthday (month and day only) shared with friends.",
+      "Optional gift hints on your wishlists, visible to friends only."
+    ]
+  }, {
     "version": "0.5.0",
     "date": "2026-10-27",
     "title": "Organize many ideas at once",

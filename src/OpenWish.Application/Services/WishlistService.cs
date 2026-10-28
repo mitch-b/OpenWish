@@ -740,7 +740,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await CanUserAccessWishlistInternalAsync(context, wishlistId, userId);
     }
 
-    private static async Task<bool> CanUserAccessWishlistInternalAsync(ApplicationDbContext context, int wishlistId, string userId)
+    internal static async Task<bool> CanUserAccessWishlistInternalAsync(ApplicationDbContext context, int wishlistId, string userId)
     {
         var wishlist = await context.Wishlists
             .FirstOrDefaultAsync(w => w.Id == wishlistId && !w.Deleted);
@@ -784,6 +784,55 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         return false;
+    }
+
+    /// <summary>Batch form of <see cref="CanUserAccessWishlistInternalAsync"/> using a fixed number of queries.</summary>
+    internal static async Task<HashSet<int>> GetAccessibleWishlistIdsAsync(
+        ApplicationDbContext context, string userId, IReadOnlyCollection<int> wishlistIds)
+    {
+        if (wishlistIds.Count == 0)
+        {
+            return [];
+        }
+
+        var wishlists = await context.Wishlists
+            .AsNoTracking()
+            .Where(w => wishlistIds.Contains(w.Id) && !w.Deleted)
+            .Select(w => new { w.Id, w.OwnerId, w.IsPrivate, w.IsFriendsOnly, w.EventId })
+            .ToListAsync();
+        var ids = wishlists.Select(w => w.Id).ToList();
+        var ownerIds = wishlists.Select(w => w.OwnerId).Distinct().ToList();
+        var eventIds = wishlists.Where(w => w.EventId.HasValue).Select(w => w.EventId!.Value).Distinct().ToList();
+
+        var permitted = (await context.WishlistPermissions
+            .AsNoTracking()
+            .Where(wp => ids.Contains(wp.WishlistId) && wp.UserId == userId && !wp.Deleted)
+            .Select(wp => wp.WishlistId)
+            .ToListAsync()).ToHashSet();
+
+        var friendOwners = (await context.Friends
+            .AsNoTracking()
+            .Where(f => !f.Deleted &&
+                ((f.UserId == userId && ownerIds.Contains(f.FriendUserId)) ||
+                 (f.FriendUserId == userId && ownerIds.Contains(f.UserId))))
+            .Select(f => f.UserId == userId ? f.FriendUserId : f.UserId)
+            .ToListAsync()).ToHashSet();
+
+        var memberEvents = (await context.Events
+            .AsNoTracking()
+            .Where(e => !e.Deleted && eventIds.Contains(e.Id) &&
+                (e.CreatedBy.Id == userId ||
+                 e.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId)))
+            .Select(e => e.Id)
+            .ToListAsync()).ToHashSet();
+
+        return wishlists
+            .Where(w => w.OwnerId == userId ||
+                permitted.Contains(w.Id) ||
+                (!w.IsPrivate && !w.IsFriendsOnly && friendOwners.Contains(w.OwnerId)) ||
+                (w.EventId.HasValue && memberEvents.Contains(w.EventId.Value)))
+            .Select(w => w.Id)
+            .ToHashSet();
     }
 
     public async Task<bool> CanUserEditWishlistAsync(int wishlistId, string userId)

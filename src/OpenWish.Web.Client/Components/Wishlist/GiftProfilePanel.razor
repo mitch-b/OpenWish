@@ -1,0 +1,50 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IGiftProfileService GiftProfileService
+@inject ILogger<GiftProfilePanel> Logger
+
+@if (_profile is not null)
+{
+    <section class="gift-profile-panel" aria-labelledby="gift-profile-title" data-testid="gift-profile">
+        <h2 id="gift-profile-title">Gift hints from the owner</h2>
+        <dl>
+            @if (!string.IsNullOrWhiteSpace(_profile.Sizes))
+            {
+                <div><dt>Sizes</dt><dd>@_profile.Sizes</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(_profile.Favorites))
+            {
+                <div><dt>Favorites</dt><dd>@_profile.Favorites</dd></div>
+            }
+            @if (!string.IsNullOrWhiteSpace(_profile.Avoid))
+            {
+                <div><dt>Please avoid</dt><dd>@_profile.Avoid</dd></div>
+            }
+        </dl>
+    </section>
+}
+
+@code {
+    private GiftProfileModel? _profile;
+
+    [Parameter, EditorRequired]
+    public string WishlistPublicId { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ViewerId { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _profile = await GiftProfileService.GetProfileForWishlistAsync(WishlistPublicId, ViewerId);
+        }
+        catch (Exception ex)
+        {
+            // Hints are optional; never block the list.
+            Logger.LogWarning(ex, "Unable to load gift hints for wishlist {WishlistPublicId}.", WishlistPublicId);
+            _profile = null;
+        }
+    }
+}

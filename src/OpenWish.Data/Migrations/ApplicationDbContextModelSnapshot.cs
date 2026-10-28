@@ -243,6 +243,15 @@ namespace OpenWish.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("GiftAvoid")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GiftFavorites")
+                        .HasColumnType("text");
+
+                    b.Property<string>("GiftSizes")
+                        .HasColumnType("text");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
 

@@ -3120,6 +3120,39 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await birthdayPanel.waitFor({ state: "visible" });
     await assertNoHorizontalScroll(ownerPage, "dashboard birthdays");
     await screenshot(ownerPage, "dashboard-birthdays-mobile.png");
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    const hints = ownerPage.getByTestId("gift-profile");
+    await hints.waitFor({ state: "visible" });
+    await hints.getByText("Peanuts and scented candles").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "wishlist-gift-hints.png");
+    await ownerPage.setViewportSize({ width: 390, height: 844 });
+    await assertNoHorizontalScroll(ownerPage, "wishlist gift hints");
+    await screenshot(ownerPage, "wishlist-gift-hints-mobile.png");
+    const ownHints = await ownerContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-family-gift-ideas`);
+    if (ownHints.status() !== 404) {
+      throw new Error(`An owner was served their own gift hints panel data (${ownHints.status()}).`);
+    }
+    const guestContext = await browser.newContext();
+    await login(guestContext, "guest", guestEmail);
+    const guestHints = await guestContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-jordan-favorites`);
+    if (guestHints.status() !== 404) {
+      throw new Error(`A non-friend could read gift hints (${guestHints.status()}).`);
+    }
+    await guestContext.close();
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/Account/Manage/GiftProfile`, { waitUntil: "domcontentloaded" });
+    await ownerPage.locator("#gift-sizes").fill("Shirt L");
+    await ownerPage.locator("#save-gift-hints").click();
+    await ownerPage.getByText("Your gift hints have been saved.").waitFor({ state: "visible" });
+    await screenshot(ownerPage, "account-gift-hints.png");
+    const mine = await (await ownerContext.request.get(`${baseUrl}/api/gift-profile/me`)).json();
+    if (mine.sizes !== "Shirt L") {
+      throw new Error(`Gift hints were not saved: ${JSON.stringify(mine)}`);
+    }
+    await ownerPage.locator("#gift-sizes").fill("");
+    await ownerPage.locator("#save-gift-hints").click();
+    await ownerPage.getByText("Your gift hints have been saved.").waitFor({ state: "visible" });
     await ownerContext.close();
     const anonymous = await browser.newContext();
     const anonymousBirthdays = await anonymous.request.get(`${baseUrl}/api/birthdays/upcoming`, { maxRedirects: 0 });
@@ -3134,6 +3167,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
       throw new Error(`Gift plan diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
+    assertions.push("gift hints appear on a friend's wishlist only for friends; non-friends and owners get 404 and the account form saves and clears them");
     assertions.push("friends' upcoming birthdays (month and day only) show on the dashboard within 30 days; the account form saves and clears one");
     assertions.push("gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them");
     await context.close();

@@ -190,6 +190,9 @@ public sealed class DevelopmentDataSeeder(
         var birthday = DateOnly.FromDateTime(now.UtcDateTime).AddDays(9);
         friend.BirthdayMonth = birthday.Month;
         friend.BirthdayDay = birthday.Day;
+        friend.GiftSizes = "Shirt M, shoe 10";
+        friend.GiftFavorites = "Dark roast coffee, green, local bookshops";
+        friend.GiftAvoid = "Peanuts and scented candles";
         var distantBirthday = birthday.AddMonths(6);
         secondFriend.BirthdayMonth = distantBirthday.Month;
         secondFriend.BirthdayDay = distantBirthday.Day;

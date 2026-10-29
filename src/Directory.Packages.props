@@ -8,7 +8,7 @@
     <PackageVersion Include="AutoMapper" Version="16.2.0" />
     <PackageVersion Include="FluentEmail.Core" Version="3.0.2" />
     <PackageVersion Include="FluentEmail.Smtp" Version="3.0.2" />
-    <PackageVersion Include="HtmlAgilityPack" Version="1.13.0" />
+    <PackageVersion Include="HtmlAgilityPack" Version="1.13.1" />
     <PackageVersion Include="QRCoder" Version="1.7.0" />
     <PackageVersion Include="Humanizer" Version="3.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.12" />

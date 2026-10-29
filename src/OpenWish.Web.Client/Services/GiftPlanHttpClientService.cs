@@ -24,4 +24,8 @@ public class GiftPlanHttpClientService(HttpClient httpClient) : IGiftPlanService
 
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId) =>
+        await httpClient.GetFromJsonAsync<List<GivenGiftMatchModel>>(
+            $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{itemId}/given") ?? [];
 }

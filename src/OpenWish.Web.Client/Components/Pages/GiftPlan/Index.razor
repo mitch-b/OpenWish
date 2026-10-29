@@ -15,7 +15,7 @@
 
 <div class="container page-shell gift-plan" data-testid="gift-plan">
     <PageHeader Title="My gift plan"
-                Description="Every gift you've reserved, by person, and what is still to buy. Only you can see this page." />
+                Description="Every gift you've reserved, by person, what is still to buy, and gifts you've already given. Only you can see this page." />
 
     <section aria-labelledby="gift-plan-heading" aria-busy="@(_isLoading ? "true" : "false")">
         <h2 id="gift-plan-heading" class="visually-hidden">Gifts you've reserved</h2>
@@ -43,7 +43,7 @@
                 <div class="mt-2">Loading your gift plan...</div>
             </div>
         }
-        else if (_plan.ItemCount == 0)
+        else if (_plan.ItemCount == 0 && _plan.HistoryCount == 0)
         {
             <div class="empty-state text-center" data-testid="gift-plan-empty">
                 <OpenWishIcon Name="gift" Class="empty-state-icon" />
@@ -54,92 +54,136 @@
         }
         else
         {
-            <dl class="plan-summary" data-testid="gift-plan-summary">
-                <div>
-                    <dt>Gifts reserved</dt>
-                    <dd data-testid="gift-plan-count">@_plan.ItemCount</dd>
-                </div>
-                <div>
-                    <dt>Still to buy</dt>
-                    <dd data-testid="gift-plan-to-buy">@_plan.ToBuyCount</dd>
-                    <dd class="plan-note">@_plan.PurchasedCount bought</dd>
-                </div>
-                <div>
-                    <dt>People</dt>
-                    <dd>@_plan.Recipients.Count</dd>
-                </div>
-                <div>
-                    <dt>Estimated total</dt>
-                    <dd data-testid="gift-plan-total">@_plan.Total.ToString("C")</dd>
-                    <dd class="plan-note">@_plan.ToBuyTotal.ToString("C") still to buy</dd>
-                    @if (_plan.UnpricedCount > 0)
-                    {
-                        <dd class="plan-note">@UnpricedText(_plan.UnpricedCount)</dd>
-                    }
-                </div>
-            </dl>
-
-            @foreach (var recipient in _plan.Recipients)
+            @if (_plan.ItemCount == 0)
             {
-                <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="RecipientKey(recipient)">
-                    <header class="plan-recipient-header">
-                        <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
-                        <p>
-                            @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
-                            &middot; @recipient.Total.ToString("C")
-                            &middot; @recipient.ToBuyCount to buy
-                            @if (recipient.UnpricedCount > 0)
-                            {
-                                <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
-                            }
-                        </p>
-                    </header>
-                    <ul class="plan-items">
-                        @foreach (var item in recipient.Items)
+                <p class="lead" data-testid="gift-plan-nothing-to-buy">Nothing left to buy. Your earlier gifts are listed below.</p>
+            }
+            else
+            {
+                <dl class="plan-summary" data-testid="gift-plan-summary">
+                    <div>
+                        <dt>Gifts reserved</dt>
+                        <dd data-testid="gift-plan-count">@_plan.ItemCount</dd>
+                    </div>
+                    <div>
+                        <dt>Still to buy</dt>
+                        <dd data-testid="gift-plan-to-buy">@_plan.ToBuyCount</dd>
+                        <dd class="plan-note">@_plan.PurchasedCount bought</dd>
+                    </div>
+                    <div>
+                        <dt>People</dt>
+                        <dd>@_plan.Recipients.Count</dd>
+                    </div>
+                    <div>
+                        <dt>Estimated total</dt>
+                        <dd data-testid="gift-plan-total">@_plan.Total.ToString("C")</dd>
+                        <dd class="plan-note">@_plan.ToBuyTotal.ToString("C") still to buy</dd>
+                        @if (_plan.UnpricedCount > 0)
                         {
-                            <li class="plan-item" data-testid="gift-plan-item" @key="@($"{item.WishlistPublicId}/{item.ItemPublicId}")">
-                                <div class="plan-item-main">
-                                    <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
-                                    <small>
-                                        @item.WishlistName
-                                        @if (item.EventName is not null)
-                                        {
-                                            <span> &middot; <a href="/events/@item.EventPublicId">@item.EventName</a></span>
-                                        }
-                                    </small>
-                                    <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
-                                    @if (item.PurchasedOn is { } purchasedOn)
-                                    {
-                                        <small class="plan-bought" data-testid="gift-plan-bought">
-                                            <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d, yyyy")
-                                        </small>
-                                    }
-                                </div>
-                                <div class="plan-item-side">
-                                    <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
-                                            type="button"
-                                            data-testid="gift-plan-toggle"
-                                            disabled="@(_busyKey is not null)"
-                                            @onclick="() => TogglePurchasedAsync(item)">
-                                        @(_busyKey == KeyOf(item) ? "Saving..." : item.IsPurchased ? "Not bought yet" : "Mark as bought")
-                                        <span class="visually-hidden"> for @item.ItemName</span>
-                                    </button>
-                                    <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
-                                    @if (!string.IsNullOrWhiteSpace(item.Url))
-                                    {
-                                        <a class="btn btn-outline-primary btn-sm"
-                                           href="@item.Url"
-                                           target="_blank"
-                                           rel="noopener noreferrer nofollow"
-                                           aria-label="Open store page for @item.ItemName (opens in a new tab)">
-                                            <OpenWishIcon Name="box-arrow-up-right" /> Store
-                                        </a>
-                                    }
-                                </div>
-                            </li>
+                            <dd class="plan-note">@UnpricedText(_plan.UnpricedCount)</dd>
                         }
-                    </ul>
-                </section>
+                    </div>
+                </dl>
+
+                @foreach (var recipient in _plan.Recipients)
+                {
+                    <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="RecipientKey(recipient)">
+                        <header class="plan-recipient-header">
+                            <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
+                            <p>
+                                @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
+                                &middot; @recipient.Total.ToString("C")
+                                &middot; @recipient.ToBuyCount to buy
+                                @if (recipient.UnpricedCount > 0)
+                                {
+                                    <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
+                                }
+                            </p>
+                        </header>
+                        <ul class="plan-items">
+                            @foreach (var item in recipient.Items)
+                            {
+                                <li class="plan-item" data-testid="gift-plan-item" @key="@($"{item.WishlistPublicId}/{item.ItemPublicId}")">
+                                    <div class="plan-item-main">
+                                        <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
+                                        <small>
+                                            @item.WishlistName
+                                            @if (item.EventName is not null)
+                                            {
+                                                <span> &middot; <a href="/events/@item.EventPublicId">@item.EventName</a></span>
+                                            }
+                                        </small>
+                                        <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                        @if (item.PurchasedOn is { } purchasedOn)
+                                        {
+                                            <small class="plan-bought" data-testid="gift-plan-bought">
+                                                <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d, yyyy")
+                                            </small>
+                                        }
+                                    </div>
+                                    <div class="plan-item-side">
+                                        <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
+                                                type="button"
+                                                data-testid="gift-plan-toggle"
+                                                disabled="@(_busyKey is not null)"
+                                                @onclick="() => TogglePurchasedAsync(item)">
+                                            @(_busyKey == KeyOf(item) ? "Saving..." : item.IsPurchased ? "Not bought yet" : "Mark as bought")
+                                            <span class="visually-hidden"> for @item.ItemName</span>
+                                        </button>
+                                        <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.Url))
+                                        {
+                                            <a class="btn btn-outline-primary btn-sm"
+                                               href="@item.Url"
+                                               target="_blank"
+                                               rel="noopener noreferrer nofollow"
+                                               aria-label="Open store page for @item.ItemName (opens in a new tab)">
+                                                <OpenWishIcon Name="box-arrow-up-right" /> Store
+                                            </a>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+            }
+
+            @if (_plan.HistoryCount > 0)
+            {
+                <details class="plan-history mt-4" data-testid="gift-history">
+                    <summary><h3 class="h5 d-inline">Gifts you've given (@_plan.HistoryCount)</h3></summary>
+                    <p class="plan-note mt-2">Gifts you marked as bought for occasions that have passed. Private to you.</p>
+                    @foreach (var recipient in _plan.History)
+                    {
+                        <section class="plan-recipient" aria-labelledby="@("history-" + RecipientId(recipient))" data-testid="gift-history-recipient" @key="@("history-" + RecipientKey(recipient))">
+                            <header class="plan-recipient-header">
+                                <h4 id="@("history-" + RecipientId(recipient))" class="h6">@recipient.RecipientName</h4>
+                            </header>
+                            <ul class="plan-items">
+                                @foreach (var item in recipient.Items)
+                                {
+                                    <li class="plan-item" data-testid="gift-history-item" @key="@($"history-{item.WishlistPublicId}/{item.ItemPublicId}")">
+                                        <div class="plan-item-main">
+                                            <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
+                                            <small>
+                                                @item.WishlistName
+                                                @if (item.EventName is not null)
+                                                {
+                                                    <span> &middot; @item.EventName</span>
+                                                }
+                                            </small>
+                                            <small>Marked bought @item.PurchasedOn!.Value.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                        </div>
+                                        <div class="plan-item-side">
+                                            <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    }
+                </details>
             }
         }
     </section>

@@ -7,6 +7,7 @@ namespace OpenWish.Application.Services;
 
 public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFactory) : IGiftPlanService
 {
+    private const int HistoryAfterDays = 30;
     private const string SharedListName = "Shared event list";
 
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
@@ -30,6 +31,8 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             {
                 r.ReservationDate,
                 r.PurchasedOn,
+                EventDate = r.WishlistItem!.Wishlist!.Event != null && !r.WishlistItem.Wishlist.Event.Deleted
+                    ? (DateTimeOffset?)r.WishlistItem.Wishlist.Event.Date : null,
                 Item = r.WishlistItem!,
                 Wishlist = r.WishlistItem!.Wishlist!,
                 OwnerName = r.WishlistItem.Wishlist.Owner != null ? r.WishlistItem.Wishlist.Owner.UserName : null,
@@ -48,6 +51,8 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
         var accessible = await WishlistService.GetAccessibleWishlistIdsAsync(
             context, userId, reservations.Select(r => r.Wishlist.Id).Distinct().ToList());
         var visible = new List<(string OwnerKey, string RecipientName, GiftPlanItemModel Item)>();
+        var archived = new List<(string OwnerKey, string RecipientName, GiftPlanItemModel Item)>();
+        var now = DateTimeOffset.UtcNow;
         foreach (var row in reservations.OrderBy(r => r.ReservationDate))
         {
             if (!accessible.Contains(row.Wishlist.Id))
@@ -55,7 +60,9 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 continue;
             }
 
-            visible.Add((
+            var isArchived = row.PurchasedOn is { } boughtOn &&
+                (row.EventDate is { } eventDate ? eventDate < now : boughtOn <= now.AddDays(-HistoryAfterDays));
+            (isArchived ? archived : visible).Add((
                 row.Wishlist.OwnerId,
                 PublicDisplayName.From(row.OwnerName, SharedListName),
                 new GiftPlanItemModel
@@ -83,8 +90,101 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             })
             .OrderBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+        var history = archived
+            .GroupBy(entry => entry.OwnerKey)
+            .Select(group => new GiftPlanRecipientModel
+            {
+                RecipientName = group.First().RecipientName,
+                Items = group.Select(entry => entry.Item).OrderByDescending(item => item.PurchasedOn).ToList()
+            })
+            .OrderBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
 
-        return new GiftPlanModel { Recipients = recipients };
+        return new GiftPlanModel { Recipients = recipients, History = history };
+    }
+
+    public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var target = await context.WishlistItems
+            .AsNoTracking()
+            .Where(i => i.Id == itemId && !i.Deleted && !i.IsPrivate &&
+                        i.Wishlist != null && !i.Wishlist.Deleted && i.Wishlist.PublicId == wishlistPublicId)
+            .Select(i => new { i.Id, i.Name, i.Url, i.WishlistId, i.Wishlist!.OwnerId })
+            .FirstOrDefaultAsync();
+        if (target is null || target.OwnerId == userId ||
+            !await WishlistService.CanUserAccessWishlistInternalAsync(context, target.WishlistId, userId))
+        {
+            return [];
+        }
+
+        var candidates = await context.ItemReservations
+            .AsNoTracking()
+            .Where(r => !r.Deleted &&
+                        r.UserId == userId &&
+                        r.PurchasedOn != null &&
+                        r.WishlistItem != null &&
+                        r.WishlistItem.Id != target.Id &&
+                        !r.WishlistItem.Deleted &&
+                        r.WishlistItem.Wishlist != null &&
+                        !r.WishlistItem.Wishlist.Deleted &&
+                        r.WishlistItem.Wishlist.OwnerId == target.OwnerId)
+            .Select(r => new
+            {
+                r.PurchasedOn,
+                r.WishlistItem!.Name,
+                r.WishlistItem.Url,
+                OwnerName = r.WishlistItem.Wishlist!.Owner != null ? r.WishlistItem.Wishlist.Owner.UserName : null
+            })
+            .ToListAsync();
+
+        var targetUrl = NormalizeUrl(target.Url);
+        return candidates
+            .Where(c => targetUrl is not null
+                ? NormalizeUrl(c.Url) == targetUrl
+                : NormalizeUrl(c.Url) is null && string.Equals(c.Name.Trim(), target.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(c => c.PurchasedOn)
+            .Select(c => new GivenGiftMatchModel
+            {
+                RecipientName = PublicDisplayName.From(c.OwnerName, SharedListName),
+                ItemName = c.Name,
+                PurchasedOn = c.PurchasedOn!.Value
+            })
+            .ToList();
+    }
+
+    private static string? NormalizeUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var value = url.Trim().ToLowerInvariant();
+        var hash = value.IndexOf('#');
+        if (hash >= 0)
+        {
+            value = value[..hash];
+        }
+
+        foreach (var prefix in new[] { "https://", "http://" })
+        {
+            if (value.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                value = value[prefix.Length..];
+                break;
+            }
+        }
+
+        if (value.StartsWith("www.", StringComparison.Ordinal))
+        {
+            value = value[4..];
+        }
+
+        value = value.TrimEnd('/');
+        return value.Length == 0 ? null : value;
     }
 
     public async Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased)

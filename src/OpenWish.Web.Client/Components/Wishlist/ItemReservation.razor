@@ -3,6 +3,7 @@
 
 @inject IWishlistService WishlistService
 @inject IUserContextService UserContextService
+@inject IGiftPlanService GiftPlanService
 
 <div class="item-reservation" aria-busy="@(_loading || _isUpdating)">
     @if (_loading)
@@ -89,6 +90,12 @@
         }
         else
         {
+            @if (_givenMatches.Count > 0)
+            {
+                <div class="alert alert-warning mb-2" role="note" data-testid="duplicate-gift-warning">
+                    You marked a gift like this as given to @_givenMatches[0].RecipientName on @_givenMatches[0].PurchasedOn.ToLocalTime().ToString("MMM d, yyyy"). Reserve anyway?
+                </div>
+            }
             <div class="form-check mb-2">
                 <input class="form-check-input" type="checkbox" id="anonymousCheckbox-@ItemId" disabled="@_isUpdating" @bind="_anonymous" />
                 <label class="form-check-label" for="anonymousCheckbox-@ItemId">
@@ -159,6 +166,7 @@
     private bool _focusErrorAlert;
     private ItemReservationModel _reservation = new ItemReservationModel();
     private string? _currentUserId;
+    private IReadOnlyList<GivenGiftMatchModel> _givenMatches = [];
 
     private string? _loadedKey;
 
@@ -249,6 +257,7 @@
                 _isReserved = false;
             }
 
+            await LoadGivenMatchesAsync();
             return true;
         }
         catch (Exception ex)
@@ -261,6 +270,25 @@
         {
             _loading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task LoadGivenMatchesAsync()
+    {
+        _givenMatches = [];
+        if (_isReserved || _currentUserId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _givenMatches = await GiftPlanService.GetPreviouslyGivenMatchesAsync(_currentUserId, WishlistId, ItemId);
+        }
+        catch (Exception ex)
+        {
+            // The warning is a courtesy; never block reserving because it failed to load.
+            Logger.LogWarning(ex, "Failed to check previously given gifts for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
         }
     }
 

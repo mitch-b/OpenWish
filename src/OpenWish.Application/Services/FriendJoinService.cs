@@ -116,6 +116,33 @@ public class FriendJoinService(IDbContextFactory<ApplicationDbContext> contextFa
         var ownerId = entity.UserId;
         var now = DateTimeOffset.UtcNow;
 
+        // The claim and the friendship changes commit together, and only one redeemer can win the claim.
+        await using var transaction = context.Database.IsRelational()
+            ? await context.Database.BeginTransactionAsync()
+            : null;
+        int claimed;
+        if (transaction is not null)
+        {
+            claimed = await context.FriendJoinCodes
+                .Where(c => c.Id == entity.Id && !c.Deleted && c.UsedOn == null && c.ExpiresOn > now)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(c => c.UsedOn, now)
+                    .SetProperty(c => c.Deleted, true)
+                    .SetProperty(c => c.UpdatedOn, now));
+        }
+        else
+        {
+            // Non-relational providers (unit tests) cannot run a conditional bulk update.
+            entity.UsedOn = now;
+            entity.Deleted = true;
+            entity.UpdatedOn = now;
+            claimed = 1;
+        }
+        if (claimed == 0)
+        {
+            return new FriendJoinPreviewModel { Status = FriendJoinStatus.Invalid };
+        }
+
         // Same reactivate-or-create handling as accepting a friend request, so soft-deleted rows are reused.
         foreach (var (from, to) in new[] { (userId, ownerId), (ownerId, userId) })
         {
@@ -151,15 +178,15 @@ public class FriendJoinService(IDbContextFactory<ApplicationDbContext> contextFa
             request.UpdatedOn = now;
         }
 
-        entity.UsedOn = now;
-        entity.Deleted = true;
-        entity.UpdatedOn = now;
-
         var redeemerName = PublicDisplayName.From(
             await context.Users.Where(u => u.Id == userId).Select(u => u.UserName).FirstOrDefaultAsync(),
             "Someone");
 
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         try
         {

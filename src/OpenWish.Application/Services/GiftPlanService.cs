@@ -134,11 +134,13 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                         r.WishlistItem != null &&
                         r.WishlistItem.Id != target.Id &&
                         !r.WishlistItem.Deleted &&
+                        !r.WishlistItem.IsPrivate &&
                         r.WishlistItem.Wishlist != null &&
                         !r.WishlistItem.Wishlist.Deleted &&
                         r.WishlistItem.Wishlist.OwnerId == target.OwnerId)
             .Select(r => new
             {
+                r.WishlistItem!.WishlistId,
                 r.PurchasedOn,
                 r.WishlistItem!.Name,
                 r.WishlistItem.Url,
@@ -146,8 +148,11 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             })
             .ToListAsync();
 
+        var accessible = await WishlistService.GetAccessibleWishlistIdsAsync(
+            context, userId, candidates.Select(c => c.WishlistId).Distinct().ToList());
         var targetUrl = NormalizeUrl(target.Url);
         return candidates
+            .Where(c => accessible.Contains(c.WishlistId))
             .Where(c => targetUrl is not null
                 ? NormalizeUrl(c.Url) == targetUrl
                 : NormalizeUrl(c.Url) is null && string.Equals(c.Name.Trim(), target.Name.Trim(), StringComparison.OrdinalIgnoreCase))

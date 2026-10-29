@@ -52,6 +52,30 @@ public class ActivityServiceSecurityTests
     }
 
     [Fact]
+    public async Task ActivityFeeds_HideReceivedItemsFromEveryoneButTheOwner()
+    {
+        var factory = CreateFactory();
+        var (wishlistId, actorId) = await SeedActivityDataAsync(factory);
+        await using (var context = factory.CreateDbContext())
+        {
+            var wishlist = await context.Wishlists.SingleAsync();
+            context.Friends.Add(new Friend { UserId = "viewer", FriendUserId = "actor" });
+            context.WishlistPermissions.Add(new WishlistPermission { WishlistId = wishlist.Id, UserId = "viewer", PermissionType = "View" });
+            foreach (var item in context.WishlistItems)
+            {
+                item.ReceivedOn = DateTimeOffset.UtcNow;
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        var service = new ActivityService(factory, _mapper);
+
+        Assert.Empty(await service.GetFriendsActivityFeedAsync("viewer"));
+        Assert.DoesNotContain(await service.GetWishlistActivityAsync(wishlistId, actorId), activity => activity.WishlistItemId.HasValue);
+    }
+
+    [Fact]
     public async Task GetFriendsActivityFeedAsync_HidesAnonymousReservationActor()
     {
         var factory = CreateFactory();

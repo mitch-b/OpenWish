@@ -1509,7 +1509,7 @@ public class EventService(
         // A copied event avoids last year's pairings when the group is large enough to allow it.
         var previousPairings = await LoadPreviousPairingsAsync(context, eventId);
         var assignments = previousPairings.Count > 0
-            ? DrawNamesWithExclusions(participants, [.. exclusions, .. previousPairings])
+            ? FindCompleteMatching(participants, [.. exclusions, .. previousPairings])
               ?? DrawNamesWithExclusions(participants, exclusions)
             : DrawNamesWithExclusions(participants, exclusions);
 
@@ -1839,6 +1839,73 @@ public class EventService(
         }
 
         return null; // Failed to find valid assignment
+    }
+
+    // Randomized backtracking, so a null result means no assignment satisfies every exclusion
+    // (unless the step budget was exhausted on a very large group).
+    private static List<(GiftExchangeParticipant giver, GiftExchangeParticipant receiver)>? FindCompleteMatching(
+        IReadOnlyList<GiftExchangeParticipant> participants,
+        List<PairingExclusion> exclusions)
+    {
+        const int stepBudget = 200_000;
+        var random = new Random();
+        var count = participants.Count;
+        var allowed = new List<int>[count];
+        for (var g = 0; g < count; g++)
+        {
+            allowed[g] = Enumerable.Range(0, count)
+                .Where(r => r != g &&
+                    !exclusions.Any(e =>
+                        MatchesParticipant(e.SourceUserId, e.SourceEmail, participants[g]) &&
+                        MatchesParticipant(e.TargetUserId, e.TargetEmail, participants[r])))
+                .OrderBy(_ => random.Next())
+                .ToList();
+        }
+
+        var order = Enumerable.Range(0, count).OrderBy(g => allowed[g].Count).ToArray();
+        var chosen = new int[count];
+        var taken = new bool[count];
+        var steps = 0;
+
+        bool place(int position)
+        {
+            if (position == count)
+            {
+                return true;
+            }
+
+            var giver = order[position];
+            foreach (var receiver in allowed[giver])
+            {
+                if (taken[receiver])
+                {
+                    continue;
+                }
+
+                if (++steps > stepBudget)
+                {
+                    return false;
+                }
+
+                taken[receiver] = true;
+                chosen[giver] = receiver;
+                if (place(position + 1))
+                {
+                    return true;
+                }
+
+                taken[receiver] = false;
+            }
+
+            return false;
+        }
+
+        if (!place(0))
+        {
+            return null;
+        }
+
+        return Enumerable.Range(0, count).Select(g => (participants[g], participants[chosen[g]])).ToList();
     }
 
     private static bool MatchesParticipant(string? userId, string? email, GiftExchangeParticipant participant)

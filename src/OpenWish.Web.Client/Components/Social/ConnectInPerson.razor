@@ -94,7 +94,7 @@
         try
         {
             _userId ??= await UserContextService.GetUserIdAsync();
-            _code = await FriendJoinService.CreateJoinCodeAsync(_userId ?? string.Empty);
+            _code = await FriendJoinService.CreateJoinCodeAsync(_userId ?? string.Empty, NavigationManager.BaseUri.TrimEnd('/'));
         }
         catch (Exception ex)
         {

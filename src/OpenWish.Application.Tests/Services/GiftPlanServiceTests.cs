@@ -352,6 +352,35 @@ public class GiftPlanServiceTests
         Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", closedId, closedTarget));
     }
 
+    [Fact]
+    public async Task GetPreviouslyGivenMatchesAsync_DoesNotLeakPrivateItemsOrRevokedLists()
+    {
+        var factory = CreateFactory();
+        int target;
+        string openId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var open = new Wishlist { Name = "Open", OwnerId = jordan.Id };
+            var closed = new Wishlist { Name = "Closed", OwnerId = jordan.Id, IsPrivate = true };
+            var nowPrivate = new WishlistItem { Name = "Secret scarf", Url = "https://shop.test/scarf", Wishlist = open, IsPrivate = true };
+            var fromClosed = new WishlistItem { Name = "Secret scarf renamed", Url = "https://shop.test/scarf", Wishlist = closed };
+            var again = new WishlistItem { Name = "Scarf", Url = "https://shop.test/scarf", Wishlist = open };
+            seed.WishlistItems.AddRange(nowPrivate, fromClosed, again);
+            await seed.SaveChangesAsync();
+            var a = Reserve(nowPrivate, me.Id);
+            var b = Reserve(fromClosed, me.Id);
+            a.PurchasedOn = b.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.AddRange(a, b);
+            await seed.SaveChangesAsync();
+            target = again.Id;
+            openId = open.PublicId;
+        }
+
+        Assert.Empty(await new GiftPlanService(factory).GetPreviouslyGivenMatchesAsync("me", openId, target));
+    }
+
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
     {
         var users = (

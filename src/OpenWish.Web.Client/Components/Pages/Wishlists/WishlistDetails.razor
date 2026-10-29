@@ -511,6 +511,7 @@ else
             <p class="received-hint">It moves off your active list and out of everyone else's view. You can move it back any time.</p>
             <label for="received-thank-you" class="form-label">Thank-you note (optional)</label>
             <textarea id="received-thank-you"
+                      @ref="_thankYouField"
                       class="form-control"
                       rows="3"
                       maxlength="@SetWishlistItemReceivedRequest.MaxThankYouLength"
@@ -1092,9 +1093,13 @@ else
     private bool CanMarkReceived =>
         _isOwner && (_wishlist?.Event is not { } occasion || occasion.Date <= DateTimeOffset.UtcNow);
 
+    private ElementReference _thankYouField;
+    private bool _focusThankYouField;
+
     private void BeginMarkReceived(WishlistItemModel item)
     {
         _receivedTarget = item;
+        _focusThankYouField = true;
         _thankYouMessage = string.Empty;
     }
 
@@ -1822,6 +1827,12 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
+        if (_focusThankYouField && _receivedTarget is not null)
+        {
+            _focusThankYouField = false;
+            await _thankYouField.FocusAsync();
+        }
 
         if (_canEdit && !_isListeningForPaste)
         {

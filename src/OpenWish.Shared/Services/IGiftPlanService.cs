@@ -17,4 +17,11 @@ public interface IGiftPlanService
     /// wishlist they can still open.
     /// </summary>
     Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased);
+
+    /// <summary>
+    /// Gets gifts the caller already marked as bought for the owner of this item's wishlist that look like
+    /// the same item (same URL, else same name). Private to the caller: empty for the list owner and for
+    /// wishlists the caller cannot open.
+    /// </summary>
+    Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId);
 }

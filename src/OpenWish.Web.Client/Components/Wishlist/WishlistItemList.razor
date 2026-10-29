@@ -126,6 +126,17 @@
                                         <OpenWishIcon Name="arrow-down" />
                                         <span class="rank-action-label">Move down</span>
                                     </button>
+                                    @if (CanMarkReceived)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                type="button"
+                                                data-testid="mark-received"
+                                                aria-label="Mark @item.Name as received"
+                                                @onclick="() => OnMarkReceived.InvokeAsync(item)">
+                                            <OpenWishIcon Name="gift" />
+                                            <span class="rank-action-label">Received</span>
+                                        </button>
+                                    }
                                 </div>
                             }
                         </div>
@@ -169,6 +180,8 @@
     [Parameter] public EventCallback<WishlistItemModel> OnTogglePin { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnMoveUp { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnMoveDown { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnMarkReceived { get; set; }
+    [Parameter] public bool CanMarkReceived { get; set; }
     [Parameter] public bool CanReorder { get; set; }
     [Parameter] public bool IsRanking { get; set; }
     [Parameter] public bool ShowInteractions { get; set; } = false;

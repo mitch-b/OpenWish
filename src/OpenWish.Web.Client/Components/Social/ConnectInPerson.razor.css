@@ -1,0 +1,55 @@
+.connect-code-panel {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.connect-qr {
+    width: 12.5rem;
+    height: 12.5rem;
+    flex: 0 0 auto;
+    padding: 0.5rem;
+    border-radius: 0.8rem;
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+}
+
+.connect-qr ::deep svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.connect-code-details {
+    min-width: 0;
+    flex: 1 1 14rem;
+}
+
+.connect-code-label,
+.connect-expiry,
+.connect-link-hint {
+    margin: 0 0 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.connect-code {
+    margin: 0 0 0.5rem;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+}
+
+.connect-code-input {
+    flex: 1 1 10rem;
+    min-height: 2.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.connect-code-details .btn,
+.connect-redeem .btn {
+    min-height: 2.75rem;
+}

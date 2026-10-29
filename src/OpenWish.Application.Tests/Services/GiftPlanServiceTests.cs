@@ -222,6 +222,165 @@ public class GiftPlanServiceTests
         Assert.Equal(original, stored.UpdatedOn);
     }
 
+    [Fact]
+    public async Task GetGiftPlanAsync_MovesBoughtGiftsOfPastOccasionsIntoPrivateHistory()
+    {
+        var factory = CreateFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan", "casey");
+            var past = new Event { Name = "Last birthday", CreatedBy = jordan, Date = DateTimeOffset.UtcNow.AddDays(-10) };
+            var pastList = new Wishlist { Name = "Old", OwnerId = jordan.Id, Event = past };
+            var plain = new Wishlist { Name = "Plain", OwnerId = casey.Id };
+            var oldGift = new WishlistItem { Name = "Old gift", Wishlist = pastList };
+            var olderGift = new WishlistItem { Name = "Older gift", Wishlist = pastList };
+            var oldNoEvent = new WishlistItem { Name = "Old plain", Wishlist = plain };
+            var recentNoEvent = new WishlistItem { Name = "Recent plain", Wishlist = plain };
+            var unbought = new WishlistItem { Name = "Unbought", Wishlist = pastList };
+            seed.WishlistItems.AddRange(oldGift, olderGift, oldNoEvent, recentNoEvent, unbought);
+            await seed.SaveChangesAsync();
+            var reservations = new[]
+            {
+                Reserve(oldGift, me.Id), Reserve(olderGift, me.Id), Reserve(oldNoEvent, me.Id),
+                Reserve(recentNoEvent, me.Id), Reserve(unbought, me.Id)
+            };
+            reservations[0].PurchasedOn = DateTimeOffset.UtcNow.AddDays(-12);
+            reservations[1].PurchasedOn = DateTimeOffset.UtcNow.AddDays(-20);
+            reservations[2].PurchasedOn = DateTimeOffset.UtcNow.AddDays(-45);
+            reservations[3].PurchasedOn = DateTimeOffset.UtcNow.AddDays(-2);
+            seed.ItemReservations.AddRange(reservations);
+            await seed.SaveChangesAsync();
+        }
+
+        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+
+        Assert.Equal(["casey", "jordan"], plan.History.Select(r => r.RecipientName));
+        Assert.Equal(["Old plain"], plan.History[0].Items.Select(i => i.ItemName));
+        Assert.Equal(["Old gift", "Older gift"], plan.History[1].Items.Select(i => i.ItemName));
+        Assert.Equal(["Recent plain", "Unbought"], plan.Recipients.SelectMany(r => r.Items).Select(i => i.ItemName).Order());
+
+        var other = await new GiftPlanService(factory).GetGiftPlanAsync("other");
+        Assert.Empty(other.History);
+        var owner = await new GiftPlanService(factory).GetGiftPlanAsync("jordan");
+        Assert.Empty(owner.History);
+    }
+
+    [Fact]
+    public async Task GetPreviouslyGivenMatchesAsync_MatchesByUrlOrNameForTheSameRecipientOnly()
+    {
+        var factory = CreateFactory();
+        int urlTarget, nameTarget, otherRecipientTarget, noMatchTarget;
+        string jordanListId, caseyListId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan", "casey");
+            AddFriends(seed, "other", "jordan");
+            var old = new Wishlist { Name = "Old", OwnerId = jordan.Id };
+            var fresh = new Wishlist { Name = "New", OwnerId = jordan.Id };
+            var caseyList = new Wishlist { Name = "Casey", OwnerId = casey.Id };
+            var givenUrl = new WishlistItem { Name = "Kettle", Url = "https://www.shop.test/kettle/", Wishlist = old };
+            var givenName = new WishlistItem { Name = "Blue Scarf", Wishlist = old };
+            var givenToCasey = new WishlistItem { Name = "Mug", Wishlist = caseyList };
+            var newUrl = new WishlistItem { Name = "Electric kettle", Url = "http://shop.test/kettle", Wishlist = fresh };
+            var newName = new WishlistItem { Name = " blue scarf ", Wishlist = fresh };
+            var newMug = new WishlistItem { Name = "Mug", Wishlist = fresh };
+            var newOther = new WishlistItem { Name = "Different", Wishlist = fresh };
+            seed.WishlistItems.AddRange(givenUrl, givenName, givenToCasey, newUrl, newName, newMug, newOther);
+            await seed.SaveChangesAsync();
+            var reservations = new[] { Reserve(givenUrl, me.Id), Reserve(givenName, me.Id), Reserve(givenToCasey, me.Id) };
+            foreach (var r in reservations)
+            {
+                r.PurchasedOn = DateTimeOffset.UtcNow.AddDays(-3);
+            }
+
+            seed.ItemReservations.AddRange(reservations);
+            await seed.SaveChangesAsync();
+            urlTarget = newUrl.Id;
+            nameTarget = newName.Id;
+            otherRecipientTarget = newMug.Id;
+            noMatchTarget = newOther.Id;
+            jordanListId = fresh.PublicId;
+            caseyListId = caseyList.PublicId;
+        }
+
+        var service = new GiftPlanService(factory);
+
+        var byUrl = Assert.Single(await service.GetPreviouslyGivenMatchesAsync("me", jordanListId, urlTarget));
+        Assert.Equal("jordan", byUrl.RecipientName);
+        Assert.Equal("Kettle", byUrl.ItemName);
+        Assert.Equal("Blue Scarf", Assert.Single(await service.GetPreviouslyGivenMatchesAsync("me", jordanListId, nameTarget)).ItemName);
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", jordanListId, otherRecipientTarget));
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", jordanListId, noMatchTarget));
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("other", jordanListId, urlTarget));
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("jordan", jordanListId, urlTarget));
+        Assert.NotEmpty(caseyListId);
+    }
+
+    [Fact]
+    public async Task GetPreviouslyGivenMatchesAsync_IgnoresUnboughtAndInaccessibleLists()
+    {
+        var factory = CreateFactory();
+        int unboughtTarget, closedTarget;
+        string openId, closedId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var open = new Wishlist { Name = "Open", OwnerId = jordan.Id };
+            var closed = new Wishlist { Name = "Closed", OwnerId = jordan.Id, IsPrivate = true };
+            var reservedOnly = new WishlistItem { Name = "Hat", Wishlist = open };
+            var hatAgain = new WishlistItem { Name = "Hat", Wishlist = open };
+            var given = new WishlistItem { Name = "Gloves", Wishlist = open };
+            var closedGloves = new WishlistItem { Name = "Gloves", Wishlist = closed };
+            seed.WishlistItems.AddRange(reservedOnly, hatAgain, given, closedGloves);
+            await seed.SaveChangesAsync();
+            var bought = Reserve(given, me.Id);
+            bought.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.AddRange(Reserve(reservedOnly, me.Id), bought);
+            await seed.SaveChangesAsync();
+            unboughtTarget = hatAgain.Id;
+            closedTarget = closedGloves.Id;
+            openId = open.PublicId;
+            closedId = closed.PublicId;
+        }
+
+        var service = new GiftPlanService(factory);
+
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", openId, unboughtTarget));
+        Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", closedId, closedTarget));
+    }
+
+    [Fact]
+    public async Task GetPreviouslyGivenMatchesAsync_DoesNotLeakPrivateItemsOrRevokedLists()
+    {
+        var factory = CreateFactory();
+        int target;
+        string openId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var open = new Wishlist { Name = "Open", OwnerId = jordan.Id };
+            var closed = new Wishlist { Name = "Closed", OwnerId = jordan.Id, IsPrivate = true };
+            var nowPrivate = new WishlistItem { Name = "Secret scarf", Url = "https://shop.test/scarf", Wishlist = open, IsPrivate = true };
+            var fromClosed = new WishlistItem { Name = "Secret scarf renamed", Url = "https://shop.test/scarf", Wishlist = closed };
+            var again = new WishlistItem { Name = "Scarf", Url = "https://shop.test/scarf", Wishlist = open };
+            seed.WishlistItems.AddRange(nowPrivate, fromClosed, again);
+            await seed.SaveChangesAsync();
+            var a = Reserve(nowPrivate, me.Id);
+            var b = Reserve(fromClosed, me.Id);
+            a.PurchasedOn = b.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.AddRange(a, b);
+            await seed.SaveChangesAsync();
+            target = again.Id;
+            openId = open.PublicId;
+        }
+
+        Assert.Empty(await new GiftPlanService(factory).GetPreviouslyGivenMatchesAsync("me", openId, target));
+    }
+
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
     {
         var users = (

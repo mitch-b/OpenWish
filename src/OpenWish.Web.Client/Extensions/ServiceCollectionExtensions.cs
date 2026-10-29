@@ -19,6 +19,7 @@ public static class ServiceCollectionExtensions
 
         // Social features
         services.AddScoped<IFriendService, FriendHttpClientService>();
+        services.AddScoped<IFriendJoinService, FriendJoinHttpClientService>();
         services.AddScoped<INotificationService, NotificationHttpClientService>();
         services.AddScoped<IActivityService, ActivityHttpClientService>();
 

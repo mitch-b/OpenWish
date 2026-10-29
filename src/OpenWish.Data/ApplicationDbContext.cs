@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Friend> Friends { get; set; }
     public DbSet<FriendRequest> FriendRequests { get; set; }
     public DbSet<PendingFriendInvite> PendingFriendInvites { get; set; }
+    public DbSet<FriendJoinCode> FriendJoinCodes { get; set; }
     public DbSet<WishlistPermission> WishlistPermissions { get; set; }
     public DbSet<ItemComment> ItemComments { get; set; }
     public DbSet<ItemReservation> ItemReservations { get; set; }
@@ -192,6 +193,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<PendingFriendInvite>()
             .HasIndex(pfi => new { pfi.SenderUserId, pfi.Email })
+            .IsUnique()
+            .HasFilter("\"Deleted\" = false");
+
+        modelBuilder.Entity<FriendJoinCode>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<FriendJoinCode>()
+            .HasIndex(c => c.CodeHash)
             .IsUnique()
             .HasFilter("\"Deleted\" = false");
 

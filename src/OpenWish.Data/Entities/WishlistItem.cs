@@ -18,4 +18,5 @@ public class WishlistItem : BaseEntity
     public bool IsPinned { get; set; }
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
     public string? CreationRequestHash { get; set; }
+    public DateTimeOffset? ReceivedOn { get; set; } // Set when the owner marks the idea as received after the occasion
 }

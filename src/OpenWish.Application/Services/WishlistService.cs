@@ -972,7 +972,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ? await context.Database.BeginTransactionAsync()
             : null;
         var item = await GetWishlistItemForUpdateAsync(context, wishlistId, itemId);
-        if (item is null || item.Deleted)
+        if (item is null || item.Deleted || item.ReceivedOn is not null)
         {
             throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
         }
@@ -1198,6 +1198,115 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return _mapper.Map<WishlistItemModel>(item);
     }
 
+    public async Task<WishlistItemModel> SetWishlistItemReceivedByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        SetWishlistItemReceivedRequest request,
+        string requestingUserId)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var thankYou = request.ThankYouMessage?.Trim();
+        if (thankYou?.Length > SetWishlistItemReceivedRequest.MaxThankYouLength)
+        {
+            throw new ArgumentException(
+                $"Keep your thank-you to {SetWishlistItemReceivedRequest.MaxThankYouLength} characters or fewer.",
+                nameof(request));
+        }
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .Include(w => w.Owner)
+            .Include(w => w.Event)
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        if (!string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can mark an idea as received.");
+        }
+
+        var item = await context.WishlistItems
+            .FirstOrDefaultAsync(i =>
+                i.WishlistId == wishlist.Id &&
+                i.PublicId == itemPublicId &&
+                !i.Deleted &&
+                !i.IsHiddenFromOwner)
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        var now = DateTimeOffset.UtcNow;
+        if (!request.IsReceived)
+        {
+            if (item.ReceivedOn is not null)
+            {
+                item.ReceivedOn = null;
+                item.UpdatedOn = now;
+                await context.SaveChangesAsync();
+            }
+
+            return _mapper.Map<WishlistItemModel>(item);
+        }
+
+        if (item.ReceivedOn is not null)
+        {
+            return _mapper.Map<WishlistItemModel>(item);
+        }
+
+        if (wishlist.Event is { Deleted: false } occasion && occasion.Date > now)
+        {
+            throw new ArgumentException(
+                $"Ideas on an event list can be marked as received after the event on {occasion.Date:MMMM d, yyyy}.",
+                nameof(request));
+        }
+
+        item.ReceivedOn = now;
+        item.UpdatedOn = now;
+        await context.SaveChangesAsync();
+
+        if (!string.IsNullOrEmpty(thankYou))
+        {
+            await DeliverThankYouAsync(context, wishlist, item, thankYou, now);
+        }
+
+        return _mapper.Map<WishlistItemModel>(item);
+    }
+
+    private static async Task DeliverThankYouAsync(
+        ApplicationDbContext context,
+        Wishlist wishlist,
+        WishlistItem item,
+        string message,
+        DateTimeOffset now)
+    {
+        var reserverIds = await context.ItemReservations
+            .Where(r => !r.Deleted && r.WishlistItemId == item.Id)
+            .Select(r => r.UserId)
+            .Distinct()
+            .ToListAsync();
+        if (reserverIds.Count == 0)
+        {
+            return;
+        }
+
+        var ownerName = PublicDisplayName.From(wishlist.Owner?.UserName, "Someone");
+        foreach (var reserverId in reserverIds.Where(id => id != wishlist.OwnerId))
+        {
+            context.Notifications.Add(new Notification
+            {
+                UserId = reserverId,
+                SenderUserId = wishlist.OwnerId,
+                Title = "A thank-you for your gift",
+                Type = "ThankYou",
+                Message = $"{ownerName} received \"{item.Name}\" and says: {message}",
+                Date = now,
+                IsRead = false,
+                CreatedOn = now,
+                UpdatedOn = now
+            });
+        }
+
+        await context.SaveChangesAsync();
+    }
+
     public async Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(
         string wishlistPublicId,
         string itemPublicId,
@@ -1239,7 +1348,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .ToListAsync();
         var orderedItemPublicIds = request.OrderedItemPublicIds;
         var ownerVisibleItems = activeItems
-            .Where(item => !item.IsHiddenFromOwner)
+            .Where(item => !item.IsHiddenFromOwner && item.ReceivedOn is null)
             .ToList();
 
         if (orderedItemPublicIds.Count != ownerVisibleItems.Count ||
@@ -1259,7 +1368,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var utcNow = DateTimeOffset.UtcNow;
         for (var index = 0; index < existingOrder.Count; index++)
         {
-            var item = existingOrder[index].IsHiddenFromOwner
+            var item = existingOrder[index].IsHiddenFromOwner || existingOrder[index].ReceivedOn is not null
                 ? existingOrder[index]
                 : requestedItemQueue.Dequeue();
             item.OrderIndex = index;
@@ -1481,6 +1590,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(i => i.WishlistId == wishlistId &&
                         !i.Deleted &&
                         !i.IsHiddenFromOwner &&
+                        i.ReceivedOn == null &&
                         itemPublicIds.Contains(i.PublicId))
             .ToListAsync();
 
@@ -1768,7 +1878,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     private static void FilterWishlistItemsForViewer(WishlistModel wishlist, string? requestingUserId)
     {
-        if (string.IsNullOrEmpty(requestingUserId) || wishlist.Items is null || wishlist.Items.Count == 0)
+        if (wishlist.Items is null || wishlist.Items.Count == 0)
+        {
+            return;
+        }
+
+        SeparateReceivedItems(wishlist, requestingUserId);
+        if (string.IsNullOrEmpty(requestingUserId) || wishlist.Items.Count == 0)
         {
             return;
         }
@@ -1781,8 +1897,30 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
     }
 
+    // Received ideas leave the active list for everyone; only the owner gets them back, in a separate collection.
+    private static void SeparateReceivedItems(WishlistModel wishlist, string? requestingUserId)
+    {
+        var received = wishlist.Items.Where(item => item.ReceivedOn is not null).ToList();
+        if (received.Count == 0)
+        {
+            return;
+        }
+
+        wishlist.Items = wishlist.Items.Where(item => item.ReceivedOn is null).ToList();
+        var isOwner = !string.IsNullOrEmpty(requestingUserId) &&
+                      string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal);
+        if (isOwner)
+        {
+            wishlist.ReceivedItems = received
+                .Where(item => !item.IsHiddenFromOwner)
+                .OrderByDescending(item => item.ReceivedOn)
+                .ToList();
+        }
+    }
+
     private static IEnumerable<WishlistItemModel> FilterWishlistItemsForViewer(IEnumerable<WishlistItemModel> items, string? ownerId, string? requestingUserId)
     {
+        items = items.Where(item => item.ReceivedOn is null);
         if (string.IsNullOrEmpty(requestingUserId))
         {
             return items;
@@ -1803,14 +1941,18 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     private static bool CanViewerSeeItem(WishlistItem item, string? ownerId, string? requestingUserId)
     {
+        var isOwner = !string.IsNullOrEmpty(ownerId) &&
+                      !string.IsNullOrEmpty(requestingUserId) &&
+                      string.Equals(ownerId, requestingUserId, StringComparison.Ordinal);
+        if (item.ReceivedOn is not null && !isOwner)
+        {
+            return false;
+        }
+
         if (string.IsNullOrEmpty(requestingUserId))
         {
             return true;
         }
-
-        var isOwner = !string.IsNullOrEmpty(ownerId) &&
-                      !string.IsNullOrEmpty(requestingUserId) &&
-                      string.Equals(ownerId, requestingUserId, StringComparison.Ordinal);
 
         return ShouldExposeItem(isOwner, item.IsPrivate, item.IsHiddenFromOwner);
     }

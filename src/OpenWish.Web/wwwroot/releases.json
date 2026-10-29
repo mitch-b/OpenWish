@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.7.0",
+    "date": "2026-10-29",
+    "title": "Run it again, remember what you gave, connect in person",
+    "summary": "Copy a past event into a new one, keep a private gift history, mark received ideas, and connect with friends using a code or QR.",
+    "highlights": [
+      "Run it again: copy an event with its participants, budget, and rules; new draws avoid last time's pairings.",
+      "Gift history and a gentle warning before repeating a gift.",
+      "Mark ideas as received after the occasion, with an optional thank-you.",
+      "Connect in person with a short-lived code or QR code."
+    ]
+  }, {
     "version": "0.6.0",
     "date": "2026-10-28",
     "title": "Plan your gifts, remember birthdays, share hints",

@@ -42,4 +42,16 @@ public class GiftPlanController(IGiftPlanService giftPlanService, ApiUserContext
             return NotFound();
         }
     }
+
+    [HttpGet("{wishlistPublicId}/items/{itemId:int}/given")]
+    public async Task<IActionResult> GetPreviouslyGiven(string wishlistPublicId, int itemId)
+    {
+        var userId = await userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await giftPlanService.GetPreviouslyGivenMatchesAsync(userId, wishlistPublicId, itemId));
+    }
 }

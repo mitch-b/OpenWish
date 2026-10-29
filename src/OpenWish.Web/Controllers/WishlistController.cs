@@ -255,6 +255,36 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
+    [HttpPost("{wishlistPublicId}/items/{itemPublicId}/received")]
+    public async Task<IActionResult> SetWishlistItemReceived(
+        string wishlistPublicId,
+        string itemPublicId,
+        [FromBody] SetWishlistItemReceivedRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _wishlistService.SetWishlistItemReceivedByPublicIdAsync(wishlistPublicId, itemPublicId, request, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPut("{wishlistPublicId}/items/{itemPublicId}/pin")]
     public async Task<IActionResult> UpdateWishlistItemPin(
         string wishlistPublicId,

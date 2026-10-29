@@ -71,6 +71,7 @@ public static class ServiceCollectionExtensions
 
         // Social features
         services.AddScoped<IFriendService, FriendService>();
+        services.AddScoped<IFriendJoinService, FriendJoinService>();
         services.AddScoped<INotificationService, NotificationService>();
 
         services.AddAutoMapper(_ => { }, typeof(OpenWishProfile).Assembly);

@@ -312,6 +312,22 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
             ?? throw new InvalidOperationException("Unable to deserialize event.");
     }
 
+    public async Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/run-again", request);
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message)
+                ? "Unable to run this event again."
+                : message);
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<EventModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize event.");
+    }
+
     public async Task<EventModel> RevealGiftExchangeByPublicIdAsync(string eventPublicId, string ownerId)
     {
         var response = await httpClient.PostAsync($"api/events/{eventPublicId}/reveal-gift-exchange", null);

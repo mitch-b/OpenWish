@@ -39,10 +39,23 @@ public record GiftPlanModel
 {
     public IReadOnlyList<GiftPlanRecipientModel> Recipients { get; init; } = [];
 
+    /// <summary>Bought gifts whose occasion has passed, by recipient, most recent first.</summary>
+    public IReadOnlyList<GiftPlanRecipientModel> History { get; init; } = [];
+
+    public int HistoryCount => History.Sum(recipient => recipient.Items.Count);
+
     public int ItemCount => Recipients.Sum(recipient => recipient.Items.Count);
     public decimal Total => Recipients.Sum(recipient => recipient.Total);
     public int UnpricedCount => Recipients.Sum(recipient => recipient.UnpricedCount);
     public int ToBuyCount => Recipients.Sum(recipient => recipient.ToBuyCount);
     public int PurchasedCount => ItemCount - ToBuyCount;
     public decimal ToBuyTotal => Recipients.Sum(recipient => recipient.ToBuyTotal);
+}
+
+/// <summary>A gift the caller already marked as given to the same person as the item being viewed.</summary>
+public record GivenGiftMatchModel
+{
+    public string RecipientName { get; init; } = string.Empty;
+    public string ItemName { get; init; } = string.Empty;
+    public DateTimeOffset PurchasedOn { get; init; }
 }

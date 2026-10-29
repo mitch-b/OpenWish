@@ -3184,6 +3184,676 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
   results.push({ scenario: "feature-day-outcomes", assertions });
 }
 
+async function verifyOccasionsJourney(browser, manifest, results) {
+  const assertions = [];
+  const pastEventId = "demo-summer-cookout-swap";
+  const desktopViewport = { width: 1280, height: 900 };
+  const mobileViewport = { width: 390, height: 844 };
+  const personas = {
+    owner: ownerEmail,
+    friend: friendEmail,
+    friend2: "playwright-friend2@openwish.local",
+    guest: guestEmail
+  };
+  const contexts = [];
+  const pages = [];
+
+  const open = async (persona, viewport = desktopViewport) => {
+    const context = await browser.newContext(
+      viewport.width <= 640 ? { viewport, isMobile: true } : { viewport });
+    contexts.push(context);
+    const page = await context.newPage();
+    const diagnostics = monitorPage(page);
+    await login(context, persona, personas[persona]);
+    pages.push({ persona, diagnostics });
+    return { context, page };
+  };
+  const api = (context, method, route, data) =>
+    context.request.fetch(`${baseUrl}${route}`, { method, data, maxRedirects: 0 });
+  const readJson = async (response, description) => {
+    if (!response.ok()) {
+      throw new Error(`${description} returned ${response.status()}: ${await response.text()}`);
+    }
+    return response.json();
+  };
+  const assertStatus = (response, expected, description) => {
+    if (response.status() !== expected) {
+      throw new Error(`${description} returned ${response.status()}, expected ${expected}.`);
+    }
+  };
+  const assertDenied = (response, description) => {
+    const status = response.status();
+    if (!(status === 401 || status === 403 || status === 404 || (status >= 300 && status < 400))) {
+      throw new Error(`${description} was not denied (${status}).`);
+    }
+  };
+  const settle = page => page.waitForTimeout(1500);
+  const goto = async (page, route, expectedText) => {
+    const response = await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+    if (!response?.ok()) {
+      throw new Error(`${route} returned ${response?.status() ?? "no response"}.`);
+    }
+    if (expectedText) {
+      await assertVisible(page, expectedText);
+    }
+    await settle(page);
+  };
+  const statusIs = (value, name, index) => value === name || value === index;
+  const addItem = async (context, wishlistPublicId, item) => {
+    const response = await api(context, "POST", `/api/wishlists/${wishlistPublicId}/items`, item);
+    if (!response.ok()) {
+      throw new Error(`Creating ${item.name} returned ${response.status()}: ${await response.text()}`);
+    }
+    const id = Number(response.headers().location?.split("/").filter(Boolean).at(-1));
+    if (!Number.isInteger(id)) {
+      throw new Error(`Creating ${item.name} did not return an item identifier.`);
+    }
+    return id;
+  };
+
+  const owner = await open("owner");
+  const jordan = await open("friend");
+  const casey = await open("friend2");
+  const taylor = await open("guest");
+  const anonymous = await browser.newContext();
+  contexts.push(anonymous);
+  const [ownerUser, jordanUser, caseyUser, taylorUser] = await Promise.all(
+    [owner, jordan, casey, taylor].map(async persona =>
+      readJson(await api(persona.context, "GET", "/api/account/user"), "Account lookup")));
+
+  // Fixture: an owner wishlist attached to the finished cookout, with a duplicate pair and a gift to receive.
+  const wishlistResponse = await readJson(
+    await api(owner.context, "POST", "/api/wishlists", {
+      name: "Kitchen Wishes",
+      icon: "🍳",
+      isPrivate: false,
+      isFriendsOnly: false
+    }),
+    "Kitchen wishlist creation");
+  const kitchenId = wishlistResponse.publicId;
+  const attached = await api(owner.context, "POST", `/api/events/${pastEventId}/wishlists/attach`, {
+    wishlistPublicId: kitchenId
+  });
+  if (!attached.ok()) {
+    throw new Error(`Attaching the kitchen wishlist returned ${attached.status()}: ${await attached.text()}`);
+  }
+  const skilletName = "Cast-Iron Skillet";
+  const skilletAgainName = "Cast-Iron Skillet, 12 inch";
+  const apronName = "Linen Apron";
+  const skilletId = await addItem(owner.context, kitchenId, {
+    publicId: "occasions-skillet-given",
+    name: skilletName,
+    url: "https://example.com/skillet",
+    price: 38
+  });
+  const skilletAgainId = await addItem(owner.context, kitchenId, {
+    publicId: "occasions-skillet-again",
+    name: skilletAgainName,
+    url: "https://www.example.com/skillet/",
+    price: 42
+  });
+  const apronId = await addItem(owner.context, kitchenId, {
+    publicId: "occasions-linen-apron",
+    name: apronName,
+    price: 26
+  });
+
+  // A4: gift history and the duplicate-gift warning belong to the shopper alone.
+  {
+    const reserved = await api(casey.context, "POST", `/api/wishlists/${kitchenId}/items/${skilletId}/reserve`, {
+      isAnonymous: false
+    });
+    if (!reserved.ok() || await reserved.json() !== true) {
+      throw new Error(`Reserving the skillet returned ${reserved.status()}.`);
+    }
+    assertStatus(
+      await api(casey.context, "PUT", `/api/gift-plan/${kitchenId}/items/occasions-skillet-given/purchased`, {
+        isPurchased: true
+      }),
+      204,
+      "Marking the skillet as bought");
+
+    const plan = await readJson(await api(casey.context, "GET", "/api/gift-plan"), "Shopper gift plan");
+    if (plan.recipients.length !== 0) {
+      throw new Error(`A bought gift for a past occasion stayed on the to-buy plan: ${JSON.stringify(plan.recipients)}`);
+    }
+    const alexHistory = plan.history.find(recipient => recipient.recipientName === "AlexDemo");
+    if (plan.history.length !== 1 || alexHistory?.items.length !== 1 ||
+        alexHistory.items[0].itemName !== skilletName || !alexHistory.items[0].purchasedOn) {
+      throw new Error(`Gift history did not list the given skillet: ${JSON.stringify(plan.history)}`);
+    }
+    if (JSON.stringify(plan).includes("@")) {
+      throw new Error("The gift history disclosed an email address.");
+    }
+
+    for (const [name, persona] of [["list owner", owner], ["other shopper", jordan], ["non-member", taylor]]) {
+      const otherPlan = await readJson(await api(persona.context, "GET", "/api/gift-plan"), `${name} gift plan`);
+      if (JSON.stringify(otherPlan).includes(skilletName)) {
+        throw new Error(`The ${name} could see the shopper's gift history.`);
+      }
+      const given = await readJson(
+        await api(persona.context, "GET", `/api/gift-plan/${kitchenId}/items/${skilletAgainId}/given`),
+        `${name} given-gift lookup`);
+      if (given.length !== 0) {
+        throw new Error(`The ${name} was told about the shopper's earlier gift: ${JSON.stringify(given)}`);
+      }
+    }
+    const caseyGiven = await readJson(
+      await api(casey.context, "GET", `/api/gift-plan/${kitchenId}/items/${skilletAgainId}/given`),
+      "Shopper given-gift lookup");
+    if (caseyGiven.length !== 1 || caseyGiven[0].recipientName !== "AlexDemo" ||
+        caseyGiven[0].itemName !== skilletName || JSON.stringify(caseyGiven).includes("@")) {
+      throw new Error(`The duplicate lookup was wrong: ${JSON.stringify(caseyGiven)}`);
+    }
+    const ownItem = await readJson(
+      await api(casey.context, "GET", `/api/gift-plan/${kitchenId}/items/${skilletId}/given`),
+      "Own-item given-gift lookup");
+    if (ownItem.length !== 0) {
+      throw new Error("An item was reported as a duplicate of itself.");
+    }
+    const unknownList = await api(casey.context, "GET", `/api/gift-plan/no-such-list/items/${skilletAgainId}/given`);
+    if (!unknownList.ok() || (await unknownList.json()).length !== 0) {
+      throw new Error("An unknown wishlist produced given-gift matches.");
+    }
+    assertDenied(await api(anonymous, "GET", `/api/gift-plan/${kitchenId}/items/${skilletAgainId}/given`),
+      "Anonymous given-gift lookup");
+
+    await goto(casey.page, "/gift-plan", "My gift plan");
+    const planPage = casey.page.getByTestId("gift-plan");
+    await planPage.getByTestId("gift-plan-nothing-to-buy").waitFor({ state: "visible" });
+    const history = planPage.getByTestId("gift-history");
+    await history.waitFor({ state: "visible" });
+    await history.locator("summary").click();
+    const historyRecipient = history.getByTestId("gift-history-recipient");
+    await historyRecipient.getByText("AlexDemo").first().waitFor({ state: "visible" });
+    const historyItem = history.getByTestId("gift-history-item");
+    await historyItem.filter({ hasText: skilletName }).waitFor({ state: "visible" });
+    if (await historyItem.count() !== 1 || await historyRecipient.count() !== 1) {
+      throw new Error("The gift history rendered the wrong number of recipients or gifts.");
+    }
+    await screenshot(casey.page, "gift-history.png", true);
+
+    const caseyMobile = await open("friend2", mobileViewport);
+    await goto(caseyMobile.page, "/gift-plan", "My gift plan");
+    const mobileHistory = caseyMobile.page.getByTestId("gift-history");
+    await mobileHistory.locator("summary").click();
+    await mobileHistory.getByTestId("gift-history-item").first().waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(caseyMobile.page, "gift history");
+    await screenshot(caseyMobile.page, "gift-history-mobile.png", true);
+
+    await goto(jordan.page, "/gift-plan", "My gift plan");
+    if (await jordan.page.getByTestId("gift-history").count() !== 0) {
+      throw new Error("Another shopper saw gift history they did not create.");
+    }
+
+    // The warning appears on the matching idea for the shopper only.
+    await goto(casey.page, `/wishlists/${kitchenId}`, skilletAgainName);
+    await casey.page.getByRole("button", { name: `Show gift options for ${skilletAgainName}` }).click();
+    const warning = casey.page.getByTestId("duplicate-gift-warning");
+    await warning.waitFor({ state: "visible" });
+    const warningText = await warning.textContent();
+    if (!warningText.includes("AlexDemo") || !warningText.includes("Reserve anyway?")) {
+      throw new Error(`The duplicate warning was unclear: ${warningText}`);
+    }
+    await screenshot(casey.page, "duplicate-gift-warning.png", true);
+    await goto(caseyMobile.page, `/wishlists/${kitchenId}`, skilletAgainName);
+    await caseyMobile.page.getByRole("button", { name: `Show gift options for ${skilletAgainName}` }).first().click();
+    await caseyMobile.page.getByTestId("duplicate-gift-warning").waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(caseyMobile.page, "duplicate gift warning");
+    await screenshot(caseyMobile.page, "duplicate-gift-warning-mobile.png", true);
+
+    await goto(jordan.page, `/wishlists/${kitchenId}`, skilletAgainName);
+    await jordan.page.getByRole("button", { name: `Show gift options for ${skilletAgainName}` }).click();
+    await jordan.page.getByRole("button", { name: "Reserve this item" }).first().waitFor({ state: "visible" });
+    if (await jordan.page.getByTestId("duplicate-gift-warning").count() !== 0) {
+      throw new Error("A shopper who gave nothing saw a duplicate-gift warning.");
+    }
+    await goto(owner.page, `/wishlists/${kitchenId}`, skilletAgainName);
+    if (await owner.page.getByTestId("gift-history").count() !== 0) {
+      throw new Error("The list owner saw gift history on their wishlist.");
+    }
+    if (await owner.page.getByTestId("duplicate-gift-warning").count() !== 0) {
+      throw new Error("The list owner saw a duplicate-gift warning.");
+    }
+    assertions.push("gift history and duplicate-gift warning appear only to the shopper who bought the earlier gift; the owner, other shoppers, non-members and anonymous callers get nothing");
+  }
+
+  // A5: received ideas leave every view but the owner's, and the thank-you reaches only the reserver.
+  {
+    const reserved = await api(casey.context, "POST", `/api/wishlists/${kitchenId}/items/${apronId}/reserve`, {
+      isAnonymous: true
+    });
+    if (!reserved.ok() || await reserved.json() !== true) {
+      throw new Error(`Reserving the apron returned ${reserved.status()}.`);
+    }
+    const thankYou = "Thank you for the apron, it is perfect for Sunday pancakes!";
+
+    assertDenied(
+      await api(casey.context, "POST", `/api/wishlists/${kitchenId}/items/occasions-linen-apron/received`, { isReceived: true }),
+      "A shopper marking an idea received");
+    assertDenied(
+      await api(anonymous, "POST", `/api/wishlists/${kitchenId}/items/occasions-linen-apron/received`, { isReceived: true }),
+      "An anonymous caller marking an idea received");
+    assertStatus(
+      await api(owner.context, "POST", `/api/wishlists/${kitchenId}/items/occasions-linen-apron/received`, {
+        isReceived: true,
+        thankYouMessage: "x".repeat(301)
+      }),
+      400,
+      "An over-long thank-you");
+    assertStatus(
+      await api(owner.context, "POST", `/api/wishlists/${manifest.wishlistPublicId}/items/demo-cast-iron-dutch-oven/received`, {
+        isReceived: true
+      }),
+      400,
+      "Marking an idea on a future event list as received");
+
+    await goto(owner.page, `/wishlists/${manifest.wishlistPublicId}`, "Cast-Iron Dutch Oven");
+    if (await owner.page.getByTestId("mark-received").count() !== 0) {
+      throw new Error("Ideas on an upcoming event list offered a received action.");
+    }
+
+    await goto(owner.page, `/wishlists/${kitchenId}`, apronName);
+    const apronRow = () => owner.page.locator("tr").filter({ hasText: apronName });
+    await apronRow().getByTestId("mark-received").click();
+    const form = owner.page.getByTestId("received-form");
+    await form.waitFor({ state: "visible" });
+    await form.getByTestId("received-thank-you").fill(thankYou);
+    await screenshot(owner.page, "received-ideas-form.png", true);
+    await form.getByTestId("confirm-received").click();
+    const receivedSection = owner.page.getByTestId("received-section");
+    await receivedSection.waitFor({ state: "visible" });
+    await receivedSection.locator("summary").click();
+    await receivedSection.locator('[data-received-item="occasions-linen-apron"]').waitFor({ state: "visible" });
+    await apronRow().waitFor({ state: "detached" });
+    const receivedText = await receivedSection.textContent();
+    if (receivedText.includes("CaseyDemo") || receivedText.includes("JordanDemo") || receivedText.includes("@")) {
+      throw new Error(`The received section revealed a giver: ${receivedText}`);
+    }
+    await screenshot(owner.page, "received-ideas.png", true);
+
+    const ownerList = await readJson(await api(owner.context, "GET", `/api/wishlists/${kitchenId}`), "Owner wishlist");
+    if (ownerList.items.some(item => item.publicId === "occasions-linen-apron") ||
+        ownerList.receivedItems.length !== 1 ||
+        ownerList.receivedItems[0].publicId !== "occasions-linen-apron" ||
+        !ownerList.receivedItems[0].receivedOn) {
+      throw new Error(`The owner's received ideas were wrong: ${JSON.stringify(ownerList.receivedItems)}`);
+    }
+    if (JSON.stringify(ownerList.receivedItems).includes("CaseyDemo")) {
+      throw new Error("The owner's received ideas revealed who reserved them.");
+    }
+    for (const [name, persona] of [["other shopper", jordan], ["reserver", casey]]) {
+      const shopperList = await readJson(await api(persona.context, "GET", `/api/wishlists/${kitchenId}`), `${name} wishlist`);
+      if (shopperList.receivedItems.length !== 0 || JSON.stringify(shopperList).includes(apronName)) {
+        throw new Error(`The ${name} could still see the received idea.`);
+      }
+      const itemList = await readJson(await api(persona.context, "GET", `/api/wishlists/${kitchenId}/items`), `${name} items`);
+      if (JSON.stringify(itemList).includes(apronName)) {
+        throw new Error(`The ${name} item list still included the received idea.`);
+      }
+    }
+    const caseyPlan = await readJson(await api(casey.context, "GET", "/api/gift-plan"), "Reserver gift plan");
+    if (JSON.stringify(caseyPlan).includes(apronName)) {
+      throw new Error("A received idea stayed on the reserver's gift plan.");
+    }
+
+    const caseyNotifications = await readJson(await api(casey.context, "GET", "/api/notifications?includeRead=true"), "Reserver notifications");
+    const thanks = caseyNotifications.filter(notification => notification.type === "ThankYou");
+    if (thanks.length !== 1 || !thanks[0].message.includes(thankYou) || !thanks[0].message.includes("AlexDemo")) {
+      throw new Error(`The reserver did not get the thank-you: ${JSON.stringify(thanks)}`);
+    }
+    for (const [name, persona] of [["other shopper", jordan], ["list owner", owner], ["non-member", taylor]]) {
+      const notifications = await readJson(await api(persona.context, "GET", "/api/notifications?includeRead=true"), `${name} notifications`);
+      if (notifications.some(notification => notification.type === "ThankYou" || notification.message?.includes(thankYou))) {
+        throw new Error(`The ${name} received the private thank-you.`);
+      }
+    }
+
+    await owner.page.setViewportSize(mobileViewport);
+    await receivedSection.waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(owner.page, "received ideas");
+    await screenshot(owner.page, "received-ideas-mobile.png", true);
+    await owner.page.setViewportSize(desktopViewport);
+
+    await receivedSection.getByTestId("move-back-to-wishlist").click();
+    await apronRow().waitFor({ state: "visible" });
+    await receivedSection.waitFor({ state: "detached" });
+    const restored = await readJson(await api(casey.context, "GET", "/api/gift-plan"), "Restored gift plan");
+    if (!restored.recipients.some(recipient => recipient.items.some(item => item.itemName === apronName))) {
+      throw new Error("Moving an idea back did not restore the reserver's plan.");
+    }
+    const restoredList = await readJson(await api(jordan.context, "GET", `/api/wishlists/${kitchenId}`), "Restored wishlist");
+    if (!restoredList.items.some(item => item.publicId === "occasions-linen-apron")) {
+      throw new Error("Moving an idea back did not return it to shoppers.");
+    }
+    assertions.push("received ideas leave shoppers' views, show only in the owner's Received section, and the thank-you reaches only the reserver");
+  }
+
+  // D1: running an event again copies people and rules, avoids last year's pairings, and is organizer-only.
+  {
+    const newName = "Cookout Swap 2027";
+    const nextYear = new Date();
+    nextYear.setUTCFullYear(nextYear.getUTCFullYear() + 1);
+    const nextYearIso = nextYear.toISOString().slice(0, 10);
+
+    assertStatus(
+      await api(jordan.context, "POST", `/api/events/${pastEventId}/run-again`, { name: newName, date: nextYear.toISOString() }),
+      403,
+      "A participant running the event again");
+    assertStatus(
+      await api(taylor.context, "POST", `/api/events/${pastEventId}/run-again`, { name: newName, date: nextYear.toISOString() }),
+      404,
+      "A non-member running the event again");
+    assertDenied(
+      await api(anonymous, "POST", `/api/events/${pastEventId}/run-again`, { name: newName, date: nextYear.toISOString() }),
+      "An anonymous caller running the event again");
+    assertStatus(
+      await api(owner.context, "POST", `/api/events/${pastEventId}/run-again`, { name: "   ", date: nextYear.toISOString() }),
+      400,
+      "Running an event again without a name");
+
+    const pastForJordan = await readJson(await api(jordan.context, "GET", `/api/events/${pastEventId}`), "Participant event");
+    if (pastForJordan.copiedFromEventPublicId || pastForJordan.avoidsPreviousPairings) {
+      throw new Error("A participant was shown organizer-only copy details.");
+    }
+    await goto(jordan.page, `/events/${pastEventId}`, "Summer Cookout Swap");
+    if (await jordan.page.getByTestId("run-again").count() !== 0) {
+      throw new Error("A participant was offered Run it again.");
+    }
+
+    await goto(owner.page, `/events/${pastEventId}`, "Summer Cookout Swap");
+    const panel = owner.page.getByTestId("run-again");
+    await panel.waitFor({ state: "visible" });
+    await screenshot(owner.page, "run-again.png", true);
+    await panel.getByTestId("run-again-open").click();
+    await panel.getByTestId("run-again-name").fill("   ");
+    await panel.getByTestId("run-again-submit").click();
+    await panel.getByTestId("run-again-error").waitFor({ state: "visible" });
+    await panel.getByTestId("run-again-name").fill(newName);
+    await panel.getByTestId("run-again-date").fill(nextYearIso);
+    await panel.getByTestId("run-again-cancel").click();
+    await panel.getByTestId("run-again-name").waitFor({ state: "detached" });
+    await panel.getByTestId("run-again-open").click();
+    await panel.getByTestId("run-again-name").fill(newName);
+    await panel.getByTestId("run-again-date").fill(nextYearIso);
+    await panel.getByTestId("run-again-submit").click();
+    await owner.page.waitForURL(/\/events\/[^/?]+\?rerun=1$/);
+    const newEventId = new URL(owner.page.url()).pathname.split("/").filter(Boolean).at(-1);
+    if (newEventId === pastEventId) {
+      throw new Error("Running the event again reused the original event.");
+    }
+    await owner.page.getByTestId("rerun-success").waitFor({ state: "visible" });
+    const copiedFrom = owner.page.getByTestId("copied-from");
+    await copiedFrom.waitFor({ state: "visible" });
+    if (await copiedFrom.getByRole("link", { name: "Summer Cookout Swap" }).getAttribute("href") !== `/events/${pastEventId}`) {
+      throw new Error("The copied-from link did not point at the original event.");
+    }
+    await owner.page.getByTestId("avoid-last-year").waitFor({ state: "visible" });
+    await settle(owner.page);
+    await screenshot(owner.page, "run-again-result.png", true);
+
+    const created = await readJson(await api(owner.context, "GET", `/api/events/${newEventId}`), "Copied event");
+    const copiedMembers = created.eventUsers.filter(member => member.user?.userName !== "AlexDemo");
+    const memberNames = copiedMembers.map(member => member.user?.userName).sort();
+    if (created.name !== newName || created.copiedFromEventPublicId !== pastEventId ||
+        created.avoidsPreviousPairings !== true || !created.isGiftExchange || created.namesDrawnOn ||
+        created.budget !== 40 || memberNames.join(",") !== "CaseyDemo,JordanDemo" ||
+        copiedMembers.some(member => member.status !== "Pending") ||
+        !created.date.startsWith(nextYearIso)) {
+      throw new Error(`The copied event was wrong: ${JSON.stringify(created)}`);
+    }
+    if (created.eventWishlists.length !== 0 || created.giftExchanges.length !== 0) {
+      throw new Error("The copied event carried over wishlists or pairings.");
+    }
+
+    // The copy keeps the original untouched.
+    const original = await readJson(await api(owner.context, "GET", `/api/events/${pastEventId}`), "Original event");
+    if (original.name !== "Summer Cookout Swap" || original.copiedFromEventPublicId) {
+      throw new Error("Running the event again changed the original event.");
+    }
+
+    // Invitees see the invitation only: no copy details, no organizer actions.
+    const pendingForJordan = await readJson(await api(jordan.context, "GET", `/api/events/${newEventId}`), "Invitee event");
+    if (pendingForJordan.copiedFromEventPublicId || pendingForJordan.copiedFromEventName ||
+        pendingForJordan.avoidsPreviousPairings || JSON.stringify(pendingForJordan).includes("Summer Cookout Swap")) {
+      throw new Error("An invitee was shown the organizer-only copy details.");
+    }
+    const invitations = {};
+    for (const [name, persona] of [["jordan", jordan], ["casey", casey]]) {
+      const pending = await readJson(await api(persona.context, "GET", "/api/events/invitations/pending"), `${name} invitations`);
+      const invitation = pending.find(item => item.event?.publicId === newEventId);
+      if (!invitation) {
+        throw new Error(`${name} did not receive a fresh invitation to the copied event.`);
+      }
+      invitations[name] = invitation.publicId;
+    }
+    // The synthetic SMTP is not configured, so add the fourth member directly instead of by email invitation.
+    const holidayEvent = await readJson(await api(owner.context, "GET", "/api/events/demo-holiday-gift-exchange"), "Holiday event");
+    const taylorMember = (holidayEvent.eventUsers ?? []).find(member => member.user?.email === taylorUser.email);
+    if (!taylorMember?.userId) {
+      throw new Error(`Could not resolve the fourth participant's user id: ${JSON.stringify((holidayEvent.eventUsers ?? []).map(m => Object.keys(m)))}`);
+    }
+    assertStatus(
+      await api(owner.context, "POST", `/api/events/${newEventId}/users`, { userId: taylorMember.userId, role: "Participant" }),
+      204,
+      "Adding a fourth participant to the copy");
+    for (const [name, persona] of [["jordan", jordan], ["casey", casey]]) {
+      assertStatus(
+        await api(persona.context, "POST", `/api/events/invitations/by-public-id/${invitations[name]}/accept`),
+        204,
+        `${name} accepting the copied event`);
+    }
+
+    await goto(jordan.page, `/events/${newEventId}`, newName);
+    if (await jordan.page.getByTestId("copied-from").count() !== 0 || await jordan.page.getByTestId("run-again").count() !== 0 ||
+        await jordan.page.getByTestId("avoid-last-year").count() !== 0) {
+      throw new Error("An accepted participant saw organizer-only copy controls.");
+    }
+    const jordanView = await readJson(await api(jordan.context, "GET", `/api/events/${newEventId}`), "Participant copied event");
+    if (jordanView.copiedFromEventPublicId || jordanView.avoidsPreviousPairings) {
+      throw new Error("An accepted participant received copy details from the API.");
+    }
+    assertStatus(
+      await api(casey.context, "POST", `/api/events/${newEventId}/run-again`, { name: "Not allowed", date: nextYear.toISOString() }),
+      403,
+      "An accepted participant running the copy again");
+
+    // The mobile organizer view of the freshly copied event.
+    const ownerMobile = await open("owner", mobileViewport);
+    await goto(ownerMobile.page, `/events/${newEventId}?rerun=1`, newName);
+    await ownerMobile.page.getByTestId("rerun-success").waitFor({ state: "visible" });
+    await ownerMobile.page.getByTestId("avoid-last-year").waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(ownerMobile.page, "run it again");
+    await screenshot(ownerMobile.page, "run-again-mobile.png", true);
+
+    assertStatus(await api(owner.context, "POST", `/api/events/${newEventId}/draw-names`), 200, "Drawing the copied exchange");
+    const receivers = {};
+    for (const [name, persona] of [["AlexDemo", owner], ["JordanDemo", jordan], ["CaseyDemo", casey], ["TaylorDemo", taylor]]) {
+      const mine = await readJson(await api(persona.context, "GET", `/api/events/${newEventId}/my-gift-exchange`), `${name} pairing`);
+      receivers[name] = mine.receiver?.userName;
+    }
+    if (receivers.AlexDemo === "JordanDemo" || receivers.JordanDemo === "AlexDemo") {
+      throw new Error(`The new draw repeated last year's pairings: ${JSON.stringify(receivers)}`);
+    }
+    if (new Set(Object.values(receivers)).size !== 4 ||
+        Object.entries(receivers).some(([giver, receiver]) => !receiver || giver === receiver)) {
+      throw new Error(`The new draw was not a valid exchange: ${JSON.stringify(receivers)}`);
+    }
+    await goto(owner.page, `/events/${newEventId}`, newName);
+    if (await owner.page.getByTestId("avoid-last-year").count() !== 0) {
+      throw new Error("The fresh-pairings note stayed after names were drawn.");
+    }
+    assertions.push("Run it again copies people and rules as pending invitations, links back for the organizer only, avoids last year's pairings, and rejects participants, outsiders and anonymous callers");
+  }
+
+  // C2: connect in person with a one-time code.
+  {
+    const caseyFriendsBefore = await readJson(await api(casey.context, "GET", "/api/friends"), "Casey friends");
+    if (caseyFriendsBefore.some(friend => friend.userName === "TaylorDemo")) {
+      throw new Error("The connect-in-person fixture personas were already friends.");
+    }
+    const codeFrom = async page => {
+      await page.getByTestId("connect-code").waitFor({ state: "visible" });
+      const code = (await page.getByTestId("connect-code").textContent()).replace(/\s/g, "");
+      if (!/^[A-HJKMNP-Z2-9]{8}$/.test(code)) {
+        throw new Error(`The displayed connection code was malformed: ${code}`);
+      }
+      return code;
+    };
+    const preview = async (persona, code) => readJson(
+      await api(persona.context, "POST", "/api/friends/join/preview", { code }), "Code preview");
+
+    await goto(casey.page, "/friends", "Connect in person");
+    const connect = casey.page.getByTestId("connect-in-person");
+    await connect.waitFor({ state: "visible" });
+    await connect.getByTestId("connect-generate").click();
+    await connect.getByTestId("connect-code-panel").waitFor({ state: "visible" });
+    await connect.getByTestId("connect-qr").locator("svg").waitFor({ state: "visible" });
+    await connect.getByTestId("connect-expiry").getByText("Expires at").waitFor({ state: "visible" });
+    const firstCode = await codeFrom(casey.page);
+    await screenshot(casey.page, "connect-in-person.png", true);
+
+    const valid = await preview(taylor, firstCode);
+    if (!statusIs(valid.status, "Valid", 0) || valid.displayName !== "CaseyDemo" ||
+        JSON.stringify(valid).includes("@") || Object.keys(valid).sort().join(",") !== "displayName,status") {
+      throw new Error(`The code preview leaked or was wrong: ${JSON.stringify(valid)}`);
+    }
+    await goto(casey.page, `/friends/join/${firstCode}`, "own code");
+    await casey.page.getByTestId("join-own").waitFor({ state: "visible" });
+    const ownPreview = await preview(casey, firstCode);
+    if (!statusIs(ownPreview.status, "OwnCode", 2) || ownPreview.displayName) {
+      throw new Error(`Redeeming one's own code was not refused: ${JSON.stringify(ownPreview)}`);
+    }
+    const ownRedeem = await readJson(
+      await api(casey.context, "POST", "/api/friends/join/redeem", { code: firstCode }), "Own code redemption");
+    if (statusIs(ownRedeem.status, "Connected", 4)) {
+      throw new Error("A person connected with themselves.");
+    }
+
+    await goto(casey.page, "/friends", "Connect in person");
+    await casey.page.getByTestId("connect-generate").click();
+    await casey.page.getByTestId("connect-code-panel").waitFor({ state: "visible" });
+    const secondCode = await codeFrom(casey.page);
+    if (secondCode === firstCode) {
+      throw new Error("A new connection code repeated the previous one.");
+    }
+    await casey.page.getByTestId("connect-cancel").click();
+    await casey.page.getByTestId("connect-code-panel").waitFor({ state: "detached" });
+    await casey.page.getByText("Your code no longer works.").waitFor({ state: "visible" });
+    for (const code of [firstCode, secondCode]) {
+      const stale = await preview(taylor, code);
+      if (!statusIs(stale.status, "Invalid", 3) || stale.displayName) {
+        throw new Error(`A replaced or cancelled code still worked: ${JSON.stringify(stale)}`);
+      }
+    }
+    await goto(taylor.page, `/friends/join/${secondCode}`, "expired");
+    await taylor.page.getByTestId("join-invalid").waitFor({ state: "visible" });
+    for (const code of ["ZZZZ2222", "not-a-code", "0000-0000"]) {
+      const unknown = await preview(taylor, code);
+      if (!statusIs(unknown.status, "Invalid", 3) || unknown.displayName) {
+        throw new Error(`An unknown code was accepted: ${code}`);
+      }
+    }
+    const unknownRedeem = await readJson(
+      await api(taylor.context, "POST", "/api/friends/join/redeem", { code: "ZZZZ2222" }), "Unknown code redemption");
+    if (!statusIs(unknownRedeem.status, "Invalid", 3)) {
+      throw new Error("Redeeming an unknown code did not fail.");
+    }
+    assertDenied(
+      await api(anonymous, "POST", "/api/friends/join/preview", { code: firstCode }),
+      "Anonymous code preview");
+    assertDenied(await api(anonymous, "POST", "/api/friends/join/code"), "Anonymous code creation");
+
+    const caseyMobile = await open("friend2", mobileViewport);
+    await goto(caseyMobile.page, "/friends", "Connect in person");
+    await caseyMobile.page.getByTestId("connect-generate").click();
+    await caseyMobile.page.getByTestId("connect-code-panel").waitFor({ state: "visible" });
+    const regenerated = await codeFrom(caseyMobile.page);
+    await caseyMobile.page.getByTestId("connect-regenerate").click();
+    await caseyMobile.page.waitForFunction(
+      previous => {
+        const text = document.querySelector('[data-testid="connect-code"]')?.textContent?.replace(/\s/g, "");
+        return text && text !== previous;
+      },
+      regenerated);
+    const thirdCode = await codeFrom(caseyMobile.page);
+    await assertNoHorizontalScroll(caseyMobile.page, "connect in person");
+    await screenshot(caseyMobile.page, "connect-in-person-mobile.png", true);
+    const replaced = await preview(taylor, regenerated);
+    if (!statusIs(replaced.status, "Invalid", 3)) {
+      throw new Error("A regenerated code still worked.");
+    }
+
+    // The confirm page, then typing the code into the Friends page on a phone.
+    await goto(taylor.page, `/friends/join/${thirdCode}`, "Connect with CaseyDemo?");
+    await taylor.page.getByTestId("join-confirm-title").waitFor({ state: "visible" });
+    await screenshot(taylor.page, "friend-join-confirm.png", true);
+    const taylorMobile = await open("guest", mobileViewport);
+    await goto(taylorMobile.page, "/friends", "Connect in person");
+    const typed = `${thirdCode.slice(0, 4).toLowerCase()}-${thirdCode.slice(4).toLowerCase()}`;
+    await taylorMobile.page.getByTestId("join-code-input").fill(typed);
+    await taylorMobile.page.getByTestId("join-code-submit").click();
+    await taylorMobile.page.waitForURL(/\/friends\/join\//);
+    await taylorMobile.page.getByTestId("join-confirm-title").getByText("CaseyDemo").waitFor({ state: "visible" });
+    if ((await taylorMobile.page.getByTestId("friend-join").textContent()).includes("@")) {
+      throw new Error("The join page disclosed an email address.");
+    }
+    await assertNoHorizontalScroll(taylorMobile.page, "friend join");
+    await screenshot(taylorMobile.page, "friend-join-confirm-mobile.png", true);
+    await settle(taylorMobile.page);
+    await taylorMobile.page.getByTestId("join-confirm").click();
+    await taylorMobile.page.getByTestId("join-success").getByText("CaseyDemo").waitFor({ state: "visible" });
+
+    const taylorFriends = await readJson(await api(taylor.context, "GET", "/api/friends"), "Taylor friends");
+    const caseyFriends = await readJson(await api(casey.context, "GET", "/api/friends"), "Casey friends");
+    if (!taylorFriends.some(friend => friend.userName === "CaseyDemo") ||
+        !caseyFriends.some(friend => friend.userName === "TaylorDemo")) {
+      throw new Error("Redeeming a code did not create a mutual friendship.");
+    }
+    const caseyNotifications = await readJson(await api(casey.context, "GET", "/api/notifications?includeRead=true"), "Casey notifications");
+    if (!caseyNotifications.some(notification => notification.message?.includes("TaylorDemo connected with you in person"))) {
+      throw new Error("The code owner was not told about the new connection.");
+    }
+    const reused = await readJson(
+      await api(taylor.context, "POST", "/api/friends/join/redeem", { code: thirdCode }), "Reused code redemption");
+    if (!statusIs(reused.status, "Invalid", 3)) {
+      throw new Error("A one-time code was redeemed twice.");
+    }
+    await goto(taylor.page, `/friends/join/${thirdCode}`, "expired");
+    await taylor.page.getByTestId("join-invalid").waitFor({ state: "visible" });
+
+    const fourth = await readJson(await api(casey.context, "POST", "/api/friends/join/code"), "Code creation");
+    const lifetimeMs = new Date(fourth.expiresOn).getTime() - Date.now();
+    if (!/^[A-HJKMNP-Z2-9]{8}$/.test(fourth.code) || fourth.joinUrl !== `${baseUrl}/friends/join/${fourth.code}` ||
+        !fourth.qrSvg.includes("<svg") || lifetimeMs < 14 * 60 * 1000 || lifetimeMs > 15.5 * 60 * 1000) {
+      throw new Error(`The created code was wrong: ${JSON.stringify({ ...fourth, qrSvg: "..." })}`);
+    }
+    const already = await preview(taylor, fourth.code);
+    if (!statusIs(already.status, "AlreadyFriends", 1) || already.displayName !== "CaseyDemo") {
+      throw new Error(`Existing friends were not recognised: ${JSON.stringify(already)}`);
+    }
+    await goto(taylor.page, `/friends/join/${fourth.code}`, "already friends");
+    await taylor.page.getByTestId("join-already").waitFor({ state: "visible" });
+    assertStatus(await api(casey.context, "DELETE", "/api/friends/join/code"), 200, "Stopping sharing a code");
+    const after = await preview(taylor, fourth.code);
+    if (!statusIs(after.status, "Invalid", 3)) {
+      throw new Error("A stopped code still worked.");
+    }
+    assertions.push("connection codes are one-time, expire or stop working, preview only a display name, and redeeming creates a mutual friendship");
+  }
+
+  for (const { persona, diagnostics } of pages) {
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(
+        `Occasions ${persona} diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+  }
+  results.push({ scenario: "occasions-outcomes", assertions });
+  for (const context of contexts) {
+    await context.close();
+  }
+}
+
 async function verifyMobileJourney(browser, manifest, results) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -3488,6 +4158,7 @@ try {
   await verifyGuestJourney(browser, manifest, securityFixture, results);
   await verifyFriendJourney(browser, manifest, results);
   await verifyFeatureDayJourney(browser, manifest, results);
+  await verifyOccasionsJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
   await verifyUnsharedMatchWishlist(browser, manifest, results);
 

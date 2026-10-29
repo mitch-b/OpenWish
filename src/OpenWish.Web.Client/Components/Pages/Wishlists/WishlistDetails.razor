@@ -2,6 +2,7 @@
 @page "/wishlists/{WishlistId}"
 
 @using OpenWish.Shared.Products
+@using OpenWish.Shared.RequestModels
 @using OpenWish.Shared.Services
 @using OpenWish.Web.Client.Components.Wishlist
 
@@ -503,6 +504,42 @@ else
         </section>
     }
 
+    @if (_receivedTarget is not null)
+    {
+        <section class="received-panel" aria-labelledby="received-form-title" data-testid="received-form">
+            <h2 id="received-form-title" class="h5">Mark "@_receivedTarget.Name" as received</h2>
+            <p class="received-hint">It moves off your active list and out of everyone else's view. You can move it back any time.</p>
+            <label for="received-thank-you" class="form-label">Thank-you note (optional)</label>
+            <textarea id="received-thank-you"
+                      @ref="_thankYouField"
+                      class="form-control"
+                      rows="3"
+                      maxlength="@SetWishlistItemReceivedRequest.MaxThankYouLength"
+                      aria-describedby="received-thank-you-help"
+                      data-testid="received-thank-you"
+                      @bind="_thankYouMessage"
+                      @bind:event="oninput"></textarea>
+            <small id="received-thank-you-help" class="form-text">
+                Send a thank-you to whoever got this for you. @_thankYouMessage.Length/@SetWishlistItemReceivedRequest.MaxThankYouLength
+            </small>
+            <div class="received-actions">
+                <button type="button"
+                        class="btn btn-primary btn-sm"
+                        data-testid="confirm-received"
+                        disabled="@_isSavingReceived"
+                        @onclick="ConfirmMarkReceivedAsync">
+                    @(_isSavingReceived ? "Saving..." : "Mark as received")
+                </button>
+                <button type="button"
+                        class="btn btn-outline-secondary btn-sm"
+                        disabled="@_isSavingReceived"
+                        @onclick="() => _receivedTarget = null">
+                    Cancel
+                </button>
+            </div>
+        </section>
+    }
+
     <div id="wishlist-items" class="wishlist-content @ViewMode-view">
         @if (_items != null)
         {
@@ -674,6 +711,17 @@ else
                                         <OpenWishIcon Name="star-fill" />
                                         <span class="rank-action-label">Most wanted</span>
                                     </button>
+                                    @if (CanMarkReceived)
+                                    {
+                                        <button class="btn-icon"
+                                                type="button"
+                                                data-testid="mark-received"
+                                                aria-label="Mark @item.Name as received"
+                                                @onclick="() => BeginMarkReceived(item)">
+                                            <OpenWishIcon Name="gift" />
+                                            <span class="rank-action-label">Received</span>
+                                        </button>
+                                    }
                                     <div class="rank-actions" aria-label="Reorder @item.Name">
                                         <button class="btn-icon"
                                                 type="button"
@@ -767,6 +815,8 @@ else
                                     OnEdit="@HandleItemEditClick"
                                     OnDelete="@ShowItemDeleteDialogAsync"
                                     OnTogglePin="@ToggleItemPinAsync"
+                                    CanMarkReceived="@CanMarkReceived"
+                                    OnMarkReceived="@BeginMarkReceived"
                                     OnMoveUp="@(item => MoveItemAsync(item, -1))"
                                     OnMoveDown="@(item => MoveItemAsync(item, 1))"
                                     CanReorder="@CanReorder"
@@ -806,6 +856,35 @@ else
             </div>
         }
     </div>
+
+    @if (_isOwner && _wishlist.ReceivedItems.Count > 0)
+    {
+        <details class="received-section" data-testid="received-section">
+            <summary>Received (@_wishlist.ReceivedItems.Count)</summary>
+            <ul class="received-list">
+                @foreach (var received in _wishlist.ReceivedItems)
+                {
+                    <li class="received-row" data-received-item="@received.PublicId">
+                        <span class="received-copy">
+                            <strong>@received.Name</strong>
+                            @if (received.ReceivedOn is { } receivedOn)
+                            {
+                                <small>Received @receivedOn.ToString("MMM d, yyyy")</small>
+                            }
+                        </span>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                data-testid="move-back-to-wishlist"
+                                disabled="@(_restoringItemId is not null)"
+                                aria-label="Move @received.Name back to wishlist"
+                                @onclick="() => MoveBackToWishlistAsync(received)">
+                            @(_restoringItemId == received.PublicId ? "Moving..." : "Move back to wishlist")
+                        </button>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
 }
 
 <WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
@@ -1006,6 +1085,91 @@ else
         _items is null ? [] : WishlistFreshness.GetStaleItems(_items, DateTimeOffset.UtcNow);
 
     private string? _confirmingItemId;
+    private WishlistItemModel? _receivedTarget;
+    private string _thankYouMessage = string.Empty;
+    private bool _isSavingReceived;
+    private string? _restoringItemId;
+
+    private bool CanMarkReceived =>
+        _isOwner && (_wishlist?.Event is not { } occasion || occasion.Date <= DateTimeOffset.UtcNow);
+
+    private ElementReference _thankYouField;
+    private bool _focusThankYouField;
+
+    private void BeginMarkReceived(WishlistItemModel item)
+    {
+        _receivedTarget = item;
+        _focusThankYouField = true;
+        _thankYouMessage = string.Empty;
+    }
+
+    private async Task ConfirmMarkReceivedAsync()
+    {
+        if (_receivedTarget is null || _isSavingReceived || string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            return;
+        }
+
+        var target = _receivedTarget;
+        _isSavingReceived = true;
+        try
+        {
+            await WishlistService.SetWishlistItemReceivedByPublicIdAsync(
+                WishlistId,
+                target.PublicId,
+                new SetWishlistItemReceivedRequest { IsReceived = true, ThankYouMessage = _thankYouMessage },
+                _currentUserId);
+            _receivedTarget = null;
+            await ReloadAfterReceivedChangeAsync($"{target.Name} moved to Received.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _feedbackMessage = ex is HttpRequestException or ArgumentException
+                ? ex.Message
+                : $"We couldn't mark {target.Name} as received. Refresh the page and try again.";
+            _feedbackIsError = true;
+        }
+        finally
+        {
+            _isSavingReceived = false;
+        }
+    }
+
+    private async Task MoveBackToWishlistAsync(WishlistItemModel item)
+    {
+        if (_restoringItemId is not null || string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            return;
+        }
+
+        _restoringItemId = item.PublicId;
+        try
+        {
+            await WishlistService.SetWishlistItemReceivedByPublicIdAsync(
+                WishlistId,
+                item.PublicId,
+                new SetWishlistItemReceivedRequest { IsReceived = false },
+                _currentUserId);
+            await ReloadAfterReceivedChangeAsync($"{item.Name} is back on your wishlist.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            _feedbackMessage = $"We couldn't move {item.Name} back. Refresh the page and try again.";
+            _feedbackIsError = true;
+        }
+        finally
+        {
+            _restoringItemId = null;
+        }
+    }
+
+    private async Task ReloadAfterReceivedChangeAsync(string message)
+    {
+        _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
+        await LoadItems();
+        _feedbackMessage = message;
+        _feedbackIsError = false;
+    }
 
     private async Task ConfirmStillWantedAsync(WishlistItemModel item)
     {
@@ -1663,6 +1827,12 @@ else
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
+        if (_focusThankYouField && _receivedTarget is not null)
+        {
+            _focusThankYouField = false;
+            await _thankYouField.FocusAsync();
+        }
 
         if (_canEdit && !_isListeningForPaste)
         {

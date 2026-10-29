@@ -1,0 +1,136 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.RequestModels
+@using OpenWish.Shared.Services
+
+@inject IEventService EventService
+@inject NavigationManager NavigationManager
+@inject ILogger<RunEventAgain> Logger
+
+<section class="@(IsPast ? "run-again run-again-emphasis" : "run-again") card shadow-sm mb-4" aria-labelledby="run-again-title" aria-busy="@(_busy ? "true" : "false")" data-testid="run-again">
+    <div class="card-body">
+        <h2 id="run-again-title" class="h4"><OpenWishIcon Name="arrow-repeat" /> Run it again</h2>
+        @if (!_open)
+        {
+            <p class="text-muted">
+                @(IsPast
+                    ? "This event has passed. Start next year's version with the same details, people, and pairing rules."
+                    : "Plan another round with the same details, people, and pairing rules. Everyone gets a fresh invitation.")
+            </p>
+            <button type="button" class="btn @(IsPast ? "btn-primary" : "btn-outline-primary") run-again-button" data-testid="run-again-open" aria-expanded="false" @onclick="Open">
+                Run it again
+            </button>
+        }
+        else
+        {
+            <EditForm Model="_form" OnValidSubmit="Submit" FormName="run-event-again">
+                <div class="mb-3">
+                    <label for="run-again-name" class="form-label">New event name</label>
+                    <input id="run-again-name" class="form-control run-again-field" data-testid="run-again-name" maxlength="200" autocomplete="off"
+                           @bind="_form.Name" @bind:event="oninput" disabled="@_busy" required aria-describedby="run-again-help" />
+                </div>
+                <div class="mb-3">
+                    <label for="run-again-date" class="form-label">New date</label>
+                    <input id="run-again-date" type="date" class="form-control run-again-field" data-testid="run-again-date"
+                           @bind="_form.Date" disabled="@_busy" required />
+                </div>
+                <p id="run-again-help" class="text-muted small">
+                    The new event is a fresh start: names aren't drawn, and invitations go out as pending. You won't be attached to a wishlist automatically.
+                </p>
+                @if (_errorMessage is not null)
+                {
+                    <div class="alert alert-danger" role="alert" data-testid="run-again-error">@_errorMessage</div>
+                }
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary run-again-button" data-testid="run-again-submit" disabled="@_busy">
+                        @if (_busy)
+                        {
+                            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>Create the new event</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary run-again-button" data-testid="run-again-cancel" disabled="@_busy" @onclick="Close">Cancel</button>
+                </div>
+            </EditForm>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string EventId { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string EventName { get; set; } = string.Empty;
+    [Parameter] public DateTimeOffset EventDate { get; set; }
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+
+    private readonly RunAgainForm _form = new();
+    private bool _open;
+    private bool _busy;
+    private string? _errorMessage;
+
+    private bool IsPast => EventDate <= DateTimeOffset.UtcNow;
+
+    private void Open()
+    {
+        var baseDate = EventDate.ToLocalTime().DateTime;
+        _form.Name = $"{EventName} (copy)";
+        _form.Date = baseDate.AddYears(1).Date;
+        _errorMessage = null;
+        _open = true;
+    }
+
+    private void Close()
+    {
+        if (!_busy)
+        {
+            _open = false;
+        }
+    }
+
+    private async Task Submit()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_form.Name))
+        {
+            _errorMessage = "Give the new event a name.";
+            return;
+        }
+
+        _busy = true;
+        _errorMessage = null;
+        try
+        {
+            // Keep the original time of day on the new date.
+            var time = EventDate.ToLocalTime().TimeOfDay;
+            var local = DateTime.SpecifyKind(_form.Date.Date + time, DateTimeKind.Local);
+            var created = await EventService.RunEventAgainByPublicIdAsync(
+                EventId,
+                new RunEventAgainRequest { Name = _form.Name.Trim(), Date = new DateTimeOffset(local) },
+                CurrentUserId);
+            NavigationManager.NavigateTo($"/events/{created.PublicId}?rerun=1");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorMessage = ex.Message;
+            _busy = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to run event {EventPublicId} again", EventId);
+            _errorMessage = "We couldn't create the new event. Try again.";
+            _busy = false;
+        }
+    }
+
+    private sealed class RunAgainForm
+    {
+        public string Name { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+    }
+}

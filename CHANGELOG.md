@@ -2,6 +2,25 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.7.0] - 2026-10-29
+
+### Added
+
+- "Run it again" copies a past event (details, participants as new
+  invitations, pairing rules) into a new event; copied gift exchanges avoid
+  last time's pairings when possible.
+- A private gift history on the Gift plan page and a gentle warning when you
+  reserve something you already gave the same person.
+- Wishlist owners can mark ideas as received after the occasion, with an
+  optional thank-you to whoever reserved them.
+- "Connect in person" on the Friends page: a short-lived code and QR code to
+  become friends face to face.
+
+### Fixed
+
+- Drawing names and sending invitations no longer fail when SMTP is not
+  configured.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added

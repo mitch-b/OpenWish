@@ -1,0 +1,128 @@
+@page "/friends/join/{Code}"
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+@using OpenWish.Web.Client.Components.Shared
+@attribute [Authorize]
+
+@rendermode InteractiveAuto
+
+@inject IFriendJoinService FriendJoinService
+@inject IUserContextService UserContextService
+@inject ILogger<FriendJoin> Logger
+
+<PageTitle>Connect in person</PageTitle>
+
+<div class="container page-shell">
+    <PageHeader Title="Connect in person" Description="Confirm who you're connecting with." />
+
+    <div class="friend-join" data-testid="friend-join" aria-live="polite">
+        @if (_loading)
+        {
+            <p role="status">Checking the code...</p>
+        }
+        else if (_failed)
+        {
+            <div class="alert alert-danger" role="alert" data-testid="join-error">
+                We couldn't check that code. Try again in a moment.
+            </div>
+            <button class="btn btn-outline-primary" type="button" @onclick="LoadAsync">Try again</button>
+        }
+        else
+        {
+            switch (_preview?.Status)
+            {
+                case FriendJoinStatus.Valid:
+                    <h2 class="h4" data-testid="join-confirm-title">Connect with @_preview.DisplayName?</h2>
+                    <p>You'll both be able to see what each other shares with friends.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary" type="button" data-testid="join-confirm"
+                                disabled="@_busy" @onclick="ConfirmAsync">
+                            @(_busy ? "Connecting..." : "Connect")
+                        </button>
+                        <a class="btn btn-outline-secondary" href="friends">Not now</a>
+                    </div>
+                    break;
+                case FriendJoinStatus.Connected:
+                    <div class="alert alert-success" role="status" data-testid="join-success">
+                        You're now connected with @_preview.DisplayName.
+                    </div>
+                    <a class="btn btn-primary" href="friends">Go to friends</a>
+                    break;
+                case FriendJoinStatus.AlreadyFriends:
+                    <div class="alert alert-info" role="status" data-testid="join-already">
+                        You're already friends with @_preview.DisplayName.
+                    </div>
+                    <a class="btn btn-primary" href="friends">Go to friends</a>
+                    break;
+                case FriendJoinStatus.OwnCode:
+                    <div class="alert alert-info" role="status" data-testid="join-own">
+                        This is your own code. Show it to the person you want to connect with.
+                    </div>
+                    <a class="btn btn-primary" href="friends">Back to friends</a>
+                    break;
+                default:
+                    <div class="alert alert-warning" role="alert" data-testid="join-invalid">
+                        This code has expired or isn't valid. Ask your friend for a new one.
+                    </div>
+                    <a class="btn btn-primary" href="friends">Back to friends</a>
+                    break;
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Code { get; set; } = string.Empty;
+
+    private FriendJoinPreviewModel? _preview;
+    private string? _userId;
+    private bool _loading = true;
+    private bool _failed;
+    private bool _busy;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _failed = false;
+        try
+        {
+            _userId ??= await UserContextService.GetUserIdAsync();
+            _preview = await FriendJoinService.PreviewJoinCodeAsync(_userId ?? string.Empty, Code);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Connection code preview failed.");
+            _failed = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            _preview = await FriendJoinService.RedeemJoinCodeAsync(_userId ?? string.Empty, Code);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Connection code redemption failed.");
+            _failed = true;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

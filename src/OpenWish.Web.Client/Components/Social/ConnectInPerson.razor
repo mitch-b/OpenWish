@@ -1,0 +1,147 @@
+@using OpenWish.Shared.Models
+@using OpenWish.Shared.Services
+
+@inject IFriendJoinService FriendJoinService
+@inject IUserContextService UserContextService
+@inject NavigationManager NavigationManager
+@inject ILogger<ConnectInPerson> Logger
+
+<div class="connect-in-person" data-testid="connect-in-person" aria-busy="@(_busy ? "true" : "false")">
+    <div class="social-heading">
+        <span class="social-heading-icon"><OpenWishIcon Name="people" /></span>
+        <div>
+            <h2>Connect in person</h2>
+            <p>Show a code to someone next to you. It works once and expires in 15 minutes.</p>
+        </div>
+    </div>
+
+    @if (_code is null)
+    {
+        <button class="btn btn-primary" type="button" data-testid="connect-generate"
+                disabled="@_busy" @onclick="GenerateAsync">
+            @(_busy ? "Creating code..." : "Show my code")
+        </button>
+    }
+    else
+    {
+        <div class="connect-code-panel" data-testid="connect-code-panel">
+            <div class="connect-qr" data-testid="connect-qr" role="img"
+                 aria-label="QR code that opens your OpenWish connection link. The code is @SpokenCode.">
+                @((MarkupString)_code.QrSvg)
+            </div>
+            <div class="connect-code-details">
+                <p class="connect-code-label" id="connectCodeLabel">Your code</p>
+                <p class="connect-code" data-testid="connect-code" aria-labelledby="connectCodeLabel">@FormattedCode</p>
+                <p class="connect-expiry" data-testid="connect-expiry">Expires at @_code.ExpiresOn.ToLocalTime().ToString("t")</p>
+                <p class="connect-link-hint">They can scan the QR code, open the link, or type the code under "Have a code?" on their Friends page.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline-primary" type="button" data-testid="connect-regenerate"
+                            disabled="@_busy" @onclick="GenerateAsync">New code</button>
+                    <button class="btn btn-outline-secondary" type="button" data-testid="connect-cancel"
+                            disabled="@_busy" @onclick="CancelAsync">Stop sharing</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div role="status" aria-live="polite">
+        @if (_statusMessage is not null)
+        {
+            <div class="alert alert-success mt-3 mb-0">@_statusMessage</div>
+        }
+    </div>
+    @if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger mt-3 mb-0" role="alert">@_errorMessage</div>
+    }
+
+    <hr class="my-4" />
+
+    <form class="connect-redeem" @onsubmit="OpenCode" @onsubmit:preventDefault="true">
+        <label for="joinCodeInput" class="form-label">Have a code?</label>
+        <div class="d-flex flex-wrap gap-2">
+            <input id="joinCodeInput" class="form-control connect-code-input" data-testid="join-code-input"
+                   autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12"
+                   aria-describedby="joinCodeHelp" @bind="_enteredCode" @bind:event="oninput" />
+            <button class="btn btn-primary" type="submit" data-testid="join-code-submit"
+                    disabled="@string.IsNullOrWhiteSpace(_enteredCode)">Continue</button>
+        </div>
+        <div class="form-text" id="joinCodeHelp">Type the 8-character code from your friend's screen.</div>
+    </form>
+</div>
+
+@code {
+    private FriendJoinCodeModel? _code;
+    private string? _userId;
+    private string _enteredCode = string.Empty;
+    private bool _busy;
+    private string? _statusMessage;
+    private string? _errorMessage;
+
+    private string FormattedCode => _code is { Code.Length: 8 } c ? $"{c.Code[..4]} {c.Code[4..]}" : _code?.Code ?? string.Empty;
+    private string SpokenCode => string.Join(' ', _code?.Code.ToCharArray() ?? []);
+
+    private async Task GenerateAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _statusMessage = null;
+        _errorMessage = null;
+        try
+        {
+            _userId ??= await UserContextService.GetUserIdAsync();
+            _code = await FriendJoinService.CreateJoinCodeAsync(_userId ?? string.Empty);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Connection code could not be created.");
+            _errorMessage = "We couldn't create a code. Try again in a moment.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _errorMessage = null;
+        try
+        {
+            _userId ??= await UserContextService.GetUserIdAsync();
+            await FriendJoinService.CancelJoinCodeAsync(_userId ?? string.Empty);
+            _code = null;
+            _statusMessage = "Your code no longer works.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Connection code could not be cancelled.");
+            _errorMessage = "We couldn't stop sharing the code. Try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void OpenCode()
+    {
+        var cleaned = new string(_enteredCode.Where(char.IsLetterOrDigit).ToArray());
+        if (cleaned.Length == 0)
+        {
+            return;
+        }
+
+        NavigationManager.NavigateTo($"friends/join/{Uri.EscapeDataString(cleaned)}");
+    }
+}

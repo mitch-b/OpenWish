@@ -31,6 +31,7 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             {
                 r.ReservationDate,
                 r.PurchasedOn,
+                r.WishlistItem!.ReceivedOn,
                 EventDate = r.WishlistItem!.Wishlist!.Event != null && !r.WishlistItem.Wishlist.Event.Deleted
                     ? (DateTimeOffset?)r.WishlistItem.Wishlist.Event.Date : null,
                 Item = r.WishlistItem!,
@@ -60,7 +61,12 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 continue;
             }
 
-            var isArchived = row.PurchasedOn is { } boughtOn &&
+            if (row.ReceivedOn is not null && row.PurchasedOn is null)
+            {
+                continue;
+            }
+
+            var isArchived = row.ReceivedOn is not null || row.PurchasedOn is { } boughtOn &&
                 (row.EventDate is { } eventDate ? eventDate < now : boughtOn <= now.AddDays(-HistoryAfterDays));
             (isArchived ? archived : visible).Add((
                 row.Wishlist.OwnerId,

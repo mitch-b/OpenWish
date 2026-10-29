@@ -230,6 +230,17 @@ public interface IWishlistService
     /// </summary>
     Task<WishlistItemModel> ConfirmWishlistItemStillWantedByPublicIdAsync(string wishlistPublicId, string itemPublicId, string requestingUserId);
 
+    /// <summary>
+    /// Marks an idea as received (hiding it from the active list for everyone but the owner) or moves it back.
+    /// Only the wishlist owner may do this, and for event lists only once the event date has passed.
+    /// An optional thank-you is delivered silently to whoever reserved the item, if anyone did.
+    /// </summary>
+    Task<WishlistItemModel> SetWishlistItemReceivedByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        SetWishlistItemReceivedRequest request,
+        string requestingUserId);
+
     Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, string itemPublicId, bool isPinned);
 
     /// <summary>Persists the complete custom order of all active items in a wishlist.</summary>

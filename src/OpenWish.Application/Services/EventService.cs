@@ -124,6 +124,7 @@ public class EventService(
     }
 
     private static bool ShouldIncludeWishlistItem(WishlistItemModel item, bool isOwner) =>
+        item.ReceivedOn is null &&
         (!item.IsPrivate || isOwner) &&
         (!item.IsHiddenFromOwner || !isOwner);
 

@@ -1311,6 +1311,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<int?>("PublicWishlistId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("ReceivedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()

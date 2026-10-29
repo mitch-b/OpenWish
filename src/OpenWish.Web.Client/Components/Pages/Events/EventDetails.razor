@@ -97,6 +97,13 @@ else
 
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
         {
+            @if (_event.AvoidsPreviousPairings)
+            {
+                <p class="alert alert-info" role="status" data-testid="avoid-last-year">
+                    <strong>Fresh pairings.</strong>
+                    When you draw names, OpenWish avoids repeating last time's matches whenever the group allows it.
+                </p>
+            }
             <div id="gift-exchange-setup">
                 <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" />
             </div>

@@ -8,6 +8,7 @@ public class EventModel : BaseEntityModel
     public ApplicationUserModel? CreatedBy { get; set; }
     public string? CopiedFromEventPublicId { get; set; } // Only populated for the organizer
     public string? CopiedFromEventName { get; set; } // Only populated for the organizer
+    public bool AvoidsPreviousPairings { get; set; } // Only populated for the organizer of a copied gift exchange
     public bool IsRecurring { get; set; } // Indicates if the event is recurring
     public decimal? Budget { get; set; } // Budget for the event
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange

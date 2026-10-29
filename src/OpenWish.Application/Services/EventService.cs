@@ -949,6 +949,10 @@ public class EventService(
             eventModel.CopiedFromEventPublicId = null;
             eventModel.CopiedFromEventName = null;
         }
+        else if (eventEntity.IsGiftExchange && eventEntity.CopiedFromEvent is { IsGiftExchange: true })
+        {
+            eventModel.AvoidsPreviousPairings = true;
+        }
         if (isPendingInvitee)
         {
             eventModel.EventUsers = [];
@@ -1501,8 +1505,12 @@ public class EventService(
                 NormalizeEmail(pr.TargetInviteeEmail)))
             .ToList();
 
-        // Perform name drawing with exclusions
-        var assignments = DrawNamesWithExclusions(participants, exclusions);
+        // A copied event avoids last year's pairings when the group is large enough to allow it.
+        var previousPairings = await LoadPreviousPairingsAsync(context, eventId);
+        var assignments = previousPairings.Count > 0
+            ? DrawNamesWithExclusions(participants, [.. exclusions, .. previousPairings])
+              ?? DrawNamesWithExclusions(participants, exclusions)
+            : DrawNamesWithExclusions(participants, exclusions);
 
         if (assignments == null)
         {
@@ -1567,6 +1575,26 @@ public class EventService(
         }
 
         return await GetEventAsync(eventId);
+    }
+
+    private static async Task<List<PairingExclusion>> LoadPreviousPairingsAsync(ApplicationDbContext context, int eventId)
+    {
+        var previousEventId = await context.Events
+            .Where(e => e.Id == eventId)
+            .Select(e => EF.Property<int?>(e, "CopiedFromEventId"))
+            .FirstOrDefaultAsync();
+        if (previousEventId is null)
+        {
+            return [];
+        }
+
+        var previous = await context.GiftExchanges
+            .AsNoTracking()
+            .Where(ge => ge.EventId == previousEventId && !ge.Deleted)
+            .ToListAsync();
+        return previous
+            .Select(ge => new PairingExclusion(ge.GiverId, NormalizeEmail(ge.GiverEmail), ge.ReceiverId, NormalizeEmail(ge.ReceiverEmail)))
+            .ToList();
     }
 
     public async Task<EventModel> DrawNamesByPublicIdAsync(string eventPublicId, string ownerId)

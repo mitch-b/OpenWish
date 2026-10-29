@@ -2,6 +2,7 @@ using System.Net.Mail;
 using System.Text.Encodings.Web;
 using FluentEmail.Core;
 using FluentEmail.Core.Interfaces;
+using FluentEmail.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace OpenWish.Application.Services;
@@ -129,12 +130,22 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
 
     private async Task<bool> TrySendEmailAsync(string toEmail, string subject, string message)
     {
-        var response = await _emailFactory
-            .Create()
-            .To(toEmail)
-            .Subject(subject)
-            .Body(message, true)
-            .SendAsync();
+        SendResponse response;
+        try
+        {
+            response = await _emailFactory
+                .Create()
+                .To(toEmail)
+                .Subject(subject)
+                .Body(message, true)
+                .SendAsync();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Email is a best-effort side effect; an unconfigured or failing sender must not fail the request.
+            _logger.LogWarning(ex, "Email delivery failed.");
+            return false;
+        }
 
         if (!response.Successful)
         {

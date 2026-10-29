@@ -43,6 +43,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => string.Join(',', src.Tags)))
             .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+            .ForMember(dest => dest.CopiedFromEvent, opt => opt.Ignore())
             .ForMember(dest => dest.EventUsers, opt => opt.Ignore()) // do not map from DtoModel to EF entity
             .ForMember(dest => dest.EventWishlists, opt => opt.Ignore())
             .ForMember(dest => dest.GiftExchanges, opt => opt.Ignore())

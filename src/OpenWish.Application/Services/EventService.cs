@@ -12,6 +12,7 @@ using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
@@ -920,6 +921,7 @@ public class EventService(
         var eventEntity = await context.Events
             .AsNoTracking()
             .Include(e => e.CreatedBy)
+            .Include(e => e.CopiedFromEvent)
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
@@ -942,6 +944,11 @@ public class EventService(
         }
 
         var eventModel = _mapper.Map<EventModel>(eventEntity);
+        if (!IsEventOwner(eventEntity, requestingUserId) || eventEntity.CopiedFromEvent?.Deleted == true)
+        {
+            eventModel.CopiedFromEventPublicId = null;
+            eventModel.CopiedFromEventName = null;
+        }
         if (isPendingInvitee)
         {
             eventModel.EventUsers = [];
@@ -953,6 +960,149 @@ public class EventService(
         FilterWishlistVisibility(eventModel.EventWishlists, requestingUserId);
         RemoveParticipantEmails(eventModel, IsEventOwner(eventEntity, requestingUserId));
         return eventModel;
+    }
+
+    public async Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId)
+    {
+        var name = request.Name?.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new InvalidOperationException("Give the new event a name.");
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var source = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+                .ThenInclude(eu => eu.User)
+            .Include(e => e.PairingRules)
+            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+            ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+
+        if (!IsEventOwner(source, ownerId))
+        {
+            if (!IsEventMember(source, ownerId) && !IsPendingInvitee(source, ownerId))
+            {
+                throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
+            }
+
+            throw new UnauthorizedAccessException("Only the event creator can perform this action");
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var copy = new Event
+        {
+            Name = name,
+            Description = source.Description,
+            Date = request.Date.ToUniversalTime(),
+            CreatedBy = source.CreatedBy,
+            CopiedFromEvent = source,
+            IsRecurring = true,
+            Budget = source.Budget,
+            IsGiftExchange = source.IsGiftExchange,
+            GiftExchangeStyle = NormalizeGiftExchangeStyle(source.GiftExchangeStyle),
+            Tags = source.Tags,
+            CreatedOn = now,
+            UpdatedOn = now
+        };
+
+        var copiedUserIds = new HashSet<string>(StringComparer.Ordinal);
+        var copiedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var invitedUsers = new List<ApplicationUser>();
+        var invitedEmails = new List<string>();
+        foreach (var member in source.EventUsers.Where(eu => !eu.Deleted && eu.Status != "Rejected").OrderBy(eu => eu.Id))
+        {
+            var email = NormalizeEmail(member.InviteeEmail);
+            if (member.UserId is not null)
+            {
+                if (member.UserId == ownerId || member.User is null || !copiedUserIds.Add(member.UserId))
+                {
+                    continue;
+                }
+
+                invitedUsers.Add(member.User);
+            }
+            else if (email is null || !copiedEmails.Add(email))
+            {
+                continue;
+            }
+            else
+            {
+                invitedEmails.Add(email);
+            }
+
+            copy.EventUsers.Add(new EventUser
+            {
+                UserId = member.UserId,
+                InviteeEmail = member.UserId is null ? email : null,
+                InvitationDate = now,
+                Status = "Pending",
+                IsAccepted = false,
+                Role = "Participant",
+                CreatedOn = now,
+                UpdatedOn = now
+            });
+        }
+
+        bool IsKept(string? userId, string? inviteeEmail)
+        {
+            var normalized = NormalizeEmail(inviteeEmail);
+            return (userId is not null && (userId == ownerId || copiedUserIds.Contains(userId))) ||
+                (normalized is not null && copiedEmails.Contains(normalized));
+        }
+
+        foreach (var rule in source.PairingRules.Where(r => !r.Deleted &&
+            IsKept(r.SourceUserId, r.SourceInviteeEmail) && IsKept(r.TargetUserId, r.TargetInviteeEmail)))
+        {
+            copy.PairingRules.Add(new CustomPairingRule
+            {
+                SourceUserId = rule.SourceUserId,
+                SourceInviteeEmail = rule.SourceInviteeEmail,
+                TargetUserId = rule.TargetUserId,
+                TargetInviteeEmail = rule.TargetInviteeEmail,
+                RuleType = rule.RuleType,
+                RuleDescription = rule.RuleDescription,
+                CreatedOn = now,
+                UpdatedOn = now
+            });
+        }
+
+        context.Events.Add(copy);
+        await context.SaveChangesAsync();
+
+        var inviterName = source.CreatedBy.UserName ?? source.CreatedBy.Email ?? "Someone";
+        var baseUri = _baseUri?.TrimEnd('/') ?? "";
+        try
+        {
+            foreach (var eventUser in copy.EventUsers.Where(eu => eu.UserId is not null))
+            {
+                var invitee = invitedUsers.First(u => u.Id == eventUser.UserId);
+                await _notificationService.CreateNotificationAsync(
+                    ownerId,
+                    invitee.Id,
+                    "Event Invitation",
+                    $"You've been invited to the event: {copy.Name}",
+                    "EventInvite",
+                    BuildEventInvitationAction(copy.PublicId, eventUser.Id));
+                await _emailSender.SendEventInviteEmailAsync(
+                    invitee.Email ?? string.Empty, inviterName, copy.Name, $"{baseUri}/events/{copy.PublicId}");
+            }
+
+            foreach (var email in invitedEmails)
+            {
+                await _emailSender.SendEventInviteEmailAsync(
+                    email, inviterName, copy.Name,
+                    $"{baseUri}/events/{copy.PublicId}/accept-invite?email={Uri.EscapeDataString(email)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            // The event and invitations exist; the organizer can resend from the event page.
+            _logger.LogWarning(ex, "Failed to send some invitations for rerun event {EventPublicId}", copy.PublicId);
+        }
+
+        return await GetEventByPublicIdAsync(copy.PublicId, ownerId);
     }
 
     public async Task<EventModel> UpdateEventByPublicIdAsync(string publicId, EventModel evt, string requestorId)

@@ -80,6 +80,21 @@ else
             </div>
         }
 
+        @if (Rerun == 1 && _isOwner)
+        {
+            <div class="alert alert-success" role="status" data-testid="rerun-success">
+                Your new event is ready. Everyone from the last one has a pending invitation, and nothing has been drawn yet.
+            </div>
+        }
+
+        @if (_isOwner && !_isPendingInvitee)
+        {
+            <RunEventAgain EventId="@EventId"
+                           EventName="@_event.Name"
+                           EventDate="@_event.Date"
+                           CurrentUserId="@(_currentUserId ?? string.Empty)" />
+        }
+
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
         {
             <div id="gift-exchange-setup">
@@ -153,6 +168,13 @@ else
                                 <span class="event-fact-label">Event type</span>
                                 <strong>@EventTypeLabel</strong>
                             </div>
+                            @if (_isOwner && !string.IsNullOrEmpty(_event.CopiedFromEventPublicId))
+                            {
+                                <div class="event-fact" data-testid="copied-from">
+                                    <span class="event-fact-label">Copied from</span>
+                                    <strong><a href="/events/@_event.CopiedFromEventPublicId">@_event.CopiedFromEventName</a></strong>
+                                </div>
+                            }
                             @if (_event.IsRecurring)
                             {
                                 <div class="event-fact">
@@ -291,6 +313,7 @@ else
 
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;
+    [SupplyParameterFromQuery(Name = "rerun")] public int? Rerun { get; set; }
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;

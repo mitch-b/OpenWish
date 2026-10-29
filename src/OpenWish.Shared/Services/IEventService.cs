@@ -1,4 +1,5 @@
 using OpenWish.Shared.Models;
+using OpenWish.Shared.RequestModels;
 
 namespace OpenWish.Shared.Services;
 
@@ -8,6 +9,9 @@ namespace OpenWish.Shared.Services;
 /// </summary>
 public interface IEventService
 {
+    /// <summary>Creates a new undrawn event from an existing one, copying details, pending invitations, and pairing rules. Organizer only.</summary>
+    Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId);
+
     /// <summary>Creates a new event owned by the specified user.</summary>
     /// <param name="evt">The event model containing name, description, and other details.</param>
     /// <param name="creatorId">The user ID of the event creator.</param>

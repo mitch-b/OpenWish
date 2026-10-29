@@ -602,6 +602,32 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpPost("{eventPublicId}/run-again")]
+    public async Task<ActionResult<EventModel>> RunEventAgain(string eventPublicId, [FromBody] RunEventAgainRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            return Ok(await _eventService.RunEventAgainByPublicIdAsync(eventPublicId, request, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost("{eventPublicId}/reveal-gift-exchange")]
     public async Task<ActionResult<EventModel>> RevealGiftExchange(string eventPublicId)
     {

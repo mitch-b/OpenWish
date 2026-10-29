@@ -1,0 +1,14 @@
+.run-again-emphasis {
+    border-color: var(--bs-primary);
+}
+
+.run-again-button,
+.run-again-field {
+    min-height: 44px;
+}
+
+@media (max-width: 575.98px) {
+    .run-again-button {
+        width: 100%;
+    }
+}

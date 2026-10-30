@@ -36,11 +36,13 @@ public class EventModelValidationTests
 
     [Theory]
     [InlineData(null)]
-    [InlineData(0)]
-    [InlineData(50)]
-    public void ValidEvent_PassesWithOrWithoutBudget(int? budget)
+    [InlineData("0")]
+    [InlineData("50.25")]
+    [InlineData("999999999.99")]
+    public void ValidEvent_PassesWithOrWithoutBudget(string? budget)
     {
-        var results = Validate(new EventModel { Name = "Cabin swap", Budget = budget, EventUsers = [] });
+        decimal? amount = budget is null ? null : decimal.Parse(budget, System.Globalization.CultureInfo.InvariantCulture);
+        var results = Validate(new EventModel { Name = "Cabin swap", Budget = amount, EventUsers = [] });
 
         Assert.Empty(results);
     }

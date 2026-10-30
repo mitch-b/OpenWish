@@ -21,10 +21,6 @@
                     <small>Invite people, collect wishlists, and draw names privately.</small>
                 </button>
             </div>
-            @if (LockEventType)
-            {
-                <div class="form-text">Reset the current assignments before changing the event type.</div>
-            }
             <div class="col-sm-6">
                 <button type="button"
                         class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
@@ -36,6 +32,10 @@
                 </button>
             </div>
         </div>
+        @if (LockEventType)
+        {
+            <div class="form-text mt-2">Reset the current assignments before changing the event type.</div>
+        }
     </fieldset>
 
     @if (Model!.IsGiftExchange)

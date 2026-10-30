@@ -1292,6 +1292,20 @@ async function verifyOwnerJourney(browser, manifest, results) {
     document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Summer cabin gift swap"
   );
   await screenshot(page, "create-event.png");
+  if (await page.getByText("Step 1 of 3").count() !== 0) {
+    throw new Error("The create event page still shows a step counter for a single-step form.");
+  }
+  if (await page.getByRole("link", { name: "Back to events" }).getAttribute("href") !== "/events") {
+    throw new Error("Back to events was not a link.");
+  }
+  await page.locator("#budget").fill("-5");
+  await page.getByRole("button", { name: "Create and invite people" }).click();
+  await page.getByText("Enter a budget of $0 or more, or leave it blank.").waitFor({ state: "visible" });
+  await page.getByText("Give your event a name.").waitFor({ state: "visible" });
+  if (!new URL(page.url()).pathname.endsWith("/events/new")) {
+    throw new Error("An invalid event form navigated away instead of showing inline errors.");
+  }
+  await page.locator("#budget").fill("50");
   await page.locator("#name").fill("Neighborhood Gift Exchange");
   await page.getByRole("button", { name: "Create and invite people" }).click();
   await page.waitForURL(url => /^\/events\/(?!new$)[^/]+$/.test(url.pathname));
@@ -2353,6 +2367,10 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("link", { name: "Review invitation" }).click();
   await assertVisible(page, "You're almost in!");
   await assertVisible(page, "Accept invite");
+  const invitationHost = await page.getByText(/^\s*Hosted by /).first().innerText();
+  if (invitationHost.includes("??") || invitationHost.includes("_event") || !/Hosted by \S+/.test(invitationHost)) {
+    throw new Error(`The invitation page showed a malformed host line: ${invitationHost}`);
+  }
   await page.getByRole("button", { name: "Decline invite" }).click();
   const declineInvitationDialog = page.getByRole("dialog", { name: "Decline invitation" });
   await declineInvitationDialog.getByText("The host will see that you declined").waitFor({ state: "visible" });

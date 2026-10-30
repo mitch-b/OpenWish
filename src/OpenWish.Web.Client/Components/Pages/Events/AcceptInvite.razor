@@ -89,7 +89,7 @@
                                         </div>
                                         <div class="small text-muted">
                                             <OpenWishIcon Name="person-circle" />
-                                            Hosted by @_event.CreatedBy?.UserName ?? _event.CreatedBy?.Email ?? "a friend"
+                                            Hosted by @HostName
                                         </div>
                                     </div>
                                 }
@@ -102,7 +102,7 @@
                                 {
                                     case "accepted":
                                         <div class="alert alert-success" role="alert">
-                                            You're part of the gift exchange. Add a few gift ideas and you're done.
+                                            @AcceptedMessage
                                         </div>
                                         <a class="btn btn-success" href="/events/@EventId">
                                             Continue and add my wishlist
@@ -261,6 +261,15 @@
         _isLoading = false;
     }
 
+    private string HostName =>
+        !string.IsNullOrWhiteSpace(_event?.CreatedBy?.UserName) ? _event.CreatedBy.UserName
+        : !string.IsNullOrWhiteSpace(_event?.CreatedBy?.Email) ? _event.CreatedBy.Email
+        : "a friend";
+
+    private string AcceptedMessage => _event?.IsGiftExchange == false
+        ? "You're part of this event. Add a few gift ideas and you're done."
+        : "You're part of the gift exchange. Add a few gift ideas and you're done.";
+
     private async Task AcceptInviteAsync()
     {
         if (_invitation == null || string.IsNullOrEmpty(_currentUserId))
@@ -280,7 +289,9 @@
             {
                 _invitation.Status = "Accepted";
                 _invitation.IsAccepted = true;
-                _successMessage = "You're in! Continue to the event and add a few gift ideas for your match.";
+                _successMessage = _event?.IsGiftExchange == false
+                    ? "You're in! Continue to the event and add a few gift ideas."
+                    : "You're in! Continue to the event and add a few gift ideas for your match.";
             }
             else
             {

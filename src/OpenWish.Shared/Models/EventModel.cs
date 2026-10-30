@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace OpenWish.Shared.Models;
 
 public class EventModel : BaseEntityModel
 {
+    [Required(ErrorMessage = "Give your event a name.")]
     public string Name { get; set; }
     public string? Description { get; set; }
     public DateTimeOffset Date { get; set; }
@@ -10,6 +13,7 @@ public class EventModel : BaseEntityModel
     public string? CopiedFromEventName { get; set; } // Only populated for the organizer
     public bool AvoidsPreviousPairings { get; set; } // Only populated for the organizer of a copied gift exchange
     public bool IsRecurring { get; set; } // Indicates if the event is recurring
+    [Range(typeof(decimal), "0", "999999999.99", ParseLimitsInInvariantCulture = true, ConvertValueInInvariantCulture = true, ErrorMessage = "Enter a budget of $0 or more, or leave it blank.")]
     public decimal? Budget { get; set; } // Budget for the event
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange
     // Null means an older client omitted the optional field during an update.

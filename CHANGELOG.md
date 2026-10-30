@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.7.1] - 2026-10-30
+
+### Fixed
+
+- The event invitation page shows the host's name correctly instead of stray
+  code, and its wording matches celebrations as well as gift exchanges.
+- Creating an event with a blank name or an invalid budget now explains the
+  problem next to the field instead of failing with a generic message.
+- The create event page no longer shows a "Step 1 of 3" counter for a
+  single form, and "Back to events" is a real link.
+- Participants see whether their wishlist is already shared with an event, and
+  celebration participants get the same prompt as gift exchange participants.
+- Invitees whose invitation has no email on file get a link to their pending
+  invitations instead of a dead end.
+
 ## [0.7.0] - 2026-10-29
 
 ### Added

@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.7.1",
+    "date": "2026-10-30",
+    "title": "Smoother event invitations and setup",
+    "summary": "Clearer event creation errors, a correct invitation page, and better guidance for participants.",
+    "highlights": [
+      "The invitation page shows the host's name correctly.",
+      "Blank event names and invalid budgets are explained next to the field.",
+      "Participants see whether their wishlist is already shared with the event.",
+      "Invitations without an email on file link to your pending invitations."
+    ]
+  }, {
     "version": "0.7.0",
     "date": "2026-10-29",
     "title": "Run it again, remember what you gave, connect in person",

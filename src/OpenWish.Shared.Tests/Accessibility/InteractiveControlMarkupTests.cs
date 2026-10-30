@@ -1662,7 +1662,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<PageTitle>Create an event</PageTitle>", markup, StringComparison.Ordinal);
         Assert.Contains("Title=\"Create an event\"", markup, StringComparison.Ordinal);
         Assert.Contains("gift exchange or coordinate wishlists for a celebration", markup, StringComparison.Ordinal);
-        Assert.Contains("class=\"btn btn-outline-secondary\" type=\"button\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" href=\"/events\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1689,6 +1689,37 @@ public class InteractiveControlMarkupTests
         Assert.Contains("new() { Name = \"\", IsPrivate = true }", markup, StringComparison.Ordinal);
         Assert.Contains("items/new?firstIdea=true", markup, StringComparison.Ordinal);
         Assert.Contains("Back to wishlists", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AcceptInvite_ShowsAFormattedHostAndMatchingWording()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "AcceptInvite.razor");
+
+        Assert.Contains("Hosted by @HostName", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@_event.CreatedBy?.UserName ??", markup, StringComparison.Ordinal);
+        Assert.Contains("@AcceptedMessage", markup, StringComparison.Ordinal);
+        Assert.Contains("You're part of this event.", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NewEvent_HasNoFakeStepCounterAndLinksBackToEvents()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "NewEvent.razor");
+
+        Assert.DoesNotContain("Step 1 of 3", markup, StringComparison.Ordinal);
+        Assert.Contains("<a class=\"btn btn-outline-secondary\" href=\"/events\">", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventDetails_ParticipantGuidanceReflectsSharedWishlistAndNeverDeadEnds()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("data-testid=\"participant-wishlist-shared\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"participant-add-wishlist\"", markup, StringComparison.Ordinal);
+        Assert.Contains("_isAcceptedParticipant && !_isOwner", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"/events\">Open my invitations</a>", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

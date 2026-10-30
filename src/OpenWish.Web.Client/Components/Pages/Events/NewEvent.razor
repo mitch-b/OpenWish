@@ -15,11 +15,7 @@
 
 <div class="container page-shell">
   <PageHeader Title="Create an event"
-              Description="Plan a private gift exchange or coordinate wishlists for a celebration.">
-      <Actions>
-          <span class="step-indicator">Step 1 of 3</span>
-      </Actions>
-  </PageHeader>
+              Description="Plan a private gift exchange or coordinate wishlists for a celebration." />
   <div class="row g-4">
     <div class="col-md-8">
         <div class="event-content view-transition">
@@ -41,9 +37,9 @@
                 <li class="mb-2">Let people add a few gift ideas.</li>
                 <li>Make private assignments when your group is ready.</li>
             </ol>
-            <button class="btn btn-outline-secondary" type="button" @onclick="@(() => NavigationManager.NavigateTo("/events"))">
+            <a class="btn btn-outline-secondary" href="/events">
                 <OpenWishIcon Name="arrow-left" /> Back to events
-            </button>
+            </a>
         </div>
     </div>
   </div>

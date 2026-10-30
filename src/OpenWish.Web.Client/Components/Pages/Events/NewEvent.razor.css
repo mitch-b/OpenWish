@@ -2,16 +2,6 @@
     padding-top: 0.5rem;
 }
 
-.step-indicator {
-    display: inline-flex;
-    padding: 0.5rem 0.75rem;
-    border-radius: 999px;
-    background: var(--color-primary-soft);
-    color: var(--color-link);
-    font-size: 0.78rem;
-    font-weight: 750;
-}
-
 .event-content,
 .add-item-section {
     padding: 1.5rem;

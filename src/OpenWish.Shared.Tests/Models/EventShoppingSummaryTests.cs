@@ -5,7 +5,7 @@ namespace OpenWish.Shared.Tests.Models;
 
 public class EventCountdownTests
 {
-    private static readonly TimeSpan _offset = TimeSpan.FromHours(-5);
+    private static readonly TimeZoneInfo _shopperZone = TimeZoneInfo.CreateCustomTimeZone("test", TimeSpan.FromHours(-5), "test", "test");
 
     [Theory]
     [InlineData("2026-12-25T18:00:00-05:00", "2026-12-25T08:00:00-05:00", "today")]
@@ -13,24 +13,35 @@ public class EventCountdownTests
     [InlineData("2026-12-25T18:00:00-05:00", "2026-12-15T23:59:00-05:00", "in 10 days")]
     public void Describe_CountsCalendarDays(string occasion, string now, string expected)
     {
-        Assert.Equal(expected, EventCountdown.Describe(DateTimeOffset.Parse(occasion), DateTimeOffset.Parse(now)));
+        Assert.Equal(expected, EventCountdown.Describe(DateTimeOffset.Parse(occasion), DateTimeOffset.Parse(now), _shopperZone));
     }
 
     [Fact]
     public void Describe_ReturnsNullAfterTheOccasion()
     {
         Assert.Null(EventCountdown.Describe(
-            new DateTimeOffset(2026, 12, 25, 18, 0, 0, _offset),
-            new DateTimeOffset(2026, 12, 26, 0, 30, 0, _offset)));
+            new DateTimeOffset(2026, 12, 25, 18, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 12, 26, 12, 0, 0, TimeSpan.Zero),
+            _shopperZone));
     }
 
     [Fact]
-    public void Describe_ComparesInTheOccasionsOwnOffset()
+    public void Describe_UsesTheShoppersDayForAUtcStoredOccasion()
     {
-        var occasion = new DateTimeOffset(2026, 12, 25, 1, 0, 0, _offset);
-        var now = new DateTimeOffset(2026, 12, 25, 3, 0, 0, TimeSpan.Zero); // still Dec 24 at -05:00
+        // Dec 25 18:00Z is Dec 25 13:00 for the shopper; at Dec 24 20:00 -05:00 it is still tomorrow.
+        var occasion = new DateTimeOffset(2026, 12, 25, 18, 0, 0, TimeSpan.Zero);
+        var now = new DateTimeOffset(2026, 12, 24, 20, 0, 0, TimeSpan.FromHours(-5));
 
-        Assert.Equal("tomorrow", EventCountdown.Describe(occasion, now));
+        Assert.Equal("tomorrow", EventCountdown.Describe(occasion, now, _shopperZone));
+    }
+
+    [Fact]
+    public void Describe_RollsOverAtTheShoppersMidnightNotUtc()
+    {
+        var occasion = new DateTimeOffset(2026, 12, 25, 3, 0, 0, TimeSpan.Zero); // Dec 24 22:00 for the shopper
+        var now = new DateTimeOffset(2026, 12, 24, 23, 0, 0, TimeSpan.Zero); // Dec 24 18:00 for the shopper
+
+        Assert.Equal("today", EventCountdown.Describe(occasion, now, _shopperZone));
     }
 }
 

@@ -156,6 +156,7 @@ else
                                          CurrentUserId="@_currentUserId"
                                          ExchangeDate="@_event.Date"
                                          WishlistsLoaded="@_wishlistsLoaded"
+                                         OnMatchBudgetResolved="HandleMatchBudgetResolved"
                                          EventWishlists="@_event.EventWishlists" />
                 }
 
@@ -306,7 +307,7 @@ else
                 <div class="mt-4">
                     <EventReservedItems EventId="@EventId"
                                          CurrentUserId="@_currentUserId"
-                                         Budget="@(_event.IsGiftExchange ? _event.Budget : null)" />
+                                         Budget="@_matchBudget" />
                 </div>
 
                 @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
@@ -342,6 +343,7 @@ else
     private bool _isAcceptedParticipant;
     private bool _isPendingInvitee;
     private bool _wishlistsLoaded;
+    private decimal? _matchBudget; // The budget the match panel shops within, so both panels agree
     private EventUserModel? _pendingInvitation;
     private string? _loadedEventId;
     private string? _loadError;
@@ -545,6 +547,8 @@ else
 
         return Task.CompletedTask;
     }
+
+    private void HandleMatchBudgetResolved(decimal? budget) => _matchBudget = budget;
 
     private async Task HandleNamesDrawn()
     {

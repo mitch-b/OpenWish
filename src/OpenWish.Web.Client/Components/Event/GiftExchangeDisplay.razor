@@ -47,7 +47,7 @@
                     <dt>Exchange date</dt>
                     <dd>
                         @ExchangeDate.ToString("ddd, MMM d, yyyy")
-                        @if (EventCountdown.Describe(ExchangeDate, DateTimeOffset.Now) is { } countdown)
+                        @if (EventCountdown.Describe(ExchangeDate, DateTimeOffset.Now, TimeZoneInfo.Local) is { } countdown)
                         {
                             <span class="text-muted" data-testid="exchange-countdown">· @countdown</span>
                         }
@@ -97,6 +97,7 @@
     [Parameter] public DateTimeOffset ExchangeDate { get; set; }
     [Parameter] public bool WishlistsLoaded { get; set; }
     [Parameter] public ICollection<WishlistModel>? EventWishlists { get; set; }
+    [Parameter] public EventCallback<decimal?> OnMatchBudgetResolved { get; set; }
 
     private GiftExchangeModel? _giftExchange;
     private WishlistModel? _recipientWishlist;
@@ -159,6 +160,7 @@
             _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
 
             UpdateRecipientWishlist();
+            await OnMatchBudgetResolved.InvokeAsync(_giftExchange?.Budget);
         }
         catch (Exception ex)
         {

@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.7.2] - 2026-10-31
+
+### Improved
+
+- Your gift exchange match stays on screen while the event page finishes
+  loading, instead of flashing back to a spinner.
+- The match shows how soon the exchange is ("today", "tomorrow", "in 12 days").
+- My Reserved Items totals what you have reserved and, in a gift exchange,
+  how much of the budget is left or exceeded, noting items without a price.
+- Wishlist links in My Reserved Items open in the same tab, so Back returns to
+  the event.
+- With nothing reserved yet, My Reserved Items links straight to the event
+  wishlists.
+
 ## [0.7.1] - 2026-10-30
 
 ### Fixed

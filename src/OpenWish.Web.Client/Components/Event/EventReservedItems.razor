@@ -45,11 +45,32 @@
         else if (_items.Count == 0)
         {
             <div class="text-muted small">
-                You haven't reserved any items for this event yet. Explore participant wishlists to start picking gifts.
+                You haven't reserved any items for this event yet.
+                <a href="#event-wishlists">Browse the event wishlists</a> to start picking gifts.
             </div>
         }
         else
         {
+            var spend = ReservedSpend.From(_items.Select(item => item.Price), Budget);
+            <p class="reserved-spend small mb-3" data-testid="reserved-spend">
+                <strong>@spend.Total.ToString("C") reserved</strong>
+                @if (spend.HasBudget)
+                {
+                    @if (spend.IsOverBudget)
+                    {
+                        <span class="text-danger"> · @((-spend.Remaining).ToString("C")) over the @spend.Budget!.Value.ToString("C") budget</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted"> · @spend.Remaining.ToString("C") left of the @spend.Budget!.Value.ToString("C") budget</span>
+                    }
+                }
+                @if (spend.UnpricedCount > 0)
+                {
+                    <span class="text-muted"> · @spend.UnpricedCount without a price</span>
+                }
+            </p>
+
             foreach (var ownerGroup in GetOwnerGroups())
             {
                 <div class="reserved-owner-group mb-4">
@@ -69,9 +90,7 @@
                         <div class="reserved-wishlist mb-3">
                             <div class="reserved-wishlist-header d-flex justify-content-between align-items-center">
                                 <a href="/wishlists/@wishlist.WishlistPublicId"
-                                   class="fw-semibold text-decoration-none"
-                                   target="_blank" rel="noopener noreferrer"
-                                   aria-label="Open @wishlist.WishlistName wishlist in a new tab">
+                                   class="fw-semibold text-decoration-none">
                                     <OpenWishIcon Name="card-checklist" Class="me-1" />@wishlist.WishlistName
                                 </a>
                                 <span class="badge bg-light text-dark">@wishlist.Items.Count</span>
@@ -111,8 +130,7 @@
                                                 <div class="reserved-item-links mt-2 d-flex flex-wrap gap-2">
                                                     <a href="/wishlists/@wishlist.WishlistPublicId"
                                                        class="btn btn-sm btn-outline-primary"
-                                                       target="_blank" rel="noopener noreferrer"
-                                                       aria-label="View @wishlist.WishlistName wishlist in a new tab">
+                                                       aria-label="View @wishlist.WishlistName wishlist">
                                                         View wishlist
                                                     </a>
                                                     @if (!string.IsNullOrWhiteSpace(item.Url))
@@ -157,6 +175,10 @@
 
     [Parameter]
     public string? CurrentUserId { get; set; }
+
+    // Only set when one budget applies to everything the shopper reserves, such as a gift exchange match.
+    [Parameter]
+    public decimal? Budget { get; set; }
 
     private readonly List<EventReservedItemModel> _items = new();
     private string? _userId;

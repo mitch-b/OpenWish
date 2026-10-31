@@ -45,7 +45,13 @@
                 </div>
                 <div>
                     <dt>Exchange date</dt>
-                    <dd>@ExchangeDate.ToString("ddd, MMM d, yyyy")</dd>
+                    <dd>
+                        @ExchangeDate.ToString("ddd, MMM d, yyyy")
+                        @if (EventCountdown.Describe(ExchangeDate, DateTimeOffset.Now) is { } countdown)
+                        {
+                            <span class="text-muted" data-testid="exchange-countdown">· @countdown</span>
+                        }
+                    </dd>
                 </div>
             </dl>
 
@@ -117,9 +123,31 @@
     private static int GetItemCount(WishlistModel wishlist) =>
         wishlist.ItemCount > 0 ? wishlist.ItemCount : wishlist.Items?.Count ?? 0;
 
+    private string? _loadedKey;
+
     protected override async Task OnParametersSetAsync()
     {
-        await LoadGiftExchange();
+        var key = $"{EventId}/{CurrentUserId}";
+        if (key != _loadedKey)
+        {
+            _loadedKey = key;
+            await LoadGiftExchange();
+        }
+        else
+        {
+            // The parent re-renders as its wishlists arrive; keep the match on screen instead of reloading it.
+            UpdateRecipientWishlist();
+        }
+    }
+
+    private void UpdateRecipientWishlist()
+    {
+        _recipientWishlist = _giftExchange?.ReceiverId != null && EventWishlists != null
+            ? EventWishlists
+                .Where(wishlist => wishlist.OwnerId == _giftExchange.ReceiverId)
+                .OrderByDescending(GetItemCount)
+                .FirstOrDefault()
+            : null;
     }
 
     private async Task LoadGiftExchange()
@@ -130,17 +158,7 @@
         {
             _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
 
-            if (_giftExchange?.ReceiverId != null && EventWishlists != null)
-            {
-                _recipientWishlist = EventWishlists
-                    .Where(wishlist => wishlist.OwnerId == _giftExchange.ReceiverId)
-                    .OrderByDescending(GetItemCount)
-                    .FirstOrDefault();
-            }
-            else
-            {
-                _recipientWishlist = null;
-            }
+            UpdateRecipientWishlist();
         }
         catch (Exception ex)
         {

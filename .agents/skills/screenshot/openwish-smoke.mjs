@@ -2663,6 +2663,20 @@ async function verifyFriendJourney(browser, manifest, results) {
   await friendMatch.getByText("Your match stays private.").waitFor({ state: "visible" });
   await assertVisible(page, "My Reserved Items");
   await assertVisible(page, "Noise-Cancelling Headphones");
+  const countdown = (await friendMatch.getByTestId("exchange-countdown").textContent())?.trim() ?? "";
+  if (!/^· (today|tomorrow|in \d+ days)$/.test(countdown)) {
+    throw new Error(`The match did not show how soon the exchange is: ${countdown}`);
+  }
+  const reservedSpend = (await page.getByTestId("reserved-spend").textContent())?.replace(/\s+/g, " ").trim() ?? "";
+  if (!/\$[\d,.]+ reserved/.test(reservedSpend) || !/budget/.test(reservedSpend)) {
+    throw new Error(`The reserved items did not total against the exchange budget: ${reservedSpend}`);
+  }
+  const reservedLinkTargets = await page.locator(".event-reserved-items a[href^='/wishlists/']")
+    .evaluateAll(links => links.map(link => link.target));
+  if (reservedLinkTargets.length === 0 || reservedLinkTargets.some(target => target === "_blank")) {
+    throw new Error("Reserved item wishlist links should open in the same tab.");
+  }
+  await friendMatch.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
 
   const inviteResponse = await context.request.post(
     `${baseUrl}/api/friends/invite?email=${encodeURIComponent(`  ${guestEmail.toUpperCase()}  `)}`

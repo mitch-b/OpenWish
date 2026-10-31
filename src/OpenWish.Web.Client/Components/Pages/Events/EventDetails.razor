@@ -305,7 +305,8 @@ else
 
                 <div class="mt-4">
                     <EventReservedItems EventId="@EventId"
-                                         CurrentUserId="@_currentUserId" />
+                                         CurrentUserId="@_currentUserId"
+                                         Budget="@(_event.IsGiftExchange ? _event.Budget : null)" />
                 </div>
 
                 @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())

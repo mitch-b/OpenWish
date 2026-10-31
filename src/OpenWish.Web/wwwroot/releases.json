@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.7.2",
+    "date": "2026-10-31",
+    "title": "Shop for your match with less friction",
+    "summary": "Your match stays steady while the event loads, shows how soon the exchange is, and your reserved gifts total against the budget.",
+    "highlights": [
+      "The gift exchange match no longer flashes back to a spinner.",
+      "See how many days remain until the exchange.",
+      "My Reserved Items totals your gifts against the exchange budget.",
+      "Reserved item links keep you in the same tab, and an empty list points to the event wishlists."
+    ]
+  }, {
     "version": "0.7.1",
     "date": "2026-10-30",
     "title": "Smoother event invitations and setup",

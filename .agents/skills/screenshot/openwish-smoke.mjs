@@ -1431,8 +1431,30 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "attached" });
   await screenshot(page, "friends.png");
   await page.waitForTimeout(2000);
+  await page.getByRole("link", { name: "View their lists" }).waitFor({ state: "visible" });
+  await friendInvites.fill("not-an-email, new-friend@example.com");
+  await friendInvites.press("Control+Enter");
+  await page.getByRole("alert").filter({ hasText: "\"not-an-email\" is not a valid email address" })
+    .waitFor({ state: "visible" });
   await friendInvites.fill("new-friend@example.com");
   await sendInvitations.click({ trial: true });
+  const jordanLists = page.getByRole("link", { name: "View wishlists shared by JordanDemo" });
+  await jordanLists.waitFor({ state: "visible" });
+  await jordanLists.click();
+  await page.waitForURL(/\/wishlists\?tab=friends&owner=JordanDemo/);
+  await page.getByText("Showing lists from").waitFor({ state: "visible" });
+  await assertVisible(page, "Jordan's Favorites");
+  const sharedSearch = page.getByRole("searchbox", { name: "Search shared wishlists" });
+  await sharedSearch.fill("zzz-no-such-list");
+  await page.getByText("No shared wishlists match").waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Clear filters" }).click();
+  await assertVisible(page, "Jordan's Favorites");
+  await screenshot(page, "friend-lists.png");
+  await page.getByRole("link", { name: "Wishlists", exact: true }).first().click();
+  await page.waitForURL(/\/wishlists$/);
+  await page.getByRole("tab", { name: "My Wishlists", selected: true }).waitFor({ state: "visible" });
+  await page.getByText("Showing lists from").waitFor({ state: "detached" });
+  await visit(page, "/friends", "Connect with friends", visitedRoutes);
 
   const notificationBell = page.locator(".notification-bell");
   await notificationBell.click();

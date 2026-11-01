@@ -22,9 +22,10 @@
                       aria-describedby="emailInvitesHelp"
                       aria-invalid="@(_error ? "true" : "false")"
                       value="@inviteEmails"
-                      @oninput="UpdateInviteEmails"></textarea>
+                      @oninput="UpdateInviteEmails"
+                      @onkeydown="HandleInviteKeyDown"></textarea>
             <div class="form-text" id="emailInvitesHelp">
-                Separate multiple addresses with commas, spaces, or semicolons.
+                Separate multiple addresses with commas, spaces, or semicolons. Press Ctrl+Enter to send.
             </div>
         </div>
         
@@ -76,6 +77,14 @@
         _success = false;
     }
     
+    private async Task HandleInviteKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && (args.CtrlKey || args.MetaKey))
+        {
+            await SendEmailInvites();
+        }
+    }
+
     private async Task SendEmailInvites()
     {
         if (_sendingInvites)
@@ -100,13 +109,19 @@
             
             if (_currentUserId != null)
             {
-                // Split emails by comma and clean up
-                var emails = inviteEmails.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(e => e.Trim())
-                    .Where(e => !string.IsNullOrWhiteSpace(e))
-                    .ToList();
-                
-                if (!emails.Any())
+                var parsed = FriendInviteInput.Parse(inviteEmails);
+                var emails = parsed.Valid;
+
+                if (parsed.Invalid.Count > 0)
+                {
+                    _error = true;
+                    _errorMessage = parsed.Invalid.Count == 1
+                        ? $"\"{parsed.Invalid[0]}\" is not a valid email address. Fix it or remove it, then send again."
+                        : $"These are not valid email addresses: {string.Join(", ", parsed.Invalid)}. Fix or remove them, then send again.";
+                    return;
+                }
+
+                if (emails.Count == 0)
                 {
                     _error = true;
                     _errorMessage = "Please enter at least one valid email address.";

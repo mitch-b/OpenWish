@@ -29,7 +29,7 @@
 
             <div class="card friends-panel mb-4">
                 <div class="card-body">
-                    <FriendRequestList @key="_requestListVersion" OnFriendshipsChanged="HandleFriendshipsChanged" />
+                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
                 </div>
             </div>
         </div>
@@ -37,7 +37,7 @@
         <div>
             <div class="card friends-panel">
                 <div class="card-body">
-                    <FriendList @key="_friendListVersion" />
+                    <FriendList @ref="_friendList" />
                 </div>
             </div>
         </div>
@@ -45,16 +45,10 @@
 </div>
 
 @code {
-    private int _friendListVersion;
-    private int _requestListVersion;
+    private FriendList? _friendList;
+    private FriendRequestList? _requestList;
 
-    private void HandleRequestSent()
-    {
-        _requestListVersion++;
-    }
+    private Task HandleRequestSent() => _requestList?.ReloadAsync() ?? Task.CompletedTask;
 
-    private void HandleFriendshipsChanged()
-    {
-        _friendListVersion++;
-    }
+    private Task HandleFriendshipsChanged() => _friendList?.ReloadAsync() ?? Task.CompletedTask;
 }

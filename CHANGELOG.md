@@ -2,6 +2,24 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.8.0] - 2026-11-01
+
+### Added
+
+- A "View lists" action on every friend opens the Friends' Wishlists tab
+  showing only that friend's shared lists; accepting a friend request offers
+  the same link.
+- Search the lists shared with you by list or friend name.
+
+### Improved
+
+- Email invitations are checked before sending; invalid addresses are named
+  and duplicates are ignored. Ctrl+Enter sends from the field.
+- Friends are sorted by name with a count, and accepting, removing, or
+  requesting friends updates the lists in place instead of flashing a spinner.
+- Opening Friends' Wishlists from a link no longer flashes "Nothing shared
+  with you yet" while lists load.
+
 ## [0.7.2] - 2026-10-31
 
 ### Improved

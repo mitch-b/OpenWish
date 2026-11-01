@@ -1450,6 +1450,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Clear filters" }).click();
   await assertVisible(page, "Jordan's Favorites");
   await screenshot(page, "friend-lists.png");
+  await page.getByRole("link", { name: "Wishlists", exact: true }).first().click();
+  await page.waitForURL(/\/wishlists$/);
+  await page.getByRole("tab", { name: "My Wishlists", selected: true }).waitFor({ state: "visible" });
+  await page.getByText("Showing lists from").waitFor({ state: "detached" });
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
 
   const notificationBell = page.locator(".notification-bell");

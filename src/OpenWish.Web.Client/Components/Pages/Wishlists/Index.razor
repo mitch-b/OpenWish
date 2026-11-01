@@ -280,6 +280,33 @@
     private IReadOnlyList<WishlistModel> VisibleFriendsWishlists =>
         FriendWishlistFilter.Apply(friendsWishlists ?? [], _friendsSearchTerm, _ownerFilter);
 
+    private string? _appliedTab;
+    private string? _appliedOwner;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ApplyQueryParameters() && _userId != null)
+        {
+            await LoadFriendsWishlistsIfShown();
+        }
+    }
+
+    private bool ApplyQueryParameters()
+    {
+        if (Tab == _appliedTab && Owner == _appliedOwner)
+        {
+            return false;
+        }
+
+        _appliedTab = Tab;
+        _appliedOwner = Owner;
+        var showFriends = string.Equals(Tab, "friends", StringComparison.OrdinalIgnoreCase);
+        activeTab = showFriends ? "friends-wishlists" : "my-wishlists";
+        _ownerFilter = showFriends && !string.IsNullOrWhiteSpace(Owner) ? Owner.Trim() : null;
+        _friendsSearchTerm = string.Empty;
+        return true;
+    }
+
     private void ClearOwnerFilter() => _ownerFilter = null;
 
     private void ClearFriendFilters()
@@ -295,11 +322,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (string.Equals(Tab, "friends", StringComparison.OrdinalIgnoreCase))
-        {
-            activeTab = "friends-wishlists";
-            _ownerFilter = string.IsNullOrWhiteSpace(Owner) ? null : Owner.Trim();
-        }
+        ApplyQueryParameters();
 
         try
         {
@@ -325,6 +348,7 @@
             wishlists = new List<WishlistModel>();
             ApplyFiltersAndSort();
             _loadingWishlists = false;
+            await LoadFriendsWishlistsIfShown();
         }
     }
 
@@ -339,7 +363,6 @@
                 if (_userId != null)
                 {
                     await LoadWishlists();
-                    await LoadFriendsWishlistsIfShown();
                 }
                 else
                 {
@@ -354,6 +377,7 @@
             finally
             {
                 _loadingWishlists = false;
+                await LoadFriendsWishlistsIfShown();
                 StateHasChanged();
             }
         }

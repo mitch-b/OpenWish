@@ -1364,7 +1364,7 @@ public class InteractiveControlMarkupTests
         var styles = ReadComponent("OpenWish.Web.Client", "Components", "Social", "FriendList.razor.css");
 
         Assert.Contains("aria-busy=\"@(_loading ? \"true\" : \"false\")\"", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("@onclick=\"LoadFriends\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"RetryLoadFriends\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Remove @GetFriendName(friend) from friends\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\" aria-live=\"polite\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("DescriptionId=\"friend-removal-description\"", dialogMarkup, StringComparison.Ordinal);
@@ -1376,10 +1376,12 @@ public class InteractiveControlMarkupTests
         Assert.True(
             listMarkup.IndexOf("_statusMessage = $\"{friendName} removed", StringComparison.Ordinal) <
             listMarkup.IndexOf(
-                "await LoadFriends();",
+                "await LoadFriends(silent: true);",
                 listMarkup.IndexOf("private async Task ConfirmRemoveFriend", StringComparison.Ordinal),
                 StringComparison.Ordinal));
         Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"View wishlists shared by @GetFriendName(friend)\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("/wishlists?tab=friends&owner=", listMarkup, StringComparison.Ordinal);
     }
 
     [Fact]

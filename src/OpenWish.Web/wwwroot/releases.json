@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-11-01",
+    "title": "From your friends to their wishlists",
+    "summary": "Jump from a friend to their lists, search lists shared with you, and invite friends with clearer feedback.",
+    "highlights": [
+      "View lists on each friend opens just that friend's shared wishlists; accepting a request offers the same link.",
+      "Search the lists shared with you by list or friend name.",
+      "Invitations check email addresses first, name any that look wrong, and send with Ctrl+Enter.",
+      "Accepting, removing, or requesting friends updates the lists in place without flashing a spinner."
+    ]
+  }, {
     "version": "0.7.2",
     "date": "2026-10-31",
     "title": "Shop for your match with less friction",

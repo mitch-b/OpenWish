@@ -173,7 +173,7 @@
                  tabindex="0"
                  aria-busy="@(loadingFriendsWishlists ? "true" : "false")"
                  hidden="@(activeTab != "friends-wishlists")">
-                @if (loadingFriendsWishlists)
+                @if (loadingFriendsWishlists || (friendsWishlists is null && _friendsWishlistLoadError is null && activeTab == "friends-wishlists"))
                 {
                     <div class="d-flex justify-content-center">
                         <div class="spinner-border" role="status">
@@ -196,11 +196,47 @@
                         </div>
                         <a href="/friends" class="btn btn-outline-secondary">Manage friends</a>
                     </div>
-                    <div class="row">
-                        @foreach (var wishlist in friendsWishlists)
+                    <div class="filter-field mb-3">
+                        <label for="friends-wishlist-search" class="form-label">Search shared wishlists</label>
+                        <div class="input-group search-control">
+                            <input id="friends-wishlist-search" type="search" class="form-control"
+                                   placeholder="Search by list or friend"
+                                   aria-controls="friends-wishlist-results"
+                                   @bind="_friendsSearchTerm" @bind:event="oninput" />
+                            @if (!string.IsNullOrWhiteSpace(_friendsSearchTerm))
+                            {
+                                <button class="btn btn-outline-secondary" type="button"
+                                        aria-label="Clear shared wishlist search"
+                                        @onclick="() => _friendsSearchTerm = string.Empty">
+                                    <OpenWishIcon Name="x" />
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(_ownerFilter))
+                    {
+                        <p class="mb-3" id="friends-owner-filter">
+                            Showing lists from <strong>@_ownerFilter</strong>.
+                            <button class="btn btn-link p-0 align-baseline" type="button" @onclick="ClearOwnerFilter">Show everyone</button>
+                        </p>
+                    }
+                    <div id="friends-wishlist-results" role="region" aria-label="Shared wishlists" aria-live="polite">
+                        @if (VisibleFriendsWishlists.Count == 0)
                         {
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <WishlistCard Wishlist="@wishlist" />
+                            <div class="alert alert-info" role="status">
+                                No shared wishlists match@(string.IsNullOrWhiteSpace(_ownerFilter) ? "" : $" {_ownerFilter}").
+                                <button class="btn btn-link p-0 align-baseline" type="button" @onclick="ClearFriendFilters">Clear filters</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                @foreach (var wishlist in VisibleFriendsWishlists)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <WishlistCard Wishlist="@wishlist" />
+                                    </div>
+                                }
                             </div>
                         }
                     </div>
@@ -232,6 +268,25 @@
     private ElementReference _myWishlistsTab;
     private ElementReference _friendsWishlistsTab;
     private string? _pendingTabFocus;
+    private string _friendsSearchTerm = "";
+    private string? _ownerFilter;
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? Tab { get; set; }
+
+    [SupplyParameterFromQuery(Name = "owner")]
+    public string? Owner { get; set; }
+
+    private IReadOnlyList<WishlistModel> VisibleFriendsWishlists =>
+        FriendWishlistFilter.Apply(friendsWishlists ?? [], _friendsSearchTerm, _ownerFilter);
+
+    private void ClearOwnerFilter() => _ownerFilter = null;
+
+    private void ClearFriendFilters()
+    {
+        _ownerFilter = null;
+        _friendsSearchTerm = string.Empty;
+    }
     
     // Filter and sort properties
     private string searchTerm = "";
@@ -240,6 +295,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (string.Equals(Tab, "friends", StringComparison.OrdinalIgnoreCase))
+        {
+            activeTab = "friends-wishlists";
+            _ownerFilter = string.IsNullOrWhiteSpace(Owner) ? null : Owner.Trim();
+        }
+
         try
         {
             _userId = await UserContextService.GetUserIdAsync();
@@ -247,6 +308,7 @@
             {
                 await LoadWishlists();
                 _loadingWishlists = false;
+                await LoadFriendsWishlistsIfShown();
             }
             else
             {
@@ -277,6 +339,7 @@
                 if (_userId != null)
                 {
                     await LoadWishlists();
+                    await LoadFriendsWishlistsIfShown();
                 }
                 else
                 {
@@ -299,6 +362,14 @@
         {
             _pendingTabFocus = null;
             await (tab == "my-wishlists" ? _myWishlistsTab : _friendsWishlistsTab).FocusAsync();
+        }
+    }
+
+    private async Task LoadFriendsWishlistsIfShown()
+    {
+        if (activeTab == "friends-wishlists" && friendsWishlists == null)
+        {
+            await LoadFriendsWishlists();
         }
     }
 

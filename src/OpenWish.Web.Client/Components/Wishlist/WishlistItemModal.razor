@@ -24,8 +24,15 @@
                         disabled="@IsBusy"></button>
             </div>
             <div class="modal-body">
+                @if (_lastAddedName is not null)
+                {
+                    <p class="added-another-note" role="status" data-testid="added-another-note">
+                        <OpenWishIcon Name="check-circle" />
+                        <span>@_lastAddedName was added. Add the next idea whenever you're ready.</span>
+                    </p>
+                }
                 <div class="url-import-section mb-4">
-                    <ProductLinkImporter Model="@Model"
+                    <ProductLinkImporter Model="@Model" @key="_formVersion"
                                          InputId="product-url-import-modal"
                                          HelpText="Optional: paste a link or text shared from a shopping app and we'll fill in what we can. Existing details won't be replaced."
                                          Disabled="@_isSubmitting"
@@ -35,7 +42,9 @@
                                          data-dialog-initial-focus="true" />
                 </div>
 
-                <EditForm Model="@Model"
+                <EditForm @ref="_form"
+                          @key="_formVersion"
+                          Model="@Model"
                           OnValidSubmit="@HandleSubmit"
                           FormName="WishlistItemModal"
                           id="wishlist-item-form"
@@ -116,6 +125,17 @@
                         data-dialog-close
                         @onclick="Cancel"
                         disabled="@IsBusy">Cancel</button>
+                @if (Model?.Id == 0)
+                {
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            data-testid="add-another-item"
+                            @onclick="AddAnotherAsync"
+                            disabled="@IsBusy">
+                        <OpenWishIcon Name="plus-lg" />
+                        <span>Add and add another</span>
+                    </button>
+                }
                 <button type="submit" form="wishlist-item-form" class="btn btn-primary" disabled="@IsBusy">
                     @if (_isSubmitting)
                     {
@@ -144,6 +164,11 @@
     private string? _initialImportText;
     private string? _saveError;
     private bool _dialogActive;
+    private bool _addAnother;
+    private bool _focusImporter;
+    private int _formVersion;
+    private string? _lastAddedName;
+    private EditForm? _form;
     private bool IsBusy => _isImporting || _isSubmitting;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -152,6 +177,13 @@
         {
             await JSRuntime.InvokeVoidAsync("openWishActivateDialog", "wishlist-item-dialog");
             _dialogActive = true;
+        }
+
+        if (_focusImporter && IsVisible)
+        {
+            _focusImporter = false;
+            await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "wishlist-item-dialog");
+            await JSRuntime.InvokeVoidAsync("openWishFocusElement", "product-url-import-modal");
         }
     }
 
@@ -163,6 +195,7 @@
         Model = model ?? new WishlistItemModel();
         _initialImportText = importText;
         _saveError = null;
+        _lastAddedName = null;
         if (Model.Id == 0 && string.IsNullOrWhiteSpace(Model.PublicId))
         {
             Model.PublicId = Guid.NewGuid().ToString();
@@ -227,10 +260,50 @@
             _isSubmitting = false;
         }
 
-        if (saved)
+        if (saved && _addAnother && Model is not null)
+        {
+            PrepareForNextItem();
+        }
+        else if (saved)
         {
             await HideAsync();
         }
+    }
+
+    private async Task AddAnotherAsync()
+    {
+        if (IsBusy || _form?.EditContext is not { } editContext || !editContext.Validate())
+        {
+            return;
+        }
+
+        _addAnother = true;
+        try
+        {
+            await HandleSubmit();
+        }
+        finally
+        {
+            _addAnother = false;
+        }
+    }
+
+    private void PrepareForNextItem()
+    {
+        _lastAddedName = Model.Name;
+        Model.Id = 0;
+        Model.PublicId = Guid.NewGuid().ToString();
+        Model.Name = string.Empty;
+        Model.Description = null;
+        Model.Price = null;
+        Model.Url = null;
+        Model.Image = null;
+        Model.WhereToBuy = null;
+        Model.Priority = null;
+        Model.IsPrivate = false;
+        _initialImportText = null;
+        _formVersion++;
+        _focusImporter = true;
     }
 
     private async Task Cancel()

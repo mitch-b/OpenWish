@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/wishlists/{WishlistId}"
 
+@using OpenWish.Shared.Extensions
 @using OpenWish.Shared.Products
 @using OpenWish.Shared.RequestModels
 @using OpenWish.Shared.Services
@@ -61,9 +62,9 @@ else
                     <span class="fab-label">Add item</span>
                 </button>
             }
-            <button class="btn btn-outline-secondary" type="button" @onclick="ShareWishlist">
-                <OpenWishIcon Name="share" />
-                <span class="btn-text">Copy link</span>
+            <button id="copy-wishlist-link" class="btn btn-outline-secondary" type="button" @onclick="ShareWishlist">
+                <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
+                <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
             </button>
             @if (_isOwner)
             {
@@ -99,9 +100,13 @@ else
 
     @if (!string.IsNullOrEmpty(_feedbackMessage))
     {
-        <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-success") alert-dismissible mt-2" role="alert">
+        <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-success") alert-dismissible feedback-banner mt-2" role="alert">
             @_feedbackMessage
-            <button type="button" class="btn-close" aria-label="Close" @onclick="() => _feedbackMessage = string.Empty"></button>
+            @if (_feedbackMessage == _hiddenItemFeedback && HasActiveFilters)
+            {
+                <button type="button" class="btn btn-link alert-link p-0 ms-2 align-baseline" @onclick="ShowAllAfterHiddenItem">Show all ideas</button>
+            }
+            <button type="button" class="btn-close" aria-label="Close" @onclick="DismissFeedback"></button>
         </div>
     }
 
@@ -162,7 +167,8 @@ else
                    aria-controls="wishlist-items"
                    @bind="SearchQuery"
                    @bind:event="oninput"
-                   @bind:after="ApplyFiltersAndSort" />
+                   @bind:after="ApplyFiltersAndSort"
+                   @onkeydown="HandleSearchKeyDown" />
             @if (!string.IsNullOrEmpty(SearchQuery))
             {
                 <button class="search-clear"
@@ -937,7 +943,12 @@ else
     private WishlistItemList? _itemListRef;
     private int? _pendingInteractionItemId;
     private int? _gridCoordinationItemId;
+    private static readonly TimeSpan FeedbackDisplayDuration = TimeSpan.FromSeconds(8);
     private string _feedbackMessage = string.Empty;
+    private string? _scheduledFeedback;
+    private string? _hiddenItemFeedback;
+    private bool _isDisposed;
+    private bool _linkCopied;
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
@@ -1304,7 +1315,7 @@ else
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(SearchQuery))
         {
-            var query = SearchQuery.ToLower();
+            var query = SearchQuery.Trim().ToLower();
             filtered = filtered.Where(i =>
                 (i.Name?.ToLower().Contains(query) ?? false) ||
                 (i.Description?.ToLower().Contains(query) ?? false) ||
@@ -1436,6 +1447,14 @@ else
             filterSet.Add(value);
         }
         ApplyFiltersAndSort();
+    }
+
+    private void HandleSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape" && !string.IsNullOrEmpty(SearchQuery))
+        {
+            ClearSearch();
+        }
     }
 
     private void ClearSearch()
@@ -1650,6 +1669,22 @@ else
             ? $"Changes to {savedItem.Name} saved."
             : $"{savedItem.Name} added to the wishlist.";
         _feedbackIsError = false;
+
+        var isHiddenByFilters = HasActiveFilters
+            && ShouldDisplayItem(savedItem)
+            && !_filteredItems.Any(candidate => candidate.Id == savedItem.Id);
+        if (isHiddenByFilters)
+        {
+            _feedbackMessage += " It isn't shown because of your current filters.";
+        }
+
+        _hiddenItemFeedback = isHiddenByFilters ? _feedbackMessage : null;
+    }
+
+    private void ShowAllAfterHiddenItem()
+    {
+        ClearAllFilters();
+        DismissFeedback();
     }
 
     private void HandleModalCancel()
@@ -1742,13 +1777,17 @@ else
 
     private async Task ShareWishlist()
     {
-        string wishlistUrl = NavigationManager.Uri;
+        var wishlistUrl = ShareableUrl.FromCurrentUri(NavigationManager.Uri);
 
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", wishlistUrl);
             _feedbackMessage = "Wishlist URL copied to clipboard!";
             _feedbackIsError = false;
+            _linkCopied = true;
+            StateHasChanged();
+            _ = ResetLinkCopiedAsync();
+            return;
         }
         catch
         {
@@ -1756,6 +1795,18 @@ else
             _feedbackIsError = true;
         }
         StateHasChanged();
+    }
+
+    private async Task ResetLinkCopiedAsync()
+    {
+        await Task.Delay(FeedbackDisplayDuration / 2);
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _linkCopied = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void SetViewMode(string mode)
@@ -1821,12 +1872,48 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
+    private void DismissFeedback() => _feedbackMessage = string.Empty;
+
+    // Confirmations clear themselves so they never describe an earlier action; errors stay until dismissed.
+    private void ScheduleFeedbackDismissal()
+    {
+        if (string.IsNullOrEmpty(_feedbackMessage) || _feedbackIsError)
+        {
+            _scheduledFeedback = null;
+            return;
+        }
+
+        var message = _feedbackMessage;
+        if (_scheduledFeedback == message)
+        {
+            return;
+        }
+
+        _scheduledFeedback = message;
+        _ = DismissFeedbackLaterAsync(message);
+    }
+
+    private async Task DismissFeedbackLaterAsync(string message)
+    {
+        await Task.Delay(FeedbackDisplayDuration);
+        if (_isDisposed || _feedbackMessage != message || _feedbackIsError)
+        {
+            return;
+        }
+
+        _feedbackMessage = string.Empty;
+        _scheduledFeedback = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private void ToggleGridCoordination(int itemId) =>
         _gridCoordinationItemId = _gridCoordinationItemId == itemId ? null : itemId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
+        ScheduleFeedbackDismissal();
 
         if (_focusThankYouField && _receivedTarget is not null)
         {
@@ -1851,6 +1938,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        _isDisposed = true;
         if (_isListeningForPaste)
         {
             try

@@ -2,6 +2,24 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.9.0] - 2026-11-02
+
+### Added
+
+- "Add and add another" in the Add item dialog saves an idea and readies the
+  form, with focus on the product link, for the next one.
+
+### Improved
+
+- Confirmations stay in view after actions far down a long list and clear
+  themselves after a few seconds; errors remain until dismissed.
+- Adding or editing an idea that a search or filter hides now says so and
+  offers "Show all ideas".
+- "Copy link" copies the plain wishlist address and the button confirms with
+  "Link copied".
+- Searching a wishlist ignores leading and trailing spaces, and Escape
+  clears the search.
+
 ## [0.8.0] - 2026-11-01
 
 ### Added

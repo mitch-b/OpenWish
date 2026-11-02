@@ -982,6 +982,75 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The deleted item remained visible in the wishlist.");
   }
 
+  // Capture several ideas in one visit, and be told when a filter hides a new idea.
+  const batchNames = ["Batch capture idea one", "Batch capture idea two"];
+  await addItemButton.click();
+  const batchDialog = page.getByRole("dialog", { name: "Add item" });
+  await batchDialog.waitFor({ state: "visible" });
+  await batchDialog.getByLabel("Name").fill(batchNames[0]);
+  await batchDialog.getByLabel("Estimated price").fill("12.00");
+  await batchDialog.getByRole("button", { name: "Add and add another" }).click();
+  await batchDialog.getByTestId("added-another-note")
+    .filter({ hasText: `${batchNames[0]} was added.` })
+    .waitFor({ state: "visible" });
+  if (await batchDialog.getByLabel("Name").inputValue() !== "" ||
+      await batchDialog.getByLabel("Estimated price").inputValue() !== "") {
+    throw new Error("Add and add another did not clear the form for the next idea.");
+  }
+  if (!(await batchDialog.getByLabel("Product URL").evaluate(element => element === document.activeElement))) {
+    throw new Error("Add and add another did not return focus to the product URL field.");
+  }
+  await screenshot(page, "wishlist-add-another.png", false);
+  await batchDialog.getByLabel("Name").fill(batchNames[1]);
+  await batchDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await batchDialog.waitFor({ state: "detached" });
+  for (const batchName of batchNames) {
+    await assertVisible(page, batchName);
+  }
+  const batchItemsResponse = await context.request.get(
+    `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`
+  );
+  const batchItems = await batchItemsResponse.json();
+  for (const batchName of batchNames) {
+    if (batchItems.filter(item => item.name === batchName).length !== 1) {
+      throw new Error(`${batchName} was not saved exactly once.`);
+    }
+  }
+
+  const batchSearch = page.getByRole("searchbox", { name: "Search wishlist items" });
+  await batchSearch.fill(`  ${batchNames[0]}  `);
+  await page.getByText(batchNames[1], { exact: true }).waitFor({ state: "detached" });
+  await assertVisible(page, batchNames[0]);
+  await batchSearch.press("Escape");
+  if (await batchSearch.inputValue() !== "") {
+    throw new Error("Pressing Escape did not clear the wishlist search.");
+  }
+  await assertVisible(page, batchNames[1]);
+  await batchSearch.fill(`  ${batchNames[0]}  `);
+  await page.getByText(batchNames[1], { exact: true }).waitFor({ state: "detached" });
+  const hiddenIdeaName = "Hidden by filter idea";
+  await addItemButton.click();
+  const hiddenDialog = page.getByRole("dialog", { name: "Add item" });
+  await hiddenDialog.waitFor({ state: "visible" });
+  await hiddenDialog.getByLabel("Name").fill(hiddenIdeaName);
+  await hiddenDialog.getByRole("button", { name: "Add item", exact: true }).click();
+  await hiddenDialog.waitFor({ state: "detached" });
+  const hiddenNotice = page.getByRole("alert")
+    .filter({ hasText: `${hiddenIdeaName} added to the wishlist. It isn't shown because of your current filters.` });
+  await hiddenNotice.waitFor({ state: "visible" });
+  await hiddenNotice.getByRole("button", { name: "Show all ideas" }).click();
+  await assertVisible(page, hiddenIdeaName);
+  await hiddenNotice.waitFor({ state: "detached" });
+  await batchSearch.fill("");
+
+  for (const cleanupName of [...batchNames, hiddenIdeaName]) {
+    await page.getByRole("button", { name: `Delete ${cleanupName}` }).click();
+    const cleanupDialog = page.getByRole("dialog", { name: "Delete item" });
+    await cleanupDialog.getByRole("button", { name: "Delete item" }).click();
+    await cleanupDialog.waitFor({ state: "detached" });
+    await page.getByText(cleanupName, { exact: true }).waitFor({ state: "detached" });
+  }
+
   const concurrentDeleteItemName = "Concurrent delete verification item";
   const concurrentDeleteItemResponse = await context.request.post(
     `${baseUrl}/api/wishlists/${manifest.wishlistPublicId}/items`,

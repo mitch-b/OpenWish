@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-11-02",
+    "title": "Capture ideas faster, with clearer feedback",
+    "summary": "Add several ideas in one visit, know when a filter hides a new idea, and see confirmations where you are working.",
+    "highlights": [
+      "Add and add another saves an idea and gets the form ready for the next one.",
+      "Confirmations stay in view after actions far down a list, then clear themselves.",
+      "If a search or filter hides the idea you just added, you are told and can show all ideas.",
+      "Copy link shares the plain wishlist address and confirms with Link copied.",
+      "Press Escape in the wishlist search to clear it."
+    ]
+  }, {
     "version": "0.8.0",
     "date": "2026-11-01",
     "title": "From your friends to their wishlists",

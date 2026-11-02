@@ -218,6 +218,26 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistCapture_StaysSteadyAndTellsTheTruthAboutWhatHappened()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor.css");
+        var modal = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+
+        Assert.Contains("HandleSearchKeyDown", details, StringComparison.Ordinal);
+        Assert.Contains("args.Key == \"Escape\"", details, StringComparison.Ordinal);
+        Assert.Contains("feedback-banner", details, StringComparison.Ordinal);
+        Assert.Contains("position: sticky", styles, StringComparison.Ordinal);
+        Assert.Contains("ScheduleFeedbackDismissal", details, StringComparison.Ordinal);
+        Assert.Contains("ShareableUrl.FromCurrentUri(NavigationManager.Uri)", details, StringComparison.Ordinal);
+        Assert.Contains("Link copied", details, StringComparison.Ordinal);
+        Assert.Contains("It isn't shown because of your current filters.", details, StringComparison.Ordinal);
+        Assert.Contains("Show all ideas", details, StringComparison.Ordinal);
+        Assert.Contains("Add and add another", modal, StringComparison.Ordinal);
+        Assert.Contains("PrepareForNextItem", modal, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistItemEntry_OffersOptionalImportAndClearPrivacyGuidance()
     {
         var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");

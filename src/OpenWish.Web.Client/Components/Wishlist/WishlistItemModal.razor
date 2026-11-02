@@ -182,7 +182,7 @@
         if (_focusImporter && IsVisible)
         {
             _focusImporter = false;
-            await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "wishlist-item-dialog");
+            await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "product-url-import-modal");
             await JSRuntime.InvokeVoidAsync("openWishFocusElement", "product-url-import-modal");
         }
     }
@@ -276,6 +276,14 @@
         {
             return;
         }
+
+        if (Model.Price < 0)
+        {
+            _saveError = "Estimated price can't be negative.";
+            return;
+        }
+
+        _saveError = null;
 
         _addAnother = true;
         try

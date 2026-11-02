@@ -988,6 +988,11 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const batchDialog = page.getByRole("dialog", { name: "Add item" });
   await batchDialog.waitFor({ state: "visible" });
   await batchDialog.getByLabel("Name").fill(batchNames[0]);
+  await batchDialog.getByLabel("Estimated price").fill("-1");
+  await batchDialog.getByRole("button", { name: "Add and add another" }).click();
+  await batchDialog.getByRole("alert")
+    .filter({ hasText: "Estimated price can't be negative." })
+    .waitFor({ state: "visible" });
   await batchDialog.getByLabel("Estimated price").fill("12.00");
   await batchDialog.getByRole("button", { name: "Add and add another" }).click();
   await batchDialog.getByTestId("added-another-note")

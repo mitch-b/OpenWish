@@ -98,11 +98,11 @@ else
         </div>
     }
 
-    @if (!string.IsNullOrEmpty(_feedbackMessage))
+    @if (!string.IsNullOrEmpty(FeedbackMessage))
     {
         <div class="alert @(_feedbackIsError ? "alert-danger" : "alert-success") alert-dismissible feedback-banner mt-2" role="alert">
-            @_feedbackMessage
-            @if (_feedbackMessage == _hiddenItemFeedback && HasActiveFilters)
+            @FeedbackMessage
+            @if (FeedbackMessage == _hiddenItemFeedback && HasActiveFilters)
             {
                 <button type="button" class="btn btn-link alert-link p-0 ms-2 align-baseline" @onclick="ShowAllAfterHiddenItem">Show all ideas</button>
             }
@@ -944,8 +944,18 @@ else
     private int? _pendingInteractionItemId;
     private int? _gridCoordinationItemId;
     private static readonly TimeSpan FeedbackDisplayDuration = TimeSpan.FromSeconds(8);
-    private string _feedbackMessage = string.Empty;
-    private string? _scheduledFeedback;
+    private string _feedbackText = string.Empty;
+    private int _feedbackGeneration;
+    private int _scheduledGeneration;
+    private string FeedbackMessage
+    {
+        get => _feedbackText;
+        set
+        {
+            _feedbackText = value;
+            _feedbackGeneration++;
+        }
+    }
     private string? _hiddenItemFeedback;
     private bool _isDisposed;
     private bool _linkCopied;
@@ -1071,7 +1081,7 @@ else
                 new() { OrderedItemPublicIds = orderedItems.Select(candidate => candidate.PublicId).ToList() });
             _items = savedItems.Where(ShouldDisplayItem).ToList();
             ApplyFiltersAndSort();
-            _feedbackMessage = $"{item.Name} moved {(direction < 0 ? "up" : "down")}.";
+            FeedbackMessage = $"{item.Name} moved {(direction < 0 ? "up" : "down")}.";
             _feedbackIsError = false;
         }
         catch (HttpRequestException)
@@ -1135,7 +1145,7 @@ else
         }
         catch (Exception ex) when (ex is HttpRequestException or ArgumentException or KeyNotFoundException or UnauthorizedAccessException)
         {
-            _feedbackMessage = ex is HttpRequestException or ArgumentException
+            FeedbackMessage = ex is HttpRequestException or ArgumentException
                 ? ex.Message
                 : $"We couldn't mark {target.Name} as received. Refresh the page and try again.";
             _feedbackIsError = true;
@@ -1165,7 +1175,7 @@ else
         }
         catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
         {
-            _feedbackMessage = $"We couldn't move {item.Name} back. Refresh the page and try again.";
+            FeedbackMessage = $"We couldn't move {item.Name} back. Refresh the page and try again.";
             _feedbackIsError = true;
         }
         finally
@@ -1178,7 +1188,7 @@ else
     {
         _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
         await LoadItems();
-        _feedbackMessage = message;
+        FeedbackMessage = message;
         _feedbackIsError = false;
     }
 
@@ -1202,12 +1212,12 @@ else
             }
 
             ApplyFiltersAndSort();
-            _feedbackMessage = $"Kept {savedItem.Name} on your list.";
+            FeedbackMessage = $"Kept {savedItem.Name} on your list.";
             _feedbackIsError = false;
         }
         catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
         {
-            _feedbackMessage = $"We couldn't confirm {item.Name}. Refresh the page and try again.";
+            FeedbackMessage = $"We couldn't confirm {item.Name}. Refresh the page and try again.";
             _feedbackIsError = true;
         }
         finally
@@ -1224,7 +1234,7 @@ else
         }
         catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
         {
-            _feedbackMessage = string.IsNullOrEmpty(message)
+            FeedbackMessage = string.IsNullOrEmpty(message)
                 ? "We couldn't refresh your ideas. Reload the page to see their current state."
                 : $"{message} We couldn't refresh the list, so reload the page to see the latest.";
             _feedbackIsError = string.IsNullOrEmpty(message);
@@ -1233,12 +1243,12 @@ else
 
         if (string.IsNullOrEmpty(message))
         {
-            _feedbackMessage = "Your ideas changed before that was saved. They have been refreshed.";
+            FeedbackMessage = "Your ideas changed before that was saved. They have been refreshed.";
             _feedbackIsError = true;
         }
         else
         {
-            _feedbackMessage = message;
+            FeedbackMessage = message;
             _feedbackIsError = false;
         }
     }
@@ -1266,7 +1276,7 @@ else
             }
 
             ApplyFiltersAndSort();
-            _feedbackMessage = savedItem.IsPinned
+            FeedbackMessage = savedItem.IsPinned
                 ? $"{savedItem.Name} marked as most wanted."
                 : $"{savedItem.Name} removed from most wanted.";
             _feedbackIsError = false;
@@ -1293,16 +1303,16 @@ else
     {
         try
         {
-            _feedbackMessage = message;
+            FeedbackMessage = message;
             await LoadItems();
         }
         catch (HttpRequestException)
         {
-            _feedbackMessage = "The ideas could not be refreshed. Try again.";
+            FeedbackMessage = "The ideas could not be refreshed. Try again.";
         }
         catch (KeyNotFoundException)
         {
-            _feedbackMessage = "This wishlist is no longer available.";
+            FeedbackMessage = "This wishlist is no longer available.";
         }
 
         _feedbackIsError = true;
@@ -1665,20 +1675,20 @@ else
         }
 
         ApplyFiltersAndSort();
-        _feedbackMessage = item.Id > 0
+        FeedbackMessage = item.Id > 0
             ? $"Changes to {savedItem.Name} saved."
             : $"{savedItem.Name} added to the wishlist.";
         _feedbackIsError = false;
 
         var isHiddenByFilters = HasActiveFilters
             && ShouldDisplayItem(savedItem)
-            && !_filteredItems.Any(candidate => candidate.Id == savedItem.Id);
+            && !_filteredItems.Any(candidate => candidate.PublicId == savedItem.PublicId);
         if (isHiddenByFilters)
         {
-            _feedbackMessage += " It isn't shown because of your current filters.";
+            FeedbackMessage += " It isn't shown because of your current filters.";
         }
 
-        _hiddenItemFeedback = isHiddenByFilters ? _feedbackMessage : null;
+        _hiddenItemFeedback = isHiddenByFilters ? FeedbackMessage : null;
     }
 
     private void ShowAllAfterHiddenItem()
@@ -1733,7 +1743,7 @@ else
                 _expandedItemId = null;
             }
             ApplyFiltersAndSort();
-            _feedbackMessage = $"{itemName} deleted.";
+            FeedbackMessage = $"{itemName} deleted.";
             _feedbackIsError = false;
             _itemPendingDeletion = null;
             await _deleteDialog.Close();
@@ -1782,7 +1792,7 @@ else
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", wishlistUrl);
-            _feedbackMessage = "Wishlist URL copied to clipboard!";
+            FeedbackMessage = "Wishlist URL copied to clipboard!";
             _feedbackIsError = false;
             _linkCopied = true;
             StateHasChanged();
@@ -1791,7 +1801,7 @@ else
         }
         catch
         {
-            _feedbackMessage = "Unable to copy. Please copy the URL manually.";
+            FeedbackMessage = "Unable to copy. Please copy the URL manually.";
             _feedbackIsError = true;
         }
         StateHasChanged();
@@ -1867,42 +1877,46 @@ else
 
     private async Task NotifyNoCommentsAsync()
     {
-        _feedbackMessage = "No comments to display yet.";
+        FeedbackMessage = "No comments to display yet.";
         _feedbackIsError = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void DismissFeedback() => _feedbackMessage = string.Empty;
+    private void DismissFeedback() => FeedbackMessage = string.Empty;
 
     // Confirmations clear themselves so they never describe an earlier action; errors stay until dismissed.
+    // Each published message gets a generation so an older timer can't dismiss a newer, identical one.
     private void ScheduleFeedbackDismissal()
     {
-        if (string.IsNullOrEmpty(_feedbackMessage) || _feedbackIsError)
-        {
-            _scheduledFeedback = null;
-            return;
-        }
-
-        var message = _feedbackMessage;
-        if (_scheduledFeedback == message)
+        if (string.IsNullOrEmpty(FeedbackMessage) || _feedbackIsError || _scheduledGeneration == _feedbackGeneration)
         {
             return;
         }
 
-        _scheduledFeedback = message;
-        _ = DismissFeedbackLaterAsync(message);
+        _scheduledGeneration = _feedbackGeneration;
+        _ = DismissFeedbackLaterAsync(_feedbackGeneration);
     }
 
-    private async Task DismissFeedbackLaterAsync(string message)
+    private async Task DismissFeedbackLaterAsync(int generation)
     {
         await Task.Delay(FeedbackDisplayDuration);
-        if (_isDisposed || _feedbackMessage != message || _feedbackIsError)
+        if (_itemModal is { IsVisible: true })
+        {
+            // The page is inert behind the dialog, so keep the message until the dialog closes.
+            while (_itemModal is { IsVisible: true } && !_isDisposed)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            await Task.Delay(FeedbackDisplayDuration);
+        }
+
+        if (_isDisposed || generation != _feedbackGeneration || _feedbackIsError)
         {
             return;
         }
 
-        _feedbackMessage = string.Empty;
-        _scheduledFeedback = null;
+        FeedbackMessage = string.Empty;
         await InvokeAsync(StateHasChanged);
     }
 

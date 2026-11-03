@@ -897,4 +897,70 @@ legend.form-label {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
     }
-}
+}
+@media print {
+    .sidebar,
+    .top-row,
+    .hero-actions,
+    .paste-hint,
+    .feedback-banner,
+    .reload-banner,
+    #blazor-error-ui,
+    .dropdown,
+    .nav-tabs,
+    .search-filter-bar,
+    .filter-panel,
+    .applied-filters,
+    .budget-guide,
+    .stale-panel,
+    .received-panel,
+    .received-section,
+    .organize,
+    .gift-profile-panel,
+    button,
+    input,
+    select,
+    textarea {
+        display: none !important;
+    }
+
+    .page,
+    .app-main {
+        display: block !important;
+    }
+
+    /* One light palette on paper, whether or not background graphics are printed. */
+    html,
+    body,
+    .page,
+    .app-main,
+    .content,
+    .content-frame,
+    .wishlist-hero,
+    .wishlist-content,
+    .wishlist-item-card,
+    .wishlist-item-card * {
+        background: #ffffff !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        transform: none !important;
+    }
+
+    .wishlist-hero h1,
+    .wishlist-hero * {
+        color: #000000 !important;
+        text-shadow: none !important;
+    }
+
+    .wishlist-item-card {
+        border: 1px solid #000000 !important;
+        break-inside: avoid;
+    }
+
+    .content,
+    .content-frame {
+        padding: 0 !important;
+        max-width: none !important;
+    }
+}

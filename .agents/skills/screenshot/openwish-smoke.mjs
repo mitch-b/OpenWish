@@ -3982,6 +3982,203 @@ async function verifyOccasionsJourney(browser, manifest, results) {
   }
 }
 
+async function verifyOccasionRemindersJourney(browser, manifest, results) {
+  const assertions = [];
+  const contexts = [];
+  const pages = [];
+  const open = async (persona, email, viewport = { width: 1280, height: 900 }, options = {}) => {
+    const context = await browser.newContext(
+      viewport.width <= 640 ? { viewport, isMobile: true, ...options } : { viewport, ...options });
+    contexts.push(context);
+    const page = await context.newPage();
+    pages.push({ persona, diagnostics: monitorPage(page) });
+    await login(context, persona, email);
+    return { context, page };
+  };
+  const eventDay = new Date();
+  eventDay.setUTCDate(eventDay.getUTCDate() + 5);
+  eventDay.setUTCHours(0, 0, 0, 0);
+  const compactDay = eventDay.toISOString().slice(0, 10).replaceAll("-", "");
+
+  const owner = await open("owner", ownerEmail);
+  const jordan = await open("friend", friendEmail);
+  const anonymous = await browser.newContext();
+  contexts.push(anonymous);
+
+  const created = await owner.context.request.post(`${baseUrl}/api/events`, {
+    data: {
+      name: "Reminder Swap, Office; 2026",
+      description: "Bring a wrapped gift.",
+      date: eventDay.toISOString(),
+      isGiftExchange: true,
+      giftExchangeStyle: "GiftExchange",
+      tags: [],
+      eventUsers: []
+    }
+  });
+  if (!created.ok()) {
+    throw new Error(`Creating the reminder event returned ${created.status()}: ${await created.text()}`);
+  }
+  const reminderEvent = await created.json();
+
+  const calendarRoute = `${baseUrl}/api/events/${reminderEvent.publicId}/calendar.ics`;
+  const calendar = await owner.context.request.get(calendarRoute);
+  const calendarBody = (await calendar.text()).replaceAll("\r\n ", "");
+  if (!calendar.ok() ||
+      !calendar.headers()["content-type"]?.startsWith("text/calendar") ||
+      !calendar.headers()["content-disposition"]?.includes("reminder-swap-office-2026.ics") ||
+      !calendarBody.includes(`DTSTART;VALUE=DATE:${compactDay}`) ||
+      !calendarBody.includes("SUMMARY:Reminder Swap\\, Office\\; 2026") ||
+      !calendarBody.includes(`UID:${reminderEvent.publicId}@openwish`) ||
+      !calendarBody.includes(`/events/${reminderEvent.publicId}`)) {
+    throw new Error(`The calendar file was wrong (${calendar.status()}): ${calendarBody}`);
+  }
+  const outsider = await jordan.context.request.get(calendarRoute, { maxRedirects: 0 });
+  if (![403, 404].includes(outsider.status())) {
+    throw new Error(`A non-member could download the calendar file (${outsider.status()}).`);
+  }
+  const signedOut = await anonymous.request.get(calendarRoute, { maxRedirects: 0 });
+  if (!(signedOut.status() === 401 || (signedOut.status() >= 300 && signedOut.status() < 400))) {
+    throw new Error(`A signed-out visitor could download the calendar file (${signedOut.status()}).`);
+  }
+  assertions.push("the calendar file is an all-day event with escaped text and the event link, and is denied to non-members and signed-out visitors");
+
+  // Dashboard reminder for the organizer; the non-member sees none.
+  await owner.page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  const reminder = owner.page.getByTestId("occasion-reminder").filter({ hasText: "Draw names for Reminder Swap" });
+  await reminder.waitFor({ state: "visible" });
+  if (!(await reminder.innerText()).includes("in 5 days")) {
+    throw new Error(`The draw reminder did not say when the exchange is: ${await reminder.innerText()}`);
+  }
+  await screenshot(owner.page, "dashboard-reminders.png");
+  await jordan.page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await jordan.page.getByRole("heading", { name: "Needs attention" }).waitFor({ state: "visible" });
+  await jordan.page.waitForTimeout(1500);
+  if (await jordan.page.getByText("Reminder Swap").count() > 0) {
+    throw new Error("A non-member saw the organizer's reminder.");
+  }
+  // A pending invitee is not a member yet and cannot download the calendar; accepting grants it.
+  const ownerFriends = await (await owner.context.request.get(`${baseUrl}/api/friends`)).json();
+  const jordanFriend = ownerFriends.find(friend => friend.userName === "JordanDemo");
+  if (!jordanFriend?.id) {
+    throw new Error("The owner's friends did not include Jordan.");
+  }
+  const invited = await owner.context.request.post(
+    `${baseUrl}/api/events/${reminderEvent.publicId}/invitations/user/${jordanFriend.id}`);
+  if (!invited.ok()) {
+    throw new Error(`Inviting Jordan returned ${invited.status()}: ${await invited.text()}`);
+  }
+  const pendingCalendar = await jordan.context.request.get(calendarRoute, { maxRedirects: 0 });
+  if (pendingCalendar.status() !== 403) {
+    throw new Error(`A pending invitee got ${pendingCalendar.status()} from the calendar route, expected 403.`);
+  }
+  const pendingInvitations = await (await jordan.context.request.get(`${baseUrl}/api/events/invitations/pending`)).json();
+  const jordanInvitation = pendingInvitations.find(invitation => invitation.event?.publicId === reminderEvent.publicId);
+  if (!jordanInvitation) {
+    throw new Error("Jordan's pending invitation was not listed.");
+  }
+  const accepted = await jordan.context.request.post(
+    `${baseUrl}/api/events/invitations/by-public-id/${jordanInvitation.publicId}/accept`);
+  if (!accepted.ok()) {
+    throw new Error(`Accepting the invitation returned ${accepted.status()}: ${await accepted.text()}`);
+  }
+  const acceptedCalendar = await jordan.context.request.get(calendarRoute);
+  if (!acceptedCalendar.ok() || !(await acceptedCalendar.text()).includes("BEGIN:VCALENDAR")) {
+    throw new Error(`An accepted participant got ${acceptedCalendar.status()} from the calendar route.`);
+  }
+  assertions.push("a pending invitee is denied the calendar file until they accept the invitation");
+  await reminder.click();
+  await owner.page.waitForURL(`**/events/${reminderEvent.publicId}/manage`);
+  assertions.push("the organizer is reminded to draw names for an upcoming undrawn exchange, the reminder opens the event setup, and non-members see nothing");
+
+  // Countdown and add-to-calendar on the event.
+  await owner.page.goto(`${baseUrl}/events/${reminderEvent.publicId}`, { waitUntil: "domcontentloaded" });
+  const countdown = owner.page.getByTestId("event-countdown");
+  await countdown.waitFor({ state: "visible" });
+  if (!(await countdown.innerText()).includes("In 5 days")) {
+    throw new Error(`The event page countdown was wrong: ${await countdown.innerText()}`);
+  }
+  const link = owner.page.getByTestId("add-to-calendar");
+  await link.waitFor({ state: "visible" });
+  if (await link.getAttribute("href") !== `/api/events/${reminderEvent.publicId}/calendar.ics`) {
+    throw new Error("Add to calendar did not point at the calendar file.");
+  }
+  await assertMinimumTouchTarget(link, "Add to calendar");
+  await screenshot(owner.page, "event-add-to-calendar.png");
+  await owner.page.goto(`${baseUrl}/events`, { waitUntil: "domcontentloaded" });
+  const card = owner.page.locator(".event-card").filter({ hasText: "Reminder Swap" });
+  await card.getByTestId("event-countdown").waitFor({ state: "visible" });
+  if ((await card.getByTestId("event-countdown").innerText()).trim() !== "In 5 days") {
+    throw new Error("The event card countdown was wrong.");
+  }
+  await screenshot(owner.page, "events-countdown.png");
+  assertions.push("event cards and the event page show how soon the occasion is, with an Add to calendar action");
+
+  // Copy as text and print.
+  const wishlistResponse = await owner.context.request.get(`${baseUrl}/api/wishlists/${manifest.wishlistPublicId}`);
+  const wishlistName = (await wishlistResponse.json()).name;
+  await owner.page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "domcontentloaded" });
+  // The verification site is plain HTTP, so capture what the page's copy helper asked to put on the clipboard.
+  await owner.page.evaluate(() => {
+    document.execCommand = command => {
+      if (command === "copy") {
+        window.__openWishLastCopy = document.activeElement?.value;
+      }
+      return true;
+    };
+  });
+  const copyText = owner.page.locator("#copy-wishlist-text");
+  await copyText.waitFor({ state: "visible" });
+  await owner.page.waitForTimeout(1500);
+  await copyText.click();
+  await owner.page.getByRole("button", { name: "List copied" }).waitFor({ state: "visible" });
+  const copied = await owner.page.evaluate(() => window.__openWishLastCopy);
+  if (!copied.startsWith(`${wishlistName}\n- `) || !copied.includes(`/wishlists/${manifest.wishlistPublicId}`) ||
+      /reserved|comment/i.test(copied)) {
+    throw new Error(`The copied list text was wrong: ${copied}`);
+  }
+  await screenshot(owner.page, "wishlist-copy-as-text.png");
+  await owner.page.emulateMedia({ media: "print" });
+  for (const selector of [".sidebar", ".hero-actions", ".top-row", ".search-filter-bar", ".organize"]) {
+    if (await owner.page.locator(selector).first().isVisible()) {
+      throw new Error(`${selector} is still visible when printing.`);
+    }
+  }
+  const printedHeading = await owner.page.locator(".wishlist-hero h1").evaluate(
+    element => getComputedStyle(element).color);
+  if (printedHeading !== "rgb(0, 0, 0)") {
+    throw new Error(`The printed wishlist heading was ${printedHeading}, expected black on white.`);
+  }
+  await owner.page.emulateMedia({ media: "screen" });
+  assertions.push("a wishlist can be copied as plain text without reservations or comments, and printing hides navigation and controls");
+
+  for (const { persona, diagnostics } of pages) {
+    if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+      throw new Error(
+        `Occasion reminders ${persona} diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
+    }
+  }
+
+  const mobile = await open("owner", ownerEmail, { width: 390, height: 844 });
+  await mobile.page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+  await mobile.page.getByTestId("occasion-reminder").first().waitFor({ state: "visible" });
+  await assertNoHorizontalScroll(mobile.page, "Mobile dashboard reminders");
+  await screenshot(mobile.page, "dashboard-reminders-mobile.png");
+  await mobile.page.goto(`${baseUrl}/events/${reminderEvent.publicId}`, { waitUntil: "domcontentloaded" });
+  await mobile.page.getByTestId("add-to-calendar").waitFor({ state: "visible" });
+  await assertNoHorizontalScroll(mobile.page, "Mobile event header");
+  await screenshot(mobile.page, "event-add-to-calendar-mobile.png");
+  const mobileDiagnostics = pages.at(-1).diagnostics;
+  if (mobileDiagnostics.browserErrors.length > 0 || mobileDiagnostics.failedResponses.length > 0) {
+    throw new Error(`Mobile reminders diagnostics: ${[...mobileDiagnostics.browserErrors, ...mobileDiagnostics.failedResponses].join(" | ")}`);
+  }
+
+  results.push({ scenario: "occasion-reminders", assertions });
+  for (const context of contexts) {
+    await context.close();
+  }
+}
+
 async function verifyMobileJourney(browser, manifest, results) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -4287,6 +4484,7 @@ try {
   await verifyFriendJourney(browser, manifest, results);
   await verifyFeatureDayJourney(browser, manifest, results);
   await verifyOccasionsJourney(browser, manifest, results);
+  await verifyOccasionRemindersJourney(browser, manifest, results);
   await verifyMobileJourney(browser, manifest, results);
   await verifyUnsharedMatchWishlist(browser, manifest, results);
 

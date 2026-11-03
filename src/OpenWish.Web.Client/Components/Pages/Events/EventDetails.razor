@@ -45,6 +45,11 @@ else
             <div class="event-header-content">
                 <div class="event-header-copy">
                     <h1 class="display-4">@_event.Name</h1>
+                    <p class="event-when mb-2" data-testid="event-countdown">
+                        <OpenWishIcon Name="calendar-event" />
+                        <span>@_event.Date.ToString("dddd, MMM d, yyyy")</span>
+                        <strong>@EventCountdown.Badge(_event.Date, DateTimeOffset.UtcNow)</strong>
+                    </p>
                     <p class="lead mb-0">@_event.Description</p>
                     @if (_event.Tags != null)
                     {
@@ -56,12 +61,20 @@ else
                         </div>
                     }
                 </div>
-                @if (_isOwner)
-                {
-                    <a href="/events/@EventId/manage" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-light") event-manage-action">
-                        <OpenWishIcon Name="gear" Class="me-2" /> Manage event
-                    </a>
-                }
+                <div class="event-header-actions">
+                    @if (!_isPendingInvitee && !EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow))
+                    {
+                        <a href="/api/events/@EventId/calendar.ics" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-outline-light") event-manage-action" data-testid="add-to-calendar" download>
+                            <OpenWishIcon Name="download" Class="me-2" /> Add to calendar
+                        </a>
+                    }
+                    @if (_isOwner)
+                    {
+                        <a href="/events/@EventId/manage" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-light") event-manage-action">
+                            <OpenWishIcon Name="gear" Class="me-2" /> Manage event
+                        </a>
+                    }
+                </div>
             </div>
         </div>
     </div>

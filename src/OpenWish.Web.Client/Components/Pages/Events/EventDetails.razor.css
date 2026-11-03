@@ -55,6 +55,21 @@
     min-width: 0;
 }
 
+.event-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.event-when {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    font-size: 0.95rem;
+}
+
 .event-manage-action {
     display: inline-flex;
     flex: 0 0 auto;
@@ -251,8 +266,12 @@
         flex-direction: column;
     }
 
-    .event-manage-action {
+    .event-header-actions {
         width: 100%;
+    }
+
+    .event-manage-action {
+        flex: 1 1 100%;
         justify-content: center;
     }
 

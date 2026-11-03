@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/715afdff-a5fa-47c2-8537-91ca3b75a27d/manage",
+        "/events/69e153dd-ef85-4dd0-b9d9-c2e028ff7fdc/manage",
         "/friends",
         "/friends",
         "/events/demo-holiday-gift-exchange",
@@ -184,6 +184,16 @@
         "received ideas leave shoppers' views, show only in the owner's Received section, and the thank-you reaches only the reserver",
         "Run it again copies people and rules as pending invitations, links back for the organizer only, avoids last year's pairings, and rejects participants, outsiders and anonymous callers",
         "connection codes are one-time, expire or stop working, preview only a display name, and redeeming creates a mutual friendship"
+      ]
+    },
+    {
+      "scenario": "occasion-reminders",
+      "assertions": [
+        "the calendar file is an all-day event with escaped text and the event link, and is denied to non-members and signed-out visitors",
+        "a pending invitee is denied the calendar file until they accept the invitation",
+        "the organizer is reminded to draw names for an upcoming undrawn exchange, the reminder opens the event setup, and non-members see nothing",
+        "event cards and the event page show how soon the occasion is, with an Add to calendar action",
+        "a wishlist can be copied as plain text without reservations or comments, and printing hides navigation and controls"
       ]
     },
     {

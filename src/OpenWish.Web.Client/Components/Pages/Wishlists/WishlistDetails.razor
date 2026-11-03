@@ -66,6 +66,17 @@ else
                 <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
                 <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
             </button>
+            @if (_items is { Count: > 0 })
+            {
+                <button id="copy-wishlist-text" class="btn btn-outline-secondary" type="button" @onclick="CopyWishlistText">
+                    <OpenWishIcon Name="@(_textCopied ? "check-lg" : "clipboard")" />
+                    <span class="btn-text">@(_textCopied ? "List copied" : "Copy as text")</span>
+                </button>
+                <button id="print-wishlist" class="btn btn-outline-secondary" type="button" @onclick="PrintWishlist">
+                    <OpenWishIcon Name="list-check" />
+                    <span class="btn-text">Print</span>
+                </button>
+            }
             @if (_isOwner)
             {
                 <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary">
@@ -959,6 +970,7 @@ else
     private string? _hiddenItemFeedback;
     private bool _isDisposed;
     private bool _linkCopied;
+    private bool _textCopied;
     private bool _feedbackIsError;
     private WishlistItemModel? _itemPendingDeletion;
     private bool _isDeletingItem;
@@ -1805,6 +1817,59 @@ else
             _feedbackIsError = true;
         }
         StateHasChanged();
+    }
+
+    private async Task CopyWishlistText()
+    {
+        if (_wishlist is null)
+        {
+            return;
+        }
+
+        var text = WishlistText.Build(_wishlist.Name, _items, ShareableUrl.FromCurrentUri(NavigationManager.Uri));
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishCopyText", text);
+            FeedbackMessage = "Wishlist copied as text.";
+            _feedbackIsError = false;
+            _textCopied = true;
+            StateHasChanged();
+            _ = ResetTextCopiedAsync();
+            return;
+        }
+        catch
+        {
+            FeedbackMessage = "Unable to copy. Please try again or use Print.";
+            _feedbackIsError = true;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ResetTextCopiedAsync()
+    {
+        await Task.Delay(FeedbackDisplayDuration / 2);
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        _textCopied = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task PrintWishlist()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("window.print");
+        }
+        catch (JSException ex)
+        {
+            Logger.LogWarning(ex, "Could not open the print dialog for wishlist {WishlistId}", WishlistId);
+            FeedbackMessage = "Unable to open printing on this device.";
+            _feedbackIsError = true;
+            StateHasChanged();
+        }
     }
 
     private async Task ResetLinkCopiedAsync()

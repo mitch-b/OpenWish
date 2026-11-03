@@ -1,3 +1,25 @@
+window.openWishCopyText = async function (text) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    // Self-hosted instances on plain HTTP have no async clipboard API.
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.focus();
+    field.select();
+    const copied = document.execCommand("copy");
+    field.remove();
+    if (!copied) {
+        throw new Error("Unable to copy text.");
+    }
+};
+
 window.openWishScrollToElement = function (id) {
     const element = document.getElementById(id);
     if (!element) {

@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.10.0",
+    "date": "2026-11-03",
+    "title": "Occasions you won't forget",
+    "summary": "See how soon an occasion is, add it to your calendar, get reminders on the dashboard, and share a list as text or on paper.",
+    "highlights": [
+      "Add to calendar downloads an all-day entry for an event, with the event link.",
+      "The dashboard reminds organizers to draw names and everyone about occasions in the next week.",
+      "Event cards and pages say how soon the occasion is.",
+      "Copy as text puts a wishlist's ideas, prices, and links on your clipboard.",
+      "Print gives a clean paper copy of a wishlist."
+    ]
+  }, {
     "version": "0.9.0",
     "date": "2026-11-02",
     "title": "Capture ideas faster, with clearer feedback",

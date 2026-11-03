@@ -897,4 +897,34 @@ legend.form-label {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
     }
-}
+}
+@media print {
+    .sidebar,
+    .top-row,
+    .hero-actions,
+    .paste-hint,
+    .feedback-banner,
+    .reload-banner,
+    #blazor-error-ui,
+    button,
+    .dropdown,
+    .nav-tabs {
+        display: none !important;
+    }
+
+    .page,
+    .app-main {
+        display: block !important;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .content,
+    .content-frame {
+        padding: 0 !important;
+        max-width: none !important;
+    }
+}

@@ -1,3 +1,5 @@
+using OpenWish.Shared.Dashboard;
+
 namespace OpenWish.Shared.Models;
 
 public static class EventCountdown
@@ -18,4 +20,21 @@ public static class EventCountdown
             _ => $"in {days} days"
         };
     }
+
+    /// <summary>A short badge label counted on the event's own calendar, matching the date shown on its card.</summary>
+    public static string Badge(DateTimeOffset date, DateTimeOffset now)
+    {
+        var days = DashboardWelcome.GetDaysUntil(date, now);
+        return days switch
+        {
+            0 => "Today",
+            1 => "Tomorrow",
+            > 1 and < 60 => $"In {days} days",
+            >= 60 => $"In {days / 30} months",
+            -1 => "Yesterday",
+            _ => "Past event"
+        };
+    }
+
+    public static bool IsPast(DateTimeOffset date, DateTimeOffset now) => DashboardWelcome.GetDaysUntil(date, now) < 0;
 }

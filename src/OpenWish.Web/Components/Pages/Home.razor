@@ -263,10 +263,22 @@
                                 <span class="count-pill">@GiftsToBuyCount</span>
                             </a>
                         }
+                        @foreach (var reminder in Reminders ?? [])
+                        {
+                            <a href="@reminder.Href" class="attention-item" data-testid="occasion-reminder">
+                                <span class="attention-icon attention-warm"><OpenWishIcon Name="@reminder.Icon" /></span>
+                                <span class="attention-copy">
+                                    <strong>@reminder.Title</strong>
+                                    <small>@reminder.Detail</small>
+                                </span>
+                                <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
+                            </a>
+                        }
                         @if (PendingEventInvitationCount == 0 &&
                              PendingFriendRequestCount == 0 &&
                              UpcomingEventCount == 0 &&
-                             GiftsToBuyCount == 0)
+                             GiftsToBuyCount == 0 &&
+                             Reminders is not { Count: > 0 })
                         {
                             <div class="attention-empty">
                                 <span class="attention-icon attention-cool"><OpenWishIcon Name="check-circle" /></span>
@@ -397,6 +409,9 @@
     public int? UpcomingEventCount { get; set; }
 
     [PersistentState]
+    public List<DashboardReminder>? Reminders { get; set; }
+
+    [PersistentState]
     public int? PendingFriendRequestCount { get; set; }
 
     [PersistentState]
@@ -422,6 +437,7 @@
         FeaturedWishlists is not null &&
         Checklist is not null &&
         Events is not null &&
+        Reminders is not null &&
         UpcomingEventCount is not null &&
         PendingFriendRequestCount is not null &&
         PendingEventInvitationCount is not null &&
@@ -570,6 +586,7 @@
             Events = _eventsForWelcome.Take(3).Select(DashboardEventCard.From).ToList();
 
             UpcomingEventCount = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).Count();
+            Reminders = DashboardReminders.For(allEvents, _userId, DateTimeOffset.UtcNow).ToList();
         }
     }
 

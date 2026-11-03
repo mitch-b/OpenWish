@@ -57,6 +57,19 @@
     gap: 0.35rem;
 }
 
+.event-meta .event-countdown {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.event-meta .event-countdown-past {
+    font-weight: 500;
+    color: var(--color-text-muted);
+}
+
 .event-status .status-ready {
     color: var(--color-success-text);
     font-weight: 700;

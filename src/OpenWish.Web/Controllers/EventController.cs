@@ -52,6 +52,32 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpGet("{publicId}/calendar.ics")]
+    public async Task<IActionResult> GetCalendarFile(string publicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var evt = await _eventService.GetEventByPublicIdAsync(publicId, userId);
+            var eventUrl = $"{Request.Scheme}://{Request.Host}/events/{Uri.EscapeDataString(evt.PublicId)}";
+            var calendar = EventCalendar.BuildIcs(evt, eventUrl, DateTimeOffset.UtcNow);
+            return File(System.Text.Encoding.UTF8.GetBytes(calendar), "text/calendar; charset=utf-8", EventCalendar.FileName(evt));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<EventModel>> CreateEvent(EventModel eventModel)
     {

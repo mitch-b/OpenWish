@@ -77,3 +77,24 @@ public class ReservedSpendTests
         Assert.False(spend.IsOverBudget);
     }
 }
+public class EventCountdownBadgeTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 11, 3, 12, 0, 0, TimeSpan.Zero);
+
+    [Theory]
+    [InlineData(0, "Today")]
+    [InlineData(1, "Tomorrow")]
+    [InlineData(12, "In 12 days")]
+    [InlineData(75, "In 2 months")]
+    [InlineData(-1, "Yesterday")]
+    [InlineData(-9, "Past event")]
+    public void Badge_CountsOnTheEventCalendar(int days, string expected) =>
+        Assert.Equal(expected, EventCountdown.Badge(Now.Date.AddDays(days), Now));
+
+    [Fact]
+    public void IsPast_OnlyAfterTheEventDay()
+    {
+        Assert.False(EventCountdown.IsPast(Now.Date, Now));
+        Assert.True(EventCountdown.IsPast(Now.Date.AddDays(-1), Now));
+    }
+}

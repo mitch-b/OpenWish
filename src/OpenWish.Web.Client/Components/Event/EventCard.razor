@@ -22,6 +22,7 @@ else
             </div>
             <div class="event-meta">
                 <span><OpenWishIcon Name="calendar-event" /> @Event.Date.ToString("MMM d, yyyy")</span>
+                <span class="@(EventCountdown.IsPast(Event.Date, DateTimeOffset.UtcNow) ? "event-countdown event-countdown-past" : "event-countdown")" data-testid="event-countdown">@EventCountdown.Badge(Event.Date, DateTimeOffset.UtcNow)</span>
                 @if (Event.IsGiftExchange)
                 {
                     <span><OpenWishIcon Name="gift" /> @GiftExchangeStyleLabel</span>

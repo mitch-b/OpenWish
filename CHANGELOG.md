@@ -2,6 +2,23 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.10.0] - 2026-11-03
+
+### Added
+
+- "Add to calendar" on an event downloads an all-day calendar entry with the
+  event link.
+- The dashboard reminds organizers to draw names for an exchange within two
+  weeks, and everyone about an occasion within a week.
+- "Copy as text" on a wishlist copies its ideas, prices, and links as a plain
+  message you can paste anywhere.
+- "Print" on a wishlist prints just the list, without navigation or controls.
+
+### Improved
+
+- Event cards and the event page show how soon the occasion is ("In 5 days",
+  "Tomorrow", "Past event").
+
 ## [0.9.0] - 2026-11-02
 
 ### Added

@@ -5,18 +5,24 @@ window.openWishCopyText = async function (text) {
     }
 
     // Self-hosted instances on plain HTTP have no async clipboard API.
+    const previouslyFocused = document.activeElement;
     const field = document.createElement("textarea");
     field.value = text;
     field.setAttribute("readonly", "");
     field.style.position = "fixed";
     field.style.opacity = "0";
     document.body.appendChild(field);
-    field.focus();
-    field.select();
-    const copied = document.execCommand("copy");
-    field.remove();
-    if (!copied) {
-        throw new Error("Unable to copy text.");
+    try {
+        field.focus();
+        field.select();
+        if (!document.execCommand("copy")) {
+            throw new Error("Unable to copy text.");
+        }
+    } finally {
+        field.remove();
+        if (previouslyFocused instanceof HTMLElement) {
+            previouslyFocused.focus({ preventScroll: true });
+        }
     }
 };
 

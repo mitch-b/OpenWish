@@ -4057,6 +4057,36 @@ async function verifyOccasionRemindersJourney(browser, manifest, results) {
   if (await jordan.page.getByText("Reminder Swap").count() > 0) {
     throw new Error("A non-member saw the organizer's reminder.");
   }
+  // A pending invitee is not a member yet and cannot download the calendar; accepting grants it.
+  const ownerFriends = await (await owner.context.request.get(`${baseUrl}/api/friends`)).json();
+  const jordanFriend = ownerFriends.find(friend => friend.userName === "JordanDemo");
+  if (!jordanFriend?.id) {
+    throw new Error("The owner's friends did not include Jordan.");
+  }
+  const invited = await owner.context.request.post(
+    `${baseUrl}/api/events/${reminderEvent.publicId}/invitations/user/${jordanFriend.id}`);
+  if (!invited.ok()) {
+    throw new Error(`Inviting Jordan returned ${invited.status()}: ${await invited.text()}`);
+  }
+  const pendingCalendar = await jordan.context.request.get(calendarRoute, { maxRedirects: 0 });
+  if (pendingCalendar.status() !== 403) {
+    throw new Error(`A pending invitee got ${pendingCalendar.status()} from the calendar route, expected 403.`);
+  }
+  const pendingInvitations = await (await jordan.context.request.get(`${baseUrl}/api/events/invitations/pending`)).json();
+  const jordanInvitation = pendingInvitations.find(invitation => invitation.event?.publicId === reminderEvent.publicId);
+  if (!jordanInvitation) {
+    throw new Error("Jordan's pending invitation was not listed.");
+  }
+  const accepted = await jordan.context.request.post(
+    `${baseUrl}/api/events/invitations/by-public-id/${jordanInvitation.publicId}/accept`);
+  if (!accepted.ok()) {
+    throw new Error(`Accepting the invitation returned ${accepted.status()}: ${await accepted.text()}`);
+  }
+  const acceptedCalendar = await jordan.context.request.get(calendarRoute);
+  if (!acceptedCalendar.ok() || !(await acceptedCalendar.text()).includes("BEGIN:VCALENDAR")) {
+    throw new Error(`An accepted participant got ${acceptedCalendar.status()} from the calendar route.`);
+  }
+  assertions.push("a pending invitee is denied the calendar file until they accept the invitation");
   await reminder.click();
   await owner.page.waitForURL(`**/events/${reminderEvent.publicId}/manage`);
   assertions.push("the organizer is reminded to draw names for an upcoming undrawn exchange, the reminder opens the event setup, and non-members see nothing");
@@ -4109,10 +4139,15 @@ async function verifyOccasionRemindersJourney(browser, manifest, results) {
   }
   await screenshot(owner.page, "wishlist-copy-as-text.png");
   await owner.page.emulateMedia({ media: "print" });
-  for (const selector of [".sidebar", ".hero-actions", ".top-row"]) {
+  for (const selector of [".sidebar", ".hero-actions", ".top-row", ".search-filter-bar", ".organize"]) {
     if (await owner.page.locator(selector).first().isVisible()) {
       throw new Error(`${selector} is still visible when printing.`);
     }
+  }
+  const printedHeading = await owner.page.locator(".wishlist-hero h1").evaluate(
+    element => getComputedStyle(element).color);
+  if (printedHeading !== "rgb(0, 0, 0)") {
+    throw new Error(`The printed wishlist heading was ${printedHeading}, expected black on white.`);
   }
   await owner.page.emulateMedia({ media: "screen" });
   assertions.push("a wishlist can be copied as plain text without reservations or comments, and printing hides navigation and controls");

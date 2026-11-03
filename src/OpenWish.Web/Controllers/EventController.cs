@@ -64,6 +64,11 @@ public class EventController(IEventService eventService, ApiUserContextService u
         try
         {
             var evt = await _eventService.GetEventByPublicIdAsync(publicId, userId);
+            if (!EventCalendar.CanDownload(evt, userId))
+            {
+                return Forbid();
+            }
+
             var eventUrl = $"{Request.Scheme}://{Request.Host}/events/{Uri.EscapeDataString(evt.PublicId)}";
             var calendar = EventCalendar.BuildIcs(evt, eventUrl, DateTimeOffset.UtcNow);
             return File(System.Text.Encoding.UTF8.GetBytes(calendar), "text/calendar; charset=utf-8", EventCalendar.FileName(evt));

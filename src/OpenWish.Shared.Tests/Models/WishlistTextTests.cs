@@ -22,6 +22,10 @@ public class WishlistTextTests
     }
 
     [Fact]
+    public void Build_KeepsCents() =>
+        Assert.Contains("- Candle ($38.99)", WishlistText.Build("L", [new WishlistItemModel { Name = "Candle", Price = 38.99m }]));
+
+    [Fact]
     public void Build_SaysWhenThereAreNoIdeas() =>
         Assert.Equal("Empty\nNo ideas yet.\n", WishlistText.Build("Empty", []));
 }

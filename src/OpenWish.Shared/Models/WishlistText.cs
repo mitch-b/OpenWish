@@ -19,7 +19,7 @@ public static class WishlistText
             builder.Append("- ").Append(item.Name);
             if (item.Price is { } price)
             {
-                builder.Append(" (").Append(price.ToString("C0", CultureInfo.GetCultureInfo("en-US")).Replace(".00", string.Empty, StringComparison.Ordinal)).Append(')');
+                builder.Append(" (").Append(FormatPrice(price)).Append(')');
             }
 
             if (!string.IsNullOrWhiteSpace(item.Url))
@@ -41,5 +41,11 @@ public static class WishlistText
         }
 
         return builder.ToString();
+    }
+
+    private static string FormatPrice(decimal price)
+    {
+        var text = price.ToString("C", CultureInfo.GetCultureInfo("en-US"));
+        return text.EndsWith(".00", StringComparison.Ordinal) ? text[..^3] : text;
     }
 }

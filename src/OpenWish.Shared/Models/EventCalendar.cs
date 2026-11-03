@@ -5,6 +5,14 @@ namespace OpenWish.Shared.Models;
 /// <summary>Builds an iCalendar file for an occasion. Only details every participant can already see are included.</summary>
 public static class EventCalendar
 {
+    /// <summary>The organizer and accepted participants may download the file; a pending invitee may not.</summary>
+    public static bool CanDownload(EventModel evt, string userId) =>
+        string.Equals(evt.CreatedBy?.Id, userId, StringComparison.Ordinal) ||
+        (evt.EventUsers ?? []).Any(participant =>
+            !participant.Deleted &&
+            string.Equals(participant.UserId, userId, StringComparison.Ordinal) &&
+            string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase));
+
     public static string FileName(EventModel evt)
     {
         var safe = new string((evt.Name ?? string.Empty)

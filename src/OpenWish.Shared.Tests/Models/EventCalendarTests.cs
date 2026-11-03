@@ -51,6 +51,27 @@ public class EventCalendarTests
         Assert.DoesNotContain("SecretMatch", ics);
     }
 
+    [Fact]
+    public void CanDownload_AllowsOrganizersAndAcceptedParticipantsOnly()
+    {
+        var evt = Sample();
+        evt.CreatedBy = new ApplicationUserModel { Id = "host", UserName = "host", Email = "h@example.test" };
+        evt.EventUsers =
+        [
+            new EventUserModel { UserId = "yes", Status = "Accepted" },
+            new EventUserModel { UserId = "maybe", Status = "Pending" },
+            new EventUserModel { UserId = "no", Status = "Rejected" },
+            new EventUserModel { UserId = "gone", Status = "Accepted", Deleted = true }
+        ];
+
+        Assert.True(EventCalendar.CanDownload(evt, "host"));
+        Assert.True(EventCalendar.CanDownload(evt, "yes"));
+        Assert.False(EventCalendar.CanDownload(evt, "maybe"));
+        Assert.False(EventCalendar.CanDownload(evt, "no"));
+        Assert.False(EventCalendar.CanDownload(evt, "gone"));
+        Assert.False(EventCalendar.CanDownload(evt, "stranger"));
+    }
+
     [Theory]
     [InlineData("Cookout; Swap, 2026", "cookout-swap-2026.ics")]
     [InlineData("!!!", "event.ics")]

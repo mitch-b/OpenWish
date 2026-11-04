@@ -9,7 +9,7 @@ public static class GiftPlanText
     public static string Build(GiftPlanModel plan, DateTimeOffset now)
     {
         var builder = new StringBuilder("Gift shopping list\n");
-        var recipients = plan.RecipientsToBuy;
+        var recipients = plan.GetRecipientsToBuy(now);
         if (recipients.Count == 0)
         {
             return builder.Append("Nothing left to buy.\n").ToString();
@@ -18,7 +18,7 @@ public static class GiftPlanText
         foreach (var recipient in recipients)
         {
             builder.Append('\n').Append(recipient.RecipientName);
-            if (recipient.NextOccasion is { } occasion && !EventCountdown.IsPast(occasion, now))
+            if (recipient.GetNextOccasion(now) is { } occasion && !EventCountdown.IsPast(occasion, now))
             {
                 builder.Append(" (").Append(EventCountdown.Badge(occasion, now).ToLowerInvariant()).Append(')');
             }
@@ -42,7 +42,7 @@ public static class GiftPlanText
         }
 
         builder.Append("\nEstimated to buy: ").Append(FormatPrice(plan.ToBuyTotal));
-        if (plan.RecipientsToBuy.Sum(recipient => recipient.UnpricedCount) is var unpriced and > 0)
+        if (recipients.Sum(recipient => recipient.UnpricedCount) is var unpriced and > 0)
         {
             builder.Append(" (").Append(unpriced == 1 ? "1 gift has no price" : $"{unpriced} gifts have no price").Append(')');
         }
@@ -50,9 +50,6 @@ public static class GiftPlanText
         return builder.Append('\n').ToString();
     }
 
-    private static string FormatPrice(decimal price)
-    {
-        var text = price.ToString("C", CultureInfo.GetCultureInfo("en-US"));
-        return text.EndsWith(".00", StringComparison.Ordinal) ? text[..^3] : text;
-    }
+    // Matches the prices on the page, which use the current culture.
+    private static string FormatPrice(decimal price) => price.ToString("C", CultureInfo.CurrentCulture);
 }

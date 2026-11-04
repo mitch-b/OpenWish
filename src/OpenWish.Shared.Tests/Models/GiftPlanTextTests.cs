@@ -32,10 +32,10 @@ public class GiftPlanTextTests
             ]
         };
 
-        var text = GiftPlanText.Build(plan, Now);
+        var text = WithCulture("en-US", () => GiftPlanText.Build(plan, Now));
 
         Assert.Equal(
-            "Gift shopping list\n\nJordan (in 3 days)\n- Scarf ($30) - https://shop.test/scarf\n- Tea\n\nEstimated to buy: $30 (1 gift has no price)\n",
+            "Gift shopping list\n\nJordan (in 3 days)\n- Scarf ($30.00) - https://shop.test/scarf\n- Tea\n\nEstimated to buy: $30.00 (1 gift has no price)\n",
             text);
     }
 
@@ -59,7 +59,7 @@ public class GiftPlanTextTests
             ]
         };
 
-        var recipient = Assert.Single(plan.RecipientsToBuy);
+        var recipient = Assert.Single(plan.GetRecipientsToBuy(Now));
         Assert.Equal("B", recipient.RecipientName);
         Assert.Equal(["z"], recipient.Items.Select(i => i.ItemName));
     }
@@ -85,7 +85,74 @@ public class GiftPlanTextTests
             ]
         };
 
-        Assert.Equal(Now.AddDays(9), recipient.NextOccasion);
-        Assert.Null(new GiftPlanRecipientModel { Items = [new GiftPlanItemModel()] }.NextOccasion);
+        Assert.Equal(Now.AddDays(9), recipient.GetNextOccasion(Now));
+        Assert.Null(new GiftPlanRecipientModel { Items = [new GiftPlanItemModel()] }.GetNextOccasion(Now));
+    }
+
+    [Fact]
+    public void NextOccasion_SkipsPastEventsWhileAnUpcomingOneExists()
+    {
+        var recipient = new GiftPlanRecipientModel
+        {
+            Items =
+            [
+                new GiftPlanItemModel { EventDate = Now.AddDays(-10) },
+                new GiftPlanItemModel { EventDate = Now.AddDays(12) }
+            ]
+        };
+
+        Assert.Equal(Now.AddDays(12), recipient.GetNextOccasion(Now));
+        Assert.Equal(Now.AddDays(-10), new GiftPlanRecipientModel { Items = [recipient.Items[0]] }.GetNextOccasion(Now));
+    }
+
+    [Fact]
+    public void GetRecipientsToBuy_ReordersByTheOccasionThatRemains()
+    {
+        var plan = new GiftPlanModel
+        {
+            Recipients =
+            [
+                new GiftPlanRecipientModel
+                {
+                    RecipientName = "Ana",
+                    Items = [new GiftPlanItemModel { ItemName = "a", EventDate = Now.AddDays(1), PurchasedOn = Now }, new GiftPlanItemModel { ItemName = "b" }]
+                },
+                new GiftPlanRecipientModel
+                {
+                    RecipientName = "Ben",
+                    Items = [new GiftPlanItemModel { ItemName = "c", EventDate = Now.AddDays(7) }]
+                }
+            ]
+        };
+
+        Assert.Equal(["Ben", "Ana"], plan.GetRecipientsToBuy(Now).Select(r => r.RecipientName));
+    }
+
+    [Fact]
+    public void Build_FormatsPricesWithTheCurrentCulture()
+    {
+        var plan = new GiftPlanModel
+        {
+            Recipients = [new GiftPlanRecipientModel { RecipientName = "Jo", Items = [new GiftPlanItemModel { ItemName = "Tea", Price = 30m }] }]
+        };
+
+        var text = WithCulture("en-GB", () => GiftPlanText.Build(plan, Now));
+
+        Assert.Contains("£30.00", text);
+        Assert.DoesNotContain("$", text);
+    }
+
+    private static T WithCulture<T>(string name, Func<T> action)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo(name);
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
     }
 }

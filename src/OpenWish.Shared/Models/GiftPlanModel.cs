@@ -40,10 +40,22 @@ public record GiftPlanRecipientModel
     public decimal ToBuyTotal => Items.Where(item => !item.IsPurchased).Sum(item => item.Price ?? 0m);
     public int OverBudgetCount => Items.Count(item => item.IsOverBudget);
 
-    /// <summary>The soonest occasion still waiting on a gift, else the soonest dated occasion; null when no gift has one.</summary>
-    public DateTimeOffset? NextOccasion =>
-        Items.Where(item => !item.IsPurchased && item.EventDate is not null).Min(item => item.EventDate)
-        ?? Items.Where(item => item.EventDate is not null).Min(item => item.EventDate);
+    /// <summary>
+    /// The soonest upcoming occasion with a gift still to buy; failing that, the most recent overdue one, then
+    /// any dated occasion. Null when no gift has one.
+    /// </summary>
+    public DateTimeOffset? GetNextOccasion(DateTimeOffset now)
+    {
+        var dated = Items.Where(item => item.EventDate is not null).ToList();
+        var waiting = dated.Where(item => !item.IsPurchased).Select(item => item.EventDate!.Value).ToList();
+        var upcoming = waiting.Where(date => !EventCountdown.IsPast(date, now)).ToList();
+        if (upcoming.Count > 0)
+        {
+            return upcoming.Min();
+        }
+
+        return waiting.Count > 0 ? waiting.Max() : dated.Max(item => item.EventDate);
+    }
 }
 
 /// <summary>A private overview of the gifts the caller has committed to buying.</summary>
@@ -64,11 +76,25 @@ public record GiftPlanModel
     public decimal ToBuyTotal => Recipients.Sum(recipient => recipient.ToBuyTotal);
     public int OverBudgetCount => Recipients.Sum(recipient => recipient.OverBudgetCount);
 
-    /// <summary>The same plan reduced to gifts that are still to buy, dropping people with nothing left.</summary>
-    public IReadOnlyList<GiftPlanRecipientModel> RecipientsToBuy =>
-        Recipients
-            .Where(recipient => recipient.ToBuyCount > 0)
-            .Select(recipient => recipient with { Items = recipient.Items.Where(item => !item.IsPurchased).ToList() })
+    /// <summary>
+    /// Recipients reduced to gifts still to buy, dropping people with nothing left and ordered again by the
+    /// soonest occasion that remains.
+    /// </summary>
+    public IReadOnlyList<GiftPlanRecipientModel> GetRecipientsToBuy(DateTimeOffset now) =>
+        OrderByOccasion(
+            Recipients
+                .Where(recipient => recipient.ToBuyCount > 0)
+                .Select(recipient => recipient with { Items = recipient.Items.Where(item => !item.IsPurchased).ToList() }),
+            now);
+
+    /// <summary>Soonest occasion first, people without one last, then by name.</summary>
+    public static IReadOnlyList<GiftPlanRecipientModel> OrderByOccasion(IEnumerable<GiftPlanRecipientModel> recipients, DateTimeOffset now) =>
+        recipients
+            .Select(recipient => (Recipient: recipient, Next: recipient.GetNextOccasion(now)))
+            .OrderBy(entry => entry.Next is null)
+            .ThenBy(entry => entry.Next)
+            .ThenBy(entry => entry.Recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(entry => entry.Recipient)
             .ToList();
 }
 

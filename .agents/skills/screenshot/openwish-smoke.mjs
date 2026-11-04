@@ -3218,13 +3218,25 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await planPage.getByTestId("gift-plan-show-all").click();
     await headphonesRow.getByRole("button", { name: /Not bought yet/ }).click();
     await headphonesRow.getByRole("button", { name: /Mark as bought/ }).waitFor({ state: "visible" });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(baseUrl).origin }).catch(() => {});
+    // Plain-HTTP test hosts have no async clipboard, so also observe what the real copy command selects.
     await page.evaluate(() => {
-      window.__copiedPlan = null;
-      window.openWishCopyText = async text => { window.__copiedPlan = text; };
+      window.__copyCommandText = null;
+      document.addEventListener("copy", () => {
+        const field = document.activeElement;
+        window.__copyCommandText = field && "value" in field ? field.value.substring(field.selectionStart, field.selectionEnd) : null;
+      }, { once: true });
     });
     await planPage.getByTestId("gift-plan-copy").click();
     await planPage.getByTestId("gift-plan-copy").getByText("List copied").waitFor({ state: "visible" });
-    const copiedPlan = await page.evaluate(() => window.__copiedPlan);
+    // The real browser clipboard (or its plain-HTTP fallback) must hold the list, not a stub.
+    const copiedPlan = await page.evaluate(async () => {
+      try {
+        return await navigator.clipboard.readText();
+      } catch {
+        return window.__copyCommandText;
+      }
+    });
     if (!copiedPlan?.includes("AlexDemo") || !copiedPlan.includes("Noise-Cancelling Headphones") || !copiedPlan.includes("$249.99")) {
       throw new Error(`The copied shopping list is wrong: ${copiedPlan}`);
     }

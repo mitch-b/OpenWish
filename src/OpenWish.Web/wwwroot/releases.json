@@ -9,7 +9,7 @@
       "Gifts priced above an occasion's budget are flagged.",
       "Still to buy hides gifts you have already bought.",
       "Copy shopping list puts what is left to buy, with prices and links, on your clipboard.",
-      "Release frees a reservation right from the plan."
+      "Release names the gift, asks you to confirm, then frees the reservation right from the plan."
     ]
   }, {
     "version": "0.10.0",

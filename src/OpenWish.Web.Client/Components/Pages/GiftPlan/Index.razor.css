@@ -108,7 +108,16 @@
 
 .plan-release-confirm {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+    max-width: 22rem;
+}
+
+.plan-release-text {
+    flex: 1 0 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    text-align: left;
 }
 
 .plan-items {

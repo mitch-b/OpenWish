@@ -1,3 +1,16 @@
+// Buttons with data-copy-text write the clipboard inside the browser's own click so Safari accepts it.
+window.openWishLastCopy = Promise.resolve(false);
+document.addEventListener("click", function (event) {
+    const button = event.target instanceof Element ? event.target.closest("[data-copy-text]") : null;
+    if (button && !button.disabled) {
+        window.openWishLastCopy = window.openWishCopyText(button.getAttribute("data-copy-text") ?? "").then(() => true, () => false);
+    }
+});
+
+window.openWishLastCopyResult = function () {
+    return window.openWishLastCopy;
+};
+
 window.openWishCopyText = async function (text) {
     if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);

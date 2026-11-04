@@ -152,7 +152,7 @@ public class WishlistReceivedIdeasTests
         await ReserveAsync(factory, items[0], "shopper", purchased: false);
         await ReserveAsync(factory, items[1], "shopper", purchased: true);
         var service = CreateService(factory);
-        var plan = new GiftPlanService(factory);
+        var plan = new GiftPlanService(factory, new NoOpActivityService());
         Assert.Equal(2, (await plan.GetGiftPlanAsync("shopper")).ItemCount);
 
         await service.SetWishlistItemReceivedByPublicIdAsync(list.PublicId, items[0].PublicId, Received(), "owner");

@@ -8,7 +8,8 @@ All notable user-facing changes to OpenWish are documented here.
 
 - On "My gift plan", "Copy shopping list" copies what is still to buy, by
   person, with prices and store links.
-- "Release" on a planned gift frees the reservation without leaving the page.
+- "Release" on a planned gift asks you to confirm, naming the gift, and then frees
+  the reservation without leaving the page; received gifts can't be released.
 - A "Still to buy" filter hides gifts you have already bought.
 
 ### Improved

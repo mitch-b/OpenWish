@@ -25,6 +25,18 @@ public class GiftPlanHttpClientService(HttpClient httpClient) : IGiftPlanService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task ReleaseGiftAsync(string userId, string wishlistPublicId, string itemPublicId)
+    {
+        var response = await httpClient.DeleteAsync(
+            $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{Uri.EscapeDataString(itemPublicId)}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            throw new KeyNotFoundException("You have not reserved that gift.");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId) =>
         await httpClient.GetFromJsonAsync<List<GivenGiftMatchModel>>(
             $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{itemId}/given") ?? [];

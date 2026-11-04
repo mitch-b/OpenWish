@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using OpenWish.Application.Services;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
+using OpenWish.Shared.Models;
+using OpenWish.Shared.Services;
 using Xunit;
 
 namespace OpenWish.Application.Tests.Services;
@@ -29,7 +31,7 @@ public class GiftPlanServiceTests
             await seed.SaveChangesAsync();
         }
 
-        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
 
         Assert.Equal(["casey", "jordan"], plan.Recipients.Select(r => r.RecipientName));
         Assert.Equal(3, plan.ItemCount);
@@ -61,7 +63,7 @@ public class GiftPlanServiceTests
             await seed.SaveChangesAsync();
         }
 
-        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
 
         Assert.Equal(["Visible"], plan.Recipients.SelectMany(r => r.Items).Select(i => i.ItemName));
     }
@@ -86,7 +88,7 @@ public class GiftPlanServiceTests
             await seed.SaveChangesAsync();
         }
 
-        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
 
         var recipient = Assert.Single(plan.Recipients);
         Assert.DoesNotContain("@", recipient.RecipientName);
@@ -96,7 +98,7 @@ public class GiftPlanServiceTests
     [Fact]
     public async Task GetGiftPlanAsync_ReturnsAnEmptyPlanWithoutReservations()
     {
-        var plan = await new GiftPlanService(CreateFactory()).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(CreateFactory(), new RecordingActivityService()).GetGiftPlanAsync("me");
 
         Assert.Empty(plan.Recipients);
         Assert.Equal(0, plan.ItemCount);
@@ -123,7 +125,7 @@ public class GiftPlanServiceTests
             wishlistId = list.PublicId;
         }
 
-        var service = new GiftPlanService(factory);
+        var service = new GiftPlanService(factory, new RecordingActivityService());
         var minePublicId = (await service.GetGiftPlanAsync("me")).Recipients[0].Items[0].ItemPublicId;
 
         await service.SetGiftPurchasedAsync("me", wishlistId, minePublicId, true);
@@ -137,7 +139,7 @@ public class GiftPlanServiceTests
         Assert.Equal(1, cleared.ToBuyCount);
         Assert.Equal(10m, cleared.ToBuyTotal);
 
-        var theirPublicId = (await new GiftPlanService(factory).GetGiftPlanAsync("other")).Recipients[0].Items[0].ItemPublicId;
+        var theirPublicId = (await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("other")).Recipients[0].Items[0].ItemPublicId;
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.SetGiftPurchasedAsync("me", wishlistId, theirPublicId, true));
         await using var verify = factory.CreateDbContext();
         Assert.All(verify.ItemReservations.Where(r => r.UserId == "other"), r => Assert.Null(r.PurchasedOn));
@@ -163,7 +165,7 @@ public class GiftPlanServiceTests
         }
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => new GiftPlanService(factory).SetGiftPurchasedAsync("me", wishlistId, itemId, true));
+            () => new GiftPlanService(factory, new RecordingActivityService()).SetGiftPurchasedAsync("me", wishlistId, itemId, true));
     }
 
     [Fact]
@@ -185,7 +187,7 @@ public class GiftPlanServiceTests
             await seed.SaveChangesAsync();
         }
 
-        var items = (await new GiftPlanService(factory).GetGiftPlanAsync("me")).Recipients.SelectMany(r => r.Items).ToList();
+        var items = (await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me")).Recipients.SelectMany(r => r.Items).ToList();
 
         var hiddenItem = Assert.Single(items, i => i.ItemName == "Hidden event");
         Assert.Null(hiddenItem.EventName);
@@ -212,10 +214,10 @@ public class GiftPlanServiceTests
         }
 
         await using var read = factory.CreateDbContext();
-        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
         var listId = plan.Recipients[0].Items[0].WishlistPublicId;
         var itemId = plan.Recipients[0].Items[0].ItemPublicId;
-        await new GiftPlanService(factory).SetGiftPurchasedAsync("me", listId, itemId, true);
+        await new GiftPlanService(factory, new RecordingActivityService()).SetGiftPurchasedAsync("me", listId, itemId, true);
 
         var stored = await read.ItemReservations.AsNoTracking().SingleAsync();
         Assert.NotNull(stored.PurchasedOn);
@@ -253,16 +255,16 @@ public class GiftPlanServiceTests
             await seed.SaveChangesAsync();
         }
 
-        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
 
         Assert.Equal(["casey", "jordan"], plan.History.Select(r => r.RecipientName));
         Assert.Equal(["Old plain"], plan.History[0].Items.Select(i => i.ItemName));
         Assert.Equal(["Old gift", "Older gift"], plan.History[1].Items.Select(i => i.ItemName));
         Assert.Equal(["Recent plain", "Unbought"], plan.Recipients.SelectMany(r => r.Items).Select(i => i.ItemName).Order());
 
-        var other = await new GiftPlanService(factory).GetGiftPlanAsync("other");
+        var other = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("other");
         Assert.Empty(other.History);
-        var owner = await new GiftPlanService(factory).GetGiftPlanAsync("jordan");
+        var owner = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("jordan");
         Assert.Empty(owner.History);
     }
 
@@ -305,7 +307,7 @@ public class GiftPlanServiceTests
             caseyListId = caseyList.PublicId;
         }
 
-        var service = new GiftPlanService(factory);
+        var service = new GiftPlanService(factory, new RecordingActivityService());
 
         var byUrl = Assert.Single(await service.GetPreviouslyGivenMatchesAsync("me", jordanListId, urlTarget));
         Assert.Equal("jordan", byUrl.RecipientName);
@@ -346,7 +348,7 @@ public class GiftPlanServiceTests
             closedId = closed.PublicId;
         }
 
-        var service = new GiftPlanService(factory);
+        var service = new GiftPlanService(factory, new RecordingActivityService());
 
         Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", openId, unboughtTarget));
         Assert.Empty(await service.GetPreviouslyGivenMatchesAsync("me", closedId, closedTarget));
@@ -378,7 +380,71 @@ public class GiftPlanServiceTests
             openId = open.PublicId;
         }
 
-        Assert.Empty(await new GiftPlanService(factory).GetPreviouslyGivenMatchesAsync("me", openId, target));
+        Assert.Empty(await new GiftPlanService(factory, new RecordingActivityService()).GetPreviouslyGivenMatchesAsync("me", openId, target));
+    }
+
+    [Fact]
+    public async Task GetGiftPlanAsync_OrdersBySoonestOccasionAndShowsBudgetOnlyToEventMembers()
+    {
+        var factory = CreateFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan", "casey");
+            var soon = new Event { Name = "Casey swap", CreatedBy = casey, Date = DateTimeOffset.UtcNow.AddDays(3), Budget = 20m };
+            soon.EventUsers.Add(new EventUser { UserId = "me", Status = "Accepted" });
+            var secret = new Event { Name = "Surprise", CreatedBy = jordan, Date = DateTimeOffset.UtcNow.AddDays(1), Budget = 5m };
+            var caseyItem = new WishlistItem { Name = "Candle", Price = 25m, Wishlist = new Wishlist { Name = "C", OwnerId = casey.Id, Event = soon } };
+            var jordanItem = new WishlistItem { Name = "Hat", Price = 10m, Wishlist = new Wishlist { Name = "J", OwnerId = jordan.Id, Event = secret } };
+            seed.WishlistItems.AddRange(caseyItem, jordanItem);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.AddRange(Reserve(jordanItem, me.Id), Reserve(caseyItem, me.Id));
+            await seed.SaveChangesAsync();
+        }
+
+        var plan = await new GiftPlanService(factory, new RecordingActivityService()).GetGiftPlanAsync("me");
+
+        Assert.Equal(["casey", "jordan"], plan.Recipients.Select(r => r.RecipientName));
+        var member = plan.Recipients[0].Items[0];
+        Assert.Equal(20m, member.EventBudget);
+        Assert.NotNull(member.EventDate);
+        Assert.True(member.IsOverBudget);
+        var outsider = plan.Recipients[1].Items[0];
+        Assert.Null(outsider.EventBudget);
+        Assert.Null(outsider.EventDate);
+        Assert.False(outsider.IsOverBudget);
+    }
+
+    [Fact]
+    public async Task ReleaseGiftAsync_FreesOnlyTheCallersOwnReservation()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        string itemId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var list = new Wishlist { Name = "J", OwnerId = jordan.Id };
+            var item = new WishlistItem { Name = "Scarf", Wishlist = list };
+            seed.WishlistItems.Add(item);
+            await seed.SaveChangesAsync();
+            var mine = Reserve(item, me.Id);
+            mine.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.Add(mine);
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+            itemId = item.PublicId;
+        }
+
+        var service = new GiftPlanService(factory, new RecordingActivityService());
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ReleaseGiftAsync("other", wishlistId, itemId));
+        Assert.Equal(1, (await service.GetGiftPlanAsync("me")).ItemCount);
+
+        await service.ReleaseGiftAsync("me", wishlistId, itemId);
+
+        Assert.Equal(0, (await service.GetGiftPlanAsync("me")).ItemCount);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ReleaseGiftAsync("me", wishlistId, itemId));
     }
 
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
@@ -406,6 +472,27 @@ public class GiftPlanServiceTests
         UserId = userId,
         ReservationDate = DateTimeOffset.UtcNow.AddMinutes(item.Id)
     };
+
+    private sealed class RecordingActivityService : IActivityService
+    {
+        public List<(string UserId, string Type, int? WishlistId, int? ItemId)> Logged { get; } = [];
+
+        public Task<ActivityLogModel> LogActivityAsync(
+            string userId, string activityType, string description, int? wishlistId = null, int? wishlistItemId = null)
+        {
+            Logged.Add((userId, activityType, wishlistId, wishlistItemId));
+            return Task.FromResult(new ActivityLogModel());
+        }
+
+        public Task<IEnumerable<ActivityLogModel>> GetUserActivityFeedAsync(string userId, int count = 20, int skip = 0) =>
+            Task.FromResult<IEnumerable<ActivityLogModel>>([]);
+
+        public Task<IEnumerable<ActivityLogModel>> GetFriendsActivityFeedAsync(string userId, int count = 20, int skip = 0) =>
+            Task.FromResult<IEnumerable<ActivityLogModel>>([]);
+
+        public Task<IEnumerable<ActivityLogModel>> GetWishlistActivityAsync(int wishlistId, string requestingUserId, int count = 20, int skip = 0) =>
+            Task.FromResult<IEnumerable<ActivityLogModel>>([]);
+    }
 
     private static TestFactory CreateFactory() => new();
 

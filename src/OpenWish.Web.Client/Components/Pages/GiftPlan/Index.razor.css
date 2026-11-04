@@ -78,6 +78,48 @@
     font-size: 0.9rem;
 }
 
+.plan-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.plan-toolbar .btn {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.plan-recipient-header p.plan-occasion {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+}
+
+.plan-item-main small.plan-over-budget {
+    color: var(--color-danger-text, var(--color-text-muted));
+    font-weight: 600;
+}
+
+.plan-release-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    max-width: 22rem;
+}
+
+.plan-release-text {
+    flex: 1 0 100%;
+    margin: 0;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
 .plan-items {
     margin: 0;
     padding: 0;
@@ -116,7 +158,9 @@
 
 .plan-item-side {
     display: flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: 0.75rem;
 }
@@ -140,6 +184,7 @@
     }
 
     .plan-item-side {
+        flex-wrap: wrap;
         justify-content: space-between;
     }
 }

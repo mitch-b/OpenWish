@@ -5,12 +5,13 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Application.Services;
 
-public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFactory) : IGiftPlanService
+public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFactory, IActivityService activityService) : IGiftPlanService
 {
     private const int HistoryAfterDays = 30;
     private const string SharedListName = "Shared event list";
 
     private readonly IDbContextFactory<ApplicationDbContext> _contextFactory = contextFactory;
+    private readonly IActivityService _activityService = activityService;
 
     public async Task<GiftPlanModel> GetGiftPlanAsync(string userId)
     {
@@ -45,7 +46,16 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 EventPublicId = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
                     (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
                      r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
-                    ? r.WishlistItem.Wishlist.Event.PublicId : null
+                    ? r.WishlistItem.Wishlist.Event.PublicId : null,
+                // A drawn match keeps the budget saved at draw time, which is what the match panel shows.
+                EventBudget = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
+                    (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
+                     r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
+                    ? r.WishlistItem.Wishlist.Event.GiftExchanges
+                        .Where(g => !g.Deleted && g.GiverId == userId && g.ReceiverId == r.WishlistItem.Wishlist.OwnerId)
+                        .Select(g => g.Budget)
+                        .FirstOrDefault() ?? r.WishlistItem.Wishlist.Event.Budget
+                    : null
             })
             .ToListAsync();
 
@@ -82,20 +92,22 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                     WishlistPublicId = row.Wishlist.PublicId,
                     EventName = row.EventName,
                     EventPublicId = row.EventPublicId,
+                    EventDate = row.EventPublicId is not null ? row.EventDate : null,
+                    EventBudget = row.EventBudget,
                     ReservedOn = row.ReservationDate,
                     PurchasedOn = row.PurchasedOn
                 }));
         }
 
-        var recipients = visible
-            .GroupBy(entry => entry.OwnerKey)
-            .Select(group => new GiftPlanRecipientModel
-            {
-                RecipientName = group.First().RecipientName,
-                Items = group.Select(entry => entry.Item).ToList()
-            })
-            .OrderBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        var recipients = GiftPlanModel.OrderByOccasion(
+            visible
+                .GroupBy(entry => entry.OwnerKey)
+                .Select(group => new GiftPlanRecipientModel
+                {
+                    RecipientName = group.First().RecipientName,
+                    Items = group.Select(entry => entry.Item).ToList()
+                }),
+            now);
         var history = archived
             .GroupBy(entry => entry.OwnerKey)
             .Select(group => new GiftPlanRecipientModel
@@ -222,5 +234,40 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
 
         reservation.PurchasedOn = isPurchased ? reservation.PurchasedOn ?? DateTimeOffset.UtcNow : null;
         await context.SaveChangesAsync();
+    }
+
+    public async Task ReleaseGiftAsync(string userId, string wishlistPublicId, string itemPublicId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var reservation = await context.ItemReservations
+            .Include(r => r.WishlistItem)
+            .FirstOrDefaultAsync(r => !r.Deleted &&
+                                      r.UserId == userId &&
+                                      r.WishlistItem != null &&
+                                      !r.WishlistItem.Deleted &&
+                                      r.WishlistItem.PublicId == itemPublicId &&
+                                      r.WishlistItem.Wishlist != null &&
+                                      !r.WishlistItem.Wishlist.Deleted &&
+                                      r.WishlistItem.Wishlist.PublicId == wishlistPublicId)
+            ?? throw new KeyNotFoundException("You have not reserved that gift.");
+
+        if (reservation.WishlistItem!.ReceivedOn is not null)
+        {
+            throw new KeyNotFoundException("You have not reserved that gift.");
+        }
+
+        reservation.Deleted = true;
+        reservation.PurchasedOn = null;
+        reservation.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+
+        await _activityService.LogActivityAsync(
+            userId,
+            "ReservationCanceled",
+            $"Canceled reservation for item: {reservation.WishlistItem.Name}",
+            reservation.WishlistItem.WishlistId,
+            reservation.WishlistItem.Id);
     }
 }

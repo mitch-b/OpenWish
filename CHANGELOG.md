@@ -2,6 +2,22 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.11.0] - 2026-11-04
+
+### Added
+
+- On "My gift plan", "Copy shopping list" copies what is still to buy, by
+  person, with prices and store links.
+- "Release" on a planned gift asks you to confirm, naming the gift, and then frees
+  the reservation without leaving the page; received gifts can't be released.
+- A "Still to buy" filter hides gifts you have already bought.
+
+### Improved
+
+- People are ordered by their soonest occasion, with how soon it is.
+- Gifts priced above an occasion's budget are flagged. Budgets and dates show
+  only for events you belong to.
+
 ## [0.10.0] - 2026-11-03
 
 ### Added

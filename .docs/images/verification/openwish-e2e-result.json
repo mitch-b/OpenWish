@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/69e153dd-ef85-4dd0-b9d9-c2e028ff7fdc/manage",
+        "/events/2b02de9e-a559-4218-9dcc-9048069bbebf/manage",
         "/friends",
         "/friends",
         "/events/demo-holiday-gift-exchange",
@@ -172,6 +172,7 @@
         "owner confirms a stale idea; non-owners are refused",
         "owner copies, moves, prioritizes, and removes ideas in bulk; non-owners are refused",
         "grid cards coordinate gifts inline without leaving grid view",
+        "gift plan orders people by occasion, flags gifts over the event budget, filters to still-to-buy gifts, copies a shopping list, and releases a reservation only for its holder",
         "gift hints appear on a friend's wishlist only for friends; non-friends and owners get 404 and the account form saves and clears them",
         "friends' upcoming birthdays (month and day only) show on the dashboard within 30 days; the account form saves and clears one",
         "gift plan groups the shopper's reservations by recipient; owners and anonymous visitors never see them"

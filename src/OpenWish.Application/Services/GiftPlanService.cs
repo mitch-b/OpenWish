@@ -45,7 +45,11 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 EventPublicId = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
                     (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
                      r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
-                    ? r.WishlistItem.Wishlist.Event.PublicId : null
+                    ? r.WishlistItem.Wishlist.Event.PublicId : null,
+                EventBudget = r.WishlistItem.Wishlist.Event != null && !r.WishlistItem.Wishlist.Event.Deleted &&
+                    (r.WishlistItem.Wishlist.Event.CreatedBy.Id == userId ||
+                     r.WishlistItem.Wishlist.Event.EventUsers.Any(eu => !eu.Deleted && eu.Status == "Accepted" && eu.UserId == userId))
+                    ? r.WishlistItem.Wishlist.Event.Budget : null
             })
             .ToListAsync();
 
@@ -82,6 +86,8 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                     WishlistPublicId = row.Wishlist.PublicId,
                     EventName = row.EventName,
                     EventPublicId = row.EventPublicId,
+                    EventDate = row.EventPublicId is not null ? row.EventDate : null,
+                    EventBudget = row.EventBudget,
                     ReservedOn = row.ReservationDate,
                     PurchasedOn = row.PurchasedOn
                 }));
@@ -94,7 +100,9 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 RecipientName = group.First().RecipientName,
                 Items = group.Select(entry => entry.Item).ToList()
             })
-            .OrderBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(recipient => recipient.NextOccasion is null)
+            .ThenBy(recipient => recipient.NextOccasion)
+            .ThenBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         var history = archived
             .GroupBy(entry => entry.OwnerKey)
@@ -221,6 +229,29 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         reservation.PurchasedOn = isPurchased ? reservation.PurchasedOn ?? DateTimeOffset.UtcNow : null;
+        await context.SaveChangesAsync();
+    }
+
+    public async Task ReleaseGiftAsync(string userId, string wishlistPublicId, string itemPublicId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var reservation = await context.ItemReservations
+            .Include(r => r.WishlistItem)
+            .FirstOrDefaultAsync(r => !r.Deleted &&
+                                      r.UserId == userId &&
+                                      r.WishlistItem != null &&
+                                      !r.WishlistItem.Deleted &&
+                                      r.WishlistItem.PublicId == itemPublicId &&
+                                      r.WishlistItem.Wishlist != null &&
+                                      !r.WishlistItem.Wishlist.Deleted &&
+                                      r.WishlistItem.Wishlist.PublicId == wishlistPublicId)
+            ?? throw new KeyNotFoundException("You have not reserved that gift.");
+
+        reservation.Deleted = true;
+        reservation.PurchasedOn = null;
+        reservation.UpdatedOn = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync();
     }
 }

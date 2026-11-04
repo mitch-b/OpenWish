@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.11.0",
+    "date": "2026-11-04",
+    "title": "A gift plan you can shop from",
+    "summary": "See who to shop for first, spot gifts over budget, copy a shopping list, and release a gift you can no longer buy.",
+    "highlights": [
+      "People on your gift plan are ordered by their soonest occasion.",
+      "Gifts priced above an occasion's budget are flagged.",
+      "Still to buy hides gifts you have already bought.",
+      "Copy shopping list puts what is left to buy, with prices and links, on your clipboard.",
+      "Release frees a reservation right from the plan."
+    ]
+  }, {
     "version": "0.10.0",
     "date": "2026-11-03",
     "title": "Occasions you won't forget",

@@ -43,6 +43,26 @@ public class GiftPlanController(IGiftPlanService giftPlanService, ApiUserContext
         }
     }
 
+    [HttpDelete("{wishlistPublicId}/items/{itemPublicId}")]
+    public async Task<IActionResult> Release(string wishlistPublicId, string itemPublicId)
+    {
+        var userId = await userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            await giftPlanService.ReleaseGiftAsync(userId, wishlistPublicId, itemPublicId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpGet("{wishlistPublicId}/items/{itemId:int}/given")]
     public async Task<IActionResult> GetPreviouslyGiven(string wishlistPublicId, int itemId)
     {

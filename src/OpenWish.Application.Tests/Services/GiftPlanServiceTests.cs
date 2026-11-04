@@ -381,6 +381,70 @@ public class GiftPlanServiceTests
         Assert.Empty(await new GiftPlanService(factory).GetPreviouslyGivenMatchesAsync("me", openId, target));
     }
 
+    [Fact]
+    public async Task GetGiftPlanAsync_OrdersBySoonestOccasionAndShowsBudgetOnlyToEventMembers()
+    {
+        var factory = CreateFactory();
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, _, jordan, casey) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan", "casey");
+            var soon = new Event { Name = "Casey swap", CreatedBy = casey, Date = DateTimeOffset.UtcNow.AddDays(3), Budget = 20m };
+            soon.EventUsers.Add(new EventUser { UserId = "me", Status = "Accepted" });
+            var secret = new Event { Name = "Surprise", CreatedBy = jordan, Date = DateTimeOffset.UtcNow.AddDays(1), Budget = 5m };
+            var caseyItem = new WishlistItem { Name = "Candle", Price = 25m, Wishlist = new Wishlist { Name = "C", OwnerId = casey.Id, Event = soon } };
+            var jordanItem = new WishlistItem { Name = "Hat", Price = 10m, Wishlist = new Wishlist { Name = "J", OwnerId = jordan.Id, Event = secret } };
+            seed.WishlistItems.AddRange(caseyItem, jordanItem);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.AddRange(Reserve(jordanItem, me.Id), Reserve(caseyItem, me.Id));
+            await seed.SaveChangesAsync();
+        }
+
+        var plan = await new GiftPlanService(factory).GetGiftPlanAsync("me");
+
+        Assert.Equal(["casey", "jordan"], plan.Recipients.Select(r => r.RecipientName));
+        var member = plan.Recipients[0].Items[0];
+        Assert.Equal(20m, member.EventBudget);
+        Assert.NotNull(member.EventDate);
+        Assert.True(member.IsOverBudget);
+        var outsider = plan.Recipients[1].Items[0];
+        Assert.Null(outsider.EventBudget);
+        Assert.Null(outsider.EventDate);
+        Assert.False(outsider.IsOverBudget);
+    }
+
+    [Fact]
+    public async Task ReleaseGiftAsync_FreesOnlyTheCallersOwnReservation()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        string itemId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            var list = new Wishlist { Name = "J", OwnerId = jordan.Id };
+            var item = new WishlistItem { Name = "Scarf", Wishlist = list };
+            seed.WishlistItems.Add(item);
+            await seed.SaveChangesAsync();
+            var mine = Reserve(item, me.Id);
+            mine.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.Add(mine);
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+            itemId = item.PublicId;
+        }
+
+        var service = new GiftPlanService(factory);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ReleaseGiftAsync("other", wishlistId, itemId));
+        Assert.Equal(1, (await service.GetGiftPlanAsync("me")).ItemCount);
+
+        await service.ReleaseGiftAsync("me", wishlistId, itemId);
+
+        Assert.Equal(0, (await service.GetGiftPlanAsync("me")).ItemCount);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ReleaseGiftAsync("me", wishlistId, itemId));
+    }
+
     private static (ApplicationUser Me, ApplicationUser Other, ApplicationUser Jordan, ApplicationUser Casey) AddUsers(ApplicationDbContext context)
     {
         var users = (

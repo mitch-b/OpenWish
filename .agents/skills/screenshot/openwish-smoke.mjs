@@ -3179,6 +3179,8 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await planPage.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-total").filter({ hasText: "249.99" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-occasion").filter({ hasText: "In 21 days" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-over-budget").filter({ hasText: "Over the $75.00 budget for Holiday Gift Exchange" }).waitFor({ state: "visible" });
     await screenshot(page, "gift-plan.png");
     const headphonesRow = planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" });
     await headphonesRow.getByRole("button", { name: /Mark as bought/ }).click();
@@ -3200,6 +3202,80 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await notReserver.close();
     await headphonesRow.getByRole("button", { name: /Not bought yet/ }).click();
     await headphonesRow.getByRole("button", { name: /Mark as bought/ }).waitFor({ state: "visible" });
+    // Filter, shopping list, and release.
+    await planPage.getByTestId("gift-plan-show-to-buy").click();
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).click();
+    await planPage.getByTestId("gift-plan-all-bought").waitFor({ state: "visible" });
+    if (await planPage.getByTestId("gift-plan-item").count() !== 0) {
+      throw new Error("The still-to-buy filter kept showing a bought gift.");
+    }
+    await planPage.getByTestId("gift-plan-copy").isDisabled().then(disabled => {
+      if (!disabled) {
+        throw new Error("Copy shopping list stayed enabled with nothing left to buy.");
+      }
+    });
+    await planPage.getByTestId("gift-plan-show-all").click();
+    await headphonesRow.getByRole("button", { name: /Not bought yet/ }).click();
+    await headphonesRow.getByRole("button", { name: /Mark as bought/ }).waitFor({ state: "visible" });
+    await page.evaluate(() => {
+      window.__copiedPlan = null;
+      window.openWishCopyText = async text => { window.__copiedPlan = text; };
+    });
+    await planPage.getByTestId("gift-plan-copy").click();
+    await planPage.getByTestId("gift-plan-copy").getByText("List copied").waitFor({ state: "visible" });
+    const copiedPlan = await page.evaluate(() => window.__copiedPlan);
+    if (!copiedPlan?.includes("AlexDemo") || !copiedPlan.includes("Noise-Cancelling Headphones") || !copiedPlan.includes("$249.99")) {
+      throw new Error(`The copied shopping list is wrong: ${copiedPlan}`);
+    }
+    await screenshot(page, "gift-plan-toolbar.png");
+
+    await headphonesRow.getByTestId("gift-plan-release").click();
+    await headphonesRow.getByTestId("gift-plan-release-confirm").waitFor({ state: "visible" });
+    await screenshot(page, "gift-plan-release-confirm.png");
+    await headphonesRow.getByRole("button", { name: "Keep" }).click();
+    await headphonesRow.getByTestId("gift-plan-release").waitFor({ state: "visible" });
+
+    // Release a throwaway reservation so the seeded one stays in place for later scenarios.
+    const releaseOwner = await browser.newContext();
+    await login(releaseOwner, "owner", ownerEmail);
+    const created = await releaseOwner.request.post(`${baseUrl}/api/wishlists/demo-family-gift-ideas/items`, {
+      data: { name: "Release check mug", price: 12 }
+    });
+    const tempItemId = Number(created.headers().location?.split("/").filter(Boolean).at(-1));
+    if (!created.ok() || !Number.isInteger(tempItemId)) {
+      throw new Error(`Creating the release-check idea returned ${created.status()}.`);
+    }
+    const tempReserve = await context.request.post(
+      `${baseUrl}/api/wishlists/demo-family-gift-ideas/items/${tempItemId}/reserve`,
+      { data: { isAnonymous: false } });
+    if (!tempReserve.ok()) {
+      throw new Error(`Reserving the release-check idea returned ${tempReserve.status()}.`);
+    }
+    await page.reload({ waitUntil: "domcontentloaded" });
+    const mugRow = planPage.getByTestId("gift-plan-item").filter({ hasText: "Release check mug" });
+    await mugRow.waitFor({ state: "visible" });
+    const tempItems = await (await releaseOwner.request.get(`${baseUrl}/api/wishlists/demo-family-gift-ideas/items`)).json();
+    const tempPublicId = tempItems.find(item => item.name === "Release check mug")?.publicId;
+    const notReleaser = await browser.newContext();
+    await login(notReleaser, "owner", ownerEmail);
+    const forbiddenRelease = await notReleaser.request.delete(
+      `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/${tempPublicId}`);
+    if (forbiddenRelease.status() !== 404) {
+      throw new Error(`A non-reserver released someone else's reservation (${forbiddenRelease.status()}).`);
+    }
+    await notReleaser.close();
+    await mugRow.getByTestId("gift-plan-release").click();
+    await mugRow.getByTestId("gift-plan-release-confirm").click();
+    await mugRow.waitFor({ state: "detached" });
+    const afterRelease = await (await context.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (afterRelease.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Release check mug")) {
+      throw new Error("Releasing a gift did not remove it from the plan.");
+    }
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await releaseOwner.request.delete(`${baseUrl}/api/wishlists/demo-family-gift-ideas/items/${tempItemId}`);
+    await releaseOwner.close();
+    assertions.push("gift plan orders people by occasion, flags gifts over the event budget, filters to still-to-buy gifts, copies a shopping list, and releases a reservation only for its holder");
     await page.setViewportSize({ width: 390, height: 844 });
     await planPage.getByTestId("gift-plan-item").first().waitFor({ state: "visible" });
     await assertNoHorizontalScroll(page, "gift plan");

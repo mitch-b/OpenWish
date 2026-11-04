@@ -8,6 +8,7 @@
 @inject IGiftPlanService GiftPlanService
 @inject IUserContextService UserContextService
 @inject ILogger<Index> Logger
+@inject IJSRuntime JSRuntime
 
 @rendermode InteractiveAuto
 
@@ -85,7 +86,36 @@
                     </div>
                 </dl>
 
-                @foreach (var recipient in _plan.Recipients)
+                <div class="plan-toolbar" data-testid="gift-plan-toolbar">
+                    <div class="btn-group" role="group" aria-label="Which gifts to show">
+                        <button type="button" class="btn btn-sm @(_onlyToBuy ? "btn-outline-primary" : "btn-primary")"
+                                aria-pressed="@(!_onlyToBuy ? "true" : "false")"
+                                data-testid="gift-plan-show-all"
+                                @onclick="() => SetOnlyToBuy(false)">All gifts</button>
+                        <button type="button" class="btn btn-sm @(_onlyToBuy ? "btn-primary" : "btn-outline-primary")"
+                                aria-pressed="@(_onlyToBuy ? "true" : "false")"
+                                data-testid="gift-plan-show-to-buy"
+                                @onclick="() => SetOnlyToBuy(true)">Still to buy (@_plan.ToBuyCount)</button>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-copy"
+                            disabled="@(_plan.ToBuyCount == 0)" @onclick="CopyShoppingListAsync">
+                        <OpenWishIcon Name="clipboard" /> @(_listCopied ? "List copied" : "Copy shopping list")
+                    </button>
+                </div>
+
+                @if (_plan.OverBudgetCount > 0)
+                {
+                    <p class="plan-note plan-over-budget-note" data-testid="gift-plan-over-budget-summary">
+                        @(_plan.OverBudgetCount == 1 ? "1 gift is" : $"{_plan.OverBudgetCount} gifts are") over an occasion's budget.
+                    </p>
+                }
+
+                @if (_onlyToBuy && _plan.ToBuyCount == 0)
+                {
+                    <p class="lead" data-testid="gift-plan-all-bought">Everything is bought. Switch to "All gifts" to review them.</p>
+                }
+
+                @foreach (var recipient in VisibleRecipients)
                 {
                     <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="RecipientKey(recipient)">
                         <header class="plan-recipient-header">
@@ -99,6 +129,13 @@
                                     <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
                                 }
                             </p>
+                            @if (recipient.NextOccasion is { } occasion)
+                            {
+                                <p class="plan-occasion" data-testid="gift-plan-occasion">
+                                    <OpenWishIcon Name="calendar" />
+                                    @OccasionText(occasion)
+                                </p>
+                            }
                         </header>
                         <ul class="plan-items">
                             @foreach (var item in recipient.Items)
@@ -114,6 +151,12 @@
                                             }
                                         </small>
                                         <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
+                                        @if (item.IsOverBudget)
+                                        {
+                                            <small class="plan-over-budget" data-testid="gift-plan-over-budget">
+                                                Over the @item.EventBudget!.Value.ToString("C") budget for @item.EventName
+                                            </small>
+                                        }
                                         @if (item.PurchasedOn is { } purchasedOn)
                                         {
                                             <small class="plan-bought" data-testid="gift-plan-bought">
@@ -131,6 +174,24 @@
                                             <span class="visually-hidden"> for @item.ItemName</span>
                                         </button>
                                         <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
+                                        @if (_confirmReleaseKey == KeyOf(item))
+                                        {
+                                            <div class="plan-release-confirm" role="group" aria-label="Release @item.ItemName">
+                                                <button class="btn btn-danger btn-sm" type="button" data-testid="gift-plan-release-confirm"
+                                                        disabled="@(_busyKey is not null)" @onclick="() => ReleaseAsync(item)">
+                                                    @(_busyKey == KeyOf(item) ? "Releasing..." : "Release it")
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm" type="button"
+                                                        disabled="@(_busyKey is not null)" @onclick="() => _confirmReleaseKey = null">Keep</button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-secondary btn-sm" type="button" data-testid="gift-plan-release"
+                                                    disabled="@(_busyKey is not null)" @onclick="() => _confirmReleaseKey = KeyOf(item)">
+                                                Release<span class="visually-hidden"> @item.ItemName so someone else can reserve it</span>
+                                            </button>
+                                        }
                                         @if (!string.IsNullOrWhiteSpace(item.Url))
                                         {
                                             <a class="btn btn-outline-primary btn-sm"
@@ -197,6 +258,76 @@
     private string? _statusMessage;
     private string? _busyKey;
     private string? _userId;
+    private bool _onlyToBuy;
+    private bool _listCopied;
+    private string? _confirmReleaseKey;
+
+    private IReadOnlyList<GiftPlanRecipientModel> VisibleRecipients =>
+        _plan is null ? [] : _onlyToBuy ? _plan.RecipientsToBuy : _plan.Recipients;
+
+    private void SetOnlyToBuy(bool value)
+    {
+        _onlyToBuy = value;
+        _confirmReleaseKey = null;
+    }
+
+    private static string OccasionText(DateTimeOffset occasion)
+    {
+        var badge = EventCountdown.Badge(occasion, DateTimeOffset.UtcNow);
+        return $"{badge} · {occasion.ToLocalTime().ToString("MMM d")}";
+    }
+
+    private async Task CopyShoppingListAsync()
+    {
+        if (_plan is null)
+        {
+            return;
+        }
+
+        _actionError = null;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishCopyText", GiftPlanText.Build(_plan, DateTimeOffset.UtcNow));
+            _listCopied = true;
+            _statusMessage = "Shopping list copied.";
+            StateHasChanged();
+            await Task.Delay(2000);
+            _listCopied = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Copying the shopping list failed.");
+            _actionError = "We couldn't copy the list. Try again.";
+        }
+    }
+
+    private async Task ReleaseAsync(GiftPlanItemModel item)
+    {
+        if (_busyKey is not null || _userId is null)
+        {
+            return;
+        }
+
+        _busyKey = KeyOf(item);
+        _actionError = null;
+        _statusMessage = null;
+        try
+        {
+            await GiftPlanService.ReleaseGiftAsync(_userId, item.WishlistPublicId, item.ItemPublicId);
+            _confirmReleaseKey = null;
+            _plan = await GiftPlanService.GetGiftPlanAsync(_userId);
+            _statusMessage = $"{item.ItemName} released. Someone else can reserve it now.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Releasing a reserved gift failed.");
+            _actionError = $"We couldn't release {item.ItemName}. Try again.";
+        }
+        finally
+        {
+            _busyKey = null;
+        }
+    }
 
     protected override Task OnInitializedAsync() => LoadAsync();
 

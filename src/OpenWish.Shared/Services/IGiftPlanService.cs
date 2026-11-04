@@ -19,6 +19,12 @@ public interface IGiftPlanService
     Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased);
 
     /// <summary>
+    /// Releases the caller's own reservation so someone else can reserve the idea. Throws
+    /// <see cref="KeyNotFoundException"/> unless the caller holds an active reservation on that idea.
+    /// </summary>
+    Task ReleaseGiftAsync(string userId, string wishlistPublicId, string itemPublicId);
+
+    /// <summary>
     /// Gets gifts the caller already marked as bought for the owner of this item's wishlist that look like
     /// the same item (same URL, else same name). Private to the caller: empty for the list owner and for
     /// wishlists the caller cannot open.

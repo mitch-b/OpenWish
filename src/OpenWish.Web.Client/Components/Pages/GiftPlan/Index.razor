@@ -175,7 +175,7 @@
                                     @OccasionText(occasion)
                                 </p>
                             }
-                            @if (recipient.ToBuyCount > 0)
+                            @if (RecipientOverall(recipient).ToBuyCount > 0)
                             {
                                 <button type="button" class="btn btn-outline-secondary btn-sm plan-recipient-copy" data-testid="gift-plan-copy-person"
                                         data-copy-text="@GiftPlanText.BuildForRecipient(RecipientOverall(recipient), _now)"

@@ -195,11 +195,32 @@ README walkthrough is regenerated under `.docs/images/walkthrough/`.
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.
 
-Pull requests run the same gate in `.github/workflows/validate.yml`, and the
-Docker image build in `.github/workflows/docker-image.yml`, only when their
-inputs change. Each workflow lists those inputs in its `paths` filter, so
-documentation and process changes skip them. When the gate starts depending
-on a new file outside those paths, add it to the filter.
+Every pull request targeting `main` and every push to `main` runs the gate in
+`.github/workflows/validate.yml`, including documentation-only changes. Do not
+add workflow-level `paths` filters: skipped required workflows leave checks
+pending and prevent merging.
+
+The repository's active `main` ruleset requires both `dotnet` and `browser`
+checks from GitHub Actions, with the branch up to date before merging and no
+bypass actors. Keep these job IDs stable; renaming one also requires updating
+the required check in GitHub Settings > Rules > Rulesets. These live repository
+settings are not configured by the workflow YAML. Classic branch protection
+also applies to administrators. Automated and manual merges must wait for the
+required checks to succeed; a successful Docker image build is not a substitute.
+GitHub still allows a pull request to be closed without merging.
+
+The Docker image workflow in `.github/workflows/docker-image.yml` remains
+path-filtered because it is not a required merge check. Add new image-build
+inputs to that workflow's filter when needed.
+
+PR #164 also consolidates Dependabot PRs #160, #152, #151, #150, #149, #145,
+#139, #138, and #133. The one-time cleanup workflow
+`.github/workflows/close-superseded-dependabot.yml` runs on pushes to `main`
+and closes only those still-open Dependabot PRs after GitHub confirms #164
+merged into `main`. Closing #164 without merging leaves them open. The workflow
+can be retried manually after a failure; already-closed PRs are skipped.
+Playwright's npm package, lockfile, browser image, and verification image tags
+must use the same version so the installed browser matches the test runner.
 
 ## Isolated agent environment
 

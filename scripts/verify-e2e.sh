@@ -49,7 +49,7 @@ rm -f \
   "$evidence_directory/openwish-e2e-result.json"
 
 docker build \
-  --tag openwish-playwright:1.63.0 \
+  --tag openwish-playwright:1.64.1 \
   .agents/skills/screenshot
 
 if [[ -z "${OPENWISH_PREBUILT_VERIFICATION_IMAGE:-}" ]]; then
@@ -82,7 +82,7 @@ docker run --rm \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
-  openwish-playwright:1.63.0
+  openwish-playwright:1.64.1
 
 docker run --rm \
   --network "$network_name" \
@@ -92,11 +92,11 @@ docker run --rm \
 if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
   docker run --rm --entrypoint tar \
     --volume "$docker_evidence_directory:/evidence:ro" \
-    openwish-playwright:1.63.0 -C /evidence -cf - . |
+    openwish-playwright:1.64.1 -C /evidence -cf - . |
     tar -C "$evidence_directory" -xf -
   docker run --rm --entrypoint tar \
     --volume "$docker_walkthrough_directory:/walkthrough:ro" \
-    openwish-playwright:1.63.0 -C /walkthrough -cf - . |
+    openwish-playwright:1.64.1 -C /walkthrough -cf - . |
     tar -C "$walkthrough_directory" -xf -
 fi
 

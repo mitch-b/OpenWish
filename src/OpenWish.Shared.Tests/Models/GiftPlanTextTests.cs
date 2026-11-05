@@ -142,6 +142,35 @@ public class GiftPlanTextTests
         Assert.DoesNotContain("$", text);
     }
 
+    [Fact]
+    public void BuildForRecipient_ListsOnlyThatPersonsGiftsStillToBuy()
+    {
+        var recipient = new GiftPlanRecipientModel
+        {
+            RecipientName = "Jordan",
+            Items =
+            [
+                new GiftPlanItemModel { ItemName = "Scarf", Price = 30m, Url = "https://shop.test/scarf", EventDate = Now.AddDays(1) },
+                new GiftPlanItemModel { ItemName = "Book", Price = 12.5m, PurchasedOn = Now },
+                new GiftPlanItemModel { ItemName = "Tea" }
+            ]
+        };
+
+        var text = WithCulture("en-US", () => GiftPlanText.BuildForRecipient(recipient, Now));
+
+        Assert.Equal(
+            "Gifts for Jordan (tomorrow)\n- Scarf ($30.00) - https://shop.test/scarf\n- Tea\n\nEstimated to buy: $30.00 (1 gift has no price)\n",
+            text);
+    }
+
+    [Fact]
+    public void BuildForRecipient_SaysWhenEverythingIsBought() =>
+        Assert.Equal(
+            "Gifts for Casey\nNothing left to buy.\n",
+            GiftPlanText.BuildForRecipient(
+                new GiftPlanRecipientModel { RecipientName = "Casey", Items = [new GiftPlanItemModel { ItemName = "Mug", PurchasedOn = Now }] },
+                Now));
+
     private static T WithCulture<T>(string name, Func<T> action)
     {
         var previous = System.Globalization.CultureInfo.CurrentCulture;

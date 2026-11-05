@@ -3242,6 +3242,53 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await screenshot(page, "gift-plan-toolbar.png");
 
+    // Over-budget filter, search, per-person progress and copy, and print.
+    await planPage.getByTestId("gift-plan-show-over-budget").click();
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    for (const row of await planPage.getByTestId("gift-plan-item").all()) {
+      await row.getByTestId("gift-plan-over-budget").waitFor({ state: "visible" });
+    }
+    await planPage.getByTestId("gift-plan-show-all").click();
+    const searchBox = planPage.getByTestId("gift-plan-search");
+    await searchBox.fill("zzz-no-such-gift");
+    await planPage.getByTestId("gift-plan-no-match").waitFor({ state: "visible" });
+    if (await planPage.getByTestId("gift-plan-item").count() !== 0) {
+      throw new Error("Searching the gift plan for a missing gift still listed gifts.");
+    }
+    await searchBox.press("Escape");
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await searchBox.fill("headphones");
+    await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-progress").first().getByText(/\d+ of \d+ bought/).waitFor({ state: "visible" });
+    await page.evaluate(() => {
+      window.__copyCommandText = null;
+      document.addEventListener("copy", () => {
+        const field = document.activeElement;
+        window.__copyCommandText = field && "value" in field ? field.value.substring(field.selectionStart, field.selectionEnd) : null;
+      }, { once: true });
+    });
+    await planPage.getByTestId("gift-plan-copy-person").first().click();
+    await planPage.getByTestId("gift-plan-copy-person").first().getByText("Copied").waitFor({ state: "visible" });
+    const copiedPerson = await page.evaluate(async () => {
+      try {
+        return await navigator.clipboard.readText();
+      } catch {
+        return window.__copyCommandText;
+      }
+    });
+    if (!copiedPerson?.startsWith("Gifts for ") || !copiedPerson.includes("Noise-Cancelling Headphones") || !copiedPerson.includes("$249.99")) {
+      throw new Error(`The copied list for one person is wrong: ${copiedPerson}`);
+    }
+    await screenshot(page, "gift-plan-search.png");
+    await searchBox.fill("");
+    await page.evaluate(() => {
+      window.__printCalls = 0;
+      window.print = () => { window.__printCalls += 1; };
+    });
+    await planPage.getByTestId("gift-plan-print").click();
+    await page.waitForFunction(() => window.__printCalls === 1);
+    assertions.push("gift plan filters to over-budget gifts, searches by gift, person, list, or event, shows per-person progress, copies one person's list, and prints");
+
     await headphonesRow.getByTestId("gift-plan-release").click();
     await headphonesRow.getByTestId("gift-plan-release-confirm").waitFor({ state: "visible" });
     await screenshot(page, "gift-plan-release-confirm.png");

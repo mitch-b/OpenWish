@@ -917,6 +917,9 @@ legend.form-label {
     .received-section,
     .organize,
     .gift-profile-panel,
+    .plan-toolbar,
+    .plan-search,
+    .plan-history,
     button,
     input,
     select,
@@ -939,7 +942,9 @@ legend.form-label {
     .wishlist-hero,
     .wishlist-content,
     .wishlist-item-card,
-    .wishlist-item-card * {
+    .wishlist-item-card *,
+    .gift-plan,
+    .gift-plan * {
         background: #ffffff !important;
         color: #000000 !important;
         box-shadow: none !important;

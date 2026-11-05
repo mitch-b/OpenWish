@@ -34,6 +34,25 @@ public record GiftPlanRecipientModel
     public string RecipientName { get; init; } = string.Empty;
     public IReadOnlyList<GiftPlanItemModel> Items { get; init; } = [];
 
+    /// <summary>
+    /// How many gifts this person has overall, even when <see cref="Items"/> was narrowed by a filter or search, so
+    /// progress stays truthful.
+    /// </summary>
+    public int GiftCount
+    {
+        get => _giftCount ?? Items.Count;
+        init => _giftCount = value;
+    }
+
+    public int BoughtCount
+    {
+        get => _boughtCount ?? Items.Count(item => item.IsPurchased);
+        init => _boughtCount = value;
+    }
+
+    private readonly int? _giftCount;
+    private readonly int? _boughtCount;
+
     public decimal Total => Items.Sum(item => item.Price ?? 0m);
     public int UnpricedCount => Items.Count(item => item.Price is null);
     public int ToBuyCount => Items.Count(item => !item.IsPurchased);

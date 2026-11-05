@@ -88,22 +88,42 @@
 
                 <div class="plan-toolbar" data-testid="gift-plan-toolbar">
                     <div class="btn-group" role="group" aria-label="Which gifts to show">
-                        <button type="button" class="btn btn-sm @(_onlyToBuy ? "btn-outline-primary" : "btn-primary")"
-                                aria-pressed="@(!_onlyToBuy ? "true" : "false")"
+                        <button type="button" class="btn btn-sm @(_filter == GiftPlanFilter.All ? "btn-primary" : "btn-outline-primary")"
+                                aria-pressed="@(_filter == GiftPlanFilter.All ? "true" : "false")"
                                 id="gift-plan-show-all"
                                 data-testid="gift-plan-show-all"
-                                @onclick="() => SetOnlyToBuy(false)">All gifts</button>
-                        <button type="button" class="btn btn-sm @(_onlyToBuy ? "btn-primary" : "btn-outline-primary")"
-                                aria-pressed="@(_onlyToBuy ? "true" : "false")"
+                                @onclick="() => SetFilter(GiftPlanFilter.All)">All gifts</button>
+                        <button type="button" class="btn btn-sm @(_filter == GiftPlanFilter.ToBuy ? "btn-primary" : "btn-outline-primary")"
+                                aria-pressed="@(_filter == GiftPlanFilter.ToBuy ? "true" : "false")"
                                 id="gift-plan-show-to-buy"
                                 data-testid="gift-plan-show-to-buy"
-                                @onclick="() => SetOnlyToBuy(true)">Still to buy (@_plan.ToBuyCount)</button>
+                                @onclick="() => SetFilter(GiftPlanFilter.ToBuy)">Still to buy (@_plan.ToBuyCount)</button>
+                        @if (_plan.OverBudgetCount > 0 || _filter == GiftPlanFilter.OverBudget)
+                        {
+                            <button type="button" class="btn btn-sm @(_filter == GiftPlanFilter.OverBudget ? "btn-primary" : "btn-outline-primary")"
+                                    aria-pressed="@(_filter == GiftPlanFilter.OverBudget ? "true" : "false")"
+                                    id="gift-plan-show-over-budget"
+                                    data-testid="gift-plan-show-over-budget"
+                                    @onclick="() => SetFilter(GiftPlanFilter.OverBudget)">Over budget (@_plan.OverBudgetCount)</button>
+                        }
                     </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-copy"
-                            data-copy-text="@ShoppingListText"
-                            disabled="@(_plan.ToBuyCount == 0 || _busyKey is not null)" @onclick="CopyShoppingListAsync">
-                        <OpenWishIcon Name="clipboard" /> @(_listCopied ? "List copied" : "Copy shopping list")
-                    </button>
+                    <div class="plan-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-copy"
+                                data-copy-text="@ShoppingListText"
+                                disabled="@(_plan.ToBuyCount == 0 || _busyKey is not null)" @onclick="CopyShoppingListAsync">
+                            <OpenWishIcon Name="clipboard" /> @(_listCopied ? "List copied" : "Copy shopping list")
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-print" @onclick="PrintPlanAsync">
+                            <OpenWishIcon Name="list-check" /> Print
+                        </button>
+                    </div>
+                </div>
+
+                <div class="plan-search" role="search">
+                    <label for="gift-plan-search" class="visually-hidden">Search your gift plan</label>
+                    <input id="gift-plan-search" type="search" class="form-control" data-testid="gift-plan-search"
+                           placeholder="Search by gift, person, list, or event" autocomplete="off"
+                           @bind="Search" @bind:event="oninput" @onkeydown="OnSearchKeyDown" />
                 </div>
 
                 @if (_plan.OverBudgetCount > 0)
@@ -113,9 +133,20 @@
                     </p>
                 }
 
-                @if (_onlyToBuy && _plan.ToBuyCount == 0)
+                @if (_filter == GiftPlanFilter.ToBuy && _plan.ToBuyCount == 0)
                 {
                     <p class="lead" data-testid="gift-plan-all-bought">Everything is bought. Switch to "All gifts" to review them.</p>
+                }
+                else if (_filter == GiftPlanFilter.OverBudget && _plan.OverBudgetCount == 0)
+                {
+                    <p class="lead" data-testid="gift-plan-none-over-budget">No gifts are over budget. Switch to "All gifts" to review them.</p>
+                }
+                else if (VisibleRecipients.Count == 0)
+                {
+                    <div class="plan-no-match" role="status" data-testid="gift-plan-no-match">
+                        <p class="lead mb-2">No gifts match "@_search.Trim()".</p>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ClearSearch">Clear search</button>
+                    </div>
                 }
 
                 @foreach (var recipient in VisibleRecipients)
@@ -132,12 +163,26 @@
                                     <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
                                 }
                             </p>
+                            <div class="plan-progress" data-testid="gift-plan-progress">
+                                <progress max="@recipient.GiftCount" value="@recipient.BoughtCount"
+                                          aria-label="Gifts bought for @recipient.RecipientName"></progress>
+                                <span>@recipient.BoughtCount of @recipient.GiftCount bought</span>
+                            </div>
                             @if (recipient.GetNextOccasion(_now) is { } occasion)
                             {
                                 <p class="plan-occasion" data-testid="gift-plan-occasion">
                                     <OpenWishIcon Name="calendar" />
                                     @OccasionText(occasion)
                                 </p>
+                            }
+                            @if (recipient.ToBuyCount > 0)
+                            {
+                                <button type="button" class="btn btn-outline-secondary btn-sm plan-recipient-copy" data-testid="gift-plan-copy-person"
+                                        data-copy-text="@GiftPlanText.BuildForRecipient(RecipientOverall(recipient), _now)"
+                                        disabled="@(_busyKey is not null)" @onclick="() => CopyRecipientAsync(recipient)">
+                                    <OpenWishIcon Name="clipboard" /> @(_copiedRecipientKey == RecipientKey(recipient) ? "Copied" : "Copy list")
+                                    <span class="visually-hidden"> of gifts still to buy for @recipient.RecipientName</span>
+                                </button>
                             }
                         </header>
                         <ul class="plan-items">
@@ -268,15 +313,31 @@
     private string? _statusMessage;
     private string? _busyKey;
     private string? _userId;
-    private bool _onlyToBuy;
+    private GiftPlanFilter _filter = GiftPlanFilter.All;
+    private string _search = string.Empty;
     private bool _listCopied;
+    private string? _copiedRecipientKey;
     private string? _confirmReleaseKey;
 
     private DateTimeOffset _now = DateTimeOffset.UtcNow;
     private string? _pendingFocusId;
 
+    private string Search
+    {
+        get => _search;
+        set
+        {
+            _search = value ?? string.Empty;
+            _confirmReleaseKey = null;
+        }
+    }
+
     private IReadOnlyList<GiftPlanRecipientModel> VisibleRecipients =>
-        _plan is null ? [] : _onlyToBuy ? _plan.GetRecipientsToBuy(_now) : _plan.Recipients;
+        _plan is null ? [] : GiftPlanView.Apply(_plan, _filter, _search, _now);
+
+    // A search can narrow a person's gifts, but their copied list always covers everything still to buy.
+    private GiftPlanRecipientModel RecipientOverall(GiftPlanRecipientModel recipient) =>
+        _plan?.Recipients.FirstOrDefault(r => r.Items.Any(i => KeyOf(i) == KeyOf(recipient.Items[0]))) ?? recipient;
 
     private string ShoppingListText => _plan is null ? string.Empty : GiftPlanText.Build(_plan, _now);
 
@@ -301,7 +362,7 @@
 
     // Focus stays useful when the row that held it disappears.
     private string FocusAfterRowRemoved() =>
-        _plan is { ItemCount: > 0 } ? (_onlyToBuy ? "gift-plan-show-to-buy" : "gift-plan-show-all") : "gift-plan-heading";
+        _plan is { ItemCount: > 0 } ? (_filter == GiftPlanFilter.ToBuy ? "gift-plan-show-to-buy" : "gift-plan-show-all") : "gift-plan-heading";
 
     private void AskToRelease(GiftPlanItemModel item)
     {
@@ -315,9 +376,9 @@
         _pendingFocusId = ElementIdFor("release", item);
     }
 
-    private void SetOnlyToBuy(bool value)
+    private void SetFilter(GiftPlanFilter filter)
     {
-        _onlyToBuy = value;
+        _filter = filter;
         _confirmReleaseKey = null;
         _now = DateTimeOffset.UtcNow;
     }
@@ -328,29 +389,82 @@
         return $"{badge} · {occasion.ToString("MMM d")}";
     }
 
+    private void OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Escape" && _search.Length > 0)
+        {
+            ClearSearch();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        Search = string.Empty;
+        _pendingFocusId = "gift-plan-search";
+    }
+
+    private async Task PrintPlanAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Printing the gift plan failed.");
+            _actionError = "We couldn't open the print dialog. Try again.";
+        }
+    }
+
     // The browser writes the clipboard in the click itself (see app.js); this reports whether it worked.
-    private async Task CopyShoppingListAsync()
+    private async Task<bool> WasCopiedAsync(string failureMessage)
     {
         _actionError = null;
         try
         {
-            var copied = await JSRuntime.InvokeAsync<bool>("openWishLastCopyResult");
-            if (!copied)
+            if (await JSRuntime.InvokeAsync<bool>("openWishLastCopyResult"))
             {
-                _actionError = "We couldn't copy the list. Try again.";
-                return;
+                return true;
             }
-
-            _listCopied = true;
-            _statusMessage = "Shopping list copied.";
-            StateHasChanged();
-            await Task.Delay(2000);
-            _listCopied = false;
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Copying the shopping list failed.");
-            _actionError = "We couldn't copy the list. Try again.";
+            Logger.LogWarning(ex, "Copying from the gift plan failed.");
+        }
+
+        _actionError = failureMessage;
+        return false;
+    }
+
+    private async Task CopyShoppingListAsync()
+    {
+        if (!await WasCopiedAsync("We couldn't copy the list. Try again."))
+        {
+            return;
+        }
+
+        _listCopied = true;
+        _statusMessage = "Shopping list copied.";
+        StateHasChanged();
+        await Task.Delay(2000);
+        _listCopied = false;
+    }
+
+    private async Task CopyRecipientAsync(GiftPlanRecipientModel recipient)
+    {
+        if (!await WasCopiedAsync($"We couldn't copy the list for {recipient.RecipientName}. Try again."))
+        {
+            return;
+        }
+
+        var key = RecipientKey(recipient);
+        _copiedRecipientKey = key;
+        _statusMessage = $"List for {recipient.RecipientName} copied.";
+        StateHasChanged();
+        await Task.Delay(2000);
+        if (_copiedRecipientKey == key)
+        {
+            _copiedRecipientKey = null;
         }
     }
 
@@ -432,7 +546,7 @@
             await GiftPlanService.SetGiftPurchasedAsync(_userId, item.WishlistPublicId, item.ItemPublicId, markBought);
             _plan = await GiftPlanService.GetGiftPlanAsync(_userId);
             _statusMessage = markBought ? $"{item.ItemName} marked as bought." : $"{item.ItemName} moved back to still to buy.";
-            if (_onlyToBuy && markBought)
+            if (_filter == GiftPlanFilter.ToBuy && markBought)
             {
                 _pendingFocusId = FocusAfterRowRemoved();
             }

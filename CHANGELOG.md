@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.12.0] - 2026-11-05
+
+### Added
+
+- Search "My gift plan" by gift, person, list, or occasion.
+- An "Over budget" filter on the gift plan when any gift exceeds its occasion's
+  budget.
+- Each person on the gift plan shows "X of Y bought" with a progress bar.
+- "Copy list" on a person copies just their gifts still to buy.
+- "Print" gives a clean paper copy of the gift plan.
+
 ## [0.11.0] - 2026-11-04
 
 ### Added

@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.12.0",
+    "date": "2026-11-05",
+    "title": "Shop your gift plan faster",
+    "summary": "Search your gift plan, see progress for each person, copy one person's list, and print it.",
+    "highlights": [
+      "Search the plan by gift, person, list, or occasion.",
+      "Over budget filters to gifts that cost more than their occasion's budget.",
+      "Each person shows how many of their gifts you have bought.",
+      "Copy list copies one person's gifts still to buy.",
+      "Print gives a clean paper copy of the plan."
+    ]
+  }, {
     "version": "0.11.0",
     "date": "2026-11-04",
     "title": "A gift plan you can shop from",

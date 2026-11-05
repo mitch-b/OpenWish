@@ -188,3 +188,47 @@
         justify-content: space-between;
     }
 }
+
+.plan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.plan-search {
+    margin-bottom: 1rem;
+}
+
+.plan-no-match {
+    margin: 1rem 0;
+}
+
+.plan-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.plan-progress progress {
+    flex: 0 1 10rem;
+    min-width: 5rem;
+    height: 0.6rem;
+    accent-color: var(--color-primary-bg);
+}
+
+.plan-recipient-header .plan-recipient-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 2.75rem;
+    margin-top: 0.5rem;
+}
+
+@media print {
+    .plan-progress progress {
+        display: none;
+    }
+}

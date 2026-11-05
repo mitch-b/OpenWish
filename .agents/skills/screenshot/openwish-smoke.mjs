@@ -3037,7 +3037,8 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       return (await response.json()).filter((item) => item.name === "National Park Pass");
     };
     const organize = async (listId, selectLast) => {
-      await page.goto(`${baseUrl}/wishlists/${listId}`, { waitUntil: "domcontentloaded" });
+      // Prerendered controls are visible before Blazor attaches their event handlers.
+      await page.goto(`${baseUrl}/wishlists/${listId}`, { waitUntil: "networkidle" });
       await page.locator("#organize-toggle").click();
       await page.locator("#organize-body").waitFor({ state: "visible" });
       const boxes = page.locator(".organize-list li", { hasText: "National Park Pass" }).getByRole("checkbox");
@@ -4227,7 +4228,7 @@ async function verifyOccasionRemindersJourney(browser, manifest, results) {
   assertions.push("the organizer is reminded to draw names for an upcoming undrawn exchange, the reminder opens the event setup, and non-members see nothing");
 
   // Countdown and add-to-calendar on the event.
-  await owner.page.goto(`${baseUrl}/events/${reminderEvent.publicId}`, { waitUntil: "domcontentloaded" });
+  await owner.page.goto(`${baseUrl}/events/${reminderEvent.publicId}`, { waitUntil: "networkidle" });
   const countdown = owner.page.getByTestId("event-countdown");
   await countdown.waitFor({ state: "visible" });
   if (!(await countdown.innerText()).includes("In 5 days")) {

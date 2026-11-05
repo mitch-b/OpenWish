@@ -1,0 +1,47 @@
+name: Close superseded Dependabot PRs
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: close-superseded-dependabot
+  cancel-in-progress: false
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close updates consolidated in PR 164 after it merges
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          merged="$(gh api "repos/$GH_REPO/pulls/164" \
+            --jq '.merged and .base.ref == "main" and .head.repo.full_name == .base.repo.full_name and .head.ref == "mitch-b-dotnet-ci-enforcement"')"
+          if [[ "$merged" != "true" ]]; then
+            echo "PR 164 has not merged into main; leaving Dependabot PRs open."
+            exit 0
+          fi
+
+          for number in 160 152 151 150 149 145 139 138 133; do
+            pr="$(gh api "repos/$GH_REPO/pulls/$number")"
+            if [[ "$(jq -r '.state' <<< "$pr")" != "open" ]]; then
+              echo "PR $number is already closed."
+              continue
+            fi
+            if ! jq -e '.user.login == "dependabot[bot]" and .base.ref == "main"' \
+              <<< "$pr" >/dev/null; then
+              echo "Refusing to close PR $number: unexpected author or base." >&2
+              exit 1
+            fi
+            gh pr close "$number" --repo "$GH_REPO" \
+              --comment "Superseded by the dependency updates merged in #164."
+          done

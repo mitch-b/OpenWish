@@ -213,6 +213,15 @@ The Docker image workflow in `.github/workflows/docker-image.yml` remains
 path-filtered because it is not a required merge check. Add new image-build
 inputs to that workflow's filter when needed.
 
+PR #164 also consolidates Dependabot PRs #160, #152, #151, #150, #149, #145,
+#139, #138, and #133. The one-time cleanup workflow
+`.github/workflows/close-superseded-dependabot.yml` runs on pushes to `main`
+and closes only those still-open Dependabot PRs after GitHub confirms #164
+merged into `main`. Closing #164 without merging leaves them open. The workflow
+can be retried manually after a failure; already-closed PRs are skipped.
+Playwright's npm package, lockfile, browser image, and verification image tags
+must use the same version so the installed browser matches the test runner.
+
 ## Isolated agent environment
 
 The agent-managed environment is separate from the Aspire development

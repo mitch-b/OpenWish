@@ -1050,7 +1050,7 @@ public class EventService(
             });
         }
 
-        bool IsKept(string? userId, string? inviteeEmail)
+        bool isKept(string? userId, string? inviteeEmail)
         {
             var normalized = NormalizeEmail(inviteeEmail);
             return (userId is not null && (userId == ownerId || copiedUserIds.Contains(userId))) ||
@@ -1058,7 +1058,7 @@ public class EventService(
         }
 
         foreach (var rule in source.PairingRules.Where(r => !r.Deleted &&
-            IsKept(r.SourceUserId, r.SourceInviteeEmail) && IsKept(r.TargetUserId, r.TargetInviteeEmail)))
+            isKept(r.SourceUserId, r.SourceInviteeEmail) && isKept(r.TargetUserId, r.TargetInviteeEmail)))
         {
             copy.PairingRules.Add(new CustomPairingRule
             {

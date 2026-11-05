@@ -5,7 +5,7 @@ namespace OpenWish.Shared.Tests.Models;
 
 public class GiftPlanViewTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset _now = new(2026, 11, 4, 12, 0, 0, TimeSpan.Zero);
 
     private static GiftPlanModel Plan() => new()
     {
@@ -16,15 +16,15 @@ public class GiftPlanViewTests
                 RecipientName = "Jordan",
                 Items =
                 [
-                    new GiftPlanItemModel { ItemName = "Headphones", Price = 250m, EventBudget = 75m, EventName = "Holiday Exchange", WishlistName = "Jordan's list", EventDate = Now.AddDays(20) },
-                    new GiftPlanItemModel { ItemName = "Book", Price = 12m, PurchasedOn = Now, WishlistName = "Jordan's list" },
+                    new GiftPlanItemModel { ItemName = "Headphones", Price = 250m, EventBudget = 75m, EventName = "Holiday Exchange", WishlistName = "Jordan's list", EventDate = _now.AddDays(20) },
+                    new GiftPlanItemModel { ItemName = "Book", Price = 12m, PurchasedOn = _now, WishlistName = "Jordan's list" },
                     new GiftPlanItemModel { ItemName = "Tea", WishlistName = "Jordan's list" }
                 ]
             },
             new GiftPlanRecipientModel
             {
                 RecipientName = "Casey",
-                Items = [new GiftPlanItemModel { ItemName = "Mug", Price = 9m, WishlistName = "Casey ideas", EventDate = Now.AddDays(2) }]
+                Items = [new GiftPlanItemModel { ItemName = "Mug", Price = 9m, WishlistName = "Casey ideas", EventDate = _now.AddDays(2) }]
             }
         ]
     };
@@ -32,7 +32,7 @@ public class GiftPlanViewTests
     [Fact]
     public void All_KeepsEveryoneInPlanOrder()
     {
-        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.All, null, Now);
+        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.All, null, _now);
 
         Assert.Equal(["Jordan", "Casey"], result.Select(r => r.RecipientName));
         Assert.Equal(3, result[0].Items.Count);
@@ -41,7 +41,7 @@ public class GiftPlanViewTests
     [Fact]
     public void ToBuy_DropsBoughtGiftsKeepsOverallProgressAndOrdersByOccasion()
     {
-        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.ToBuy, null, Now);
+        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.ToBuy, null, _now);
 
         Assert.Equal(["Casey", "Jordan"], result.Select(r => r.RecipientName));
         var jordan = result[1];
@@ -53,7 +53,7 @@ public class GiftPlanViewTests
     [Fact]
     public void OverBudget_ShowsOnlyGiftsAboveTheirBudget()
     {
-        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.OverBudget, null, Now);
+        var result = GiftPlanView.Apply(Plan(), GiftPlanFilter.OverBudget, null, _now);
 
         var jordan = Assert.Single(result);
         Assert.Equal(["Headphones"], jordan.Items.Select(i => i.ItemName));
@@ -65,7 +65,7 @@ public class GiftPlanViewTests
     [InlineData("CASEY IDEAS", "Casey", 1)]
     public void Search_MatchesGiftListOrOccasionIgnoringCaseAndSpaces(string search, string person, int count)
     {
-        var result = Assert.Single(GiftPlanView.Apply(Plan(), GiftPlanFilter.All, search, Now));
+        var result = Assert.Single(GiftPlanView.Apply(Plan(), GiftPlanFilter.All, search, _now));
 
         Assert.Equal(person, result.RecipientName);
         Assert.Equal(count, result.Items.Count);
@@ -74,12 +74,12 @@ public class GiftPlanViewTests
     [Fact]
     public void Search_ByPersonKeepsTheirGiftsThatPassTheFilter()
     {
-        var result = Assert.Single(GiftPlanView.Apply(Plan(), GiftPlanFilter.ToBuy, "jordan", Now));
+        var result = Assert.Single(GiftPlanView.Apply(Plan(), GiftPlanFilter.ToBuy, "jordan", _now));
 
         Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]
     public void Search_WithNoMatchReturnsNobody() =>
-        Assert.Empty(GiftPlanView.Apply(Plan(), GiftPlanFilter.All, "zzz", Now));
+        Assert.Empty(GiftPlanView.Apply(Plan(), GiftPlanFilter.All, "zzz", _now));
 }

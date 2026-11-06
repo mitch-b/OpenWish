@@ -16,6 +16,7 @@ public class IntegrationAuthorizationCode
     public required string ClientId { get; set; }
     public required string RedirectUri { get; set; }
     public string? CodeChallenge { get; set; }
+    public IntegrationAudience Audience { get; set; }
     public required string GrantedWishlistIds { get; set; }
     public int DefaultWishlistId { get; set; }
     public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;

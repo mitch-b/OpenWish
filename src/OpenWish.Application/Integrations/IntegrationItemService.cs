@@ -314,6 +314,7 @@ public class IntegrationItemService(
         return context.WishlistItems.Where(i =>
             i.SourceConnectionId == caller.ConnectionId &&
             !i.Deleted &&
+            !i.IsHiddenFromOwner &&
             allowedIds.Contains(i.WishlistId));
     }
 

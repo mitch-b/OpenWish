@@ -4,6 +4,21 @@ namespace OpenWish.Application.Models.Configuration;
 public record IntegrationSettings
 {
     public List<IntegrationAppSettings> Apps { get; set; } = [];
+
+    /// <summary>Lets AI assistants connect to the Model Context Protocol server at <c>/mcp</c>.</summary>
+    public IntegrationMcpSettings Mcp { get; set; } = new();
+}
+
+public record IntegrationMcpSettings
+{
+    /// <summary>Turns on <c>/mcp</c> and lets MCP clients register themselves. Off by default.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Remote hosts that self-registered clients may redirect to, such as <c>claude.ai</c>. Loopback
+    /// redirects for desktop assistants are always allowed. Empty allows any HTTPS host.
+    /// </summary>
+    public List<string> AllowedRedirectHosts { get; set; } = [];
 }
 
 public record IntegrationAppSettings

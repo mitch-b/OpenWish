@@ -35,6 +35,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<IntegrationConnection> IntegrationConnections { get; set; }
     public DbSet<IntegrationConnectionWishlist> IntegrationConnectionWishlists { get; set; }
     public DbSet<IntegrationAuthorizationCode> IntegrationAuthorizationCodes { get; set; }
+    public DbSet<IntegrationClientRegistration> IntegrationClientRegistrations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -149,6 +150,47 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<IntegrationConnection>()
             .Property(c => c.AccessTokenHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasIndex(c => c.RefreshTokenHash)
+            .IsUnique()
+            .HasFilter("\"RefreshTokenHash\" IS NOT NULL");
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .HasIndex(c => c.PreviousRefreshTokenHash)
+            .HasFilter("\"PreviousRefreshTokenHash\" IS NOT NULL");
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .Property(c => c.RefreshTokenHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<IntegrationConnection>()
+            .Property(c => c.PreviousRefreshTokenHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .HasIndex(r => r.ClientId)
+            .IsUnique();
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .Property(r => r.ClientId)
+            .HasMaxLength(100);
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .Property(r => r.ClientName)
+            .HasMaxLength(80);
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .Property(r => r.ClientUri)
+            .HasMaxLength(2048);
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .Property(r => r.RedirectUris)
+            .HasMaxLength(8192);
+
+        modelBuilder.Entity<IntegrationClientRegistration>()
+            .Property(r => r.SecretHash)
             .HasMaxLength(64);
 
         modelBuilder.Entity<IntegrationConnection>()

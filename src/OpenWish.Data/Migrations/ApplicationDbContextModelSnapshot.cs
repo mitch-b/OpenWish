@@ -17,7 +17,7 @@ namespace OpenWish.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -798,6 +798,9 @@ namespace OpenWish.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Audience")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ClientId")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -848,6 +851,51 @@ namespace OpenWish.Data.Migrations
                     b.ToTable("IntegrationAuthorizationCodes");
                 });
 
+            modelBuilder.Entity("OpenWish.Data.Entities.IntegrationClientRegistration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("ClientUri")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTimeOffset>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastUsedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RedirectUris")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)");
+
+                    b.Property<string>("SecretHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique();
+
+                    b.ToTable("IntegrationClientRegistrations");
+                });
+
             modelBuilder.Entity("OpenWish.Data.Entities.IntegrationConnection", b =>
                 {
                     b.Property<int>("Id")
@@ -855,6 +903,9 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AccessTokenExpiresOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("AccessTokenHash")
                         .HasMaxLength(64)
@@ -864,6 +915,9 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<int>("Audience")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ClientId")
                         .IsRequired()
@@ -884,11 +938,19 @@ namespace OpenWish.Data.Migrations
                     b.Property<DateTimeOffset?>("LastUsedOn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("PreviousRefreshTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("PublicId")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("RefreshTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTimeOffset?>("RevokedOn")
                         .HasColumnType("timestamp with time zone");
@@ -918,8 +980,15 @@ namespace OpenWish.Data.Migrations
 
                     b.HasIndex("DefaultWishlistId");
 
+                    b.HasIndex("PreviousRefreshTokenHash")
+                        .HasFilter("\"PreviousRefreshTokenHash\" IS NOT NULL");
+
                     b.HasIndex("PublicId")
                         .IsUnique();
+
+                    b.HasIndex("RefreshTokenHash")
+                        .IsUnique()
+                        .HasFilter("\"RefreshTokenHash\" IS NOT NULL");
 
                     b.HasIndex("UserId", "ClientId")
                         .IsUnique();

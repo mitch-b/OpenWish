@@ -7,10 +7,19 @@ internal static class IntegrationTokens
 {
     public const string AccessTokenPrefix = "owi_";
     public const string AuthorizationCodePrefix = "owc_";
+    public const string RefreshTokenPrefix = "owr_";
+    public const string ClientIdPrefix = "owm_";
+    public const string ClientSecretPrefix = "owms_";
 
     public static string NewAccessToken() => AccessTokenPrefix + RandomSegment();
 
     public static string NewAuthorizationCode() => AuthorizationCodePrefix + RandomSegment();
+
+    public static string NewRefreshToken() => RefreshTokenPrefix + RandomSegment();
+
+    public static string NewClientId() => ClientIdPrefix + Base64UrlEncode(RandomNumberGenerator.GetBytes(16));
+
+    public static string NewClientSecret() => ClientSecretPrefix + RandomSegment();
 
     public static string Hash(string value) =>
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));

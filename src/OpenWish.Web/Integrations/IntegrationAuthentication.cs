@@ -4,28 +4,44 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using OpenWish.Application.Integrations;
+using OpenWish.Application.Models.Configuration;
+using OpenWish.Data.Entities;
+using OpenWish.Shared.Integrations;
 
 namespace OpenWish.Web.Integrations;
 
 public static class IntegrationAuthenticationDefaults
 {
     public const string Scheme = "OpenWishIntegration";
+    public const string McpScheme = "OpenWishMcp";
+    public const string McpPolicy = "OpenWishMcp";
+    public const string McpPath = "/mcp";
+    public const string ProtectedResourceMetadataPath = "/.well-known/oauth-protected-resource";
+    public const string FormActionOriginItem = "openwish:form-action-origin";
     public const string ConnectionIdClaim = "openwish:connection_id";
     public const string ConnectionPublicIdClaim = "openwish:connection";
     public const string ClientIdClaim = "openwish:client_id";
     public const string AppNameClaim = "openwish:app_name";
 }
 
+public sealed class IntegrationAuthenticationOptions : AuthenticationSchemeOptions
+{
+    /// <summary>The only token audience this scheme accepts.</summary>
+    public IntegrationAudience Audience { get; set; }
+}
+
 /// <summary>
-/// Authenticates connected apps by bearer token. Only the integration API opts into this scheme,
-/// so an app token never works against the endpoints people use in the browser.
+/// Authenticates connected apps by bearer token. Only the integration API and the MCP server opt into
+/// these schemes, so an app token never works against the endpoints people use in the browser, and a
+/// token issued for one surface never works on the other.
 /// </summary>
 public sealed class IntegrationAuthenticationHandler(
-    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    IOptionsMonitor<IntegrationAuthenticationOptions> options,
     ILoggerFactory loggerFactory,
     UrlEncoder encoder,
-    IIntegrationConnectionService connectionService)
-    : AuthenticationHandler<AuthenticationSchemeOptions>(options, loggerFactory, encoder)
+    IIntegrationConnectionService connectionService,
+    IOptions<OpenWishSettings> settings)
+    : AuthenticationHandler<IntegrationAuthenticationOptions>(options, loggerFactory, encoder)
 {
     private const string BearerPrefix = "Bearer ";
 
@@ -39,7 +55,7 @@ public sealed class IntegrationAuthenticationHandler(
         }
 
         var token = authorization[BearerPrefix.Length..].Trim();
-        var caller = await connectionService.AuthenticateAsync(token);
+        var caller = await connectionService.AuthenticateAsync(token, Options.Audience);
         if (caller is null)
         {
             return AuthenticateResult.Fail("The access token is invalid or was revoked.");
@@ -53,7 +69,7 @@ public sealed class IntegrationAuthenticationHandler(
                 new Claim(IntegrationAuthenticationDefaults.ClientIdClaim, caller.ClientId),
                 new Claim(IntegrationAuthenticationDefaults.AppNameClaim, caller.AppName)
             ],
-            IntegrationAuthenticationDefaults.Scheme);
+            Scheme.Name);
 
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name));
     }
@@ -64,14 +80,26 @@ public sealed class IntegrationAuthenticationHandler(
         var presentedToken = authenticateResult.Failure is not null;
 
         Response.StatusCode = StatusCodes.Status401Unauthorized;
-        Response.Headers.WWWAuthenticate = presentedToken
-            ? "Bearer realm=\"OpenWish\", error=\"invalid_token\""
-            : "Bearer realm=\"OpenWish\"";
+        var challenge = "Bearer realm=\"OpenWish\"";
+        if (Options.Audience == IntegrationAudience.Mcp)
+        {
+            // MCP clients discover the authorization server from this header (RFC 9728 section 5.1).
+            challenge += $", resource_metadata=\"{PublicBaseUri.McpResourceMetadata(PublicBaseUri.Resolve(Request, settings.Value.BaseUri))}\", scope=\"{IntegrationScopes.WishlistItems}\"";
+        }
+
+        if (presentedToken)
+        {
+            challenge += ", error=\"invalid_token\"";
+        }
+
+        Response.Headers.WWWAuthenticate = challenge;
         await Response.WriteAsJsonAsync(new
         {
             error = presentedToken ? "invalid_token" : "unauthorized",
             error_description = presentedToken
-                ? "The access token is invalid or was revoked. Ask the person to connect again."
+                ? Options.Audience == IntegrationAudience.Mcp
+                    ? "The access token is invalid, expired, or was revoked."
+                    : "The access token is invalid or was revoked. Ask the person to connect again."
                 : "Send the access token in an Authorization: Bearer header."
         });
     }
@@ -113,5 +141,42 @@ public static class PublicBaseUri
             : $"{request.Scheme}://{request.Host}{request.PathBase}";
 
         return new Uri(value.EndsWith('/') ? value : value + "/", UriKind.Absolute);
+    }
+
+    /// <summary>The MCP server's resource identifier (RFC 8707), which MCP clients use as the token audience.</summary>
+    public static Uri McpResource(Uri baseUri) => new(baseUri, IntegrationAuthenticationDefaults.McpPath.TrimStart('/'));
+
+    /// <summary>Where MCP clients read the protected resource metadata for <c>/mcp</c> (RFC 9728).</summary>
+    public static Uri McpResourceMetadata(Uri baseUri) =>
+        new(baseUri, IntegrationAuthenticationDefaults.ProtectedResourceMetadataPath.TrimStart('/') + IntegrationAuthenticationDefaults.McpPath);
+
+    /// <summary>Matches an RFC 8707 resource parameter to a token audience.</summary>
+    public static bool TryResolveAudience(string? resource, Uri baseUri, bool mcpEnabled, out IntegrationAudience? audience)
+    {
+        audience = null;
+        if (string.IsNullOrEmpty(resource))
+        {
+            return true;
+        }
+
+        if (!mcpEnabled ||
+            !Uri.TryCreate(resource, UriKind.Absolute, out var requested) ||
+            !string.IsNullOrEmpty(requested.Query) ||
+            !string.IsNullOrEmpty(requested.Fragment) ||
+            !string.IsNullOrEmpty(requested.UserInfo))
+        {
+            return false;
+        }
+
+        // Scheme and host are case-insensitive; the path must match exactly (one trailing slash tolerated).
+        var expected = McpResource(baseUri);
+        if (Uri.Compare(requested, expected, UriComponents.SchemeAndServer, UriFormat.UriEscaped, StringComparison.OrdinalIgnoreCase) == 0 &&
+            string.Equals(requested.AbsolutePath.TrimEnd('/'), expected.AbsolutePath.TrimEnd('/'), StringComparison.Ordinal))
+        {
+            audience = IntegrationAudience.Mcp;
+            return true;
+        }
+
+        return false;
     }
 }

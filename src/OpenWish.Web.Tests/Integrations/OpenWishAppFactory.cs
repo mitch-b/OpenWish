@@ -67,6 +67,7 @@ public sealed class OpenWishAppFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseSetting("OpenWishSettings:OwnDatabaseUpgrades", "true");
         builder.UseSetting("OpenWishSettings:EnableDevelopmentLogin", "true");
         builder.UseSetting("OpenWishSettings:BaseUri", "https://wish.example.test/");
+        builder.UseSetting("OpenWishSettings:Integrations:Mcp:Enabled", "true");
 
         Register(builder, 0, Studio, "Send pieces from your notebook to OpenWish.");
         Register(builder, 1, Pantry, null);
@@ -78,6 +79,13 @@ public sealed class OpenWishAppFactory : WebApplicationFactory<Program>, IAsyncL
         HandleCookies = true,
         BaseAddress = new Uri("https://localhost/")
     }));
+
+    public HttpClient CreateApiClient() => CreateClient(new WebApplicationFactoryClientOptions
+    {
+        AllowAutoRedirect = false,
+        HandleCookies = false,
+        BaseAddress = new Uri("https://localhost/")
+    });
 
     public FakeConnectedApp CreateConnectedApp(FakeAppRegistration registration) =>
         new(registration, () => CreateClient(new WebApplicationFactoryClientOptions

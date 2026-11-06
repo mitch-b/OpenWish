@@ -77,6 +77,7 @@ public static class ServiceCollectionExtensions
 
         // Connected apps
         services.AddSingleton<IntegrationAppRegistry>();
+        services.AddScoped<IIntegrationClientStore, IntegrationClientStore>();
         services.AddScoped<IIntegrationConnectionService, IntegrationConnectionService>();
         services.AddScoped<IIntegrationItemService, IntegrationItemService>();
 

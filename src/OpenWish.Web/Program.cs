@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Options;
 using OpenWish.Application.Extensions;
 using OpenWish.Application.Integrations;
 using OpenWish.Application.Models.Configuration;
@@ -51,9 +52,28 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-// Connected apps authenticate with bearer tokens on the integration API only.
+// Connected apps authenticate with bearer tokens on the integration API and MCP server only.
 builder.Services.AddAuthentication()
-    .AddScheme<AuthenticationSchemeOptions, IntegrationAuthenticationHandler>(IntegrationAuthenticationDefaults.Scheme, null);
+    .AddScheme<IntegrationAuthenticationOptions, IntegrationAuthenticationHandler>(
+        IntegrationAuthenticationDefaults.Scheme,
+        options => options.Audience = IntegrationAudience.Api)
+    .AddScheme<IntegrationAuthenticationOptions, IntegrationAuthenticationHandler>(
+        IntegrationAuthenticationDefaults.McpScheme,
+        options => options.Audience = IntegrationAudience.Mcp);
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(IntegrationAuthenticationDefaults.McpPolicy, policy => policy
+        .AddAuthenticationSchemes(IntegrationAuthenticationDefaults.McpScheme)
+        .RequireAuthenticatedUser());
+
+// AI assistants reach the same scoped idea tools through the Model Context Protocol at /mcp.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMcpServer(options =>
+    {
+        options.ServerInfo = new() { Name = "OpenWish", Version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.0.0" };
+        options.ServerInstructions = OpenWishMcpTools.ServerInstructions;
+    })
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<OpenWishMcpTools>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -181,6 +201,16 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
+    // Assistants register again for each new connection; this still stops a flood of registrations.
+    options.AddPolicy(IntegrationOAuthController.RegisterRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0
+            }));
     // Lets an app sync a batch of ideas at once, then settles to a steady pace per connection.
     options.AddPolicy(IntegrationApiController.ApiRateLimitPolicy, context =>
         RateLimitPartition.GetTokenBucketLimiter(
@@ -240,11 +270,19 @@ app.Use(async (context, next) =>
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers.XFrameOptions = "DENY";
-    context.Response.Headers.ContentSecurityPolicy =
-        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        $"form-action {formActionSources}; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    context.Response.OnStarting(() =>
+    {
+        // The consent page adds the validated redirect origin of a self-registered MCP client.
+        var formAction = context.Items[IntegrationAuthenticationDefaults.FormActionOriginItem] is string origin
+            ? $"{formActionSources} {origin}"
+            : formActionSources;
+        context.Response.Headers.ContentSecurityPolicy =
+            "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
+            $"form-action {formAction}; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
+        return Task.CompletedTask;
+    });
     await next();
 });
 app.UseRouting();
@@ -264,6 +302,13 @@ app.MapAdditionalIdentityEndpoints();
 app.MapOpenWishDevelopmentEndpoints();
 
 app.MapControllers();
+
+if (app.Services.GetRequiredService<IOptions<OpenWishSettings>>().Value.Integrations?.Mcp.Enabled == true)
+{
+    app.MapMcp(IntegrationAuthenticationDefaults.McpPath)
+        .RequireAuthorization(IntegrationAuthenticationDefaults.McpPolicy)
+        .RequireRateLimiting(IntegrationApiController.ApiRateLimitPolicy);
+}
 
 app.Run();
 

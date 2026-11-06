@@ -298,3 +298,15 @@
         transition: none;
     }
 }
+
+.consent-unverified {
+    margin: 0 0 1.5rem;
+}
+
+.consent-unverified-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.35rem;
+    font-weight: 600;
+}

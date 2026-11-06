@@ -7,6 +7,9 @@ date when they change it there, and take it off when they no longer want it.
 
 Nothing is connected by default. The person who runs OpenWish registers each
 app, and each person decides whether to connect it and which lists it may use.
+Operators can also turn on an [MCP server](#ai-assistants-mcp) so people can
+connect AI assistants such as Claude, ChatGPT, and VS Code with the same
+consent screen.
 
 ```mermaid
 sequenceDiagram
@@ -101,12 +104,109 @@ immediately, and its connections show "no longer set up" in each person's
 settings until they disconnect. Rotating `ClientSecret` affects only the
 token and revoke calls; existing connections keep working.
 
+## AI assistants (MCP)
+
+OpenWish can serve the [Model Context Protocol](https://modelcontextprotocol.io/)
+at `/mcp`, so a person can tell their AI assistant "save that as a gift idea"
+and have it land on the list they chose. The assistant uses the same consent
+screen, list choices, provenance, and privacy limits as other connected apps.
+
+It is off by default. To turn it on:
+
+```bash
+OpenWishSettings__BaseUri=https://wish.example.com/
+OpenWishSettings__Integrations__Mcp__Enabled=true
+# Optional: only let remote assistants redirect to these hosts.
+OpenWishSettings__Integrations__Mcp__AllowedRedirectHosts__0=claude.ai
+OpenWishSettings__Integrations__Mcp__AllowedRedirectHosts__1=chatgpt.com
+OpenWishSettings__Integrations__Mcp__AllowedRedirectHosts__2=vscode.dev
+```
+
+Each person then finds the server address, such as
+`https://wish.example.com/mcp`, under **Account settings** > **Connected apps**
+and adds it to their assistant as a custom connector or remote MCP server. The
+assistant opens OpenWish in a browser, the person approves it and chooses its
+lists, and the assistant appears in Connected apps labeled "AI assistant".
+
+OpenWish must be reachable over HTTPS at the root of its host name; hosted
+assistants such as Claude and ChatGPT connect from their own servers, so a
+home-network-only address works only for assistants running on the same
+network (VS Code, Claude Code, Copilot CLI). Serving OpenWish under a path such
+as `https://example.com/openwish/` is not supported for MCP, because assistants
+look for OAuth metadata at the root of the host.
+
+### Tools
+
+| Tool | What it does |
+|---|---|
+| `list_wishlists` | The lists the person allowed, including the default list. |
+| `list_ideas` | Ideas this assistant added, optionally on one list. |
+| `add_idea` | Adds an idea with a name and optional notes, links, price, store, and priority. |
+| `update_idea` | Changes only the fields passed, on an idea this assistant added. |
+| `remove_idea` | Removes an idea this assistant added. |
+
+Assistants never see reservations, purchases, comments, friends, or ideas they
+did not add, and they cannot read a person's whole wishlist.
+
+### Compatibility
+
+| Client | Status |
+|---|---|
+| Claude (claude.ai, desktop, mobile) custom connectors | Supported. Uses dynamic client registration and `https://claude.ai/api/mcp/auth_callback`. |
+| Claude Code | Supported. Uses a loopback redirect. |
+| ChatGPT developer mode / custom connectors | Supported through dynamic client registration. Availability depends on the person's ChatGPT plan. |
+| GitHub Copilot in VS Code | Supported. Uses a loopback or `vscode.dev` redirect. |
+| GitHub Copilot CLI | Supported for remote HTTP servers with OAuth. |
+| Copilot cloud agent, OpenAI Responses API `mcp` tool | Not supported. They send a caller-provided token and never run a person's sign-in, so there is no consent. |
+| Clients with custom URL scheme redirects (for example `cursor://`) or browser-only clients | Not supported. Redirects must be HTTPS or loopback HTTP, and `/mcp` does not allow cross-origin browser requests. |
+
+These clients and their requirements change often; the tests use the official
+C# MCP SDK as the reference client, and each connection should still be tried
+with the real assistant before relying on it.
+
+### How it works
+
+1. An unauthenticated request to `/mcp` returns `401` with
+   `WWW-Authenticate: Bearer resource_metadata="https://wish.example.com/.well-known/oauth-protected-resource/mcp", scope="wishlist.items"`.
+2. The protected resource metadata (RFC 9728) names `https://wish.example.com/mcp`
+   as the resource and OpenWish as its authorization server.
+3. The assistant reads `/.well-known/oauth-authorization-server` (RFC 8414) and
+   registers itself at `POST /oauth/register` (RFC 7591). Registrations are
+   public clients by default and expire after a day if never used.
+4. The person approves the assistant at `/oauth/authorize`. PKCE (`S256`) is
+   required, and every redirect includes `iss` (RFC 9207). When sent, the
+   `resource` parameter (RFC 8707) must be exactly the `/mcp` URL; anything
+   else returns `invalid_target`. Assistants that omit it still get an MCP-only
+   token, because self-registered clients can only connect to `/mcp`.
+5. `POST /oauth/token` returns a one-hour access token and a refresh token.
+   Each refresh returns a new refresh token; reusing an old one disconnects the
+   assistant (OAuth 2.0 Security BCP).
+
+Security choices:
+
+- Assistants name themselves, so the consent screen warns that OpenWish can't
+  verify who made them and shows where it will send the person back.
+- MCP tokens work only at `/mcp`, and app tokens work only on the integration
+  API; neither is accepted by the other.
+- Registration redirect URIs must be HTTPS or loopback HTTP, without fragments
+  or credentials. A loopback redirect may use any port for the registered path
+  (RFC 8252). `AllowedRedirectHosts` restricts remote hosts; loopback is always
+  allowed because it only reaches the person's own computer.
+- Registration is limited to 20 per hour per address, and MCP calls share the
+  integration API's per-connection rate limit.
+- Disconnecting from settings revokes the access and refresh tokens at once.
+
+Each new connection from an assistant registers a new client, so reconnecting
+can show the assistant more than once in Connected apps. Disconnect the ones
+you no longer use.
+
 ## For app developers
 
 This contract supports **confidential server-side clients only**: the client
 secret and access token must stay on the app's server. Browser-only, native,
 and public clients, dynamic registration, OpenID Connect, refresh tokens, and
-arbitrary scopes are not supported. The only scope is `wishlist.items`.
+arbitrary scopes are not supported for registered apps; AI assistants use the
+separate [MCP flow](#ai-assistants-mcp). The only scope is `wishlist.items`.
 
 OpenWish implements a bounded OAuth 2.0 authorization code grant (RFC 6749) with
 PKCE (RFC 7636, `S256`), token revocation (RFC 7009), and authorization server
@@ -132,7 +232,10 @@ steps.
 }
 ```
 
-It returns 404 when no app is registered.
+It returns 404 when no app is registered and MCP is off. When MCP is on, it
+also lists `registration_endpoint`, the `refresh_token` grant, and the `none`
+client authentication method that assistants use; registered apps keep using
+their client secret.
 
 ### 1. Send the person to OpenWish
 
@@ -315,7 +418,10 @@ string only to use a dedicated disposable test database, never a development
 or production database. Lifecycle regressions cover outstanding consent,
 concurrent exchange/replay/disconnect, and moved-item activity privacy.
 Proxy tests verify HTTPS discovery from trusted proxies and reject an untrusted
-forwarded scheme.
+forwarded scheme. MCP tests use the official C# MCP SDK to discover the server
+from its 401 challenge, register, approve consent, and call every tool, and
+cover audience separation, refresh rotation and reuse, expiry, redirect rules,
+confidential registrations, and the disabled server.
 
 `scripts/verify-e2e.sh` registers a synthetic app named Studio Notebook and
 walks the same journey in a browser, including screenshots of the consent
@@ -373,9 +479,12 @@ server endpoint integration, and a production signing/encryption credential or
 Data Protection key-management plan. It would still need OpenWish's consent,
 list scoping, revocation ordering, and activity privacy rules.
 
-For this release, retain the narrow existing contract with explicit limitations
-and executable lifecycle/interoperability coverage; do not combine these fixes
-with an unvalidated protocol/storage rewrite. This is not a claim of OAuth
-conformance certification. Before adding public/native clients, refresh tokens,
-new grants/scopes, or third-party self-registration, migrate protocol handling
-to a maintained implementation and plan token/storage compatibility explicitly.
+MCP support needed public clients, refresh tokens, and self-registration.
+OpenIddict 7.8 still offers neither dynamic client registration nor Client ID
+Metadata Documents, which every current MCP client relies on, so adopting it
+would not remove the custom protocol code. OpenWish therefore extends the
+narrow contract with opaque, hashed tokens, the specific RFCs listed above,
+and tests that drive the official MCP C# SDK through the whole flow. This is
+not a claim of OAuth conformance certification. Revisit a maintained server
+if OpenWish adds OpenID Connect, more grants or scopes, or if OpenIddict gains
+registration support.

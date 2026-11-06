@@ -7,7 +7,7 @@ using OpenWish.Application.Models.Configuration;
 
 namespace OpenWish.Application.Integrations;
 
-/// <summary>An app the operator registered in configuration.</summary>
+/// <summary>An app the operator registered in configuration, or an MCP client that registered itself.</summary>
 public sealed record IntegrationApp(
     string ClientId,
     string DisplayName,
@@ -16,6 +16,12 @@ public sealed record IntegrationApp(
     IReadOnlyList<string> RedirectUris)
 {
     internal byte[] SecretHash { get; init; } = [];
+
+    /// <summary>True when the client registered itself, so its name is unverified.</summary>
+    public bool IsSelfRegistered { get; init; }
+
+    /// <summary>True when the client has no secret and must prove itself with PKCE.</summary>
+    public bool IsPublicClient => SecretHash.Length == 0;
 }
 
 /// <summary>
@@ -79,9 +85,33 @@ public sealed partial class IntegrationAppRegistry
         return CryptographicOperations.FixedTimeEquals(presented, app.SecretHash) ? app : null;
     }
 
-    public static bool IsRegisteredRedirect(IntegrationApp app, string? redirectUri) =>
-        !string.IsNullOrEmpty(redirectUri) &&
-        app.RedirectUris.Contains(redirectUri, StringComparer.Ordinal);
+    public static bool IsRegisteredRedirect(IntegrationApp app, string? redirectUri)
+    {
+        if (string.IsNullOrEmpty(redirectUri))
+        {
+            return false;
+        }
+
+        if (app.RedirectUris.Contains(redirectUri, StringComparer.Ordinal))
+        {
+            return true;
+        }
+
+        // RFC 8252 section 7.3: native clients listen on whatever loopback port is free.
+        return app.IsSelfRegistered &&
+            TryParseLoopback(redirectUri, out var requested) &&
+            app.RedirectUris.Any(registered =>
+                TryParseLoopback(registered, out var candidate) &&
+                string.Equals(candidate.Host, requested.Host, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(candidate.PathAndQuery, requested.PathAndQuery, StringComparison.Ordinal));
+    }
+
+    private static bool TryParseLoopback(string value, out Uri uri) =>
+        Uri.TryCreate(value, UriKind.Absolute, out uri!) &&
+        uri.Scheme == Uri.UriSchemeHttp &&
+        uri.IsLoopback &&
+        string.IsNullOrEmpty(uri.Fragment) &&
+        string.IsNullOrEmpty(uri.UserInfo);
 
     private static IntegrationApp? Validate(IntegrationAppSettings candidate, ILogger logger)
     {

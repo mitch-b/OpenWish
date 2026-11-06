@@ -1,18 +1,37 @@
 @page "/Account/Manage/ConnectedApps"
 
+@using Microsoft.Extensions.Options
 @using OpenWish.Application.Integrations
+@using OpenWish.Application.Models.Configuration
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Integrations
 @using OpenWish.Shared.Integrations
 
 @inject IdentityUserAccessor UserAccessor
 @inject IdentityRedirectManager RedirectManager
 @inject IntegrationAppRegistry Registry
 @inject IIntegrationConnectionService ConnectionService
+@inject IIntegrationClientStore ClientStore
+@inject IOptions<OpenWishSettings> Settings
 
 <PageTitle>Connected apps</PageTitle>
 
 <StatusMessage Message="@errorMessage" />
 <h3>Connected apps</h3>
-<p class="text-muted connected-apps-intro">Apps you connect can add ideas to the lists you choose. They never see reservations, purchases, comments, or your friends.</p>
+<p class="text-muted connected-apps-intro">Apps and AI assistants you connect can add ideas to the lists you choose. They never see reservations, purchases, comments, or your friends.</p>
+
+@if (mcpUrl is not null)
+{
+    <section class="connected-apps-mcp" aria-labelledby="mcp-title">
+        <h4 id="mcp-title"><OpenWishIcon Name="stars" /> Connect an AI assistant</h4>
+        <p id="mcp-help">Add OpenWish as a custom connector or MCP server in Claude, ChatGPT, or VS Code, using this address. The assistant sends you back here to choose its lists.</p>
+        <div class="connected-apps-mcp-url">
+            <label class="visually-hidden" for="mcp-url">OpenWish MCP server address</label>
+            <input class="form-control" id="mcp-url" value="@mcpUrl" readonly aria-describedby="mcp-help" />
+            <button type="button" class="btn btn-outline-secondary" data-copy-text="@mcpUrl"><OpenWishIcon Name="copy" /> Copy</button>
+        </div>
+    </section>
+}
 
 @if (connections.Count == 0)
 {
@@ -20,7 +39,11 @@
         <span class="connected-apps-empty-mark" aria-hidden="true"><OpenWishIcon Name="link-45deg" /></span>
         <div>
             <h4 id="connected-apps-empty-title">No apps are connected</h4>
-            @if (Registry.IsEnabled)
+            @if (mcpUrl is not null && !Registry.IsEnabled)
+            {
+                <p>Add the address above to an AI assistant. It brings you back here to choose which lists it can use.</p>
+            }
+            else if (Registry.IsEnabled)
             {
                 <p>Start from inside one of the apps below. It brings you back here to choose which lists it can use.</p>
             }
@@ -42,7 +65,13 @@ else
                 <header class="connected-app-header">
                     <span class="connected-app-mark" aria-hidden="true">@IntegrationDisplay.Monogram(connection.AppName)</span>
                     <div class="connected-app-title">
-                        <h4>@connection.AppName</h4>
+                        <h4>
+                            @connection.AppName
+                            @if (connection.Audience == IntegrationAudience.Mcp)
+                            {
+                                <span class="connected-app-kind">AI assistant</span>
+                            }
+                        </h4>
                         <p>
                             Connected @connection.ConnectedOn.ToLocalHumanizedString().
                             @(connection.LastUsedOn is { } lastUsed ? $"Last used {lastUsed.ToLocalHumanizedString()}." : "Not used yet.")
@@ -56,6 +85,10 @@ else
                     <div class="alert alert-warning mb-3" role="status">
                         This app is no longer set up on this OpenWish, so it can't make changes. Disconnect it to tidy up.
                     </div>
+                }
+                else if (connection.IsSelfRegistered)
+                {
+                    <p class="connected-app-description">This assistant named itself; OpenWish can't verify who made it. Disconnect it if you don't recognize it.</p>
                 }
                 else if (!string.IsNullOrWhiteSpace(connection.Description))
                 {
@@ -149,6 +182,7 @@ else
     private List<ConnectedAppSummary> connections = [];
     private Dictionary<string, IReadOnlyList<ConsentWishlistOption>> listOptions = [];
     private List<IntegrationApp> availableApps = [];
+    private string? mcpUrl;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -158,6 +192,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (ClientStore.IsMcpEnabled)
+        {
+            mcpUrl = PublicBaseUri.McpResource(PublicBaseUri.Resolve(HttpContext.Request, Settings.Value.BaseUri)).ToString();
+        }
+
         var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         userId = user.Id;
         connections = [.. await ConnectionService.GetConnectedAppsAsync(userId)];

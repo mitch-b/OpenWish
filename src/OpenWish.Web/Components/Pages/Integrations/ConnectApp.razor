@@ -5,11 +5,15 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.Extensions.Options
+@using OpenWish.Application.Models.Configuration
 @using OpenWish.Application.Integrations
 @using OpenWish.Data.Entities
 @using OpenWish.Shared.Integrations
+@using OpenWish.Web.Integrations
 
-@inject IntegrationAppRegistry Registry
+@inject IIntegrationClientStore ClientStore
+@inject IOptions<OpenWishSettings> Settings
 @inject IIntegrationConnectionService ConnectionService
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
@@ -56,6 +60,14 @@
                 }
             </div>
         </header>
+
+        @if (app.IsSelfRegistered)
+        {
+            <div class="alert alert-warning consent-unverified" role="note" aria-labelledby="consent-unverified-title">
+                <p class="consent-unverified-title" id="consent-unverified-title"><OpenWishIcon Name="exclamation-triangle" /> Only connect if you started this</p>
+                <p class="mb-0">OpenWish can't confirm who made this assistant; "@app.DisplayName" is the name it gave itself. It will send you back to <strong>@RedirectHost</strong>. If you didn't just ask an AI assistant to connect to OpenWish, cancel.</p>
+            </div>
+        }
 
         <form method="post" @formname="consent-approve" @onsubmit="ApproveAsync" class="consent-form" novalidate>
             <AntiforgeryToken />
@@ -174,11 +186,18 @@
     [SupplyParameterFromQuery(Name = "code_challenge_method")]
     private string? CodeChallengeMethod { get; set; }
 
+    [SupplyParameterFromQuery(Name = "resource")]
+    private string? Resource { get; set; }
+
+    private IntegrationAudience audience;
+    private Uri baseUri = default!;
+
     private string RedirectHost => Uri.TryCreate(RedirectUri, UriKind.Absolute, out var uri) ? uri.Authority : "the app";
 
     protected override async Task OnInitializedAsync()
     {
-        app = Registry.Find(ClientId);
+        baseUri = PublicBaseUri.Resolve(HttpContext.Request, Settings.Value.BaseUri);
+        app = await ClientStore.FindAsync(ClientId);
         if (app is null)
         {
             fatalError = "The app that sent you here isn't registered with this OpenWish.";
@@ -193,6 +212,18 @@
         }
 
         // The redirect target is trusted from here on, so protocol errors go back to the app (RFC 6749 section 4.1.2.1).
+        // Browsers check form-action against redirects that follow a form post, so allow this app's origin.
+        HttpContext.Items[IntegrationAuthenticationDefaults.FormActionOriginItem] =
+            new Uri(RedirectUri!).GetLeftPart(UriPartial.Authority);
+
+        if (!PublicBaseUri.TryResolveAudience(Resource, baseUri, ClientStore.IsMcpEnabled, out var requestedAudience))
+        {
+            RedirectToApp(new() { ["error"] = "invalid_target", ["error_description"] = "This OpenWish doesn't serve that resource." });
+            return;
+        }
+
+        audience = requestedAudience ?? (app.IsSelfRegistered ? IntegrationAudience.Mcp : IntegrationAudience.Api);
+
         var protocolError = ValidateRequest();
         if (protocolError is not null)
         {
@@ -256,7 +287,8 @@
             CodeChallenge,
             ordered,
             ordered.FirstOrDefault(),
-            createList ? newListName : null));
+            createList ? newListName : null,
+            audience));
 
         if (result.Code is not null)
         {
@@ -297,7 +329,9 @@
             return ("invalid_request", "state is required.");
         }
 
-        if (!string.IsNullOrEmpty(Scope) &&
+        // AI assistants often ask for scopes they saw elsewhere; they only ever get wishlist.items.
+        var lenientScopes = app!.IsSelfRegistered || audience == IntegrationAudience.Mcp;
+        if (!lenientScopes && !string.IsNullOrEmpty(Scope) &&
             Scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(scope => scope != IntegrationScopes.WishlistItems))
         {
             return ("invalid_scope", $"Only the {IntegrationScopes.WishlistItems} scope is supported.");
@@ -308,6 +342,11 @@
                 CodeChallenge.Length is < 43 or > 128))
         {
             return ("invalid_request", "Use a code_challenge of 43-128 characters with code_challenge_method=S256.");
+        }
+
+        if (string.IsNullOrEmpty(CodeChallenge) && (app.IsPublicClient || audience == IntegrationAudience.Mcp))
+        {
+            return ("invalid_request", "code_challenge is required; use PKCE with code_challenge_method=S256.");
         }
 
         if (string.IsNullOrEmpty(CodeChallenge) && !string.IsNullOrEmpty(CodeChallengeMethod))
@@ -324,6 +363,9 @@
         {
             parameters["state"] = State;
         }
+
+        // RFC 9207 lets the app confirm the response came from this OpenWish.
+        parameters["iss"] = baseUri.ToString();
 
         NavigationManager.NavigateTo(QueryHelpers.AddQueryString(RedirectUri!, parameters));
     }

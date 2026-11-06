@@ -142,6 +142,14 @@ public sealed class IntegrationTokenResponse
 
     [JsonPropertyName("connection_id")]
     public required string ConnectionId { get; init; }
+
+    [JsonPropertyName("expires_in")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ExpiresIn { get; init; }
+
+    [JsonPropertyName("refresh_token")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RefreshToken { get; init; }
 }
 
 public static class IntegrationScopes

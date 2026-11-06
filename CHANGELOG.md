@@ -11,6 +11,9 @@ All notable user-facing changes to OpenWish are documented here.
 - App-added ideas show their source and explain sync when edited.
 - Manage list permissions and disconnect apps from account settings without
   deleting their ideas.
+- Optional MCP server at `/mcp` lets people connect AI assistants such as
+  Claude, ChatGPT, and GitHub Copilot through the same consent screen, with
+  self-registration, PKCE, and rotating refresh tokens.
 
 ### Fixed
 

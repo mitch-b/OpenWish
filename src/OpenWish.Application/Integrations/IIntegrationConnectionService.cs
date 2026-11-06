@@ -1,3 +1,5 @@
+using OpenWish.Data.Entities;
+
 namespace OpenWish.Application.Integrations;
 
 /// <summary>The connection a bearer token resolved to.</summary>
@@ -25,7 +27,8 @@ public sealed record AuthorizationApproval(
     string? CodeChallenge,
     IReadOnlyCollection<string> WishlistPublicIds,
     string? DefaultWishlistPublicId,
-    string? NewWishlistName);
+    string? NewWishlistName,
+    IntegrationAudience Audience = IntegrationAudience.Api);
 
 public enum AuthorizationApprovalError
 {
@@ -43,6 +46,11 @@ public sealed record TokenExchangeResult(
     string? Error,
     string? ErrorDescription)
 {
+    /// <summary>Returned with short-lived MCP tokens; null for tokens that last until revoked.</summary>
+    public string? RefreshToken { get; init; }
+
+    public int? ExpiresInSeconds { get; init; }
+
     public static TokenExchangeResult Failed(string error, string description) => new(null, null, error, description);
 }
 
@@ -58,7 +66,9 @@ public sealed record ConnectedAppSummary(
     DateTimeOffset ConnectedOn,
     DateTimeOffset? LastUsedOn,
     int IdeasAdded,
-    IReadOnlyList<ConnectedAppWishlist> Wishlists);
+    IReadOnlyList<ConnectedAppWishlist> Wishlists,
+    bool IsSelfRegistered = false,
+    IntegrationAudience Audience = IntegrationAudience.Api);
 
 public interface IIntegrationConnectionService
 {
@@ -69,13 +79,22 @@ public interface IIntegrationConnectionService
     Task<AuthorizationApprovalResult> ApproveAsync(string userId, AuthorizationApproval approval);
 
     /// <summary>Exchanges an authorization code for an access token, creating or renewing the connection.</summary>
-    Task<TokenExchangeResult> ExchangeCodeAsync(IntegrationApp app, string? code, string? redirectUri, string? codeVerifier);
+    /// <param name="requestedAudience">The audience named by an RFC 8707 resource parameter, if the app sent one.</param>
+    Task<TokenExchangeResult> ExchangeCodeAsync(
+        IntegrationApp app,
+        string? code,
+        string? redirectUri,
+        string? codeVerifier,
+        IntegrationAudience? requestedAudience = null);
 
-    /// <summary>Revokes the connection behind a token when it belongs to the calling app.</summary>
+    /// <summary>Rotates a refresh token. Presenting a replaced refresh token revokes the connection.</summary>
+    Task<TokenExchangeResult> RefreshAsync(IntegrationApp app, string? refreshToken, IntegrationAudience? requestedAudience = null);
+
+    /// <summary>Revokes the connection behind an access or refresh token when it belongs to the calling app.</summary>
     Task RevokeTokenAsync(IntegrationApp app, string? token);
 
-    /// <summary>Resolves an active connection from a bearer token.</summary>
-    Task<IntegrationCaller?> AuthenticateAsync(string? token);
+    /// <summary>Resolves an active, unexpired connection from a bearer token issued for <paramref name="audience"/>.</summary>
+    Task<IntegrationCaller?> AuthenticateAsync(string? token, IntegrationAudience audience = IntegrationAudience.Api);
 
     Task<IReadOnlyList<ConnectedAppSummary>> GetConnectedAppsAsync(string userId);
 

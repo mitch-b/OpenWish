@@ -94,6 +94,13 @@
         builder.AddAttribute(3, "class", "card-title");
         builder.AddContent(4, Item.Name);
         builder.CloseElement();
+
+        if (!string.IsNullOrWhiteSpace(Item.SourceAppName))
+        {
+            builder.OpenComponent<ItemSourceBadge>(51);
+            builder.AddComponentParameter(52, nameof(ItemSourceBadge.AppName), Item.SourceAppName);
+            builder.CloseComponent();
+        }
         
         // Priority Badge
         builder.OpenElement(5, "div");

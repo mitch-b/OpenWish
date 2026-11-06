@@ -232,6 +232,39 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
+    [HttpPut("{wishlistPublicId}/items/by-public-id/{itemPublicId}")]
+    public async Task<IActionResult> UpdateWishlistItemByPublicId(string wishlistPublicId, string itemPublicId, WishlistItemModel item)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!string.Equals(itemPublicId, item.PublicId, StringComparison.Ordinal))
+        {
+            return BadRequest();
+        }
+
+        try
+        {
+            if (!await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId))
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.UpdateWishlistItemByPublicIdAsync(wishlistPublicId, itemPublicId, item));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPost("{wishlistPublicId}/items/{itemPublicId}/still-wanted")]
     public async Task<IActionResult> ConfirmWishlistItemStillWanted(string wishlistPublicId, string itemPublicId)
     {

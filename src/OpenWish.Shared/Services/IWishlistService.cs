@@ -223,6 +223,9 @@ public interface IWishlistService
     /// <returns>The updated item model.</returns>
     Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item);
 
+    /// <summary>Updates an item using only the public wishlist and item identifiers.</summary>
+    Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, string itemPublicId, WishlistItemModel item);
+
     /// <summary>Sets whether an item is highlighted as one of the wishlist owner's most wanted ideas.</summary>
     /// <summary>
     /// Confirms the owner still wants an idea, which refreshes its last-updated time so it stops being flagged as stale.

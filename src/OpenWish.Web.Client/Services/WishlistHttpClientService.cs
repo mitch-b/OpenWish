@@ -313,6 +313,16 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             ?? throw new InvalidOperationException("Unable to deserialize updated item.");
     }
 
+    public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, WishlistItemModel item)
+    {
+        var response = await _httpClient.PutAsJsonAsync(
+            $"{BaseUrl}/{wishlistPublicId}/items/by-public-id/{itemPublicId}", item);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WishlistItemModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize updated item.");
+    }
+
     public async Task<WishlistItemModel> ConfirmWishlistItemStillWantedByPublicIdAsync(
         string wishlistPublicId,
         string itemPublicId,

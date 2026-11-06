@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "assertions": [
+    "Actual Atelier PKCE/state callback succeeds over HTTPS with Secure/Strict cookies and a same-site bounce.",
+    "Creating a private list alongside an existing selection makes the new private list the default.",
+    "Real-client send uses the private default, returns public HTTPS URLs, filters private images, and is idempotent.",
+    "Companion edits sync automatically, including clearing priority, and moving preserves the single linked item.",
+    "Owner deletion is not silently recreated by an edit; explicit resend and remove remain available.",
+    "OpenWish settings disconnect produces the real client's reconnect state, and fresh consent restores access."
+  ]
+}

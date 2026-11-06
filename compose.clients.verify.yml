@@ -1,0 +1,44 @@
+services:
+  web:
+    environment:
+      OpenWishSettings__BaseUri: https://wish.test:8443/
+      ForwardedHeaders__KnownNetworks__0: 0.0.0.0/0
+      OpenWishSettings__Integrations__Apps__1__ClientId: atelier
+      OpenWishSettings__Integrations__Apps__1__ClientSecret: verification-only-atelier-secret-0123456789
+      OpenWishSettings__Integrations__Apps__1__DisplayName: The Atelier
+      OpenWishSettings__Integrations__Apps__1__RedirectUris__0: https://atelier.test:8443/api/integrations/openwish/callback
+  atelier:
+    image: ${OPENWISH_ATELIER_VERIFICATION_IMAGE}
+    environment:
+      NODE_ENV: test
+      DB_PATH: /tmp/atelier.db
+      DB_DIR: /tmp
+      SESSION_SECRET: verification-only-atelier-session-secret
+      GOOGLE_CLIENT_ID: verification-only
+      GOOGLE_CLIENT_SECRET: verification-only
+      CLIENT_URL: https://atelier.test:8443
+      OPENWISH_URL: https://wish.test:8443/
+      OPENWISH_CLIENT_ID: atelier
+      OPENWISH_CLIENT_SECRET: verification-only-atelier-secret-0123456789
+      NODE_EXTRA_CA_CERTS: /certs/cert.pem
+    volumes:
+      - ./.agents/skills/screenshot:/verification:ro
+      - ${OPENWISH_CLIENT_CERTS}:/certs:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  proxy:
+    image: nginx:alpine
+    volumes:
+      - ./.agents/skills/screenshot/clients-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ${OPENWISH_CLIENT_CERTS}:/certs:ro
+    networks:
+      default:
+        aliases: [wish.test, atelier.test]
+    depends_on:
+      web:
+        condition: service_started
+      atelier:
+        condition: service_healthy

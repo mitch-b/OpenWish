@@ -19,5 +19,6 @@
   <Project Path="OpenWish.Shared/OpenWish.Shared.csproj" />
   <Project Path="OpenWish.Shared.Tests/OpenWish.Shared.Tests.csproj" />
   <Project Path="OpenWish.Web.Client/OpenWish.Web.Client.csproj" />
+  <Project Path="OpenWish.Web.Tests/OpenWish.Web.Tests.csproj" />
   <Project Path="OpenWish.Web/OpenWish.Web.csproj" />
 </Solution>

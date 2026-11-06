@@ -1,0 +1,300 @@
+.consent-page {
+    width: min(100%, 720px);
+    margin: 0 auto;
+    padding-top: clamp(1rem, 5vw, 3rem);
+}
+
+.consent-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.consent-heading h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 2.6rem);
+    line-height: 1.1;
+}
+
+.consent-heading p {
+    max-width: 60ch;
+    margin: 0.5rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+}
+
+.consent-heading .consent-app-description {
+    font-size: 0.92rem;
+}
+
+.consent-pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.consent-mark {
+    display: grid;
+    width: 3.75rem;
+    height: 3.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 1.1rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.5rem;
+    font-weight: 750;
+}
+
+.consent-mark-app {
+    background: var(--color-accent-soft);
+    /* Darkened berry keeps small initials above 4.5:1 in both themes. */
+    color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
+    font-size: 1.2rem;
+    letter-spacing: 0.02em;
+}
+
+.consent-mark-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.consent-link {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 1px dashed var(--color-border);
+    border-radius: 999px;
+    color: var(--color-text-subtle);
+    font-size: 0.95rem;
+}
+
+.consent-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.consent-section {
+    margin: 0;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.consent-section legend,
+.consent-section h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+/* Keep the legend inside the panel instead of on its border. */
+.consent-section legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+}
+
+.consent-section legend + * {
+    clear: left;
+}
+
+.consent-help {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.consent-lists {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.consent-list {
+    display: flex;
+    min-height: 3.5rem;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.consent-list:hover {
+    background: var(--color-surface-hover);
+}
+
+.consent-list:has(input:checked) {
+    border-color: var(--color-primary-border);
+    background: var(--color-primary-soft);
+}
+
+.consent-list:has(input:focus-visible) {
+    outline: 2px solid var(--color-primary-bg);
+    outline-offset: 2px;
+}
+
+.consent-list .form-check-input {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+.consent-list-icon {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.65rem;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+}
+
+.consent-list-text {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.consent-list-name {
+    overflow-wrap: anywhere;
+    font-weight: 700;
+}
+
+.consent-list-meta {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.consent-list-badge {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--color-info-border);
+    border-radius: 999px;
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.consent-new-list {
+    display: grid;
+    gap: 0.4rem;
+    padding-top: 0.25rem;
+}
+
+.consent-new-list .form-check {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+}
+
+.consent-new-list .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+.consent-new-list .form-check-label {
+    font-weight: 650;
+}
+
+.consent-new-list .form-label {
+    margin: 0.25rem 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.consent-permissions {
+    background: var(--color-surface-alt);
+    box-shadow: none;
+}
+
+.consent-permissions ul {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0.75rem 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.consent-permissions li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    line-height: 1.45;
+}
+
+.consent-permissions li ::deep .ow-icon {
+    flex: 0 0 auto;
+    margin-top: 0.2rem;
+}
+
+.consent-permissions ::deep .consent-allowed {
+    color: var(--color-success-text);
+}
+
+.consent-permissions ::deep .consent-denied {
+    color: var(--color-text-subtle);
+}
+
+.consent-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.consent-actions .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.consent-signed-in {
+    margin: 0;
+    color: var(--color-text-subtle);
+    font-size: 0.85rem;
+    text-align: right;
+}
+
+@media (max-width: 575.98px) {
+    .consent-actions {
+        flex-direction: column-reverse;
+    }
+
+    .consent-actions .btn {
+        width: 100%;
+    }
+
+    .consent-signed-in {
+        text-align: left;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .consent-list {
+        transition: none;
+    }
+}

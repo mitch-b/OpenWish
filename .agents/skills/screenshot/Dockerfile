@@ -6,5 +6,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY openwish-smoke.mjs ./
+COPY integrated-client.mjs ./
 
 ENTRYPOINT ["node", "openwish-smoke.mjs"]

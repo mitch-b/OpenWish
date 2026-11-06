@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using FluentEmail.Core;
 using FluentEmail.Smtp;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -13,13 +14,16 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using OpenWish.Application.Extensions;
+using OpenWish.Application.Integrations;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
+using OpenWish.Web.Controllers;
 using OpenWish.Web.Extensions;
+using OpenWish.Web.Integrations;
 using OpenWish.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +50,10 @@ builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+// Connected apps authenticate with bearer tokens on the integration API only.
+builder.Services.AddAuthentication()
+    .AddScheme<AuthenticationSchemeOptions, IntegrationAuthenticationHandler>(IntegrationAuthenticationDefaults.Scheme, null);
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -164,10 +172,39 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true,
                 QueueLimit = 0
             }));
+    options.AddPolicy(IntegrationOAuthController.TokenRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    // Lets an app sync a batch of ideas at once, then settles to a steady pace per connection.
+    options.AddPolicy(IntegrationApiController.ApiRateLimitPolicy, context =>
+        RateLimitPartition.GetTokenBucketLimiter(
+            context.User.FindFirst(IntegrationAuthenticationDefaults.ConnectionPublicIdClaim)?.Value ??
+                context.Connection.RemoteIpAddress?.ToString() ?? "unauthenticated",
+            _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = 120,
+                TokensPerPeriod = 2,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                AutoReplenishment = true,
+                QueueLimit = 0
+            }));
 });
 
 var app = builder.Build();
 // Migrations now handled by DatabaseMigrationHostedService.
+
+// Consent redirects back to a connected app follow a form post, so form-action must allow them.
+var integrationRedirectOrigins = app.Services.GetRequiredService<IntegrationAppRegistry>().RedirectOrigins;
+if (integrationRedirectOrigins.Count > 0)
+{
+    formActionSources += " " + string.Join(' ', integrationRedirectOrigins);
+}
 
 app.MapDefaultEndpoints();
 
@@ -334,3 +371,6 @@ static bool configureForwardedHeaders(WebApplicationBuilder builder)
 
     return true;
 }
+
+// Exposes the entry point to WebApplicationFactory in OpenWish.Web.Tests.
+public partial class Program;

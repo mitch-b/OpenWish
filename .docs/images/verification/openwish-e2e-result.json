@@ -64,7 +64,7 @@
         "/events/demo-holiday-gift-exchange",
         "/events/demo-holiday-gift-exchange",
         "/events/new",
-        "/events/2e772461-484d-4420-9091-0f4abef20e2f/manage",
+        "/events/3b7dcf90-b3d8-469c-96a4-c4f1e46ff721/manage",
         "/friends",
         "/friends",
         "/events/demo-holiday-gift-exchange",
@@ -220,6 +220,18 @@
       "loginStatus": 200,
       "assertions": [
         "recipient without an attached wishlist has no dead-end shopping action"
+      ]
+    },
+    {
+      "scenario": "connected-app",
+      "loginStatus": 200,
+      "assertions": [
+        "app connects through consent, state, PKCE, and a server-side code exchange",
+        "app logs, edits, and removes ideas without seeing reservations",
+        "ideas show their source app, and editing one explains the sync",
+        "WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it",
+        "a non-member cannot read the private list the app writes to",
+        "disconnecting revokes the token and keeps the ideas"
       ]
     }
   ]

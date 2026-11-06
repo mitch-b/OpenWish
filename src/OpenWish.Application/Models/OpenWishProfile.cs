@@ -25,6 +25,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner))  // map from EF entity to DtoModel
             .ForMember(dest => dest.Event, opt => opt.Ignore());
         CreateMap<WishlistItemModel, WishlistItem>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.PublicId, opt => opt.Ignore())
             .ForMember(dest => dest.CreationRequestHash, opt => opt.Ignore())
             .ForMember(dest => dest.IsPinned, opt => opt.Ignore())
@@ -34,6 +35,10 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.WishlistId, opt => opt.Ignore())
+            .ForMember(dest => dest.SourceAppName, opt => opt.Ignore())
+            .ForMember(dest => dest.SourceConnectionId, opt => opt.Ignore())
+            .ForMember(dest => dest.SourceConnection, opt => opt.Ignore())
+            .ForMember(dest => dest.ExternalId, opt => opt.Ignore())
             .ReverseMap();
         CreateMap<EventModel, Event>()
             .ForMember(dest => dest.AssignmentsRevealedOn, opt => opt.Ignore())

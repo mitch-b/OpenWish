@@ -5,6 +5,24 @@ namespace OpenWish.Shared.Tests.Accessibility;
 public class InteractiveControlMarkupTests
 {
     [Fact]
+    public void ConnectedItemSyncNote_DoesNotRequireAnInternalIdAfterWebAssemblyHydration()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        Assert.Contains("@if (!string.IsNullOrWhiteSpace(Model?.SourceAppName))", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Model?.Id > 0 &&", markup, StringComparison.Ordinal);
+        Assert.Contains("keeps this idea in sync", markup, StringComparison.Ordinal);
+        Assert.Contains("_isEditing = model is not null && (model.Id > 0 || !string.IsNullOrWhiteSpace(model.PublicId))", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (!_isEditing)", markup, StringComparison.Ordinal);
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        Assert.Contains("PublicId = item.PublicId", details, StringComparison.Ordinal);
+        Assert.Contains("existingItem.PublicId == item.PublicId", details, StringComparison.Ordinal);
+        Assert.Contains("UpdateWishlistItemByPublicIdAsync(WishlistId, item.PublicId, item)", details, StringComparison.Ordinal);
+        Assert.Contains("@key=\"item.PublicId\"", details, StringComparison.Ordinal);
+        var list = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        Assert.Contains("@key=\"item.PublicId\"", list, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileNavigation_ExposesAndSynchronizesItsDisclosureState()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Layout", "NavMenu.razor");
@@ -640,7 +658,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("InputId=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("@bind-IsImporting=\"_isImporting\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus=\"true\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Model?.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("_isEditing ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-background-allowed", modalMarkup, StringComparison.Ordinal);

@@ -234,6 +234,13 @@ test -s "$walkthrough_directory/connect-in-person.png"
 test -s "$walkthrough_directory/connect-in-person-mobile.png"
 test -s "$walkthrough_directory/friend-join-confirm.png"
 test -s "$walkthrough_directory/friend-join-confirm-mobile.png"
+test -s "$walkthrough_directory/connect-app-consent.png"
+test -s "$walkthrough_directory/connect-app-consent-mobile.png"
+test -s "$walkthrough_directory/connected-app-ideas.png"
+test -s "$walkthrough_directory/connected-app-ideas-mobile.png"
+test -s "$walkthrough_directory/connected-app-edit-note.png"
+test -s "$walkthrough_directory/connected-apps.png"
+test -s "$walkthrough_directory/connected-app-disconnect.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
 web_log="$evidence_directory/openwish-e2e-web.log"

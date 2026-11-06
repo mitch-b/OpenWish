@@ -1,0 +1,208 @@
+@page "/Account/Manage/ConnectedApps"
+
+@using OpenWish.Application.Integrations
+@using OpenWish.Shared.Integrations
+
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject IntegrationAppRegistry Registry
+@inject IIntegrationConnectionService ConnectionService
+
+<PageTitle>Connected apps</PageTitle>
+
+<StatusMessage Message="@errorMessage" />
+<h3>Connected apps</h3>
+<p class="text-muted connected-apps-intro">Apps you connect can add ideas to the lists you choose. They never see reservations, purchases, comments, or your friends.</p>
+
+@if (connections.Count == 0)
+{
+    <section class="connected-apps-empty" aria-labelledby="connected-apps-empty-title">
+        <span class="connected-apps-empty-mark" aria-hidden="true"><OpenWishIcon Name="link-45deg" /></span>
+        <div>
+            <h4 id="connected-apps-empty-title">No apps are connected</h4>
+            @if (Registry.IsEnabled)
+            {
+                <p>Start from inside one of the apps below. It brings you back here to choose which lists it can use.</p>
+            }
+            else
+            {
+                <p>This OpenWish doesn't have any apps set up yet. The person who runs it can register apps in its settings.</p>
+            }
+        </div>
+    </section>
+}
+else
+{
+    <ul class="connected-apps" role="list">
+        @foreach (var connection in connections)
+        {
+            var options = listOptions[connection.ConnectionId];
+            var confirming = string.Equals(DisconnectConnectionId, connection.ConnectionId, StringComparison.Ordinal);
+            <li class="connected-app" id="connection-@connection.ConnectionId">
+                <header class="connected-app-header">
+                    <span class="connected-app-mark" aria-hidden="true">@IntegrationDisplay.Monogram(connection.AppName)</span>
+                    <div class="connected-app-title">
+                        <h4>@connection.AppName</h4>
+                        <p>
+                            Connected @connection.ConnectedOn.ToLocalHumanizedString().
+                            @(connection.LastUsedOn is { } lastUsed ? $"Last used {lastUsed.ToLocalHumanizedString()}." : "Not used yet.")
+                        </p>
+                    </div>
+                    <span class="connected-app-count">@(connection.IdeasAdded == 1 ? "1 idea added" : $"{connection.IdeasAdded} ideas added")</span>
+                </header>
+
+                @if (!connection.IsAvailable)
+                {
+                    <div class="alert alert-warning mb-3" role="status">
+                        This app is no longer set up on this OpenWish, so it can't make changes. Disconnect it to tidy up.
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(connection.Description))
+                {
+                    <p class="connected-app-description">@connection.Description</p>
+                }
+
+                @if (confirming)
+                {
+                    <form method="post" @formname="@($"disconnect-{connection.ConnectionId}")" @onsubmit="() => DisconnectAsync(connection)" class="connected-app-confirm" aria-labelledby="disconnect-title-@connection.ConnectionId">
+                        <AntiforgeryToken />
+                        <h5 id="disconnect-title-@connection.ConnectionId">Disconnect @connection.AppName?</h5>
+                        <p>@connection.AppName will stop adding or changing ideas right away. The @(connection.IdeasAdded == 1 ? "idea" : "ideas") it added stay on your lists, and you can reconnect from the app later.</p>
+                        <div class="connected-app-actions">
+                            <a class="btn btn-outline-secondary" href="Account/Manage/ConnectedApps">Keep connected</a>
+                            <button type="submit" class="btn btn-danger" autofocus>Disconnect @connection.AppName</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" @formname="@($"lists-{connection.ConnectionId}")" @onsubmit="() => SaveListsAsync(connection)" class="connected-app-lists">
+                        <AntiforgeryToken />
+                        <fieldset>
+                            <legend>Lists it can add to</legend>
+                            <div class="connected-app-list-grid">
+                                @foreach (var wishlist in options)
+                                {
+                                    var inputId = $"allow-{connection.ConnectionId}-{wishlist.PublicId}";
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="wishlist" value="@wishlist.PublicId" id="@inputId" checked="@wishlist.IsAllowed" />
+                                        <label class="form-check-label" for="@inputId">@wishlist.Name</label>
+                                    </div>
+                                }
+                            </div>
+                        </fieldset>
+                        <div class="connected-app-default">
+                            <label class="form-label" for="default-@connection.ConnectionId">New ideas go to</label>
+                            <select class="form-select" name="defaultWishlist" id="default-@connection.ConnectionId" aria-describedby="default-help-@connection.ConnectionId">
+                                @foreach (var wishlist in options)
+                                {
+                                    <option value="@wishlist.PublicId" selected="@wishlist.IsDefault">@wishlist.Name</option>
+                                }
+                            </select>
+                            <div id="default-help-@connection.ConnectionId" class="form-text">Choose one of the checked lists.</div>
+                        </div>
+                        <div class="connected-app-actions">
+                            <a class="btn btn-outline-danger" href="@($"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")">
+                                <OpenWishIcon Name="x-circle" /> Disconnect
+                            </a>
+                            <button type="submit" class="btn btn-primary">Save lists</button>
+                        </div>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@if (availableApps.Count > 0)
+{
+    <section class="connected-apps-available" aria-labelledby="available-apps-title">
+        <h4 id="available-apps-title">Apps you can connect</h4>
+        <ul role="list">
+            @foreach (var app in availableApps)
+            {
+                <li>
+                    <span class="connected-app-mark connected-app-mark-quiet" aria-hidden="true">@IntegrationDisplay.Monogram(app.DisplayName)</span>
+                    <div>
+                        <strong>@app.DisplayName</strong>
+                        @if (!string.IsNullOrWhiteSpace(app.Description))
+                        {
+                            <p>@app.Description</p>
+                        }
+                    </div>
+                    @if (app.HomepageUrl is not null)
+                    {
+                        <a class="btn btn-outline-secondary btn-sm" href="@app.HomepageUrl" target="_blank" rel="noopener noreferrer">
+                            Open @app.DisplayName <OpenWishIcon Name="box-arrow-up-right" />
+                            <span class="visually-hidden">(opens in a new tab)</span>
+                        </a>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    private string userId = default!;
+    private string? errorMessage;
+    private List<ConnectedAppSummary> connections = [];
+    private Dictionary<string, IReadOnlyList<ConsentWishlistOption>> listOptions = [];
+    private List<IntegrationApp> availableApps = [];
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "disconnect")]
+    private string? DisconnectConnectionId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        userId = user.Id;
+        connections = [.. await ConnectionService.GetConnectedAppsAsync(userId)];
+
+        foreach (var connection in connections)
+        {
+            var state = await ConnectionService.GetConsentStateAsync(userId, connection.ClientId);
+            listOptions[connection.ConnectionId] = state.Wishlists;
+        }
+
+        var connectedClientIds = connections.Select(c => c.ClientId).ToHashSet(StringComparer.Ordinal);
+        availableApps = Registry.Apps.Where(app => !connectedClientIds.Contains(app.ClientId)).ToList();
+    }
+
+    private async Task SaveListsAsync(ConnectedAppSummary connection)
+    {
+        var form = HttpContext.Request.Form;
+        var chosen = form["wishlist"].Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).ToList();
+        var defaultWishlist = form["defaultWishlist"].ToString();
+
+        if (chosen.Count == 0)
+        {
+            errorMessage = $"Error: Choose at least one list for {connection.AppName}, or disconnect it.";
+            return;
+        }
+
+        if (!chosen.Contains(defaultWishlist, StringComparer.Ordinal))
+        {
+            errorMessage = "Error: Where new ideas go must be one of the checked lists.";
+            return;
+        }
+
+        var saved = await ConnectionService.UpdateAllowedWishlistsAsync(userId, connection.ConnectionId, chosen, defaultWishlist);
+        if (!saved)
+        {
+            errorMessage = "Error: Those lists could not be saved. Refresh the page and try again.";
+            return;
+        }
+
+        RedirectManager.RedirectToCurrentPageWithStatus($"Saved the lists {connection.AppName} can add to.", HttpContext);
+    }
+
+    private async Task DisconnectAsync(ConnectedAppSummary connection)
+    {
+        await ConnectionService.DisconnectAsync(userId, connection.ConnectionId);
+        RedirectManager.RedirectToCurrentPageWithStatus($"Disconnected {connection.AppName}. Ideas it added are still on your lists.", HttpContext);
+    }
+}

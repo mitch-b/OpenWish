@@ -92,7 +92,8 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                 !a.Deleted &&
                 friendIds.Contains(a.UserId) &&
                 (!a.WishlistId.HasValue || (a.Wishlist != null && !a.Wishlist.Deleted)) &&
-                (!a.WishlistItemId.HasValue || (a.WishlistItem != null && !a.WishlistItem.Deleted)) &&
+                (!a.WishlistItemId.HasValue ||
+                 (a.WishlistItem != null && !a.WishlistItem.Deleted && a.WishlistItem.WishlistId == a.WishlistId)) &&
                 (!a.WishlistId.HasValue || accessibleWishlistIds.Contains(a.WishlistId.Value)) &&
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
@@ -129,7 +130,8 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(a =>
                 !a.Deleted &&
                 a.WishlistId == wishlistId &&
-                (!a.WishlistItemId.HasValue || (a.WishlistItem != null && !a.WishlistItem.Deleted)) &&
+                (!a.WishlistItemId.HasValue ||
+                 (a.WishlistItem != null && !a.WishlistItem.Deleted && a.WishlistItem.WishlistId == a.WishlistId)) &&
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&

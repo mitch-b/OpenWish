@@ -240,6 +240,20 @@
     }
 }
 
+.item-source-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.65rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
 /* Mobile responsive */
 @media (max-width: 767.98px) {
     .modal-dialog-container {

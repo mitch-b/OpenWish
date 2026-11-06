@@ -1,0 +1,13 @@
+@using OpenWish.Shared.Integrations
+
+@if (!string.IsNullOrWhiteSpace(AppName))
+{
+    <span class="item-source" title="Added from @AppName. Updates made there appear here automatically.">
+        <span class="item-source-mark" aria-hidden="true">@IntegrationDisplay.Monogram(AppName)</span>
+        <span><span class="visually-hidden">Added </span>From @AppName</span>
+    </span>
+}
+
+@code {
+    [Parameter] public string? AppName { get; set; }
+}

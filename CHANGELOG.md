@@ -2,6 +2,25 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.13.0] - 2026-11-06
+
+### Added
+
+- Connect operator-registered apps through individual consent and choose exactly
+  which wishlists they can use, or create a private default list.
+- App-added ideas show their source and explain sync when edited.
+- Manage list permissions and disconnect apps from account settings without
+  deleting their ideas.
+
+### Fixed
+
+- Old consent codes cannot restore disconnected apps or removed list access.
+- Concurrent connection attempts and code replays cannot bypass revocation.
+- Editing JSON-loaded ideas preserves their identity and provenance rather
+  than treating them as new items; list rendering uses public identities.
+- Moving an idea off a shared list no longer exposes its later changes in the
+  old list's activity or friends' feed.
+
 ## [0.12.0] - 2026-11-05
 
 ### Added

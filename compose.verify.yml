@@ -20,6 +20,13 @@ services:
       OpenWishSettings__EnableDevelopmentLogin: "true"
       Authentication__Google__ClientId: playwright-test-client-id
       Authentication__Google__ClientSecret: playwright-test-client-secret
+      # A synthetic connected app; the browser verifier serves it on its own loopback address.
+      OpenWishSettings__Integrations__Apps__0__ClientId: studio-demo
+      OpenWishSettings__Integrations__Apps__0__ClientSecret: verification-only-studio-secret-0123456789
+      OpenWishSettings__Integrations__Apps__0__DisplayName: Studio Notebook
+      OpenWishSettings__Integrations__Apps__0__Description: Send pieces from your wardrobe wishlist to OpenWish.
+      OpenWishSettings__Integrations__Apps__0__HomepageUrl: http://127.0.0.1:4455/
+      OpenWishSettings__Integrations__Apps__0__RedirectUris__0: http://127.0.0.1:4455/openwish/callback
     depends_on:
       db:
         condition: service_healthy

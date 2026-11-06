@@ -36,6 +36,10 @@ Run the committed browser/API verification from the repository root with
 data, and a Development-only login endpoint; never enable that endpoint in
 production.
 
+`OpenWish.Web.Tests` hosts the real web app with `WebApplicationFactory` and a
+disposable PostgreSQL container (Testcontainers), so Docker must be running
+for `dotnet test`; set `OPENWISH_TEST_POSTGRES` to reuse an existing server.
+
 Use `scripts/agent-environment.sh deploy` when a persistent local review
 instance is useful. It verifies changes before promoting them to a separate
 Compose project on port 9090 by default. Never point it at the Aspire
@@ -98,6 +102,11 @@ service discovery, resilience, health, logging, and OpenTelemetry defaults.
   method, rather than adding unrelated registrations directly to `Program.cs`.
   Server-side authentication state and user context have different Razor and
   controller implementations; retain that separation.
+- Connected apps (`OpenWish.Application/Integrations`, documented in
+  `.docs/INTEGRATIONS.md`) authenticate with their own bearer scheme that only
+  `IntegrationApiController` accepts. Keep app tokens off browser endpoints,
+  scope every query to the connection's allowed lists and the ideas it added,
+  and never return reservations, purchases, or comments to an app.
 - Central package versions are in `src/Directory.Packages.props`. All
   projects target `net10.0` with nullable reference types and preview C#
   enabled by `src/Directory.Build.props`.

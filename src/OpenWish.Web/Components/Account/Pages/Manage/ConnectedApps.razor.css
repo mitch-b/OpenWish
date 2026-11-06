@@ -1,0 +1,249 @@
+.connected-apps-intro {
+    max-width: 62ch;
+}
+
+.connected-apps {
+    display: grid;
+    gap: 1rem;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.connected-app {
+    padding: clamp(1rem, 3vw, 1.35rem);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface-alt);
+}
+
+.connected-app-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+}
+
+.connected-app-mark {
+    display: grid;
+    width: 3rem;
+    height: 3rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.9rem;
+    background: var(--color-accent-soft);
+    /* Darkened berry keeps small initials above 4.5:1 in both themes. */
+    color: color-mix(in srgb, var(--color-accent) 70%, var(--color-text));
+    font-weight: 750;
+    letter-spacing: 0.02em;
+}
+
+.connected-app-mark-quiet {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+}
+
+.connected-app-title {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.connected-app-title h4 {
+    margin: 0;
+    font-size: 1.15rem;
+    overflow-wrap: anywhere;
+}
+
+.connected-app-title p,
+.connected-app-description {
+    margin: 0.15rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.connected-app-description {
+    margin: 0 0 1rem;
+}
+
+.connected-app-count {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.connected-app-lists fieldset {
+    margin: 0 0 1rem;
+}
+
+.connected-app-lists legend,
+.connected-app-default .form-label,
+.connected-app-confirm h5 {
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.connected-app-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+    gap: 0.25rem 1rem;
+}
+
+.connected-app-list-grid .form-check {
+    display: flex;
+    min-height: 2.5rem;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+}
+
+.connected-app-list-grid .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.connected-app-list-grid .form-check-label {
+    overflow-wrap: anywhere;
+}
+
+.connected-app-default {
+    max-width: 22rem;
+}
+
+.connected-app-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.connected-app-actions .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.connected-app-confirm {
+    padding: 1rem;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 0.8rem;
+    background: var(--color-danger-bg);
+}
+
+.connected-app-confirm p {
+    margin: 0;
+    color: var(--color-text);
+}
+
+.connected-apps-empty {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1.25rem;
+    border: 1px dashed var(--color-border);
+    border-radius: 1rem;
+    background: var(--color-surface-alt);
+}
+
+.connected-apps-empty h4 {
+    margin: 0 0 0.25rem;
+    font-size: 1.1rem;
+}
+
+.connected-apps-empty p {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.connected-apps-empty-mark {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.2rem;
+}
+
+.connected-apps-available {
+    margin-top: 2rem;
+}
+
+.connected-apps-available h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1.05rem;
+}
+
+.connected-apps-available ul {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.connected-apps-available li {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 0;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.connected-apps-available li > div {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.connected-apps-available p {
+    margin: 0.1rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.connected-apps-available .btn {
+    display: inline-flex;
+    min-height: 2.5rem;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+@media (max-width: 575.98px) {
+    .connected-app-header {
+        flex-wrap: wrap;
+    }
+
+    .connected-app-count {
+        order: 3;
+    }
+
+    .connected-app-actions {
+        flex-direction: column-reverse;
+    }
+
+    .connected-app-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .connected-apps-available li {
+        flex-wrap: wrap;
+    }
+}

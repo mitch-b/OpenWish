@@ -2475,7 +2475,7 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
   const invitationOutcomes = await page.getByTestId("invitation-outcome").count();
-  if (invitationOutcomes !== 1 || await page.getByRole("alert").filter({ hasText: "You're part of" }).count() !== 0) {
+  if (invitationOutcomes !== 1 || await page.getByText(/You're (in!|part of)/).count() !== 1) {
     throw new Error(`Accepting an invitation should show exactly one outcome message, found ${invitationOutcomes}.`);
   }
 

@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.12.1] - 2026-11-06
+
+### Improved
+
+- Accepting or declining an event invitation shows a single, accurate message
+  instead of two overlapping ones.
+- The Accept button reads "Accepting invitation..." while it works, and focus
+  moves to "Continue" once you're in.
+- If an invitation doesn't match your account, "Sign in with a different
+  account" and "Back to events" offer a way forward.
+- A declined invitation links back to your events.
+- After names are drawn, a participant who hasn't shared a wishlist with the
+  event is reminded to add one.
+
 ## [0.12.0] - 2026-11-05
 
 ### Added

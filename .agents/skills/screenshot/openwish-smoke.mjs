@@ -2474,6 +2474,10 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await declineInvitationDialog.getByRole("button", { name: "Keep invitation" }).click();
   await page.getByRole("button", { name: "Accept invite" }).click();
   await assertVisible(page, "Continue and add my wishlist");
+  const invitationOutcomes = await page.getByTestId("invitation-outcome").count();
+  if (invitationOutcomes !== 1 || await page.getByRole("alert").filter({ hasText: "You're part of" }).count() !== 0) {
+    throw new Error(`Accepting an invitation should show exactly one outcome message, found ${invitationOutcomes}.`);
+  }
 
   const repeatedAcceptance = await context.request.post(
     `${baseUrl}/api/events/invitations/by-public-id/${invitationPublicId}/accept`

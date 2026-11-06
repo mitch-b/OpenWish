@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.12.1",
+    "date": "2026-11-06",
+    "title": "A clearer invitation to join an event",
+    "summary": "Accepting or declining an event invitation is clearer and never leaves you at a dead end, and drawn-names participants are nudged to share a wishlist.",
+    "highlights": [
+      "Accepting or declining shows one message that matches what happened.",
+      "The Accept button says Accepting invitation while it works, and focus moves to Continue afterward.",
+      "A mismatched invitation offers Sign in with a different account.",
+      "A declined invitation links back to your events.",
+      "After names are drawn, participants who have not shared a wishlist are reminded to add one."
+    ]
+  }, {
     "version": "0.12.0",
     "date": "2026-11-05",
     "title": "Shop your gift plan faster",

@@ -603,7 +603,7 @@ else
                 <div class="items-grid">
                     @foreach (var item in _filteredItems)
                     {
-                        <div @key="item.Id" class="wishlist-item-card @(_gridCoordinationItemId == item.Id ? "is-coordinating" : string.Empty)">
+                        <div @key="item.PublicId" class="wishlist-item-card @(_gridCoordinationItemId == item.Id ? "is-coordinating" : string.Empty)">
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
@@ -643,6 +643,13 @@ else
                                         </span>
                                     }
                                 </div>
+
+                                @if (!string.IsNullOrWhiteSpace(item.SourceAppName))
+                                {
+                                    <div class="item-source-row">
+                                        <ItemSourceBadge AppName="@item.SourceAppName" />
+                                    </div>
+                                }
 
                                 @if (!string.IsNullOrEmpty(item.Description))
                                 {
@@ -1640,6 +1647,7 @@ else
         _modalItem = new WishlistItemModel
         {
             Id = item.Id,
+            PublicId = item.PublicId,
             Name = item.Name,
             Description = item.Description,
             Price = item.Price,
@@ -1648,6 +1656,7 @@ else
             Priority = item.Priority,
             IsPrivate = item.IsPrivate,
             Image = item.Image,
+            SourceAppName = item.SourceAppName,
             WishlistId = _wishlist?.Id ?? 0 // Keep the integer ID for the model
         };
         _itemModal?.Show(_modalItem);
@@ -1656,11 +1665,12 @@ else
     private async Task HandleModalSubmit(WishlistItemModel item)
     {
         WishlistItemModel savedItem;
-        var existingItemIndex = _items.FindIndex(existingItem => existingItem.Id == item.Id);
+        var existingItemIndex = _items.FindIndex(existingItem => existingItem.PublicId == item.PublicId);
+        var isEditing = existingItemIndex >= 0;
 
-        if (item.Id > 0)
+        if (isEditing)
         {
-            savedItem = await WishlistService.UpdateWishlistItemByPublicIdAsync(WishlistId, item.Id, item);
+            savedItem = await WishlistService.UpdateWishlistItemByPublicIdAsync(WishlistId, item.PublicId, item);
         }
         else
         {
@@ -1687,7 +1697,7 @@ else
         }
 
         ApplyFiltersAndSort();
-        FeedbackMessage = item.Id > 0
+        FeedbackMessage = isEditing
             ? $"Changes to {savedItem.Name} saved."
             : $"{savedItem.Name} added to the wishlist.";
         _feedbackIsError = false;

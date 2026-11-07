@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using FluentEmail.Core;
 using FluentEmail.Smtp;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -12,14 +13,18 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Options;
 using OpenWish.Application.Extensions;
+using OpenWish.Application.Integrations;
 using OpenWish.Application.Models.Configuration;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
 using OpenWish.Shared.Extensions;
 using OpenWish.Web.Components;
 using OpenWish.Web.Components.Account;
+using OpenWish.Web.Controllers;
 using OpenWish.Web.Extensions;
+using OpenWish.Web.Integrations;
 using OpenWish.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +51,29 @@ builder.Services.AddAuthentication(options =>
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
     })
     .AddIdentityCookies();
+
+// Connected apps authenticate with bearer tokens on the integration API and MCP server only.
+builder.Services.AddAuthentication()
+    .AddScheme<IntegrationAuthenticationOptions, IntegrationAuthenticationHandler>(
+        IntegrationAuthenticationDefaults.Scheme,
+        options => options.Audience = IntegrationAudience.Api)
+    .AddScheme<IntegrationAuthenticationOptions, IntegrationAuthenticationHandler>(
+        IntegrationAuthenticationDefaults.McpScheme,
+        options => options.Audience = IntegrationAudience.Mcp);
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(IntegrationAuthenticationDefaults.McpPolicy, policy => policy
+        .AddAuthenticationSchemes(IntegrationAuthenticationDefaults.McpScheme)
+        .RequireAuthenticatedUser());
+
+// AI assistants reach the same scoped idea tools through the Model Context Protocol at /mcp.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMcpServer(options =>
+    {
+        options.ServerInfo = new() { Name = "OpenWish", Version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "1.0.0" };
+        options.ServerInstructions = OpenWishMcpTools.ServerInstructions;
+    })
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<OpenWishMcpTools>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -164,10 +192,49 @@ builder.Services.AddRateLimiter(options =>
                 AutoReplenishment = true,
                 QueueLimit = 0
             }));
+    options.AddPolicy(IntegrationOAuthController.TokenRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+    // Assistants register again for each new connection; this still stops a flood of registrations.
+    options.AddPolicy(IntegrationOAuthController.RegisterRateLimitPolicy, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0
+            }));
+    // Lets an app sync a batch of ideas at once, then settles to a steady pace per connection.
+    options.AddPolicy(IntegrationApiController.ApiRateLimitPolicy, context =>
+        RateLimitPartition.GetTokenBucketLimiter(
+            context.User.FindFirst(IntegrationAuthenticationDefaults.ConnectionPublicIdClaim)?.Value ??
+                context.Connection.RemoteIpAddress?.ToString() ?? "unauthenticated",
+            _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = 120,
+                TokensPerPeriod = 2,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                AutoReplenishment = true,
+                QueueLimit = 0
+            }));
 });
 
 var app = builder.Build();
 // Migrations now handled by DatabaseMigrationHostedService.
+
+// Consent redirects back to a connected app follow a form post, so form-action must allow them.
+var integrationRedirectOrigins = app.Services.GetRequiredService<IntegrationAppRegistry>().RedirectOrigins;
+if (integrationRedirectOrigins.Count > 0)
+{
+    formActionSources += " " + string.Join(' ', integrationRedirectOrigins);
+}
 
 app.MapDefaultEndpoints();
 
@@ -203,11 +270,19 @@ app.Use(async (context, next) =>
     context.Response.Headers.XContentTypeOptions = "nosniff";
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers.XFrameOptions = "DENY";
-    context.Response.Headers.ContentSecurityPolicy =
-        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-        $"form-action {formActionSources}; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    context.Response.OnStarting(() =>
+    {
+        // The consent page adds the validated redirect origin of a self-registered MCP client.
+        var formAction = context.Items[IntegrationAuthenticationDefaults.FormActionOriginItem] is string origin
+            ? $"{formActionSources} {origin}"
+            : formActionSources;
+        context.Response.Headers.ContentSecurityPolicy =
+            "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
+            $"form-action {formAction}; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data: https: http:; font-src 'self' data:; connect-src 'self' ws: wss:";
+        return Task.CompletedTask;
+    });
     await next();
 });
 app.UseRouting();
@@ -227,6 +302,13 @@ app.MapAdditionalIdentityEndpoints();
 app.MapOpenWishDevelopmentEndpoints();
 
 app.MapControllers();
+
+if (app.Services.GetRequiredService<IOptions<OpenWishSettings>>().Value.Integrations?.Mcp.Enabled == true)
+{
+    app.MapMcp(IntegrationAuthenticationDefaults.McpPath)
+        .RequireAuthorization(IntegrationAuthenticationDefaults.McpPolicy)
+        .RequireRateLimiting(IntegrationApiController.ApiRateLimitPolicy);
+}
 
 app.Run();
 
@@ -334,3 +416,6 @@ static bool configureForwardedHeaders(WebApplicationBuilder builder)
 
     return true;
 }
+
+// Exposes the entry point to WebApplicationFactory in OpenWish.Web.Tests.
+public partial class Program;

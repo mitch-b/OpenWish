@@ -15,7 +15,7 @@
          @onclick:stopPropagation="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 id="wishlist-item-dialog-title" class="modal-title">@(Model?.Id > 0 ? "Edit item" : "Add item")</h5>
+                <h5 id="wishlist-item-dialog-title" class="modal-title">@(_isEditing ? "Edit item" : "Add item")</h5>
                 <button type="button"
                         class="btn-close"
                         data-dialog-close
@@ -30,6 +30,13 @@
                         <OpenWishIcon Name="check-circle" />
                         <span>@_lastAddedName was added. Add the next idea whenever you're ready.</span>
                     </p>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model?.SourceAppName))
+                {
+                    <div class="item-source-note" id="wishlist-item-source-note">
+                        <ItemSourceBadge AppName="@Model.SourceAppName" />
+                        <span>@Model.SourceAppName keeps this idea in sync, so changes made there replace the details here. Privacy and ranking stay yours.</span>
+                    </div>
                 }
                 <div class="url-import-section mb-4">
                     <ProductLinkImporter Model="@Model" @key="_formVersion"
@@ -125,7 +132,7 @@
                         data-dialog-close
                         @onclick="Cancel"
                         disabled="@IsBusy">Cancel</button>
-                @if (Model?.Id == 0)
+                @if (!_isEditing)
                 {
                     <button type="button"
                             class="btn btn-outline-primary"
@@ -140,12 +147,12 @@
                     @if (_isSubmitting)
                     {
                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <span>@(Model?.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+                        <span>@(_isEditing ? "Saving changes..." : "Adding item...")</span>
                     }
                     else
                     {
                         <OpenWishIcon Name="check-lg" />
-                        <span>@(Model?.Id > 0 ? "Save changes" : "Add item")</span>
+                        <span>@(_isEditing ? "Save changes" : "Add item")</span>
                     }
                 </button>
             </div>
@@ -160,6 +167,7 @@
     [Parameter] public bool IsVisible { get; set; }
 
     private bool _isImporting;
+    private bool _isEditing;
     private bool _isSubmitting;
     private string? _initialImportText;
     private string? _saveError;
@@ -192,6 +200,7 @@
     /// </summary>
     public void Show(WishlistItemModel? model = null, string? importText = null)
     {
+        _isEditing = model is not null && (model.Id > 0 || !string.IsNullOrWhiteSpace(model.PublicId));
         Model = model ?? new WishlistItemModel();
         _initialImportText = importText;
         _saveError = null;
@@ -251,7 +260,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to save wishlist item {WishlistItemId}", Model.Id);
-            _saveError = Model.Id > 0
+            _saveError = _isEditing
                 ? "We couldn't save these changes. Review the details and try again."
                 : "We couldn't add this item. Review the details and try again.";
         }

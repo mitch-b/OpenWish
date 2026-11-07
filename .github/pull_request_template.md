@@ -28,10 +28,17 @@ or left as a nit. Delete this section on other days. -->
 
 ## Evidence
 
+- UI impact: <!-- yes / no; include visible behavior changes from backend code -->
 - Release note:
 - Desktop screenshot:
 - Mobile screenshot:
 - Before-and-after screenshots (polish days):
+<!-- UI-impacting PRs must embed real desktop and mobile images on the fields
+above: ![Descriptive alt text](https://github.com/user-attachments/assets/UUID).
+Capture the affected journey on the latest revision, not unrelated baseline
+screens. Artifact links and local paths do not count. Stage review-only files
+in ignored pr-assets/ and upload them; never commit them.
+See .docs/SCREENSHOTS.md for capture and upload commands. -->
 - Browser assertions:
 - API assertions:
 - Server log result:
@@ -42,5 +49,6 @@ or left as a nit. Delete this section on other days. -->
 - [ ] `dotnet build`
 - [ ] `dotnet test`
 - [ ] `scripts/verify-e2e.sh`
+- [ ] UI impact is declared; affected desktop/mobile screenshots are embedded above (or no UI impact)
 - [ ] No secrets or real user data are included
 - [ ] User-visible behavior is documented in `.docs/releases/`

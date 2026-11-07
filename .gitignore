@@ -7,6 +7,9 @@ app.db
 app.db-shm
 app.db-wal
 
+# Transient PR screenshots, browser results, and upload drafts.
+/pr-assets/
+
 .env.openwish
 .env.agent
 docker-compose.*.yml
@@ -38,6 +41,7 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!.docs/releases/
 x64/
 x86/
 [Ww][Ii][Nn]32/

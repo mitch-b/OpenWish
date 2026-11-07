@@ -2,19 +2,44 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
-## [0.12.1] - 2026-11-06
+## Unreleased - 2026-11-07
+
+### Added
+
+- Connected-app consent offers all current and future owned wishlists (off by
+  default) and managing existing ideas in allowed lists (on for new consent).
+  Both permissions can be changed from Integrations. Existing connections
+  retain their earlier access, and gift-coordination details remain private.
 
 ### Improved
 
-- Accepting or declining an event invitation shows a single, accurate message
-  instead of two overlapping ones.
-- The Accept button reads "Accepting invitation..." while it works, and focus
-  moves to "Continue" once you're in.
-- If an invitation doesn't match your account, "Sign in with a different
-  account" and "Back to events" offer a way forward.
-- A declined invitation links back to your events.
-- After names are drawn, a participant who hasn't shared a wishlist with the
-  event is reminded to add one.
+- Accepting or declining an event invitation shows one accurate message.
+- The Accept button shows progress and moves focus to "Continue" after joining.
+- Mismatched and declined invitations offer a clear route back to events.
+- Participants without a shared wishlist are reminded to add one after the
+  exchange draw.
+
+## [0.13.0] - 2026-11-06
+
+### Added
+
+- Connect operator-registered apps through individual consent and choose exactly
+  which wishlists they can use, or create a private default list.
+- App-added ideas show their source and explain sync when edited.
+- Manage list permissions and disconnect apps from account settings without
+  deleting their ideas.
+- Optional MCP server at `/mcp` lets people connect AI assistants such as
+  Claude, ChatGPT, and GitHub Copilot through the same consent screen, with
+  self-registration, PKCE, and rotating refresh tokens.
+
+### Fixed
+
+- Old consent codes cannot restore disconnected apps or removed list access.
+- Concurrent connection attempts and code replays cannot bypass revocation.
+- Editing JSON-loaded ideas preserves their identity and provenance rather
+  than treating them as new items; list rendering uses public identities.
+- Moving an idea off a shared list no longer exposes its later changes in the
+  old list's activity or friends' feed.
 
 ## [0.12.0] - 2026-11-05
 

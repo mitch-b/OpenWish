@@ -1169,6 +1169,21 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await UpdateWishlistItemAsync(wishlist.Id, itemId, item);
     }
 
+    public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, WishlistItemModel item)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existing = await context.WishlistItems
+            .AsNoTracking()
+            .Where(i => i.PublicId == itemPublicId && !i.Deleted &&
+                i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
+            .Select(i => new { i.Id, i.WishlistId })
+            .SingleOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        return await UpdateWishlistItemAsync(existing.WishlistId, existing.Id, item);
+    }
+
     public async Task<WishlistItemModel> ConfirmWishlistItemStillWantedByPublicIdAsync(
         string wishlistPublicId,
         string itemPublicId,

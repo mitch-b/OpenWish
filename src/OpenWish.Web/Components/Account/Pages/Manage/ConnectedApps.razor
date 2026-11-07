@@ -1,0 +1,336 @@
+@page "/Account/Manage/ConnectedApps"
+@layout OpenWish.Web.Components.Layout.MainLayout
+
+@using Microsoft.Extensions.Options
+@using OpenWish.Application.Integrations
+@using OpenWish.Application.Models.Configuration
+@using OpenWish.Data.Entities
+@using OpenWish.Web.Integrations
+@using OpenWish.Shared.Integrations
+
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject IntegrationAppRegistry Registry
+@inject IIntegrationConnectionService ConnectionService
+@inject IIntegrationClientStore ClientStore
+@inject IOptions<OpenWishSettings> Settings
+
+<PageTitle>Integrations</PageTitle>
+
+<div class="container page-shell integrations-page">
+<StatusMessage Message="@errorMessage" />
+<PageHeader Title="Integrations" Description="Send gift ideas from apps and AI assistants straight to the lists you choose." />
+
+@if (mcpUrl is not null)
+{
+    <section class="connected-apps-mcp" aria-labelledby="mcp-title">
+        <h2 id="mcp-title"><OpenWishIcon Name="stars" /> Connect an AI assistant</h2>
+        <p id="mcp-help">In your assistant, add a remote MCP server using this address.</p>
+        <div class="connected-apps-mcp-url">
+            <label class="visually-hidden" for="mcp-url">OpenWish MCP server address</label>
+            <input class="form-control" id="mcp-url" value="@mcpUrl" readonly aria-describedby="mcp-help" />
+            <button type="button" class="btn btn-primary" data-copy-text="@mcpUrl" data-copy-feedback="mcp-copy-status"><OpenWishIcon Name="copy" /> Copy address</button>
+        </div>
+        <p id="mcp-copy-status" class="connected-apps-copy-status" role="status" aria-live="polite"></p>
+        <p class="connected-apps-next-step">Then sign in to OpenWish and choose its lists. No password or token to paste.</p>
+        <details class="connected-apps-help">
+            <summary>Setup help for Claude, ChatGPT, and Copilot</summary>
+            <p>Use a custom connector or remote HTTP MCP server with OAuth. Hosted assistants need an HTTPS address they can reach; a local assistant can use your home network.</p>
+            <a href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp">MCP setup and supported assistants</a>
+        </details>
+    </section>
+}
+else
+{
+    <section class="connected-apps-mcp" aria-labelledby="mcp-title">
+        <h2 id="mcp-title"><OpenWishIcon Name="stars" /> AI assistants and MCP</h2>
+        <p>AI connections are turned off on this OpenWish.</p>
+        <details class="connected-apps-help">
+            <summary>How to enable AI connections</summary>
+            <p>Ask the person who runs it to enable <code>OpenWishSettings__Integrations__Mcp__Enabled</code>. Add this site's <code>/mcp</code> address to your assistant, then sign in and choose which lists it can use.</p>
+            <a href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp">MCP setup and supported assistants</a>
+        </details>
+    </section>
+}
+
+<p class="connected-apps-privacy"><OpenWishIcon Name="shield-check" /> Choose which lists and ideas each app can use. Reservations, purchases, comments, friends, and hidden surprises stay private.</p>
+
+<h2 class="connected-apps-section-title">Your connections <span>@connections.Count</span></h2>
+@if (connections.Count == 0)
+{
+    <section class="connected-apps-empty" aria-labelledby="connected-apps-empty-title">
+        <span class="connected-apps-empty-mark" aria-hidden="true"><OpenWishIcon Name="link-45deg" /></span>
+        <div>
+            <h3 id="connected-apps-empty-title">No apps are connected</h3>
+            @if (mcpUrl is not null && !Registry.IsEnabled)
+            {
+                <p>Copy the address above into your assistant to get started.</p>
+            }
+            else if (Registry.IsEnabled)
+            {
+                <p>Start from inside one of the apps below. It brings you back here to choose which lists it can use.</p>
+            }
+            else
+            {
+                <p>This OpenWish doesn't have any apps set up yet. The person who runs it can register apps in its settings.</p>
+            }
+        </div>
+    </section>
+}
+else
+{
+    <ul class="connected-apps" role="list">
+        @foreach (var connection in connections)
+        {
+            var confirming = string.Equals(DisconnectConnectionId, connection.ConnectionId, StringComparison.Ordinal);
+            var editing = string.Equals(EditConnectionId, connection.ConnectionId, StringComparison.Ordinal);
+            var defaultList = connection.Wishlists.FirstOrDefault(w => w.IsDefault);
+            <li class="connected-app" id="connection-@connection.ConnectionId">
+                <header class="connected-app-header">
+                    <span class="connected-app-mark" aria-hidden="true">@IntegrationDisplay.Monogram(connection.AppName)</span>
+                    <div class="connected-app-title">
+                        <h3>
+                            @connection.AppName
+                            @if (connection.Audience == IntegrationAudience.Mcp)
+                            {
+                                <span class="connected-app-kind">AI assistant</span>
+                            }
+                        </h3>
+                        <p>
+                            Connected @connection.ConnectedOn.ToLocalHumanizedString().
+                            @(connection.LastUsedOn is { } lastUsed ? $"Last used {lastUsed.ToLocalHumanizedString()}." : "Not used yet.")
+                        </p>
+                    </div>
+                    <span class="connected-app-count">@(connection.IdeasAdded == 1 ? "1 idea added" : $"{connection.IdeasAdded} ideas added")</span>
+                    @if (!confirming && !editing)
+                    {
+                        <a class="btn btn-outline-secondary connected-app-adjust" href="@($"Account/Manage/ConnectedApps?edit={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")" aria-label="Adjust lists for @connection.AppName">Adjust lists</a>
+                    }
+                </header>
+
+                <div class="connected-app-routing">
+                    <span>New ideas go to
+                        @if (defaultList is not null)
+                        {
+                            <a href="@($"/wishlists/{Uri.EscapeDataString(defaultList.PublicId)}")">@defaultList.Name</a>
+                        }
+                        else
+                        {
+                            <strong>No default list available</strong>
+                        }
+                    </span>
+                    <details class="connected-app-access">
+                        <summary>@(connection.AllowAllWishlists ? "All your wishlists" : connection.Wishlists.Count == 1 ? "1 allowed list" : $"{connection.Wishlists.Count} allowed lists")</summary>
+                        <p>@(connection.ManageExistingItems ? "Can manage existing ideas in allowed lists." : "Can only see and manage ideas it added.")</p>
+                        <ul>
+                            @foreach (var wishlist in connection.Wishlists)
+                            {
+                                <li><a href="@($"/wishlists/{Uri.EscapeDataString(wishlist.PublicId)}")">@wishlist.Name</a></li>
+                            }
+                        </ul>
+                    </details>
+                </div>
+
+                @if (!connection.IsAvailable)
+                {
+                    <div class="alert alert-warning mb-3" role="status">
+                        This app is no longer set up on this OpenWish, so it can't make changes. Disconnect it to tidy up.
+                    </div>
+                }
+                else if (connection.IsSelfRegistered)
+                {
+                    <p class="connected-app-description">This assistant named itself; OpenWish can't verify who made it. Disconnect it if you don't recognize it.</p>
+                }
+                else if (!string.IsNullOrWhiteSpace(connection.Description))
+                {
+                    <p class="connected-app-description">@connection.Description</p>
+                }
+
+                @if (confirming)
+                {
+                    <form method="post" @formname="@($"disconnect-{connection.ConnectionId}")" @onsubmit="() => DisconnectAsync(connection)" class="connected-app-confirm" aria-labelledby="disconnect-title-@connection.ConnectionId">
+                        <AntiforgeryToken />
+                        <h4 id="disconnect-title-@connection.ConnectionId">Disconnect @connection.AppName?</h4>
+                        <p>@connection.AppName will stop adding or changing ideas right away. The @(connection.IdeasAdded == 1 ? "idea" : "ideas") it added stay on your lists, and you can reconnect from the app later.</p>
+                        <div class="connected-app-actions">
+                            <a class="btn btn-outline-secondary" href="Account/Manage/ConnectedApps">Keep connected</a>
+                            <button type="submit" class="btn btn-danger" autofocus>Disconnect @connection.AppName</button>
+                        </div>
+                    </form>
+                }
+                else if (editing)
+                {
+                    var options = editOptions;
+                    <form method="post" @formname="@($"lists-{connection.ConnectionId}")" @onsubmit="() => SaveListsAsync(connection)" class="connected-app-lists">
+                        <AntiforgeryToken />
+                        <fieldset>
+                            <legend>Lists it can use</legend>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="allowAllWishlists" value="true" id="all-lists-@connection.ConnectionId" checked="@connection.AllowAllWishlists" aria-describedby="all-lists-help-@connection.ConnectionId" />
+                                <label class="form-check-label" for="all-lists-@connection.ConnectionId">Allow all wishlists</label>
+                                <div class="form-text" id="all-lists-help-@connection.ConnectionId">Includes all lists you own now and create later, even private lists. Leave this off to allow only the checked lists.</div>
+                            </div>
+                            <IntegrationWishlistPicker Id="@($"allow-{connection.ConnectionId}")" Options="@options" SelectedIds="@editSelectedIds" />
+                        </fieldset>
+                        <div class="connected-app-default">
+                            <label class="form-label" for="default-@connection.ConnectionId">New ideas go to</label>
+                            <select class="form-select" name="defaultWishlist" id="default-@connection.ConnectionId" aria-describedby="default-help-@connection.ConnectionId">
+                                @foreach (var wishlist in options)
+                                {
+                                    <option value="@wishlist.PublicId" selected="@(wishlist.PublicId == editDefaultId)">@wishlist.Name</option>
+                                }
+                            </select>
+                            <div id="default-help-@connection.ConnectionId" class="form-text">Choose one of the checked lists, or any list when all wishlists are allowed.</div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="manageExistingItems" value="true" id="existing-items-@connection.ConnectionId" checked="@connection.ManageExistingItems" aria-describedby="existing-items-help-@connection.ConnectionId" />
+                            <label class="form-check-label" for="existing-items-@connection.ConnectionId">Manage existing items in allowed lists</label>
+                            <div class="form-text" id="existing-items-help-@connection.ConnectionId">See, edit, move, and remove ideas you or other apps added. Turn this off for more privacy: only ideas this app added are accessible.</div>
+                        </div>
+                        <div class="connected-app-actions">
+                            <a class="btn btn-outline-secondary" href="@($"Account/Manage/ConnectedApps#connection-{connection.ConnectionId}")">Cancel</a>
+                            <a class="btn btn-outline-danger" href="@($"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")">
+                                <OpenWishIcon Name="x-circle" /> Disconnect
+                            </a>
+                            <button type="submit" class="btn btn-primary">Save permissions</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <a class="connected-app-disconnect" href="@($"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")" aria-label="Disconnect @connection.AppName">Disconnect</a>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@if (availableApps.Count > 0)
+{
+    <section class="connected-apps-available" aria-labelledby="available-apps-title">
+        <h2 id="available-apps-title">Apps you can connect</h2>
+        <p class="text-muted">Open an app, choose <strong>Connect OpenWish</strong>, then approve its lists here.</p>
+        <ul role="list">
+            @foreach (var app in availableApps)
+            {
+                <li>
+                    <span class="connected-app-mark connected-app-mark-quiet" aria-hidden="true">@IntegrationDisplay.Monogram(app.DisplayName)</span>
+                    <div>
+                        <strong>@app.DisplayName</strong>
+                        @if (!string.IsNullOrWhiteSpace(app.Description))
+                        {
+                            <p>@app.Description</p>
+                        }
+                    </div>
+                    @if (app.HomepageUrl is not null)
+                    {
+                        <a class="btn btn-outline-secondary btn-sm" href="@app.HomepageUrl" target="_blank" rel="noopener noreferrer">
+                            Open @app.DisplayName <OpenWishIcon Name="box-arrow-up-right" />
+                            <span class="visually-hidden">(opens in a new tab)</span>
+                        </a>
+                    }
+                    else
+                    {
+                        <span class="connected-app-start-hint">Start in the app</span>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+<details class="connected-apps-guide">
+    <summary>Build or register an app</summary>
+    <p>OpenWish supports server-side apps that use OAuth and a private client secret. The person who runs this OpenWish must register the app before it can connect.</p>
+    <div class="connected-apps-guide-links">
+        <a href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#for-app-developers">Read the app developer guide</a>
+        <a href="/llms.txt">Read llms.txt</a>
+    </div>
+</details>
+</div>
+
+@code {
+    private string userId = default!;
+    private string? errorMessage;
+    private List<ConnectedAppSummary> connections = [];
+    private IReadOnlyList<ConsentWishlistOption> editOptions = [];
+    private HashSet<string> editSelectedIds = new(StringComparer.Ordinal);
+    private string? editDefaultId;
+    private List<IntegrationApp> availableApps = [];
+    private string? mcpUrl;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery(Name = "disconnect")]
+    private string? DisconnectConnectionId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "edit")]
+    private string? EditConnectionId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ClientStore.IsMcpEnabled)
+        {
+            mcpUrl = PublicBaseUri.McpResource(PublicBaseUri.Resolve(HttpContext.Request, Settings.Value.BaseUri)).ToString();
+        }
+
+        var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        userId = user.Id;
+        var loadedConnections = await ConnectionService.GetConnectedAppsAsync(userId);
+        var editing = loadedConnections.FirstOrDefault(c => string.Equals(c.ConnectionId, EditConnectionId, StringComparison.Ordinal));
+        if (editing is not null)
+        {
+            var state = await ConnectionService.GetConsentStateAsync(userId, editing.ClientId);
+            editOptions = state.Wishlists;
+            editSelectedIds = editOptions.Where(w => w.IsAllowed).Select(w => w.PublicId).ToHashSet(StringComparer.Ordinal);
+            editDefaultId = editOptions.FirstOrDefault(w => w.IsDefault)?.PublicId;
+        }
+
+        connections = [.. loadedConnections];
+        var connectedClientIds = connections.Select(c => c.ClientId).ToHashSet(StringComparer.Ordinal);
+        availableApps = Registry.Apps.Where(app => !connectedClientIds.Contains(app.ClientId)).ToList();
+    }
+
+    private async Task SaveListsAsync(ConnectedAppSummary connection)
+    {
+        var form = HttpContext.Request.Form;
+        var chosen = form["wishlist"].Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).ToList();
+        var defaultWishlist = form["defaultWishlist"].ToString();
+        var allowAllWishlists = string.Equals(form["allowAllWishlists"], "true", StringComparison.Ordinal);
+        var manageExistingItems = string.Equals(form["manageExistingItems"], "true", StringComparison.Ordinal);
+        editSelectedIds = chosen.ToHashSet(StringComparer.Ordinal);
+        editDefaultId = defaultWishlist;
+        connections = connections.Select(c => c.ConnectionId == connection.ConnectionId
+            ? c with { AllowAllWishlists = allowAllWishlists, ManageExistingItems = manageExistingItems }
+            : c).ToList();
+
+        if (!allowAllWishlists && chosen.Count == 0)
+        {
+            errorMessage = $"Error: Choose at least one list for {connection.AppName}, or disconnect it.";
+            return;
+        }
+
+        if (!allowAllWishlists && !chosen.Contains(defaultWishlist, StringComparer.Ordinal))
+        {
+            errorMessage = "Error: Where new ideas go must be one of the checked lists.";
+            return;
+        }
+
+        var saved = await ConnectionService.UpdateAllowedWishlistsAsync(userId, connection.ConnectionId, chosen, defaultWishlist,
+            allowAllWishlists, manageExistingItems);
+        if (!saved)
+        {
+            errorMessage = "Error: Those lists could not be saved. Refresh the page and try again.";
+            return;
+        }
+
+        RedirectManager.RedirectToWithStatus("Account/Manage/ConnectedApps", $"Saved permissions for {connection.AppName}.", HttpContext);
+    }
+
+    private async Task DisconnectAsync(ConnectedAppSummary connection)
+    {
+        await ConnectionService.DisconnectAsync(userId, connection.ConnectionId);
+        RedirectManager.RedirectToCurrentPageWithStatus($"Disconnected {connection.AppName}. Ideas it added are still on your lists.", HttpContext);
+    }
+}

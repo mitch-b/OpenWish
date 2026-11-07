@@ -6,33 +6,38 @@ on:
     branches: ["main"]
   push:
     branches: ["main"]
+  merge_group:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   dotnet:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
-      - name: Restore
-        working-directory: src
-        run: dotnet restore
-      - name: Format
-        working-directory: src
-        run: dotnet format --verify-no-changes --no-restore
-      - name: Build
-        working-directory: src
-        run: dotnet build --no-restore
-      - name: Test
-        working-directory: src
-        run: dotnet test --no-build
+      - name: Verify .NET solution
+        run: scripts/verify-dotnet.sh
+      - name: Upload .NET test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dotnet-test-results
+          path: src/TestResults/
+          retention-days: 14
 
   browser:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - name: Run browser verification
@@ -42,4 +47,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: browser-evidence
-          path: .docs/images/verification/
+          path: pr-assets/
+          retention-days: 14

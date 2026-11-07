@@ -7,14 +7,16 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
+playwright_image="openwish-playwright:1.64.1-${run_id}"
 invite_test_image="openwish-invite-tests:${run_id}"
 release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 built_invite_test_image=false
+built_playwright_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
-evidence_directory="$repository_root/.docs/images/verification"
-walkthrough_directory="$repository_root/.docs/images/walkthrough"
+evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/pr-assets/verification}"
+walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/pr-assets/walkthrough}"
 docker_repository_root="$repository_root"
 
 # Docker runs on Mate's host, while this script runs in Mate's container. Keep
@@ -23,13 +25,14 @@ if [[ -n "${MATE_HOST_WORKSPACE:-}" && "$repository_root" == /workspace/* ]]; th
   docker_repository_root="${MATE_HOST_WORKSPACE%/}/${repository_root#/workspace/}"
 fi
 
-docker_evidence_directory="$docker_repository_root/.docs/images/verification"
-docker_walkthrough_directory="$docker_repository_root/.docs/images/walkthrough"
+docker_evidence_directory="${evidence_directory/#$repository_root/$docker_repository_root}"
+docker_walkthrough_directory="${walkthrough_directory/#$repository_root/$docker_repository_root}"
 
 cleanup() {
   local exit_code=$?
+  "${compose[@]}" logs --no-color web > "$evidence_directory/openwish-e2e-web.log" 2>&1 || true
   if ((exit_code != 0)); then
-    "${compose[@]}" logs web >&2 || true
+    cat "$evidence_directory/openwish-e2e-web.log" >&2
   fi
   "${compose[@]}" down --remove-orphans
   if [[ "$built_verification_image" == "true" ]]; then
@@ -37,6 +40,9 @@ cleanup() {
   fi
   if [[ "$built_invite_test_image" == "true" ]]; then
     docker image rm "$invite_test_image" >/dev/null 2>&1 || true
+  fi
+  if [[ "$built_playwright_image" == "true" ]]; then
+    docker image rm "$playwright_image" >/dev/null 2>&1 || true
   fi
   return "$exit_code"
 }
@@ -49,8 +55,9 @@ rm -f \
   "$evidence_directory/openwish-e2e-result.json"
 
 docker build \
-  --tag openwish-playwright:1.64.1 \
+  --tag "$playwright_image" \
   .agents/skills/screenshot
+built_playwright_image=true
 
 if [[ -z "${OPENWISH_PREBUILT_VERIFICATION_IMAGE:-}" ]]; then
   docker build \
@@ -82,7 +89,7 @@ docker run --rm \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
-  openwish-playwright:1.64.1
+  "$playwright_image"
 
 docker run --rm \
   --network "$network_name" \
@@ -92,11 +99,11 @@ docker run --rm \
 if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
   docker run --rm --entrypoint tar \
     --volume "$docker_evidence_directory:/evidence:ro" \
-    openwish-playwright:1.64.1 -C /evidence -cf - . |
+    "$playwright_image" -C /evidence -cf - . |
     tar -C "$evidence_directory" -xf -
   docker run --rm --entrypoint tar \
     --volume "$docker_walkthrough_directory:/walkthrough:ro" \
-    openwish-playwright:1.64.1 -C /walkthrough -cf - . |
+    "$playwright_image" -C /walkthrough -cf - . |
     tar -C "$walkthrough_directory" -xf -
 fi
 
@@ -234,6 +241,20 @@ test -s "$walkthrough_directory/connect-in-person.png"
 test -s "$walkthrough_directory/connect-in-person-mobile.png"
 test -s "$walkthrough_directory/friend-join-confirm.png"
 test -s "$walkthrough_directory/friend-join-confirm-mobile.png"
+test -s "$walkthrough_directory/connect-app-consent.png"
+test -s "$walkthrough_directory/connect-app-consent-mobile.png"
+test -s "$walkthrough_directory/connected-app-ideas.png"
+test -s "$walkthrough_directory/connected-app-ideas-mobile.png"
+test -s "$walkthrough_directory/connected-app-edit-note.png"
+test -s "$walkthrough_directory/connected-apps.png"
+test -s "$walkthrough_directory/connected-apps-mobile.png"
+test -s "$walkthrough_directory/connected-apps-mobile-dark.png"
+test -s "$walkthrough_directory/connected-apps-editor.png"
+test -s "$walkthrough_directory/connected-apps-editor-mobile.png"
+test -s "$walkthrough_directory/connected-apps-editor-dark.png"
+test -s "$walkthrough_directory/connected-apps-search-empty.png"
+test -s "$walkthrough_directory/connected-apps-empty.png"
+test -s "$walkthrough_directory/connected-app-disconnect.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 
 web_log="$evidence_directory/openwish-e2e-web.log"

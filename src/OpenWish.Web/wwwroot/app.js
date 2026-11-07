@@ -3,13 +3,75 @@ window.openWishLastCopy = Promise.resolve(false);
 document.addEventListener("click", function (event) {
     const button = event.target instanceof Element ? event.target.closest("[data-copy-text]") : null;
     if (button && !button.disabled) {
-        window.openWishLastCopy = window.openWishCopyText(button.getAttribute("data-copy-text") ?? "").then(() => true, () => false);
+        const feedback = document.getElementById(button.getAttribute("data-copy-feedback") ?? "");
+        window.openWishLastCopy = window.openWishCopyText(button.getAttribute("data-copy-text") ?? "").then(() => {
+            if (feedback) feedback.textContent = "Address copied. Paste it into your assistant.";
+            return true;
+        }, () => {
+            if (feedback) feedback.textContent = "Could not copy. Select the address and copy it manually.";
+            return false;
+        });
     }
 });
 
 window.openWishLastCopyResult = function () {
     return window.openWishLastCopy;
 };
+
+function updateIntegrationPicker(picker, reconcileDefault = false) {
+    const search = picker.querySelector("[data-picker-search]").value.trim().toLocaleLowerCase();
+    const selectedOnly = picker.querySelector("[data-picker-selected]").checked;
+    const options = [...picker.querySelectorAll("[data-picker-option]")];
+    const selected = options.filter(option => option.querySelector('input[name="wishlist"]').checked);
+    let visible = 0;
+    for (const option of options) {
+        option.hidden = !option.dataset.pickerName.toLocaleLowerCase().includes(search) ||
+            (selectedOnly && !option.querySelector('input[name="wishlist"]').checked);
+        if (!option.hidden) visible += 1;
+    }
+    picker.querySelector("[data-picker-status]").textContent =
+        `${selected.length} selected of ${options.length} lists. ${visible} shown.`;
+    picker.querySelector("[data-picker-empty]").hidden = visible !== 0;
+
+    // Search never disables checkboxes: hidden selections must still be posted.
+    const form = picker.closest("form");
+    const defaultSelect = form?.querySelector('select[name="defaultWishlist"]');
+    if (defaultSelect) {
+        const allowAllWishlists = form.querySelector('input[name="allowAllWishlists"]')?.checked === true;
+        const selectedIds = new Set(selected.map(option => option.querySelector('input[name="wishlist"]').value));
+        if (reconcileDefault && !allowAllWishlists && !selectedIds.has(defaultSelect.value)) {
+            defaultSelect.value = selectedIds.values().next().value ?? "";
+        }
+        for (const option of defaultSelect.options) {
+            // Keep a submitted invalid default visible when rendering a validation error.
+            option.disabled = !allowAllWishlists && !selectedIds.has(option.value) && option.value !== defaultSelect.value;
+        }
+    }
+}
+
+window.openWishInitializeIntegrationPickers = function () {
+    for (const picker of document.querySelectorAll("[data-integration-picker]")) {
+        picker.querySelector("[data-picker-tools]").hidden = false;
+        updateIntegrationPicker(picker);
+    }
+};
+
+document.addEventListener("DOMContentLoaded", window.openWishInitializeIntegrationPickers);
+document.addEventListener("keydown", event => {
+    if (event.key === "Enter" && event.target instanceof Element && event.target.matches("[data-picker-search]")) {
+        event.preventDefault();
+    }
+});
+for (const eventName of ["input", "change"]) {
+    document.addEventListener(eventName, event => {
+        if (!(event.target instanceof Element)) return;
+        const permissionsChanged = event.target.matches('input[name="wishlist"], input[name="allowAllWishlists"]');
+        const picker = event.target.closest("[data-integration-picker]") ??
+            (event.target.matches('input[name="allowAllWishlists"]')
+                ? event.target.closest("form")?.querySelector("[data-integration-picker]") : null);
+        if (picker) updateIntegrationPicker(picker, permissionsChanged);
+    });
+}
 
 window.openWishCopyText = async function (text) {
     if (navigator.clipboard?.writeText) {

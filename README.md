@@ -64,6 +64,7 @@ boundaries carry across screen sizes, with light and dark themes available.
 | Share safely | Choose private, friend-only, or collaborative wishlists without public discovery. |
 | Run a name draw | Invite people, track responses, connect wishlists, and reveal assignments privately. |
 | Avoid duplicates | Reserve an idea or leave a comment without exposing the plan to its recipient. |
+| Bring ideas from other apps | Let apps you run add, update, and remove ideas on lists you choose, labeled with where they came from. See [connected apps](.docs/INTEGRATIONS.md). |
 | Keep ownership | Run the application and PostgreSQL database yourself with standard Docker tooling. |
 
 ## Made for small-group trust

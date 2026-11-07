@@ -1,0 +1,10 @@
+FROM node:20-alpine
+RUN apk add --no-cache python3 make g++
+WORKDIR /app
+COPY server/package.json server/package-lock.json ./
+# Match the companion's production Dockerfile, which currently installs from package.json rather than its stale lockfile.
+RUN npm install --omit=dev
+COPY server/src ./src
+COPY server/test ./test
+COPY server/test-support ./test-support
+CMD ["node", "/verification/atelier-host.mjs"]

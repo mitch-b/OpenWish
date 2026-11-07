@@ -1,6 +1,7 @@
 import { chromium } from "playwright";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import http from "node:http";
 import path from "node:path";
 
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
@@ -435,6 +436,78 @@ async function assertTextContrast(locator, description) {
   }
 }
 
+async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, screenshotPrefix) {
+  const route = `/wishlists/${manifest.wishlistPublicId}`;
+  const link = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  const card = page.locator(".wishlist-card").filter({ has: link });
+  const returnToCards = async () => {
+    await visit(page, "/wishlists", "Family Gift Ideas", visitedRoutes);
+    await page.waitForLoadState("networkidle");
+    const search = page.getByRole("searchbox", { name: "Search wishlists" });
+    await search.fill("Family");
+    await page.getByRole("status").filter({ hasText: "1 wishlist found." }).waitFor({ state: "attached" });
+    const clearSearch = page.getByRole("button", { name: "Clear wishlist search" });
+    await clearSearch.click();
+    await clearSearch.waitFor({ state: "hidden" });
+  };
+  await page.waitForLoadState("networkidle");
+  await link.waitFor({ state: "visible" });
+  await page.keyboard.press("Tab");
+  await link.focus();
+  const focusStyle = await card.evaluate(element => getComputedStyle(element).outlineStyle);
+  if (focusStyle !== "solid") {
+    throw new Error("Keyboard focus did not outline the whole wishlist card.");
+  }
+  await card.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, `${screenshotPrefix}.png`) });
+  await page.keyboard.press("Enter");
+  await page.waitForURL(`${baseUrl}${route}`);
+  await returnToCards();
+
+  for (const selector of [".card-title", ".wishlist-card-icon", ".wishlist-meta", ".card-footer-row"]) {
+    const target = card.locator(selector);
+    await target.scrollIntoViewIfNeeded();
+    const bounds = await target.boundingBox();
+    if (!bounds) {
+      throw new Error(`Wishlist card region ${selector} was not visible.`);
+    }
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.waitForURL(`${baseUrl}${route}`);
+    await returnToCards();
+  }
+  await card.scrollIntoViewIfNeeded();
+  const bounds = await card.boundingBox();
+  await page.mouse.click(bounds.x + 10, bounds.y + 10);
+  await page.waitForURL(`${baseUrl}${route}`);
+  await returnToCards();
+
+  const overflow = card.getByRole("button", { name: "Actions for Family Gift Ideas" });
+  await overflow.click();
+  const deleteAction = card.getByRole("button", { name: "Delete", exact: true });
+  await deleteAction.waitFor({ state: "visible" });
+  if (new URL(page.url()).pathname !== "/wishlists") {
+    throw new Error("The wishlist overflow menu navigated instead of opening.");
+  }
+  await deleteAction.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, `${screenshotPrefix}-overflow.png`) });
+  await deleteAction.click();
+  const dialog = page.getByRole("dialog", { name: "Delete wishlist", exact: true });
+  await dialog.waitFor({ state: "visible" });
+  await screenshot(page, `${screenshotPrefix}-delete-confirmation.png`);
+  if (new URL(page.url()).pathname !== "/wishlists") {
+    throw new Error("A wishlist overflow action navigated instead of opening its confirmation.");
+  }
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.waitFor({ state: "hidden" });
+  if (!(await overflow.evaluate(element => element === document.activeElement))) {
+    throw new Error("Canceling wishlist deletion did not return focus to its overflow button.");
+  }
+  await page.keyboard.press("Enter");
+  await deleteAction.waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await deleteAction.waitFor({ state: "hidden" });
+}
+
 async function restoreWishlistSharing(page, manifest, friendName) {
   const managementPath = `/wishlists/${manifest.wishlistPublicId}/manage`;
   if (new URL(page.url()).pathname !== managementPath) {
@@ -721,6 +794,17 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await assertTextContrast(familyWishlistLink, "Wishlist card navigation link");
   await screenshot(page, "wishlists.png");
+
+  for (const [label, viewport] of [
+    ["desktop", { width: 1440, height: 1000 }],
+    ["tablet", { width: 900, height: 1000 }],
+    ["mobile", { width: 390, height: 844 }]
+  ]) {
+    await page.setViewportSize(viewport);
+    await verifyWishlistCardNavigation(page, manifest, visitedRoutes, `wishlist-cards-${label}`);
+    await assertNoHorizontalScroll(page, `Wishlist cards at ${label} width`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   const ownTab = page.getByRole("tab", { name: "My Wishlists" });
   const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
@@ -1536,6 +1620,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "visible" });
   const notificationDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationDialog.waitFor({ state: "visible" });
+  await page.waitForFunction(() =>
+    document.querySelector(".content")?.inert && document.querySelector(".sidebar")?.inert
+  );
   if (!(await page.locator(".content").evaluate(element => element.inert)) ||
       !(await page.locator(".sidebar").evaluate(element => element.inert))) {
     throw new Error("The modal notification panel did not make background content inert.");
@@ -1560,6 +1647,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await deleteNotification.click();
   const deleteDialog = page.getByRole("dialog", { name: "Delete notification" });
   await deleteDialog.waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const panel = document.getElementById("notification-flyout");
+    return panel !== null && panel.closest("[inert]") !== null;
+  });
   if (!(await notificationDialog.evaluate(element => element.closest("[inert]") !== null))) {
     throw new Error("The notification panel remained interactive behind its delete dialog.");
   }
@@ -1633,6 +1724,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
+  await verifyWishlistCardNavigation(page, manifest, visitedRoutes, "wishlist-cards-dark");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
   await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
@@ -1793,6 +1885,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "dashboard data",
       "owned and friend wishlists",
       "authenticated owned and friend wishlist API data",
+      "whole-card wishlist navigation and independent overflow actions on desktop, tablet, mobile, and dark theme",
+      "wishlist keyboard navigation, named deletion confirmation, and cancel focus restoration",
       "wishlist tab navigation preserves scroll and Tab enters the selected panel",
       "wishlist items and pricing",
       "accessible product links",
@@ -1908,7 +2002,9 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The installed app cannot receive shared product links.");
   }
 
+  const dashboardCircuit = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Quick add an idea", visitedRoutes);
+  await assertDashboardWelcomeSurvivesHydration(page, dashboardCircuit);
   if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
     throw new Error("Pages do not link the web app manifest.");
   }
@@ -2478,6 +2574,10 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   if (invitationOutcomes !== 1 || await page.getByText(/You're (in!|part of)/).count() !== 1) {
     throw new Error(`Accepting an invitation should show exactly one outcome message, found ${invitationOutcomes}.`);
   }
+  await screenshot(page, "invitation-accepted.png", false);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "invitation-accepted-mobile.png", false);
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   const repeatedAcceptance = await context.request.post(
     `${baseUrl}/api/events/invitations/by-public-id/${invitationPublicId}/accept`
@@ -4590,6 +4690,558 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
   await context.close();
 }
 
+// A real HTTP server on loopback inside the verifier container plays the third-party app.
+const fakeAppPort = 4455;
+const connectedApp = {
+  clientId: "studio-demo",
+  clientSecret: "verification-only-studio-secret-0123456789",
+  name: "Studio Notebook",
+  origin: `http://127.0.0.1:${fakeAppPort}`,
+  redirectUri: `http://127.0.0.1:${fakeAppPort}/openwish/callback`
+};
+
+const studioCoatImage = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+<rect width="120" height="120" rx="18" fill="#f3ece3"/>
+<path d="M44 20h32l14 18-6 62H36l-6-62z" fill="#b98a5e"/>
+<path d="M60 22v78" stroke="#8a6440" stroke-width="3"/>
+<circle cx="66" cy="52" r="3" fill="#5c4026"/><circle cx="66" cy="68" r="3" fill="#5c4026"/>
+</svg>`;
+
+function fakeAppPage(heading, body) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${heading}</title></head>
+<body style="font-family:sans-serif;margin:3rem"><h1>${heading}</h1>${body}</body></html>`;
+}
+
+// Calls the integration API exactly as a third-party server would: bearer token only, no cookies.
+async function connectedAppApi(token, method, route, body) {
+  const response = await fetch(`${baseUrl}/api/integrations/v1/${route}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(body ? { "Content-Type": "application/json" } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await response.text();
+  return {
+    status: response.status,
+    text,
+    json: text ? JSON.parse(text) : null,
+    wwwAuthenticate: response.headers.get("www-authenticate") ?? ""
+  };
+}
+
+function buildAuthorizeUrl(state, challenge) {
+  return `${baseUrl}/oauth/authorize?${new URLSearchParams({
+    response_type: "code",
+    client_id: connectedApp.clientId,
+    redirect_uri: connectedApp.redirectUri,
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    scope: "wishlist.items"
+  })}`;
+}
+
+async function startFakeConnectedApp(flow) {
+  const server = http.createServer(async (request, response) => {
+    const requestUrl = new URL(request.url ?? "/", connectedApp.origin);
+    const send = (status, contentType, body) => {
+      response.writeHead(status, { "Content-Type": contentType });
+      response.end(body);
+    };
+
+    if (requestUrl.pathname.endsWith(".svg")) {
+      return send(200, "image/svg+xml", studioCoatImage);
+    }
+
+    if (requestUrl.pathname === "/openwish/callback") {
+      const connected = await flow.onCallback(requestUrl);
+      return send(
+        200,
+        "text/html; charset=utf-8",
+        fakeAppPage(connected ? "Connected to OpenWish" : "OpenWish connection failed", "<p>You can close this tab.</p>"));
+    }
+
+    return send(
+      200,
+      "text/html; charset=utf-8",
+      fakeAppPage(connectedApp.name, `<p>Your wardrobe wishlist.</p><a href="${flow.authorizeUrl}">Connect OpenWish</a>`));
+  });
+  await new Promise(resolve => server.listen(fakeAppPort, "127.0.0.1", resolve));
+  return server;
+}
+
+async function verifyConnectedAppJourney(browser, results) {
+  const assertions = [];
+  const listName = "Winter wardrobe";
+  const state = crypto.randomBytes(16).toString("base64url");
+  const verifier = crypto.randomBytes(48).toString("base64url");
+  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+  const authorizeUrl = buildAuthorizeUrl(state, challenge);
+  let token = null;
+  let callbackProblem = null;
+
+  const fakeApp = await startFakeConnectedApp({
+    authorizeUrl,
+    onCallback: async callbackUrl => {
+      if (callbackUrl.searchParams.get("state") !== state) {
+        callbackProblem = "The callback state did not match.";
+        return false;
+      }
+
+      const response = await fetch(`${baseUrl}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code: callbackUrl.searchParams.get("code") ?? "",
+          redirect_uri: connectedApp.redirectUri,
+          client_id: connectedApp.clientId,
+          client_secret: connectedApp.clientSecret,
+          code_verifier: verifier
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        callbackProblem = `Token exchange failed: ${JSON.stringify(payload)}`;
+        return false;
+      }
+
+      token = payload;
+      return true;
+    }
+  });
+
+  try {
+    await verifyConnectedAppFlow(browser, results, { assertions, listName, challenge, getToken: () => token, getProblem: () => callbackProblem });
+  } finally {
+    await new Promise(resolve => fakeApp.close(resolve));
+  }
+}
+
+async function verifyConnectedAppFlow(browser, results, { assertions, listName, challenge, getToken, getProblem }) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  const diagnostics = monitorPage(page);
+  const loginStatus = await login(context, "owner", ownerEmail);
+
+  // The person starts in the other app, approves in OpenWish, and lands back in the app.
+  await page.goto(`${connectedApp.origin}/`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Connect OpenWish" }).click();
+  await page.waitForURL(url => url.pathname === "/oauth/authorize");
+  await page.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
+  await assertVisible(page, "It never sees reservations, purchases, comments, hidden surprises");
+  if (await page.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      !await page.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
+    throw new Error("New consent must default to selected lists and managing existing items.");
+  }
+  assertions.push("all wishlists defaults off and managing existing items defaults on");
+  const listChoices = page.getByRole("group", { name: `Lists ${connectedApp.name} can use` });
+  for (const checked of await listChoices.locator('input[name="wishlist"]').all()) {
+    await checked.uncheck();
+  }
+  await page.getByLabel("Start a new list for these ideas").check();
+  await page.getByLabel("New list name").fill(listName);
+  const approve = page.getByRole("button", { name: `Connect ${connectedApp.name}` });
+  await assertMinimumTouchTarget(approve, "consent approve button");
+  await screenshot(page, "connect-app-consent.png");
+  await page.locator("#consent-existing-items").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connect-app-permissions.png") });
+  await approve.click();
+  await page.waitForURL(url => url.origin === connectedApp.origin && url.pathname === "/openwish/callback");
+  await page.getByRole("heading", { name: "Connected to OpenWish" }).waitFor({ state: "visible" });
+  const token = getToken();
+  if (getProblem() || !token?.access_token?.startsWith("owi_")) {
+    throw new Error(getProblem() ?? "The connected app did not receive an access token.");
+  }
+  assertions.push("app connects through consent, state, PKCE, and a server-side code exchange");
+
+  const me = await connectedAppApi(token.access_token, "GET", "me");
+  const allowedList = me.json?.wishlists?.[0];
+  if (me.status !== 200 || me.json.wishlists.length !== 1 || allowedList.name !== listName || !allowedList.isDefault) {
+    throw new Error(`Unexpected connected profile: ${me.text}`);
+  }
+
+  // The app logs, edits, and removes ideas for the person.
+  const coat = await connectedAppApi(token.access_token, "PUT", "items/external/piece-coat", {
+    name: "Camel wool coat",
+    description: "Single-breasted, size S",
+    url: `${connectedApp.origin}/pieces/coat`,
+    imageUrl: `${connectedApp.origin}/images/coat.svg`,
+    price: 348,
+    whereToBuy: "Maison Example",
+    priority: 1
+  });
+  const scarf = await connectedAppApi(token.access_token, "PUT", "items/external/piece-scarf", {
+    name: "Silk twill scarf",
+    description: "Navy and cream",
+    price: 95,
+    priority: 2
+  });
+  const gloves = await connectedAppApi(token.access_token, "POST", "items", {
+    name: "Leather gloves",
+    externalId: "piece-gloves",
+    price: 120
+  });
+  if (coat.status !== 201 || scarf.status !== 201 || gloves.status !== 201) {
+    throw new Error(`Logging ideas failed: ${coat.status} ${scarf.status} ${gloves.status}`);
+  }
+  const coatUpdate = await connectedAppApi(token.access_token, "PUT", "items/external/piece-coat", {
+    name: "Camel wool coat",
+    description: "Single-breasted, size S",
+    url: `${connectedApp.origin}/pieces/coat`,
+    imageUrl: `${connectedApp.origin}/images/coat.svg`,
+    price: 298,
+    whereToBuy: "Maison Example"
+  });
+  if (coatUpdate.status !== 200 || coatUpdate.json.id !== coat.json.id || coatUpdate.json.priority !== 1) {
+    throw new Error(`Editing an idea failed: ${coatUpdate.text}`);
+  }
+  const glovesRemoval = await connectedAppApi(token.access_token, "DELETE", "items/external/piece-gloves");
+  if (glovesRemoval.status !== 204) {
+    throw new Error(`Removing an idea returned ${glovesRemoval.status}.`);
+  }
+  const appItems = await connectedAppApi(token.access_token, "GET", "items");
+  if (appItems.json.length !== 2 || /reserv/i.test(appItems.text)) {
+    throw new Error(`The app's idea list was unexpected or exposed reservations: ${appItems.text}`);
+  }
+  assertions.push("app logs, edits, and removes ideas without seeing reservations");
+
+  // OpenWish shows where each idea came from.
+  await visit(page, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await page.getByRole("button", { name: "Grid view" }).click();
+  await page.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
+  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
+  if (await page.getByText("From Studio Notebook").count() < 2) {
+    throw new Error("Each idea the app added should show where it came from.");
+  }
+  await assertVisible(page, "$298.00");
+  if (await page.getByText("Leather gloves").count() !== 0) {
+    throw new Error("An idea the app removed is still on the list.");
+  }
+  const ideaGrid = page.locator(".items-grid");
+  await ideaGrid.scrollIntoViewIfNeeded();
+  await ideaGrid.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas.png") });
+
+  // Server-only layout components can keep Auto on the server. Select its existing WASM payload in this test only.
+  await page.addInitScript(wishlistPath => {
+    if (location.pathname !== wishlistPath) return;
+    const selectWasm = comment => {
+      if (!comment.textContent.startsWith("Blazor:{")) return;
+      const descriptor = JSON.parse(comment.textContent.slice("Blazor:".length));
+      if (descriptor.type === "auto") {
+        comment.textContent = `Blazor:${JSON.stringify({ ...descriptor, type: "webassembly" })}`;
+      }
+    };
+    new MutationObserver(records => {
+      for (const record of records) {
+        for (const added of record.addedNodes) {
+          if (added.nodeType === Node.COMMENT_NODE) selectWasm(added);
+          const walker = document.createTreeWalker(added, NodeFilter.SHOW_COMMENT);
+          while (walker.nextNode()) selectWasm(walker.currentNode);
+        }
+      }
+    }).observe(document, { childList: true, subtree: true });
+  }, `/wishlists/${allowedList.id}`);
+  const wasmItems = page.waitForResponse(response =>
+    response.url().includes(`/api/wishlists/${allowedList.id}/items`) && response.status() === 200, { timeout: 120000 });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await wasmItems.catch(error => {
+    throw new Error(`${error.message}; WebAssembly diagnostics: ${JSON.stringify(diagnostics)}`);
+  });
+  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
+  for (let attempt = 0; attempt < 100 && !await page.locator("#wishlist-item-dialog").isVisible(); attempt++) {
+    await page.getByRole("button", { name: "Edit Camel wool coat" }).first().click();
+    await page.waitForTimeout(100);
+  }
+  const dialog = page.getByRole("dialog", { name: "Edit item" });
+  await dialog.getByText("keeps this idea in sync").waitFor({ state: "visible" }).catch(async error => {
+    throw new Error(`${error.message}; Dialog: ${await page.locator("#wishlist-item-dialog").allTextContents()}; ${JSON.stringify(diagnostics)}`);
+  });
+  await screenshot(page, "connected-app-edit-note.png");
+  if (await dialog.getByTestId("add-another-item").count() !== 0) {
+    throw new Error("A JSON-loaded existing idea was presented as a new item.");
+  }
+  const savedInWasm = page.waitForResponse(response =>
+    response.request().method() === "PUT" &&
+    response.url().includes(`/items/by-public-id/${coat.json.id}`) && response.status() === 200);
+  await dialog.getByRole("button", { name: "Save changes" }).click();
+  await savedInWasm;
+  await dialog.waitFor({ state: "detached" });
+  const afterOwnerEdit = await connectedAppApi(token.access_token, "GET", "items");
+  if (afterOwnerEdit.json.length !== 2 || !afterOwnerEdit.json.some(item => item.id === coat.json.id)) {
+    throw new Error("Editing in WebAssembly duplicated an idea or changed its identity.");
+  }
+  assertions.push("ideas show their source app, and editing one explains the sync");
+  assertions.push("WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it");
+
+  await page.getByRole("link", { name: "Integrations", exact: true }).click();
+  await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });
+  await page.getByText("Build or register an app", { exact: true }).click();
+  await page.getByRole("link", { name: "Read the app developer guide" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Read llms.txt" }).waitFor({ state: "visible" });
+  await page.getByText("Build or register an app", { exact: true }).click();
+  const primaryNavigation = page.locator("#primary-navigation");
+  if (await primaryNavigation.locator('a[href="Account/Manage/ConnectedApps"]').getAttribute("aria-current") !== "page" ||
+      await primaryNavigation.locator('a[href="Account/Manage"]').getAttribute("aria-current") !== null) {
+    throw new Error("Integrations and account navigation should not both appear active.");
+  }
+  await visit(page, "/Account/Manage/ConnectedApps", "Integrations", []);
+  await page.getByRole("button", { name: "Copy address", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Address copied." }).waitFor({ state: "visible" });
+  await page.evaluate(() => {
+    window.openWishOriginalCopyText = window.openWishCopyText;
+    window.openWishCopyText = async () => { throw new Error("Synthetic clipboard failure"); };
+  });
+  await page.getByRole("button", { name: "Copy address", exact: true }).click();
+  await page.getByText("Could not copy. Select the address and copy it manually.", { exact: true }).waitFor({ state: "visible" });
+  await page.evaluate(() => { window.openWishCopyText = window.openWishOriginalCopyText; });
+  await page.getByRole("button", { name: "Copy address", exact: true }).click();
+  await page.getByText("Address copied. Paste it into your assistant.", { exact: true }).waitFor({ state: "visible" });
+  assertions.push("MCP address copy reports success and actionable clipboard failure");
+  const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
+  await connection.getByText("2 ideas added").waitFor({ state: "visible" });
+  await connection.getByRole("link", { name: listName, exact: true }).first().waitFor({ state: "visible" });
+  if (await page.locator('[data-integration-picker]').count() !== 0) {
+    throw new Error("The overview must not render permission forms for every connection.");
+  }
+  const compactHeight = await connection.evaluate(element => element.getBoundingClientRect().height);
+  if (compactHeight > 260) throw new Error(`A compact connection takes ${compactHeight}px.`);
+  await screenshot(page, "connected-apps.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await screenshot(page, "connected-apps-mobile.png");
+  await page.evaluate(() => localStorage.setItem("theme", "dark"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await screenshot(page, "connected-apps-mobile-dark.png");
+  await page.evaluate(() => localStorage.setItem("theme", "light"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  assertions.push("Integrations are reachable from navigation and explain app, llms.txt, and MCP setup");
+
+  // A real large collection, not extra DOM injected into the screenshot.
+  const extraLists = [];
+  for (let index = 1; index <= 24; index++) {
+    const response = await context.request.post(`${baseUrl}/api/wishlists`, {
+      data: { name: `Collection ${String(index).padStart(2, "0")} - thoughtful gifts for family and friends`, isPrivate: true }
+    });
+    if (response.status() !== 201) throw new Error(`Scale wishlist creation failed: ${await response.text()}`);
+    extraLists.push(await response.json());
+  }
+  for (let index = 1; index <= 100; index++) {
+    const result = await connectedAppApi(token.access_token, "POST", "items", { name: `Notebook idea ${index}`, externalId: `scale-${index}` });
+    if (result.status !== 201) throw new Error(`Scale idea creation failed: ${result.text}`);
+  }
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await connection.getByText("102 ideas added").waitFor({ state: "visible" });
+  if (await connection.evaluate(element => element.getBoundingClientRect().height) > compactHeight + 4) {
+    throw new Error("A hundred more ideas inflated the connection summary.");
+  }
+  await connection.getByRole("link", { name: `Adjust lists for ${connectedApp.name}` }).focus();
+  await page.keyboard.press("Enter");
+  const picker = connection.locator("[data-integration-picker]");
+  await picker.getByLabel("Find a list").waitFor({ state: "visible" });
+  const connectionHeading = await connection.locator("header").boundingBox();
+  const stickyHeader = await page.locator(".app-main > .top-row").boundingBox();
+  if (!connectionHeading || !stickyHeader || connectionHeading.y < stickyHeader.y + stickyHeader.height) {
+    throw new Error("The connection anchor placed the app heading behind the sticky header.");
+  }
+  const listScroller = picker.locator(".integration-picker-options");
+  const dimensions = await listScroller.evaluate(element => ({ height: element.clientHeight, content: element.scrollHeight }));
+  if (dimensions.height > 290 || dimensions.content <= dimensions.height) {
+    throw new Error(`Large list picker is not bounded and scrollable: ${JSON.stringify(dimensions)}`);
+  }
+  await picker.getByLabel(listName, { exact: false }).check();
+  const search = picker.getByLabel("Find a list");
+  await search.fill("Collection 01");
+  await search.press("Enter");
+  if (!new URL(page.url()).searchParams.has("edit")) throw new Error("Searching submitted the permissions form.");
+  if (await picker.locator("[data-picker-option]:visible").count() !== 1) throw new Error("List search did not narrow the options.");
+  await picker.getByLabel(extraLists[0].name, { exact: false }).check();
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(extraLists[0].publicId);
+  // The original checked list is hidden by search; saving must retain it.
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, `Saved permissions for ${connectedApp.name}.`);
+  const updated = await connectedAppApi(token.access_token, "GET", "me");
+  if (updated.json.wishlists.length !== 2 ||
+      !updated.json.wishlists.some(list => list.id === allowedList.id) ||
+      !updated.json.wishlists.some(list => list.id === extraLists[0].publicId && list.isDefault)) {
+    throw new Error(`Saving a filtered picker lost hidden access or default: ${updated.text}`);
+  }
+  await connection.getByRole("link", { name: `Adjust lists for ${connectedApp.name}` }).click();
+  await picker.getByLabel("Find a list").fill("no matching collection");
+  await picker.getByText("No matching lists.", { exact: false }).waitFor({ state: "visible" });
+  const captureEditor = async fileName => {
+    await connection.locator(".connected-app-lists").evaluate(element => element.scrollIntoView({ block: "start", behavior: "instant" }));
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(walkthroughDirectory, fileName), fullPage: false });
+  };
+  await captureEditor("connected-apps-search-empty.png");
+  await picker.getByLabel("Find a list").fill("");
+  await picker.getByLabel("Selected only", { exact: true }).check();
+  if (await picker.locator("[data-picker-option]:visible").count() !== 2) throw new Error("Selected-only filter did not retain both lists.");
+  await picker.getByLabel(extraLists[0].name, { exact: false }).uncheck();
+  if (await connection.getByLabel("New ideas go to", { exact: true }).inputValue() !== allowedList.id) {
+    throw new Error("Removing the default did not switch to an allowed list.");
+  }
+  await connection.getByRole("link", { name: "Cancel", exact: true }).click();
+  const afterCancel = await connectedAppApi(token.access_token, "GET", "me");
+  if (afterCancel.json.wishlists.length !== 2) throw new Error("Cancel saved a permission edit.");
+
+  await connection.getByRole("link", { name: `Adjust lists for ${connectedApp.name}` }).click();
+  await picker.getByLabel("Find a list").waitFor({ state: "visible" });
+  await captureEditor("connected-apps-editor.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }, { width: 900, height: 900 }]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureEditor("connected-apps-editor-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.evaluate(() => localStorage.setItem("theme", "dark"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await captureEditor("connected-apps-editor-dark.png");
+  await page.evaluate(() => localStorage.setItem("theme", "light"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  assertions.push("24 extra lists and 102 ideas stay compact; search, hidden selections, selected-only, default switching and cancel work");
+
+  // Plain HTML remains a complete access editor without browser scripting.
+  const plainContext = await browser.newContext({ javaScriptEnabled: false });
+  await login(plainContext, "owner", ownerEmail);
+  const plainPage = await plainContext.newPage();
+  await plainPage.goto(`${baseUrl}/Account/Manage/ConnectedApps?edit=${updated.json.connectionId}`);
+  await plainPage.getByLabel("New ideas go to", { exact: true }).selectOption(allowedList.id);
+  await plainPage.getByLabel("Manage existing items in allowed lists", { exact: true }).check();
+  await plainPage.getByRole("button", { name: "Save permissions", exact: true }).click();
+  const plainSaved = await connectedAppApi(token.access_token, "GET", "me");
+  if (!plainSaved.json.wishlists.some(list => list.id === allowedList.id && list.isDefault)) {
+    throw new Error("The static form could not save without JavaScript.");
+  }
+  await plainContext.close();
+  assertions.push("permission editing works without JavaScript");
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await picker.getByLabel("Find a list").waitFor({ state: "visible" });
+  await picker.getByLabel(extraLists[0].name, { exact: false }).uncheck();
+  const uncheckedDefault = extraLists[1].publicId;
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).uncheck();
+  // Exercise server validation with a choice the enhanced picker normally prevents.
+  await connection.getByLabel("New ideas go to", { exact: true }).evaluate((select, id) => {
+    Array.from(select.options).find(option => option.value === id).disabled = false;
+  }, uncheckedDefault);
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(uncheckedDefault);
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, "Where new ideas go must be one of the checked lists.");
+  if (await connection.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked() ||
+      !await picker.getByLabel(listName, { exact: false }).isChecked() ||
+      await connection.locator(`input[name="wishlist"][value="${uncheckedDefault}"]`).isChecked() ||
+      await connection.getByLabel("New ideas go to", { exact: true }).inputValue() !== uncheckedDefault) {
+    throw new Error("Permission validation discarded submitted privacy, list, or default choices.");
+  }
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-app-validation-privacy.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-app-validation-privacy-mobile.png") });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(allowedList.id);
+  assertions.push("validation retains unchecked existing-item access and the submitted list and default choices");
+
+  await connection.getByLabel("Allow all wishlists", { exact: true }).check();
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(uncheckedDefault);
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, `Saved permissions for ${connectedApp.name}.`);
+  const allLists = await connectedAppApi(token.access_token, "GET", "wishlists");
+  if (allLists.status !== 200 || allLists.json.length < 2 ||
+      !allLists.json.some(list => list.id === uncheckedDefault && list.isDefault)) {
+    throw new Error("Allow all wishlists did not expand access and permit an unchecked default on the existing token.");
+  }
+  await connection.getByRole("link", { name: `Adjust lists for ${connectedApp.name}` }).click();
+  if (!await connection.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
+    throw new Error("Saved connected-app privacy choices were not retained.");
+  }
+  await connection.getByLabel("Allow all wishlists", { exact: true }).uncheck();
+  for (const checked of await connection.locator('input[name="wishlist"]').all()) {
+    await checked.uncheck();
+  }
+  await picker.getByLabel(listName, { exact: false }).check();
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).check();
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, `Saved permissions for ${connectedApp.name}.`);
+  const restrictedLists = await connectedAppApi(token.access_token, "GET", "wishlists");
+  if (restrictedLists.status !== 200 || restrictedLists.json.length !== 1 || restrictedLists.json[0].id !== allowedList.id) {
+    throw new Error("Turning off all wishlists did not restore selected-list access.");
+  }
+  assertions.push("permission settings persist, expand all-list access, and restrict access again without replacing the token");
+
+  // A friend cannot open the new private list the app writes to.
+  const friendContext = await browser.newContext();
+  await login(friendContext, "friend", friendEmail);
+  const friendView = await friendContext.request.get(`${baseUrl}/api/wishlists/${allowedList.id}/items`);
+  if (friendView.ok()) {
+    throw new Error("A friend could read the private list a connected app created.");
+  }
+  await friendContext.close();
+  assertions.push("a non-member cannot read the private list the app writes to");
+
+  await connection.getByRole("link", { name: `Disconnect ${connectedApp.name}`, exact: true }).click();
+  await page.getByRole("heading", { name: `Disconnect ${connectedApp.name}?` }).waitFor({ state: "visible" });
+  await screenshot(page, "connected-app-disconnect.png");
+  await page.getByRole("button", { name: `Disconnect ${connectedApp.name}` }).click();
+  await assertVisible(page, `Disconnected ${connectedApp.name}.`);
+  await screenshot(page, "connected-apps-empty.png");
+  const afterDisconnect = await connectedAppApi(token.access_token, "GET", "me");
+  if (afterDisconnect.status !== 401 || !afterDisconnect.wwwAuthenticate.includes("invalid_token")) {
+    throw new Error(`A disconnected app could still call OpenWish: ${afterDisconnect.status}`);
+  }
+  await visit(page, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
+  assertions.push("disconnecting revokes the token and keeps the ideas");
+
+  if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Connected app browser errors: ${diagnostics.browserErrors.join(" | ")} ` +
+      `${diagnostics.failedResponses.join(" | ")}`
+    );
+  }
+  await context.close();
+
+  // Phone layout for the consent screen and the list with source badges.
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const mobilePage = await mobileContext.newPage();
+  const mobileDiagnostics = monitorPage(mobilePage);
+  await login(mobileContext, "owner", ownerEmail);
+  await mobilePage.goto(buildAuthorizeUrl("mobile-preview", challenge), { waitUntil: "domcontentloaded" });
+  await mobilePage.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
+  await mobilePage.getByLabel("Find a list").waitFor({ state: "visible" });
+  await mobilePage.getByLabel("Find a list").fill("Collection 24");
+  if (await mobilePage.locator("[data-picker-option]:visible").count() !== 1) throw new Error("Consent search did not narrow a large collection.");
+  await assertResponsiveWidths(mobilePage, [{ width: 390, height: 844 }]);
+  await screenshot(mobilePage, "connect-app-consent-mobile.png");
+  await mobilePage.locator("#consent-existing-items").scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({ path: path.join(walkthroughDirectory, "connect-app-permissions-mobile.png") });
+  await visit(mobilePage, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
+  await mobilePage.getByRole("button", { name: "Grid view" }).click();
+  await mobilePage.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
+  const mobileCoat = mobilePage.locator(".wishlist-item-card").filter({ hasText: "Camel wool coat" });
+  await mobileCoat.getByText("From Studio Notebook").waitFor({ state: "visible" });
+  await assertResponsiveWidths(mobilePage, [{ width: 390, height: 844 }]);
+  await mobileCoat.scrollIntoViewIfNeeded();
+  await mobilePage.waitForTimeout(300);
+  await mobileCoat.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas-mobile.png") });
+  if (mobileDiagnostics.browserErrors.length > 0 || mobileDiagnostics.failedResponses.length > 0) {
+    throw new Error(
+      `Connected app mobile errors: ${mobileDiagnostics.browserErrors.join(" | ")} ` +
+      `${mobileDiagnostics.failedResponses.join(" | ")}`
+    );
+  }
+  await mobileContext.close();
+
+  results.push({ scenario: "connected-app", loginStatus, assertions });
+}
+
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
@@ -4616,17 +5268,24 @@ try {
     }
   }
 
-  await verifyDevelopmentLoginJourney(browser, results);
-  await verifyExternalLogin(browser, results);
-  const securityFixture = await verifyOwnerJourney(browser, manifest, results);
-  await verifyProductCaptureJourney(browser, results);
-  await verifyGuestJourney(browser, manifest, securityFixture, results);
-  await verifyFriendJourney(browser, manifest, results);
-  await verifyFeatureDayJourney(browser, manifest, results);
-  await verifyOccasionsJourney(browser, manifest, results);
-  await verifyOccasionRemindersJourney(browser, manifest, results);
-  await verifyMobileJourney(browser, manifest, results);
-  await verifyUnsharedMatchWishlist(browser, manifest, results);
+  const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
+  if (selectedScenario && selectedScenario !== "connected-app") {
+    throw new Error(`Unknown browser scenario: ${selectedScenario}`);
+  }
+  if (!selectedScenario) {
+    await verifyDevelopmentLoginJourney(browser, results);
+    await verifyExternalLogin(browser, results);
+    const securityFixture = await verifyOwnerJourney(browser, manifest, results);
+    await verifyProductCaptureJourney(browser, results);
+    await verifyGuestJourney(browser, manifest, securityFixture, results);
+    await verifyFriendJourney(browser, manifest, results);
+    await verifyFeatureDayJourney(browser, manifest, results);
+    await verifyOccasionsJourney(browser, manifest, results);
+    await verifyOccasionRemindersJourney(browser, manifest, results);
+    await verifyMobileJourney(browser, manifest, results);
+    await verifyUnsharedMatchWishlist(browser, manifest, results);
+  }
+  await verifyConnectedAppJourney(browser, results);
 
   await fs.writeFile(
     path.join(evidenceDirectory, "openwish-e2e-result.json"),

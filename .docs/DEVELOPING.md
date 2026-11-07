@@ -54,6 +54,31 @@ The AppHost forwards both values to `OpenWish.Web`. Google login remains
 disabled when either value is missing. Restart the AppHost after changing
 these secrets.
 
+## Optional connected apps
+
+Register a connected app for local testing in the AppHost user secrets. The
+AppHost forwards every `OpenWishSettings:Integrations` value to the web app:
+
+```bash
+cd src/OpenWish.AppHost
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:ClientId" "studio"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:ClientSecret" "<at-least-32-random-characters>"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:DisplayName" "Studio Notebook"
+dotnet user-secrets set "OpenWishSettings:Integrations:Apps:0:RedirectUris:0" "http://localhost:3001/api/integrations/openwish/callback"
+```
+
+See [Connected apps](INTEGRATIONS.md) for the OAuth flow and API contract.
+`OpenWish.Web.Tests` exercises that contract end to end against PostgreSQL. It
+starts a disposable container, so Docker must be running for `dotnet test`;
+set `OPENWISH_TEST_POSTGRES` to a connection string to reuse an existing
+dedicated test server instead, never a development or production database.
+
+To validate the actual companion rather than the fake app, run
+`scripts/verify-integrated-client.sh /absolute/path/to/the-atelier`.
+It uses an isolated HTTPS Compose stack and synthetic accounts; see the
+[verification details](INTEGRATIONS.md#verification) for prerequisites,
+cookie coverage, and the companion's current lockfile limitation.
+
 ## Optional OpenTelemetry export
 
 OpenWish records ASP.NET Core and outbound HTTP traces plus runtime, ASP.NET
@@ -175,13 +200,18 @@ verify they stay in sync.
 Run the complete local gate from the repository root:
 
 ```bash
-cd src
-dotnet format --verify-no-changes
-dotnet build
-dotnet test
-cd ..
+scripts/verify-dotnet.sh
 scripts/verify-e2e.sh
 ```
+
+The .NET script is also used by GitHub Actions. It restores once, verifies
+formatting and analyzer naming rules, builds, and runs every solution test,
+including the PostgreSQL-backed web suite. Docker must be running. TRX files
+with captured test/server output are written to `src/TestResults/` (override
+with `OPENWISH_TEST_RESULTS_DIR`); CI uploads them as `dotnet-test-results`
+even if a test fails. HTTP page/form assertions include the error response
+body so an HTTP 500 no longer hides its underlying Development exception.
+Targeted test runs do not replace the complete pre-push gate.
 
 The E2E script creates an isolated PostgreSQL and OpenWish stack with a unique
 Compose project name, enables synthetic login and fixtures only in that
@@ -189,8 +219,13 @@ Development environment, and runs the committed Playwright journey. It
 verifies the owner, guest, and friend perspectives across every main route,
 including authorization boundaries, gift assignments, reservations,
 notifications, account settings, theme persistence, and mobile rendering.
-Machine-readable results are written to `.docs/images/verification/`, and the
-README walkthrough is regenerated under `.docs/images/walkthrough/`.
+Machine-readable results are written to ignored `pr-assets/verification/`,
+and walkthrough captures are generated under `pr-assets/walkthrough/`.
+Set `OPENWISH_EVIDENCE_DIR` and `OPENWISH_WALKTHROUGH_DIR` to absolute
+workspace-local directories to keep verification output separate from the
+default staging area. Only set `OPENWISH_WALKTHROUGH_DIR` to
+`"$PWD/.docs/images/walkthrough"` when intentionally refreshing the committed
+README walkthrough.
 
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.
@@ -199,6 +234,12 @@ Every pull request targeting `main` and every push to `main` runs the gate in
 `.github/workflows/validate.yml`, including documentation-only changes. Do not
 add workflow-level `paths` filters: skipped required workflows leave checks
 pending and prevent merging.
+
+Validation also supports merge-group events and manual dispatch. New pushes
+cancel obsolete runs for the same PR, but do not cancel validation of `main`
+or image publication. Both jobs have bounded timeouts and retain diagnostic
+artifacts for 14 days. The browser script saves web logs even on failure
+before removing its temporary containers.
 
 The repository's active `main` ruleset requires both `dotnet` and `browser`
 checks from GitHub Actions, with the branch up to date before merging and no
@@ -209,9 +250,18 @@ also applies to administrators. Automated and manual merges must wait for the
 required checks to succeed; a successful Docker image build is not a substitute.
 GitHub still allows a pull request to be closed without merging.
 
+After bringing a branch up to date with `main` or resolving conflicts, rerun
+both local gates and wait for the required checks on the latest PR revision.
+Investigate failures using the logs and artifacts; do not weaken a test,
+bypass protection, or repeatedly retry an unexplained failure until it passes.
+The Copilot setup workflow installs the same .NET channel as validation,
+checks Docker/Compose availability, and restores the complete solution.
+
 The Docker image workflow in `.github/workflows/docker-image.yml` remains
 path-filtered because it is not a required merge check. Add new image-build
 inputs to that workflow's filter when needed.
+PR image builds do not log into the registry; only pushes to `main` authenticate
+and publish, so fork PRs do not require package-write credentials.
 
 PR #164 also consolidates Dependabot PRs #160, #152, #151, #150, #149, #145,
 #139, #138, and #133. The one-time cleanup workflow

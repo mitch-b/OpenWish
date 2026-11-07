@@ -142,6 +142,25 @@ To enable Google sign-in:
    Authentication__Google__ClientSecret=your-client-secret
    ```
 
+#### Connected apps
+
+Let other apps you run add gift ideas for the people who connect them. Each
+app needs a client ID, a secret of at least 32 characters, and its exact
+callback URL:
+
+```bash
+OpenWishSettings__BaseUri=https://yourdomain.com/
+OpenWishSettings__Integrations__Apps__0__ClientId=studio
+OpenWishSettings__Integrations__Apps__0__ClientSecret=generate-with-openssl-rand-base64-48
+OpenWishSettings__Integrations__Apps__0__DisplayName=Studio Notebook
+OpenWishSettings__Integrations__Apps__0__RedirectUris__0=https://studio.yourdomain.com/api/integrations/openwish/callback
+```
+
+People then connect from inside the app and manage access under **Account
+settings > Connected apps**. Without any registered app, the feature stays
+hidden. See [Connected apps](INTEGRATIONS.md) for every setting, the privacy
+guarantees, and the API the app uses.
+
 #### TLS/SSL Certificate
 
 For HTTPS in production:

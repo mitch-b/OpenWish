@@ -5,6 +5,24 @@ namespace OpenWish.Shared.Tests.Accessibility;
 public class InteractiveControlMarkupTests
 {
     [Fact]
+    public void ConnectedItemSyncNote_DoesNotRequireAnInternalIdAfterWebAssemblyHydration()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        Assert.Contains("@if (!string.IsNullOrWhiteSpace(Model?.SourceAppName))", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Model?.Id > 0 &&", markup, StringComparison.Ordinal);
+        Assert.Contains("keeps this idea in sync", markup, StringComparison.Ordinal);
+        Assert.Contains("_isEditing = model is not null && (model.Id > 0 || !string.IsNullOrWhiteSpace(model.PublicId))", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (!_isEditing)", markup, StringComparison.Ordinal);
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        Assert.Contains("PublicId = item.PublicId", details, StringComparison.Ordinal);
+        Assert.Contains("existingItem.PublicId == item.PublicId", details, StringComparison.Ordinal);
+        Assert.Contains("UpdateWishlistItemByPublicIdAsync(WishlistId, item.PublicId, item)", details, StringComparison.Ordinal);
+        Assert.Contains("@key=\"item.PublicId\"", details, StringComparison.Ordinal);
+        var list = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
+        Assert.Contains("@key=\"item.PublicId\"", list, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MobileNavigation_ExposesAndSynchronizesItsDisclosureState()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Layout", "NavMenu.razor");
@@ -17,6 +35,55 @@ public class InteractiveControlMarkupTests
         Assert.Contains("document.addEventListener(\"change\"", script, StringComparison.Ordinal);
         Assert.Contains("event.target.matches(\".navbar-toggler\")", script, StringComparison.Ordinal);
         Assert.Contains("syncNavigationDisclosure(navigationToggle);", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Integrations_AreDiscoverableAndExplainAppAndMcpSetup()
+    {
+        var navMenu = ReadComponent("OpenWish.Web", "Components", "Layout", "NavMenu.razor");
+        var accountMenu = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");
+        var page = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor");
+
+        Assert.Contains("href=\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
+        Assert.Contains("<span>Integrations</span>", navMenu, StringComparison.Ordinal);
+        Assert.Contains("Match=\"@(IsIntegrationsPage ? NavLinkMatch.All : NavLinkMatch.Prefix)\"", navMenu, StringComparison.Ordinal);
+        Assert.Contains("\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Manage/ConnectedApps\">Integrations</NavLink>", accountMenu, StringComparison.Ordinal);
+        Assert.Contains("Read the app developer guide", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"/llms.txt\"", page, StringComparison.Ordinal);
+        Assert.Contains("OpenWishSettings__Integrations__Mcp__Enabled", page, StringComparison.Ordinal);
+        Assert.Contains("sign in and choose which lists it can use", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IntegrationListPicker_IsSharedBoundedAndProgressivelyEnhanced()
+    {
+        var picker = ReadComponent("OpenWish.Web", "Components", "Shared", "IntegrationWishlistPicker.razor");
+        var css = ReadComponent("OpenWish.Web", "Components", "Shared", "IntegrationWishlistPicker.razor.css");
+        var page = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor");
+        var consent = ReadComponent("OpenWish.Web", "Components", "Pages", "Integrations", "ConnectApp.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+        var initializer = ReadComponent("OpenWish.Web", "wwwroot", "OpenWish.Web.lib.module.js");
+
+        Assert.Contains("<IntegrationWishlistPicker", page, StringComparison.Ordinal);
+        Assert.Contains("<IntegrationWishlistPicker", consent, StringComparison.Ordinal);
+        Assert.Contains("else if (editing)", page, StringComparison.Ordinal);
+        Assert.Contains("@layout OpenWish.Web.Components.Layout.MainLayout", page, StringComparison.Ordinal);
+        Assert.Contains("<PageHeader Title=\"Integrations\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-picker-tools", picker, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=", picker, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", picker, StringComparison.Ordinal);
+        Assert.Contains("name=\"wishlist\"", picker, StringComparison.Ordinal);
+        Assert.Contains("max-height: 18rem", css, StringComparison.Ordinal);
+        Assert.Contains("overflow-y: auto", css, StringComparison.Ordinal);
+        Assert.Contains("selectedIds.has(option.value)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("option.querySelector('input[name=\"wishlist\"]').disabled", script, StringComparison.Ordinal);
+        Assert.Contains("'enhancedload'", initializer, StringComparison.Ordinal);
+        Assert.Contains("data-copy-feedback=\"mcp-copy-status\"", page, StringComparison.Ordinal);
+        Assert.Contains("Could not copy. Select the address", script, StringComparison.Ordinal);
+        var pageCss = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor.css");
+        Assert.Contains(".connected-apps-copy-status:empty {\n    margin: 0;", pageCss, StringComparison.Ordinal);
+        Assert.Contains("scroll-margin-top: 5rem;", pageCss, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -640,7 +707,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("InputId=\"product-url-import-modal\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("@bind-IsImporting=\"_isImporting\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-initial-focus=\"true\"", modalMarkup, StringComparison.Ordinal);
-        Assert.Contains("Model?.Id > 0 ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
+        Assert.Contains("_isEditing ? \"Save changes\" : \"Add item\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishActivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("openWishDeactivateDialog", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("data-dialog-background-allowed", modalMarkup, StringComparison.Ordinal);
@@ -769,6 +836,26 @@ public class InteractiveControlMarkupTests
             styles.IndexOf(".wishlist-card-link {", StringComparison.Ordinal)..styles.IndexOf(".wishlist-card-link:hover", StringComparison.Ordinal)];
         Assert.Contains("color: var(--color-link);", linkStyles, StringComparison.Ordinal);
         Assert.Contains("outline: 3px solid var(--color-link-hover);", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WishlistCards_StretchNavigationWithoutCoveringOverflowActions()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor.css");
+
+        Assert.Contains("class=\"dropdown d-inline-block wishlist-card-actions\"", markup, StringComparison.Ordinal);
+        Assert.Contains(".wishlist-card-link::after {", styles, StringComparison.Ordinal);
+        Assert.Contains("inset: 0;", styles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 1;", styles, StringComparison.Ordinal);
+        var actionStyles = styles[
+            styles.IndexOf(".wishlist-card-actions {", StringComparison.Ordinal)..styles.IndexOf(".kebab-menu {", StringComparison.Ordinal)];
+        Assert.Contains("position: relative;", actionStyles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 2;", actionStyles, StringComparison.Ordinal);
+        Assert.Contains(".wishlist-card:has(.wishlist-card-link:focus-visible)", styles, StringComparison.Ordinal);
+        Assert.Contains("return deleteDialog.ShowAsync(", markup, StringComparison.Ordinal);
+        Assert.Contains("$\"dropdownMenu{Wishlist?.Id}\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
     }
 
     [Fact]

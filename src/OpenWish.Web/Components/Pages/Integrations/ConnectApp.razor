@@ -79,7 +79,7 @@
 
             <fieldset class="consent-section" aria-describedby="consent-lists-help">
                 <legend>Lists @app.DisplayName can use</legend>
-                <p id="consent-lists-help" class="consent-help">New ideas go to the first list you choose. You can change this anytime.</p>
+                <p id="consent-lists-help" class="consent-help">New ideas go to the first selected list in this list order. You can change this anytime from Integrations.</p>
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" id="consent-all-lists" name="allowAllWishlists" value="true" checked="@allowAllWishlists" aria-describedby="consent-all-lists-help" />
                     <label class="form-check-label" for="consent-all-lists">Allow all wishlists</label>
@@ -88,35 +88,7 @@
 
                 @if (consent.Wishlists.Count > 0)
                 {
-                    <ul class="consent-lists" role="list">
-                        @foreach (var wishlist in consent.Wishlists)
-                        {
-                            var inputId = $"consent-list-{wishlist.PublicId}";
-                            <li>
-                                <label class="consent-list" for="@inputId">
-                                    <input class="form-check-input" type="checkbox" id="@inputId" name="wishlist" value="@wishlist.PublicId" checked="@selectedIds.Contains(wishlist.PublicId)" />
-                                    <span class="consent-list-icon" aria-hidden="true">
-                                        @if (string.IsNullOrWhiteSpace(wishlist.Icon))
-                                        {
-                                            <OpenWishIcon Name="list-ul" />
-                                        }
-                                        else
-                                        {
-                                            @wishlist.Icon
-                                        }
-                                    </span>
-                                    <span class="consent-list-text">
-                                        <span class="consent-list-name">@wishlist.Name</span>
-                                        <span class="consent-list-meta">@ListMeta(wishlist)</span>
-                                    </span>
-                                    @if (wishlist.IsDefault)
-                                    {
-                                        <span class="consent-list-badge">Current default</span>
-                                    }
-                                </label>
-                            </li>
-                        }
-                    </ul>
+                    <IntegrationWishlistPicker Id="consent-list" Options="@consent.Wishlists" SelectedIds="@selectedIds" />
                 }
 
                 <div class="consent-new-list">
@@ -142,7 +114,7 @@
                     <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>Add ideas to those lists, and edit or remove the ideas it added</span></li>
                     <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>It never sees reservations, purchases, comments, hidden surprises, your friends, or lists you haven't allowed</span></li>
                 </ul>
-                <p class="consent-help mb-0">Disconnect anytime from <strong>Account settings</strong> &gt; <strong>Connected apps</strong>. Ideas it added stay on your lists.</p>
+                <p class="consent-help mb-0">Adjust lists or disconnect anytime from <strong>Integrations</strong>. Ideas it added stay on your lists.</p>
             </section>
 
             <div class="consent-actions">
@@ -388,9 +360,4 @@
         NavigationManager.NavigateTo(QueryHelpers.AddQueryString(RedirectUri!, parameters));
     }
 
-    private static string ListMeta(ConsentWishlistOption wishlist)
-    {
-        var count = wishlist.ItemCount == 1 ? "1 idea" : $"{wishlist.ItemCount} ideas";
-        return wishlist.EventName is null ? count : $"{count}, for {wishlist.EventName}";
-    }
 }

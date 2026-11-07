@@ -44,9 +44,19 @@ sequenceDiagram
   in grid, list, and card views, for the owner and for shoppers. When the owner
   edits one, OpenWish explains that the app keeps it in sync. Privacy and
   ranking choices made in OpenWish always stay with the owner.
-- **Account settings > Connected apps.** Each connection shows when it was
-  connected and last used, how many ideas it added, and which lists it can use.
-  People can change those permissions, choose where new ideas go, or disconnect.
+- **Integrations.** Copy the MCP address first, or open an available app and
+  choose **Connect OpenWish** there. Each connection has a compact summary
+  showing when it was last used, how many ideas it added, and where new ideas
+  go. Expand **Allowed lists** to view its access, or choose **Adjust lists**
+  to change access and the default destination. Search list names or show
+  **Selected only** in the bounded list picker; filtering never clears a
+  selection. The same picker appears during consent. Large idea collections
+  appear as counts, not an extra feed of items. Forms still work without
+  JavaScript; search and selected-only filtering are enhancements.
+  If the default list is deleted, new ideas go to the oldest remaining allowed
+  list; the summary and editor show that same effective destination.
+  The editor also controls all-wishlist and existing-item permissions. Submitted
+  privacy choices stay in place when a validation error needs correcting.
   Disconnecting stops the app immediately; ideas it added stay on the list.
 
 ### What an app can never see

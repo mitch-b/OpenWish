@@ -8,8 +8,8 @@ lists, not just the ideas they added.
   Clear it for more privacy: only ideas that connection added are accessible.
 - **Allow all wishlists** is off by default. Check it to include every wishlist
   you own, including private lists and lists you create later.
-- Change either choice in Integrations and save permissions. Changes apply to
-  the current connection without needing a new token.
+- Use Adjust lists in Integrations to change either choice and save permissions.
+  Changes apply to the current connection without needing a new token.
   Your choices stay in place if a validation error needs correcting. A
   restricted reconnect also invalidates older pending consent that could
   restore broader access.

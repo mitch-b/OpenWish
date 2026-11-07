@@ -56,6 +56,10 @@ public class IntegrationConnectionService(
                 !c.Deleted);
 
         var allowedIds = connection?.AllowedWishlists.Select(a => a.WishlistId).ToHashSet() ?? [];
+        var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
+            connection?.DefaultWishlistId,
+            wishlists.Where(w => connection?.AllowAllWishlists == true || allowedIds.Contains(w.Id))
+                .Select(w => w.Id).ToList());
         var options = wishlists
             .Select(w => new ConsentWishlistOption(
                 w.PublicId,
@@ -63,7 +67,7 @@ public class IntegrationConnectionService(
                 w.Icon,
                 w.ItemCount,
                 connection?.AllowAllWishlists == true || allowedIds.Contains(w.Id),
-                connection?.DefaultWishlistId == w.Id,
+                effectiveDefaultId == w.Id,
                 w.EventName))
             .ToList();
 
@@ -499,17 +503,26 @@ public class IntegrationConnectionService(
             apps[clientId] = await _clientStore.FindAsync(clientId);
         }
 
+        var allOwnedWishlists = connections.Any(c => c.AllowAllWishlists)
+            ? await context.Wishlists.AsNoTracking()
+                .Where(w => w.OwnerId == userId && !w.Deleted).OrderBy(w => w.Id).ToListAsync()
+            : [];
+
         return connections
             .Select(connection =>
             {
                 var app = apps[connection.ClientId];
-                var wishlists = connection.AllowedWishlists
-                    .Where(a => a.Wishlist is { Deleted: false })
-                    .Select(a => new ConnectedAppWishlist(
-                        a.Wishlist!.PublicId,
-                        a.Wishlist.Name,
-                        a.Wishlist.Icon,
-                        a.WishlistId == connection.DefaultWishlistId))
+                var activeAllowed = connection.AllowAllWishlists ? allOwnedWishlists : connection.AllowedWishlists
+                    .Where(a => a.Wishlist is { Deleted: false } wishlist && wishlist.OwnerId == userId)
+                    .Select(a => a.Wishlist!).OrderBy(w => w.Id).ToList();
+                var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
+                    connection.DefaultWishlistId, activeAllowed.Select(w => w.Id).ToList());
+                var wishlists = activeAllowed
+                    .Select(w => new ConnectedAppWishlist(
+                        w.PublicId,
+                        w.Name,
+                        w.Icon,
+                        w.Id == effectiveDefaultId))
                     .OrderByDescending(w => w.IsDefault)
                     .ThenBy(w => w.Name, StringComparer.CurrentCultureIgnoreCase)
                     .ToList();

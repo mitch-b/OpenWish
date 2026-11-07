@@ -109,7 +109,7 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
     public async Task SaveConnectedListsAsync(string connectionId, IEnumerable<string> wishlistIds, string defaultWishlistId,
         bool allowAllWishlists = false, bool manageExistingItems = true)
     {
-        const string url = "Account/Manage/ConnectedApps";
+        var url = $"Account/Manage/ConnectedApps?edit={Uri.EscapeDataString(connectionId)}";
         var page = await GetPageAsync(url);
         var fields = FormFields(page, $"lists-{connectionId}");
         fields.AddRange(wishlistIds.Select(id => new KeyValuePair<string, string>("wishlist", id)));

@@ -5026,7 +5026,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   const picker = connection.locator("[data-integration-picker]");
   await picker.getByLabel("Find a list").waitFor({ state: "visible" });
   const connectionHeading = await connection.locator("header").boundingBox();
-  const stickyHeader = await page.locator(".top-row").boundingBox();
+  const stickyHeader = await page.locator(".app-main > .top-row").boundingBox();
   if (!connectionHeading || !stickyHeader || connectionHeading.y < stickyHeader.y + stickyHeader.height) {
     throw new Error("The connection anchor placed the app heading behind the sticky header.");
   }

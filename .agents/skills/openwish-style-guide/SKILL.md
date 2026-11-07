@@ -57,6 +57,10 @@ OpenWish is a private coordination space for thoughtful giving. It should feel:
    hierarchy, alignment, density, contrast, wrapping, and interaction states.
    Fix issues and regenerate evidence until the page reads clearly without
    explanation.
+9. Follow `.docs/SCREENSHOTS.md`: keep review captures in ignored `pr-assets/`,
+   upload them as GitHub user attachments, and embed affected desktop/mobile
+   images in the PR body. Include before/after images for polish and declare
+   `UI impact: yes`. Do not commit review-only images.
 
 ## Design rules
 

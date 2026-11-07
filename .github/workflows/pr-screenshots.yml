@@ -1,0 +1,47 @@
+name: PR screenshots
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+  merge_group:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Test screenshot policy
+        run: node --test scripts/pr-screenshots.test.cjs
+      - name: Require hosted desktop and mobile images for UI changes
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { validateScreenshots } = require(`${process.env.GITHUB_WORKSPACE}/scripts/pr-screenshots.cjs`);
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: context.issue.number,
+              per_page: 100
+            });
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.issue.number
+            });
+            const result = validateScreenshots(files, pr.body || '');
+            await core.summary.addHeading('PR screenshot evidence')
+              .addRaw(result.message).write();
+            if (!result.passed) core.setFailed(result.message);

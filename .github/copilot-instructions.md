@@ -45,6 +45,16 @@ analyzer violation automatically; resolve reported naming violations too.
 TRX results, including captured server output, are written to
 `src/TestResults/`.
 
+For every UI-impacting PR, stage review-only screenshots in ignored
+`pr-assets/`, upload them as GitHub user attachments, and embed desktop and
+mobile images in the PR template's screenshot fields. Declare `UI impact: yes`
+even when visible behavior changes only through backend code. Inspect the
+affected journey on the latest revision; include before/after views for polish.
+The `screenshots` CI check requires images for UI source changes and rejects
+committed `pr-assets/` files. See `.docs/SCREENSHOTS.md`. Browser verification
+now writes evidence and walkthrough captures under `pr-assets/` by default;
+refresh committed documentation screenshots only intentionally.
+
 After updating a branch from `main` or resolving conflicts, rerun both gates
 on the resulting tree. When authorized to merge, wait for the required
 `dotnet` and `browser` checks on the latest PR revision; do not bypass

@@ -47,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: browser-evidence
-          path: .docs/images/verification/
+          path: pr-assets/
           retention-days: 14

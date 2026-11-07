@@ -13,8 +13,8 @@ export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 built_invite_test_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
-evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/.docs/images/verification}"
-walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/.docs/images/walkthrough}"
+evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/pr-assets/verification}"
+walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/pr-assets/walkthrough}"
 docker_repository_root="$repository_root"
 
 # Docker runs on Mate's host, while this script runs in Mate's container. Keep

@@ -93,6 +93,7 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
     {
         const string password = "Test-password-123!";
         var email = externalLogin ? TestExternalLoginHandler.Email : $"{Guid.NewGuid():N}@example.test";
+        string expectedUserId;
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -105,6 +106,7 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
                     TestExternalLoginHandler.SchemeName, TestExternalLoginHandler.ProviderKey, "Test external provider"));
                 Assert.True(linked.Succeeded, string.Join(", ", linked.Errors.Select(e => e.Description)));
             }
+            expectedUserId = user.Id;
         }
 
         using var other = await SignInAsync();
@@ -172,6 +174,16 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
         });
         Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
         var token = (await tokenResponse.Content.ReadFromJsonAsync<IntegrationTokenResponse>())!;
+
+        await using (var context = await factory.Services
+            .GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContextAsync())
+        {
+            var ownerId = await context.Wishlists.Where(w => w.PublicId == list.PublicId).Select(w => w.OwnerId).SingleAsync();
+            var connectionUserId = await context.IntegrationConnections
+                .Where(c => c.PublicId == token.ConnectionId).Select(c => c.UserId).SingleAsync();
+            Assert.Equal(expectedUserId, ownerId);
+            Assert.Equal(expectedUserId, connectionUserId);
+        }
 
         var http = factory.CreateApiClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);

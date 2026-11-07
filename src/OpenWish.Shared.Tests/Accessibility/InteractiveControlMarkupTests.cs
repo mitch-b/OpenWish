@@ -1858,7 +1858,7 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("Hosted by @HostName", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("@_event.CreatedBy?.UserName ??", markup, StringComparison.Ordinal);
-        Assert.Contains("@AcceptedMessage", markup, StringComparison.Ordinal);
+        Assert.Contains("AcceptedMessage", markup, StringComparison.Ordinal);
         Assert.Contains("You're part of this event.", markup, StringComparison.Ordinal);
     }
 
@@ -1880,6 +1880,31 @@ public class InteractiveControlMarkupTests
         Assert.Contains("data-testid=\"participant-add-wishlist\"", markup, StringComparison.Ordinal);
         Assert.Contains("_isAcceptedParticipant && !_isOwner", markup, StringComparison.Ordinal);
         Assert.Contains("href=\"/events\">Open my invitations</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AcceptInvite_ShowsOneOutcomeMessageAndNeverDeadEnds()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "AcceptInvite.razor");
+
+        Assert.Equal(2, markup.Split("data-testid=\"invitation-outcome\"", StringSplitOptions.None).Length - 1);
+        Assert.Contains("@(_successMessage ?? AcceptedMessage)", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Logged in as", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("_errorMessage = \"We couldn't find a matching invitation.\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"invitation-switch-account\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Accepting invitation...", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@_isProcessing\"", markup, StringComparison.Ordinal);
+        Assert.Contains("_continueLink.FocusAsync()", markup, StringComparison.Ordinal);
+        Assert.Contains("<a class=\"btn btn-outline-secondary\" href=\"/events\">Back to events</a>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventDetails_RemindsDrawnParticipantsWithoutAWishlistToShareOne()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.Contains("data-testid=\"participant-add-wishlist-after-draw\"", markup, StringComparison.Ordinal);
+        Assert.Contains("_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedWishlist", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

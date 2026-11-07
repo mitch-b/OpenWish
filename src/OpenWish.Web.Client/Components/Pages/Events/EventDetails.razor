@@ -142,6 +142,17 @@ else
             }
         }
 
+        else if (_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedWishlist)
+        {
+            <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" role="status" data-testid="participant-add-wishlist-after-draw">
+                <div>
+                    <strong>Your gift giver can't see any ideas from you yet.</strong>
+                    Share a wishlist with this event so they know what you'd love.
+                </div>
+                <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
+            </div>
+        }
+
         @if (_isPendingInvitee)
         {
             <div class="alert alert-info shadow-sm" role="status">

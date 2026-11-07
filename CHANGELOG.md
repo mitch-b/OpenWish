@@ -11,6 +11,14 @@ All notable user-facing changes to OpenWish are documented here.
   Both permissions can be changed from Integrations. Existing connections
   retain their earlier access, and gift-coordination details remain private.
 
+### Improved
+
+- Accepting or declining an event invitation shows one accurate message.
+- The Accept button shows progress and moves focus to "Continue" after joining.
+- Mismatched and declined invitations offer a clear route back to events.
+- Participants without a shared wishlist are reminded to add one after the
+  exchange draw.
+
 ## [0.13.0] - 2026-11-06
 
 ### Added

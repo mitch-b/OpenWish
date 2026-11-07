@@ -36,13 +36,6 @@
                             </div>
                         }
 
-                        if (!string.IsNullOrEmpty(_successMessage))
-                        {
-                            <div class="alert alert-success" role="alert">
-                                @_successMessage
-                            </div>
-                        }
-
                         @if (string.IsNullOrWhiteSpace(InviteEmail))
                         {
                             <div class="alert alert-warning" role="alert">
@@ -66,9 +59,18 @@
                         }
                         else if (_invitation == null)
                         {
-                            <div class="alert alert-warning" role="alert">
-                                We couldn't find a pending invitation for <strong>@InviteEmail</strong>.
-                                Double-check that you're signed in with the same email address that received the invite or ask the host to resend it.
+                            @if (string.IsNullOrEmpty(_errorMessage))
+                            {
+                                <div class="alert alert-warning" role="alert">
+                                    We couldn't find a pending invitation for <strong>@InviteEmail</strong>.
+                                    Double-check that you're signed in with the same email address that received the invite or ask the host to resend it.
+                                </div>
+                            }
+                            <div class="d-flex flex-wrap gap-2" data-testid="invitation-recovery">
+                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")" data-testid="invitation-switch-account">
+                                    Sign in with a different account
+                                </a>
+                                <a class="btn btn-outline-secondary" href="/events">Back to events</a>
                             </div>
                         }
                         else
@@ -95,33 +97,38 @@
                                 }
 
                                 <div class="alert alert-info" role="alert">
-                                    Logged in as <strong>@InviteEmail</strong>
+                                    Invitation for <strong>@InviteEmail</strong>
                                 </div>
 
                                 @switch (NormalizeStatus(_invitation.Status))
                                 {
                                     case "accepted":
-                                        <div class="alert alert-success" role="alert">
-                                            @AcceptedMessage
+                                        <div class="alert alert-success" role="status" data-testid="invitation-outcome">
+                                            @(_successMessage ?? AcceptedMessage)
                                         </div>
-                                        <a class="btn btn-success" href="/events/@EventId">
+                                        <a class="btn btn-success" href="/events/@EventId" @ref="_continueLink">
                                             Continue and add my wishlist
                                         </a>
                                         break;
                                     case "rejected":
-                                        <div class="alert alert-warning" role="alert">
-                                            You previously declined this invitation. Ask the host to send a new one if you changed your mind.
+                                        <div class="alert alert-warning" role="status" data-testid="invitation-outcome">
+                                            @(_successMessage ?? "You previously declined this invitation. Ask the host to send a new one if you changed your mind.")
                                         </div>
+                                        <a class="btn btn-outline-secondary" href="/events">Back to events</a>
                                         break;
                                     default:
                                         <p class="mb-3">Would you like to accept the invitation?</p>
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="d-flex flex-wrap gap-2" aria-busy="@_isProcessing">
                                             <button class="btn btn-success" @onclick="AcceptInviteAsync" disabled="@_isProcessing">
                                                 @if (_isProcessing && _processingAction == "accept")
                                                 {
                                                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                                                    <span>Accepting invitation...</span>
                                                 }
-                                                Accept invite
+                                                else
+                                                {
+                                                    <span>Accept invite</span>
+                                                }
                                             </button>
                                             <button id="decline-event-invitation"
                                                     class="btn btn-outline-secondary"
@@ -201,6 +208,17 @@
     private string? _successMessage;
     private string? _rejectErrorMessage;
     private Dialog _rejectDialog = default!;
+    private ElementReference _continueLink;
+    private bool _focusContinue;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusContinue)
+        {
+            _focusContinue = false;
+            await _continueLink.FocusAsync();
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -231,10 +249,6 @@
             try
             {
                 _invitation = await EventService.ClaimEventInvitationByEmailAsync(EventId, _currentUserId, InviteEmail);
-                if (_invitation == null)
-                {
-                    _errorMessage = "We couldn't find a matching invitation.";
-                }
             }
             catch (InvalidOperationException ex)
             {
@@ -289,6 +303,7 @@
             {
                 _invitation.Status = "Accepted";
                 _invitation.IsAccepted = true;
+                _focusContinue = true;
                 _successMessage = _event?.IsGiftExchange == false
                     ? "You're in! Continue to the event and add a few gift ideas."
                     : "You're in! Continue to the event and add a few gift ideas for your match.";

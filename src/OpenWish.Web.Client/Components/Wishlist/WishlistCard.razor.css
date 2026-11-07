@@ -1,6 +1,6 @@
 .wishlist-card {
+    position: relative;
     height: 100%;
-    overflow: hidden;
     transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -88,10 +88,29 @@
     text-decoration: underline;
 }
 
-.wishlist-card-link:focus-visible {
-    border-radius: 0.35rem;
+.wishlist-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.wishlist-card:has(.wishlist-card-link:focus-visible) {
     outline: 3px solid var(--color-link-hover);
     outline-offset: 3px;
+}
+
+.wishlist-card-link:focus-visible {
+    outline: none;
+}
+
+.wishlist-card-actions {
+    position: relative;
+    z-index: 2;
+}
+
+.wishlist-card:has(.kebab-menu[aria-expanded="true"]) {
+    z-index: 3;
 }
 
 .kebab-menu {

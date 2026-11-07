@@ -242,6 +242,12 @@ test -s "$walkthrough_directory/connected-app-ideas-mobile.png"
 test -s "$walkthrough_directory/connected-app-edit-note.png"
 test -s "$walkthrough_directory/connected-apps.png"
 test -s "$walkthrough_directory/connected-apps-mobile.png"
+test -s "$walkthrough_directory/connected-apps-mobile-dark.png"
+test -s "$walkthrough_directory/connected-apps-editor.png"
+test -s "$walkthrough_directory/connected-apps-editor-mobile.png"
+test -s "$walkthrough_directory/connected-apps-editor-dark.png"
+test -s "$walkthrough_directory/connected-apps-search-empty.png"
+test -s "$walkthrough_directory/connected-apps-empty.png"
 test -s "$walkthrough_directory/connected-app-disconnect.png"
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 

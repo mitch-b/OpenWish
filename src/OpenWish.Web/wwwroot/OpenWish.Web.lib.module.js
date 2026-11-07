@@ -1,4 +1,7 @@
 ﻿export function afterWebStarted(blazor) {
+    blazor.addEventListener('enhancedload', () => globalThis.openWishInitializeIntegrationPickers());
+    globalThis.openWishInitializeIntegrationPickers();
+
     if (globalThis.openWishPasteRegistered) {
         return;
     }

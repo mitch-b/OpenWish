@@ -209,6 +209,45 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
     }
 
     [Fact]
+    public async Task Settings_LoadsOnlyTheRequestedEditor_AndKeepsChoicesAfterValidation()
+    {
+        using var owner = await SignInAsync("owner");
+        var first = await owner.CreateWishlistAsync(Unique("First destination"));
+        var second = await owner.CreateWishlistAsync(Unique("Second destination"));
+        var app = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
+        await app.ConnectAsync(owner, [first.PublicId]);
+
+        var overview = await owner.GetPageAsync("Account/Manage/ConnectedApps");
+        Assert.Contains("Adjust lists", overview);
+        Assert.Contains(first.Name, overview);
+        Assert.DoesNotContain($"value=\"lists-{app.ConnectionId}\"", overview);
+        Assert.DoesNotContain("data-integration-picker", overview);
+
+        var url = $"Account/Manage/ConnectedApps?edit={app.ConnectionId}";
+        var editor = await owner.GetPageAsync(url);
+        Assert.Contains($"value=\"lists-{app.ConnectionId}\"", editor);
+        Assert.Contains(second.Name, editor);
+        var fields = OpenWishBrowser.FormFields(editor, $"lists-{app.ConnectionId}");
+        fields.Add(new("wishlist", second.PublicId));
+        fields.Add(new("defaultWishlist", first.PublicId));
+        var invalid = await owner.Client.PostAsync(url, new FormUrlEncodedContent(fields));
+        Assert.Equal(HttpStatusCode.OK, invalid.StatusCode);
+        var invalidHtml = await invalid.Content.ReadAsStringAsync();
+        Assert.Contains("must be one of the checked lists", invalidHtml);
+        Assert.Matches($"name=\"wishlist\" value=\"{second.PublicId}\" checked", invalidHtml);
+        Assert.DoesNotMatch($"name=\"wishlist\" value=\"{first.PublicId}\"[^>]*checked", invalidHtml);
+
+        await owner.SaveConnectedListsAsync(app.ConnectionId!, [second.PublicId], second.PublicId);
+        using var api = app.Api();
+        var profile = (await api.GetFromJsonAsync<IntegrationProfileModel>("me", _json))!;
+        Assert.Equal(second.PublicId, Assert.Single(profile.Wishlists).Id);
+        Assert.True(profile.Wishlists[0].IsDefault);
+
+        using var stranger = await SignInAsync("guest");
+        Assert.DoesNotContain("data-integration-picker", await stranger.GetPageAsync(url));
+    }
+
+    [Fact]
     public async Task DisconnectingInSettings_RevokesAccess_AndKeepsIdeas()
     {
         using var owner = await SignInAsync("owner");

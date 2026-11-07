@@ -18,6 +18,7 @@ services:
       ConnectionStrings__OpenWish: Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification
       OpenWishSettings__OwnDatabaseUpgrades: "true"
       OpenWishSettings__EnableDevelopmentLogin: "true"
+      OpenWishSettings__Integrations__Mcp__Enabled: "true"
       Authentication__Google__ClientId: playwright-test-client-id
       Authentication__Google__ClientSecret: playwright-test-client-secret
       # A synthetic connected app; the browser verifier serves it on its own loopback address.

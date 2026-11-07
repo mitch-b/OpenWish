@@ -10,6 +10,8 @@ and settings navigation; existing links and bookmarks still work.
 Connections now show a compact summary with their destination, allowed-list
 count, usage, and ideas added. Choose **Adjust lists** to open only that app's
 editor, change access and the default list, or cancel without saving.
+If the default list is deleted, the displayed destination follows the oldest
+remaining allowed list, matching where the app sends its next idea.
 
 Both connection approval and editing use a searchable, scrollable list picker
 with a **Selected only** filter and live selection counts. Hidden selections

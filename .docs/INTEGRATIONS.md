@@ -47,6 +47,8 @@ sequenceDiagram
   selection. The same picker appears during consent. Large idea collections
   appear as counts, not an extra feed of items. Forms still work without
   JavaScript; search and selected-only filtering are enhancements.
+  If the default list is deleted, new ideas go to the oldest remaining allowed
+  list; the summary and editor show that same effective destination.
   Disconnecting stops the app immediately; ideas it added stay on the list.
 
 ### What an app can never see

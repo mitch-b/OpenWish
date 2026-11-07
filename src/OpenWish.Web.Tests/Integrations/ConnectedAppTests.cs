@@ -410,11 +410,20 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         Assert.Empty(await owner.GetItemsAsync(secret.PublicId));
 
         // Deleting the default list sends new ideas to the remaining allowed list.
+        var later = await owner.CreateWishlistAsync(Unique("A later list"));
+        await owner.SaveConnectedListsAsync(app.ConnectionId!, [gifts.PublicId, secret.PublicId, later.PublicId], secret.PublicId);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.Client.DeleteAsync($"api/wishlists/{secret.PublicId}")).StatusCode);
         var fallback = await api.PostAsJsonAsync("items", new IntegrationItemRequest { Name = "Lands somewhere sensible" }, _json);
         Assert.Equal(HttpStatusCode.Created, fallback.StatusCode);
         Assert.Equal(gifts.PublicId, (await fallback.Content.ReadFromJsonAsync<IntegrationItemModel>(_json))!.WishlistId);
-        Assert.True(Assert.Single((await api.GetFromJsonAsync<List<IntegrationWishlistModel>>("wishlists", _json))!).IsDefault);
+        var survivingLists = (await api.GetFromJsonAsync<List<IntegrationWishlistModel>>("wishlists", _json))!;
+        Assert.Equal(2, survivingLists.Count);
+        Assert.Equal(gifts.PublicId, survivingLists.Single(w => w.IsDefault).Id);
+        var summary = await owner.GetPageAsync("Account/Manage/ConnectedApps");
+        Assert.Contains($"href=\"/wishlists/{gifts.PublicId}\"", summary);
+        Assert.DoesNotContain("No default list available", summary);
+        var editor = await owner.GetPageAsync($"Account/Manage/ConnectedApps?edit={app.ConnectionId}");
+        Assert.Contains($"value=\"{gifts.PublicId}\" selected", editor);
     }
 
     [Fact]

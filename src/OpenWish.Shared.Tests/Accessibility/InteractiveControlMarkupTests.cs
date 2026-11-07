@@ -81,6 +81,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("'enhancedload'", initializer, StringComparison.Ordinal);
         Assert.Contains("data-copy-feedback=\"mcp-copy-status\"", page, StringComparison.Ordinal);
         Assert.Contains("Could not copy. Select the address", script, StringComparison.Ordinal);
+        var pageCss = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor.css");
+        Assert.Contains(".connected-apps-copy-status:empty {\n    margin: 0;", pageCss, StringComparison.Ordinal);
+        Assert.Contains("scroll-margin-top: 5rem;", pageCss, StringComparison.Ordinal);
     }
 
     [Fact]

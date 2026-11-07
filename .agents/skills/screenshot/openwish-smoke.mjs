@@ -1620,6 +1620,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "visible" });
   const notificationDialog = page.getByRole("dialog", { name: "Notifications" });
   await notificationDialog.waitFor({ state: "visible" });
+  await page.waitForFunction(() =>
+    document.querySelector(".content")?.inert && document.querySelector(".sidebar")?.inert
+  );
   if (!(await page.locator(".content").evaluate(element => element.inert)) ||
       !(await page.locator(".sidebar").evaluate(element => element.inert))) {
     throw new Error("The modal notification panel did not make background content inert.");
@@ -1644,6 +1647,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await deleteNotification.click();
   const deleteDialog = page.getByRole("dialog", { name: "Delete notification" });
   await deleteDialog.waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const panel = document.getElementById("notification-flyout");
+    return panel !== null && panel.closest("[inert]") !== null;
+  });
   if (!(await notificationDialog.evaluate(element => element.closest("[inert]") !== null))) {
     throw new Error("The notification panel remained interactive behind its delete dialog.");
   }
@@ -5018,6 +5025,11 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.keyboard.press("Enter");
   const picker = connection.locator("[data-integration-picker]");
   await picker.getByLabel("Find a list").waitFor({ state: "visible" });
+  const connectionHeading = await connection.locator("header").boundingBox();
+  const stickyHeader = await page.locator(".top-row").boundingBox();
+  if (!connectionHeading || !stickyHeader || connectionHeading.y < stickyHeader.y + stickyHeader.height) {
+    throw new Error("The connection anchor placed the app heading behind the sticky header.");
+  }
   const listScroller = picker.locator(".integration-picker-options");
   const dimensions = await listScroller.evaluate(element => ({ height: element.clientHeight, content: element.scrollHeight }));
   if (dimensions.height > 290 || dimensions.content <= dimensions.height) {

@@ -219,11 +219,13 @@ Development environment, and runs the committed Playwright journey. It
 verifies the owner, guest, and friend perspectives across every main route,
 including authorization boundaries, gift assignments, reservations,
 notifications, account settings, theme persistence, and mobile rendering.
-Machine-readable results are written to `.docs/images/verification/`, and the
-README walkthrough is regenerated under `.docs/images/walkthrough/`.
+Machine-readable results are written to ignored `pr-assets/verification/`,
+and walkthrough captures are generated under `pr-assets/walkthrough/`.
 Set `OPENWISH_EVIDENCE_DIR` and `OPENWISH_WALKTHROUGH_DIR` to absolute
 workspace-local directories to keep verification output separate from the
-committed screenshots.
+default staging area. Only set `OPENWISH_WALKTHROUGH_DIR` to
+`"$PWD/.docs/images/walkthrough"` when intentionally refreshing the committed
+README walkthrough.
 
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.

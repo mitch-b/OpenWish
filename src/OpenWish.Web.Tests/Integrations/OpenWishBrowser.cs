@@ -51,8 +51,10 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
     public async Task<string> GetPageAsync(string url)
     {
         var response = await Client.GetAsync(url);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK,
+            $"GET {url} returned {(int)response.StatusCode}: {content}");
+        return content;
     }
 
     /// <summary>Opens the consent screen and approves it with the chosen lists. Returns the redirect back to the app.</summary>
@@ -72,7 +74,8 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
         }
 
         var response = await Client.PostAsync(authorizeUrl, new FormUrlEncodedContent(fields));
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+            $"POST {authorizeUrl} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return response.Headers.Location!;
     }
 
@@ -80,7 +83,8 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
     {
         var page = await GetPageAsync(authorizeUrl);
         var response = await Client.PostAsync(authorizeUrl, new FormUrlEncodedContent(FormFields(page, "consent-deny")));
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+            $"POST {authorizeUrl} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return response.Headers.Location!;
     }
 
@@ -89,7 +93,8 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
         var url = $"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connectionId)}";
         var page = await GetPageAsync(url);
         var response = await Client.PostAsync(url, new FormUrlEncodedContent(FormFields(page, $"disconnect-{connectionId}")));
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+            $"POST {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
     }
 
     public async Task SaveConnectedListsAsync(string connectionId, IEnumerable<string> wishlistIds, string defaultWishlistId)
@@ -100,7 +105,8 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
         fields.AddRange(wishlistIds.Select(id => new KeyValuePair<string, string>("wishlist", id)));
         fields.Add(new("defaultWishlist", defaultWishlistId));
         var response = await Client.PostAsync(url, new FormUrlEncodedContent(fields));
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.StatusCode == HttpStatusCode.Redirect,
+            $"POST {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
     }
 
     /// <summary>The hidden fields Blazor renders for a named static form: its handler name and antiforgery token.</summary>

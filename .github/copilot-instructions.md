@@ -36,6 +36,22 @@ Run the committed browser/API verification from the repository root with
 data, and a Development-only login endpoint; never enable that endpoint in
 production.
 
+Before pushing final changes, run `scripts/verify-dotnet.sh` and
+`scripts/verify-e2e.sh` from the repository root. The first is the exact CI
+.NET gate: restore, format verification, build, and **all** solution tests,
+including `OpenWish.Web.Tests`. Targeted tests are useful during development,
+but do not replace this final gate. `dotnet format` does not repair every
+analyzer violation automatically; resolve reported naming violations too.
+TRX results, including captured server output, are written to
+`src/TestResults/`.
+
+After updating a branch from `main` or resolving conflicts, rerun both gates
+on the resulting tree. When authorized to merge, wait for the required
+`dotnet` and `browser` checks on the latest PR revision; do not bypass
+protection, weaken tests, or treat a green Docker build as approval to merge.
+Investigate failed checks and read their artifacts before retrying. Report
+an unresolved failure rather than repeatedly rerunning it until it is green.
+
 `OpenWish.Web.Tests` hosts the real web app with `WebApplicationFactory` and a
 disposable PostgreSQL container (Testcontainers), so Docker must be running
 for `dotnet test`; set `OPENWISH_TEST_POSTGRES` to reuse an existing server.

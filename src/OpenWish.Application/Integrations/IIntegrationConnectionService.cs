@@ -19,7 +19,11 @@ public sealed record ConsentWishlistOption(
     bool IsDefault,
     string? EventName);
 
-public sealed record ConsentState(IReadOnlyList<ConsentWishlistOption> Wishlists, bool IsReconnecting);
+public sealed record ConsentState(
+    IReadOnlyList<ConsentWishlistOption> Wishlists,
+    bool IsReconnecting,
+    bool AllowAllWishlists = false,
+    bool ManageExistingItems = true);
 
 public sealed record AuthorizationApproval(
     string ClientId,
@@ -28,7 +32,9 @@ public sealed record AuthorizationApproval(
     IReadOnlyCollection<string> WishlistPublicIds,
     string? DefaultWishlistPublicId,
     string? NewWishlistName,
-    IntegrationAudience Audience = IntegrationAudience.Api);
+    IntegrationAudience Audience = IntegrationAudience.Api,
+    bool AllowAllWishlists = false,
+    bool ManageExistingItems = true);
 
 public enum AuthorizationApprovalError
 {
@@ -68,7 +74,9 @@ public sealed record ConnectedAppSummary(
     int IdeasAdded,
     IReadOnlyList<ConnectedAppWishlist> Wishlists,
     bool IsSelfRegistered = false,
-    IntegrationAudience Audience = IntegrationAudience.Api);
+    IntegrationAudience Audience = IntegrationAudience.Api,
+    bool AllowAllWishlists = false,
+    bool ManageExistingItems = false);
 
 public interface IIntegrationConnectionService
 {
@@ -103,7 +111,9 @@ public interface IIntegrationConnectionService
         string userId,
         string connectionPublicId,
         IReadOnlyCollection<string> wishlistPublicIds,
-        string? defaultWishlistPublicId);
+        string? defaultWishlistPublicId,
+        bool allowAllWishlists = false,
+        bool manageExistingItems = false);
 
     /// <summary>Revokes a connection. Ideas the app added stay on their lists.</summary>
     Task<bool> DisconnectAsync(string userId, string connectionPublicId);

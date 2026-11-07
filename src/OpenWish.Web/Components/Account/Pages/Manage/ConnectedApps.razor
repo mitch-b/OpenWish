@@ -18,7 +18,7 @@
 
 <StatusMessage Message="@errorMessage" />
 <h3>Integrations</h3>
-<p class="text-muted connected-apps-intro">Connect trusted apps or an AI assistant to add gift ideas to the lists you choose. They cannot see reservations, purchases, comments, or your friends.</p>
+<p class="text-muted connected-apps-intro">Connect trusted apps or an AI assistant to manage gift ideas in allowed lists. Choose how much to share below. Reservations, purchases, comments, and hidden surprises always stay private.</p>
 
 <section class="connected-apps-guide" aria-labelledby="connected-apps-guide-title">
     <h4 id="connected-apps-guide-title">Build an app</h4>
@@ -130,7 +130,12 @@ else
                     <form method="post" @formname="@($"lists-{connection.ConnectionId}")" @onsubmit="() => SaveListsAsync(connection)" class="connected-app-lists">
                         <AntiforgeryToken />
                         <fieldset>
-                            <legend>Lists it can add to</legend>
+                            <legend>Lists it can use</legend>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="allowAllWishlists" value="true" id="all-lists-@connection.ConnectionId" checked="@connection.AllowAllWishlists" aria-describedby="all-lists-help-@connection.ConnectionId" />
+                                <label class="form-check-label" for="all-lists-@connection.ConnectionId">Allow all wishlists</label>
+                                <div class="form-text" id="all-lists-help-@connection.ConnectionId">Includes all lists you own now and create later, even private lists. Leave this off to allow only the checked lists.</div>
+                            </div>
                             <div class="connected-app-list-grid">
                                 @foreach (var wishlist in options)
                                 {
@@ -150,13 +155,18 @@ else
                                     <option value="@wishlist.PublicId" selected="@wishlist.IsDefault">@wishlist.Name</option>
                                 }
                             </select>
-                            <div id="default-help-@connection.ConnectionId" class="form-text">Choose one of the checked lists.</div>
+                            <div id="default-help-@connection.ConnectionId" class="form-text">Choose one of the checked lists, or any list when all wishlists are allowed.</div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="manageExistingItems" value="true" id="existing-items-@connection.ConnectionId" checked="@connection.ManageExistingItems" aria-describedby="existing-items-help-@connection.ConnectionId" />
+                            <label class="form-check-label" for="existing-items-@connection.ConnectionId">Manage existing items in allowed lists</label>
+                            <div class="form-text" id="existing-items-help-@connection.ConnectionId">See, edit, move, and remove ideas you or other apps added. Turn this off for more privacy: only ideas this app added are accessible.</div>
                         </div>
                         <div class="connected-app-actions">
                             <a class="btn btn-outline-danger" href="@($"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")">
                                 <OpenWishIcon Name="x-circle" /> Disconnect
                             </a>
-                            <button type="submit" class="btn btn-primary">Save lists</button>
+                            <button type="submit" class="btn btn-primary">Save permissions</button>
                         </div>
                     </form>
                 }
@@ -234,27 +244,30 @@ else
         var form = HttpContext.Request.Form;
         var chosen = form["wishlist"].Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).ToList();
         var defaultWishlist = form["defaultWishlist"].ToString();
+        var allowAllWishlists = string.Equals(form["allowAllWishlists"], "true", StringComparison.Ordinal);
+        var manageExistingItems = string.Equals(form["manageExistingItems"], "true", StringComparison.Ordinal);
 
-        if (chosen.Count == 0)
+        if (!allowAllWishlists && chosen.Count == 0)
         {
             errorMessage = $"Error: Choose at least one list for {connection.AppName}, or disconnect it.";
             return;
         }
 
-        if (!chosen.Contains(defaultWishlist, StringComparer.Ordinal))
+        if (!allowAllWishlists && !chosen.Contains(defaultWishlist, StringComparer.Ordinal))
         {
             errorMessage = "Error: Where new ideas go must be one of the checked lists.";
             return;
         }
 
-        var saved = await ConnectionService.UpdateAllowedWishlistsAsync(userId, connection.ConnectionId, chosen, defaultWishlist);
+        var saved = await ConnectionService.UpdateAllowedWishlistsAsync(userId, connection.ConnectionId, chosen, defaultWishlist,
+            allowAllWishlists, manageExistingItems);
         if (!saved)
         {
             errorMessage = "Error: Those lists could not be saved. Refresh the page and try again.";
             return;
         }
 
-        RedirectManager.RedirectToCurrentPageWithStatus($"Saved the lists {connection.AppName} can add to.", HttpContext);
+        RedirectManager.RedirectToCurrentPageWithStatus($"Saved permissions for {connection.AppName}.", HttpContext);
     }
 
     private async Task DisconnectAsync(ConnectedAppSummary connection)

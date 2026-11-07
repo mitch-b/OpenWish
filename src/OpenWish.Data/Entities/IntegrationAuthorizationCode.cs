@@ -19,6 +19,8 @@ public class IntegrationAuthorizationCode
     public IntegrationAudience Audience { get; set; }
     public required string GrantedWishlistIds { get; set; }
     public int DefaultWishlistId { get; set; }
+    public bool AllowAllWishlists { get; set; }
+    public bool ManageExistingItems { get; set; }
     public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset ExpiresOn { get; set; }
     public DateTimeOffset? ConsumedOn { get; set; }

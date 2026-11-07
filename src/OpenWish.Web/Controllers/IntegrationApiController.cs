@@ -106,7 +106,7 @@ public class IntegrationApiController(
     };
 
     private NotFoundObjectResult NotFoundError() =>
-        NotFound(new IntegrationErrorModel { Error = "not_found", ErrorDescription = "No idea added by this app matches." });
+        NotFound(new IntegrationErrorModel { Error = "not_found", ErrorDescription = "No accessible idea matches." });
 
     private IntegrationItemModel WithAbsoluteUrl(IntegrationItemModel item)
     {

@@ -78,8 +78,13 @@
             }
 
             <fieldset class="consent-section" aria-describedby="consent-lists-help">
-                <legend>Lists @app.DisplayName can add to</legend>
+                <legend>Lists @app.DisplayName can use</legend>
                 <p id="consent-lists-help" class="consent-help">New ideas go to the first list you choose. You can change this anytime.</p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="consent-all-lists" name="allowAllWishlists" value="true" checked="@allowAllWishlists" aria-describedby="consent-all-lists-help" />
+                    <label class="form-check-label" for="consent-all-lists">Allow all wishlists</label>
+                    <div id="consent-all-lists-help" class="form-text">Includes every list you own now and create later, even private lists. Leave this off to allow only the lists you check below.</div>
+                </div>
 
                 @if (consent.Wishlists.Count > 0)
                 {
@@ -127,10 +132,15 @@
 
             <section class="consent-section consent-permissions" aria-labelledby="consent-permissions-title">
                 <h2 id="consent-permissions-title">What @app.DisplayName can do</h2>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="consent-existing-items" name="manageExistingItems" value="true" checked="@manageExistingItems" aria-describedby="consent-existing-items-help" />
+                    <label class="form-check-label" for="consent-existing-items">Manage existing items in allowed lists</label>
+                    <div id="consent-existing-items-help" class="form-text">See, edit, move, and remove ideas already on these lists, including ideas you or other apps added. Turn this off for more privacy: the app can only see and manage ideas it added.</div>
+                </div>
                 <ul role="list">
                     <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>See the names of the lists you choose</span></li>
                     <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>Add ideas to those lists, and edit or remove the ideas it added</span></li>
-                    <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>It can't see who reserved or bought anything, comments, your other ideas, or your friends</span></li>
+                    <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>It never sees reservations, purchases, comments, hidden surprises, your friends, or lists you haven't allowed</span></li>
                 </ul>
                 <p class="consent-help mb-0">Disconnect anytime from <strong>Account settings</strong> &gt; <strong>Connected apps</strong>. Ideas it added stay on your lists.</p>
             </section>
@@ -160,6 +170,8 @@
     private string signedInAs = "you";
     private HashSet<string> selectedIds = new(StringComparer.Ordinal);
     private bool createList;
+    private bool allowAllWishlists;
+    private bool manageExistingItems = true;
     private string? newListName;
 
     [CascadingParameter]
@@ -251,6 +263,8 @@
             }
 
             selectedIds = new HashSet<string>(allowed, StringComparer.Ordinal);
+            allowAllWishlists = consent.AllowAllWishlists;
+            manageExistingItems = consent.ManageExistingItems;
             createList = consent.Wishlists.Count == 0;
             newListName = createList ? $"Ideas from {app.DisplayName}" : null;
         }
@@ -268,6 +282,8 @@
             form["wishlist"].Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!),
             StringComparer.Ordinal);
         createList = string.Equals(form["createList"], "true", StringComparison.Ordinal);
+        allowAllWishlists = string.Equals(form["allowAllWishlists"], "true", StringComparison.Ordinal);
+        manageExistingItems = string.Equals(form["manageExistingItems"], "true", StringComparison.Ordinal);
         newListName = form["newListName"].ToString().Trim();
 
         if (createList && string.IsNullOrEmpty(newListName))
@@ -278,7 +294,7 @@
 
         // Keep the on-screen order so "the first list you choose" is predictable.
         var ordered = consent.Wishlists
-            .Where(w => selectedIds.Contains(w.PublicId))
+            .Where(w => allowAllWishlists || selectedIds.Contains(w.PublicId))
             .Select(w => w.PublicId)
             .ToList();
         var result = await ConnectionService.ApproveAsync(userId, new AuthorizationApproval(
@@ -288,7 +304,9 @@
             ordered,
             ordered.FirstOrDefault(),
             createList ? newListName : null,
-            audience));
+            audience,
+            allowAllWishlists,
+            manageExistingItems));
 
         if (result.Code is not null)
         {

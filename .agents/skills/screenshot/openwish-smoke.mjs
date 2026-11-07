@@ -4814,9 +4814,14 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByRole("link", { name: "Connect OpenWish" }).click();
   await page.waitForURL(url => url.pathname === "/oauth/authorize");
   await page.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
-  await assertVisible(page, "It can't see who reserved or bought anything");
-  const listChoices = page.getByRole("group", { name: `Lists ${connectedApp.name} can add to` });
-  for (const checked of await listChoices.locator('input[name="wishlist"]:checked').all()) {
+  await assertVisible(page, "It never sees reservations, purchases, comments, hidden surprises");
+  if (await page.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      !await page.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
+    throw new Error("New consent must default to selected lists and managing existing items.");
+  }
+  assertions.push("all wishlists defaults off and managing existing items defaults on");
+  const listChoices = page.getByRole("group", { name: `Lists ${connectedApp.name} can use` });
+  for (const checked of await listChoices.locator('input[name="wishlist"]').all()) {
     await checked.uncheck();
   }
   await page.getByLabel("Start a new list for these ideas").check();
@@ -4824,6 +4829,8 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   const approve = page.getByRole("button", { name: `Connect ${connectedApp.name}` });
   await assertMinimumTouchTarget(approve, "consent approve button");
   await screenshot(page, "connect-app-consent.png");
+  await page.locator("#consent-existing-items").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connect-app-permissions.png") });
   await approve.click();
   await page.waitForURL(url => url.origin === connectedApp.origin && url.pathname === "/openwish/callback");
   await page.getByRole("heading", { name: "Connected to OpenWish" }).waitFor({ state: "visible" });
@@ -4968,12 +4975,42 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   if (!(await connection.getByLabel(listName).isChecked())) {
     throw new Error("The connected app's list was not shown as allowed.");
   }
-  await screenshot(page, "connected-apps.png");
+  await connection.locator("fieldset").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-apps.png") });
   await page.setViewportSize({ width: 390, height: 844 });
   await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
-  await screenshot(page, "connected-apps-mobile.png");
+  await connection.locator("fieldset").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-apps-mobile.png") });
   await page.setViewportSize({ width: 1280, height: 800 });
   assertions.push("Integrations are reachable from navigation and explain app, llms.txt, and MCP setup");
+
+  // Permission changes are effective on the app's existing token.
+  await connection.getByLabel("Allow all wishlists", { exact: true }).check();
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).uncheck();
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, `Saved permissions for ${connectedApp.name}.`);
+  const allLists = await connectedAppApi(token.access_token, "GET", "wishlists");
+  if (allLists.status !== 200 || allLists.json.length < 2) {
+    throw new Error("Allow all wishlists did not expand access on the existing token.");
+  }
+  const savedConnection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
+  if (!await savedConnection.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      await savedConnection.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
+    throw new Error("Saved connected-app privacy choices were not retained.");
+  }
+  await savedConnection.getByLabel("Allow all wishlists", { exact: true }).uncheck();
+  for (const checked of await savedConnection.locator('input[name="wishlist"]').all()) {
+    await checked.uncheck();
+  }
+  await savedConnection.getByLabel(listName, { exact: true }).check();
+  await savedConnection.getByLabel("Manage existing items in allowed lists", { exact: true }).check();
+  await savedConnection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, `Saved permissions for ${connectedApp.name}.`);
+  const restrictedLists = await connectedAppApi(token.access_token, "GET", "wishlists");
+  if (restrictedLists.status !== 200 || restrictedLists.json.length !== 1 || restrictedLists.json[0].id !== allowedList.id) {
+    throw new Error("Turning off all wishlists did not restore selected-list access.");
+  }
+  assertions.push("permission settings persist, expand all-list access, and restrict access again without replacing the token");
 
   // A friend cannot open the new private list the app writes to.
   const friendContext = await browser.newContext();
@@ -5015,6 +5052,8 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await mobilePage.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
   await assertResponsiveWidths(mobilePage, [{ width: 390, height: 844 }]);
   await screenshot(mobilePage, "connect-app-consent-mobile.png");
+  await mobilePage.locator("#consent-existing-items").scrollIntoViewIfNeeded();
+  await mobilePage.screenshot({ path: path.join(walkthroughDirectory, "connect-app-permissions-mobile.png") });
   await visit(mobilePage, `/wishlists/${allowedList.id}`, "Camel wool coat", []);
   await mobilePage.getByRole("button", { name: "Grid view" }).click();
   await mobilePage.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });

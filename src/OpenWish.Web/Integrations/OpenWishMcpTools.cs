@@ -11,8 +11,8 @@ namespace OpenWish.Web.Integrations;
 
 /// <summary>
 /// The tools AI assistants see at <c>/mcp</c>. They offer exactly what the person approved on the
-/// consent screen: the lists they chose and the ideas this assistant added. Reservations, purchases,
-/// comments, friends, and the person's other ideas are never exposed.
+/// consent screen: allowed lists and, optionally, existing ideas. Reservations, purchases,
+/// comments, friends, and hidden surprises are never exposed.
 /// </summary>
 [McpServerToolType]
 public sealed class OpenWishMcpTools(
@@ -22,7 +22,8 @@ public sealed class OpenWishMcpTools(
 {
     public const string ServerInstructions =
         "OpenWish keeps a person's gift wishlists. Use these tools to save gift ideas the person asks you to remember. " +
-        "You can only see the lists they allowed and the ideas you added; you never see who reserved or bought anything.";
+        "You can only use allowed lists. When managing existing items is enabled, you can also see and manage ideas the person or other apps added. " +
+        "Otherwise, only ideas you added are accessible. You never see reservations, purchases, comments, or hidden surprises.";
 
     [McpServerTool(Name = "list_wishlists", Title = "List wishlists", ReadOnly = true, Idempotent = true, OpenWorld = false)]
     [Description("Lists the wishlists the person allowed this assistant to add ideas to. The default list is where new ideas go when no list is named.")]
@@ -37,8 +38,8 @@ public sealed class OpenWishMcpTools(
         return wishlists;
     }
 
-    [McpServerTool(Name = "list_ideas", Title = "List ideas you added", ReadOnly = true, Idempotent = true, OpenWorld = false)]
-    [Description("Lists the gift ideas this assistant added. It does not show the person's other ideas.")]
+    [McpServerTool(Name = "list_ideas", Title = "List allowed ideas", ReadOnly = true, Idempotent = true, OpenWorld = false)]
+    [Description("Lists ideas in allowed wishlists. Includes existing ideas when the person allows managing them; otherwise shows only ideas this assistant added.")]
     public async Task<IReadOnlyList<IntegrationItemModel>> ListIdeas(
         [Description("Only list ideas on this wishlist ID. Omit to list ideas on every allowed list.")] string? wishlistId = null)
     {
@@ -73,8 +74,8 @@ public sealed class OpenWishMcpTools(
         return Unwrap(await itemService.CreateItemAsync(Caller, request));
     }
 
-    [McpServerTool(Name = "update_idea", Title = "Update an idea you added", Idempotent = true, OpenWorld = false)]
-    [Description("Changes an idea this assistant added. Only the fields you pass change; pass an empty string to clear a text field.")]
+    [McpServerTool(Name = "update_idea", Title = "Update an allowed idea", Idempotent = true, OpenWorld = false)]
+    [Description("Changes an accessible idea in an allowed list, including existing ideas when permitted. Only the fields you pass change; pass an empty string to clear a text field.")]
     public async Task<IntegrationItemModel> UpdateIdea(
         [Description("The idea ID from add_idea or list_ideas.")] string ideaId,
         [Description("A new name.")] string? name = null,
@@ -88,7 +89,7 @@ public sealed class OpenWishMcpTools(
     {
         var caller = Caller;
         var existing = await itemService.GetItemAsync(caller, ideaId)
-            ?? throw new McpException("No idea added by this assistant has that ID.");
+            ?? throw new McpException("No accessible idea has that ID. Call list_ideas to see allowed ideas.");
 
         var request = new IntegrationItemRequest
         {
@@ -105,12 +106,12 @@ public sealed class OpenWishMcpTools(
         return Unwrap(await itemService.UpdateItemAsync(caller, ideaId, request));
     }
 
-    [McpServerTool(Name = "remove_idea", Title = "Remove an idea you added", Destructive = true, Idempotent = true, OpenWorld = false)]
-    [Description("Removes an idea this assistant added. It can't remove the person's other ideas.")]
+    [McpServerTool(Name = "remove_idea", Title = "Remove an allowed idea", Destructive = true, Idempotent = true, OpenWorld = false)]
+    [Description("Removes an accessible idea in an allowed list, including existing ideas when the person permits managing them.")]
     public async Task<string> RemoveIdea([Description("The idea ID from add_idea or list_ideas.")] string ideaId) =>
         await itemService.DeleteItemAsync(Caller, ideaId)
             ? "Removed the idea."
-            : throw new McpException("No idea added by this assistant has that ID.");
+            : throw new McpException("No accessible idea has that ID. Call list_ideas to see allowed ideas.");
 
     private IntegrationCaller Caller =>
         httpContextAccessor.HttpContext?.User.GetIntegrationCaller()
@@ -130,7 +131,7 @@ public sealed class OpenWishMcpTools(
         IntegrationWriteStatus.Created or IntegrationWriteStatus.Updated when result.Item is not null => WithAbsoluteUrl(result.Item),
         IntegrationWriteStatus.WishlistNotAllowed => throw new McpException(
             "That wishlist isn't one the person allowed. Call list_wishlists to see the allowed lists."),
-        _ => throw new McpException("No idea added by this assistant has that ID.")
+        _ => throw new McpException("No accessible idea has that ID. Call list_ideas to see allowed ideas.")
     };
 
     private IntegrationItemModel WithAbsoluteUrl(IntegrationItemModel item)

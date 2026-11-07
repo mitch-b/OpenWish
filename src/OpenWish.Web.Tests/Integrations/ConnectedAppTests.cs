@@ -132,7 +132,7 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         var list = await owner.CreateWishlistAsync(Unique("Birthday"));
         var ownIdea = await owner.AddOwnItemAsync(list.PublicId, new WishlistItemModel { Name = "Owner's own idea" });
         var app = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
-        await app.ConnectAsync(owner, [list.PublicId]);
+        await app.ConnectAsync(owner, [list.PublicId], manageExistingItems: false);
         using var api = app.Api();
 
         var created = await api.PostAsJsonAsync("items", new IntegrationItemRequest { Name = "Reading lamp", ExternalId = "lamp" }, _json);
@@ -256,7 +256,7 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         var consent = WebUtility.HtmlDecode(await owner.GetPageAsync(app.BuildAuthorizeUrl()));
         Assert.Contains("Connect Studio Notebook", consent);
         Assert.Contains(list.Name, consent);
-        Assert.Contains("can't see who reserved or bought anything", consent);
+        Assert.Contains("never sees reservations, purchases, comments, hidden surprises", consent);
         Assert.DoesNotContain("already connected", consent);
 
         await app.ConnectAsync(owner, [list.PublicId]);
@@ -447,7 +447,7 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         Assert.Equal(HttpStatusCode.Created, friendUpsert.StatusCode);
 
         var ownerPantry = factory.CreateConnectedApp(OpenWishAppFactory.Pantry);
-        await ownerPantry.ConnectAsync(owner, [ownerList.PublicId]);
+        await ownerPantry.ConnectAsync(owner, [ownerList.PublicId], manageExistingItems: false);
         using var pantryApi = ownerPantry.Api();
         Assert.Empty((await pantryApi.GetFromJsonAsync<List<IntegrationItemModel>>("items", _json))!);
         Assert.Equal(HttpStatusCode.NotFound, (await pantryApi.DeleteAsync($"items/{ownerItem.Id}")).StatusCode);

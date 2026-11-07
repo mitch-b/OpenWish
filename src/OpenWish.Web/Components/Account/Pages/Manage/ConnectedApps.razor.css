@@ -207,6 +207,7 @@
 }
 
 .connected-app-lists {
+    scroll-margin-top: 5rem;
     margin-top: 1rem;
     padding: 1rem;
     border: 1px solid var(--color-border-muted);
@@ -362,6 +363,10 @@
 }
 
 @media (max-width: 575.98px) {
+    .connected-app-lists {
+        scroll-margin-top: 1rem;
+    }
+
     .connected-app-actions .btn {
         flex: 1 1 auto;
     }

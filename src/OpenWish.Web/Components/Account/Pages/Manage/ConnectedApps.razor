@@ -250,6 +250,16 @@ else
         var allowAllWishlists = string.Equals(form["allowAllWishlists"], "true", StringComparison.Ordinal);
         var manageExistingItems = string.Equals(form["manageExistingItems"], "true", StringComparison.Ordinal);
 
+        listOptions[connection.ConnectionId] = listOptions[connection.ConnectionId]
+            .Select(w => w with
+            {
+                IsAllowed = chosen.Contains(w.PublicId, StringComparer.Ordinal),
+                IsDefault = string.Equals(w.PublicId, defaultWishlist, StringComparison.Ordinal)
+            }).ToList();
+        connections = connections.Select(c => c.ConnectionId == connection.ConnectionId
+            ? c with { AllowAllWishlists = allowAllWishlists, ManageExistingItems = manageExistingItems }
+            : c).ToList();
+
         if (!allowAllWishlists && chosen.Count == 0)
         {
             errorMessage = $"Error: Choose at least one list for {connection.AppName}, or disconnect it.";

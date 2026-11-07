@@ -93,16 +93,23 @@ public sealed class OpenWishMcpTools(
 
         var request = new IntegrationItemRequest
         {
-            WishlistId = wishlistId ?? existing.WishlistId,
-            Name = name ?? existing.Name,
-            Description = description ?? existing.Description,
-            Url = url ?? existing.Url,
-            ImageUrl = imageUrl ?? existing.ImageUrl,
-            Price = price ?? existing.Price,
-            WhereToBuy = whereToBuy ?? existing.WhereToBuy,
+            WishlistId = wishlistId,
+            Name = name,
+            Description = description,
+            Url = url,
+            ImageUrl = imageUrl,
+            Price = price,
+            WhereToBuy = whereToBuy,
             Priority = priority
         };
-        Validate(request);
+        Validate(request, partial: true);
+        request.WishlistId ??= existing.WishlistId;
+        request.Name ??= existing.Name;
+        request.Description ??= existing.Description;
+        request.Url ??= existing.Url;
+        request.ImageUrl ??= existing.ImageUrl;
+        request.Price ??= existing.Price;
+        request.WhereToBuy ??= existing.WhereToBuy;
         return Unwrap(await itemService.UpdateItemAsync(caller, ideaId, request));
     }
 
@@ -117,10 +124,29 @@ public sealed class OpenWishMcpTools(
         httpContextAccessor.HttpContext?.User.GetIntegrationCaller()
             ?? throw new McpException("This connection is no longer authorized. Connect OpenWish again.");
 
-    private static void Validate(IntegrationItemRequest request)
+    private static void Validate(IntegrationItemRequest request, bool partial = false)
     {
         var results = new List<ValidationResult>();
-        if (!Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true))
+        if (partial)
+        {
+            foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(request))
+            {
+                var value = property.GetValue(request);
+                if (value is not null)
+                {
+                    Validator.TryValidateProperty(value,
+                        new ValidationContext(request) { MemberName = property.Name }, results);
+                }
+            }
+            results.AddRange(request.Validate(new ValidationContext(request))
+                .Where(error => request.Name is not null || !error.MemberNames.Contains(nameof(IntegrationItemRequest.Name))));
+        }
+        else
+        {
+            Validator.TryValidateObject(request, new ValidationContext(request), results, validateAllProperties: true);
+        }
+
+        if (results.Count > 0)
         {
             throw new McpException(string.Join(" ", results.Select(r => r.ErrorMessage).Distinct()));
         }

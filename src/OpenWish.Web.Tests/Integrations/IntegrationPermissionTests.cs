@@ -10,7 +10,7 @@ using Xunit;
 
 namespace OpenWish.Web.Tests.Integrations;
 
-[Collection(IntegrationCollection.Name)]
+[Collection(IntegrationPermissionCollection.Name)]
 public sealed class IntegrationPermissionTests(OpenWishAppFactory factory)
 {
     [Theory]
@@ -145,6 +145,69 @@ public sealed class IntegrationPermissionTests(OpenWishAppFactory factory)
         Assert.False(state.ManageExistingItems);
     }
 
+    [Theory]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    public async Task RestrictedReconnect_InvalidatesOlderBroaderConsent(bool allowAllWishlists, bool manageExistingItems,
+        bool olderAllowsAllWishlists)
+    {
+        using var owner = await SignInAsync("owner");
+        var list = await owner.CreateWishlistAsync(Unique("Superseded consent"));
+        var removedList = await owner.CreateWishlistAsync(Unique("Removed consent list"));
+        var idea = await owner.AddOwnItemAsync(list.PublicId, new WishlistItemModel { Name = "Existing idea" });
+        var active = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
+        await active.ConnectAsync(owner, [list.PublicId, removedList.PublicId], allowAllWishlists: olderAllowsAllWishlists);
+        var pending = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
+        var olderCode = pending.ReadCallback(await owner.ApproveAsync(pending.BuildAuthorizeUrl(),
+            [list.PublicId, removedList.PublicId], allowAllWishlists: olderAllowsAllWishlists));
+        var restricted = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
+        await restricted.ConnectAsync(owner, [list.PublicId], allowAllWishlists: allowAllWishlists,
+            manageExistingItems: manageExistingItems);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await pending.RequestTokenAsync(olderCode)).StatusCode);
+        using var api = restricted.Api();
+        Assert.Equal(manageExistingItems ? HttpStatusCode.OK : HttpStatusCode.NotFound,
+            (await api.GetAsync($"items/{idea.PublicId}")).StatusCode);
+        if (!allowAllWishlists)
+        {
+            Assert.Equal(list.PublicId, Assert.Single((await api.GetFromJsonAsync<List<IntegrationWishlistModel>>("wishlists"))!).Id);
+        }
+    }
+
+    [Fact]
+    public async Task SettingsValidation_PreservesSubmittedPrivacyAndDefaultChoices()
+    {
+        using var owner = await SignInAsync("owner");
+        var selected = await owner.CreateWishlistAsync(Unique("Selected"));
+        var uncheckedList = await owner.CreateWishlistAsync(Unique("Unchecked default"));
+        var own = await owner.AddOwnItemAsync(selected.PublicId, new WishlistItemModel { Name = "Owner idea" });
+        var app = factory.CreateConnectedApp(OpenWishAppFactory.Studio);
+        await app.ConnectAsync(owner, [selected.PublicId], allowAllWishlists: true);
+        const string url = "Account/Manage/ConnectedApps";
+        var fields = OpenWishBrowser.FormFields(await owner.GetPageAsync(url), $"lists-{app.ConnectionId}");
+        fields.Add(new("wishlist", selected.PublicId));
+        fields.Add(new("defaultWishlist", uncheckedList.PublicId));
+        var invalid = await owner.Client.PostAsync(url, new FormUrlEncodedContent(fields));
+        Assert.Equal(HttpStatusCode.OK, invalid.StatusCode);
+        var errorPage = await invalid.Content.ReadAsStringAsync();
+        Assert.Contains("Where new ideas go must be one of the checked lists.", errorPage);
+        Assert.DoesNotContain($"id=\"existing-items-{app.ConnectionId}\" checked", errorPage);
+        Assert.DoesNotContain($"id=\"all-lists-{app.ConnectionId}\" checked", errorPage);
+        Assert.Contains($"value=\"{uncheckedList.PublicId}\" selected", errorPage);
+        Assert.Contains($"id=\"allow-{app.ConnectionId}-{selected.PublicId}\" checked", errorPage);
+        Assert.DoesNotContain($"id=\"allow-{app.ConnectionId}-{uncheckedList.PublicId}\" checked", errorPage);
+
+        var corrected = OpenWishBrowser.FormFields(errorPage, $"lists-{app.ConnectionId}");
+        corrected.Add(new("wishlist", selected.PublicId));
+        corrected.Add(new("defaultWishlist", selected.PublicId));
+        Assert.Equal(HttpStatusCode.Redirect,
+            (await owner.Client.PostAsync(url, new FormUrlEncodedContent(corrected))).StatusCode);
+        using var api = app.Api();
+        Assert.Equal(HttpStatusCode.NotFound, (await api.GetAsync($"items/{own.PublicId}")).StatusCode);
+    }
+
     private async Task<OpenWishBrowser> SignInAsync(string role)
     {
         var browser = factory.CreateBrowser();
@@ -153,4 +216,10 @@ public sealed class IntegrationPermissionTests(OpenWishAppFactory factory)
     }
 
     private static string Unique(string name) => $"{name} {Guid.NewGuid():N}";
+}
+
+[CollectionDefinition(Name)]
+public sealed class IntegrationPermissionCollection : ICollectionFixture<OpenWishAppFactory>
+{
+    public const string Name = "OpenWish permission host";
 }

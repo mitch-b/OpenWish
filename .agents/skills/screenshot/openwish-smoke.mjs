@@ -4986,6 +4986,32 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.setViewportSize({ width: 1280, height: 800 });
   assertions.push("Integrations are reachable from navigation and explain app, llms.txt, and MCP setup");
 
+  const uncheckedDefault = await connection.locator('select[name="defaultWishlist"] option')
+    .evaluateAll((options, allowedId) => options.map(option => option.value).find(id => id !== allowedId), allowedList.id);
+  if (!uncheckedDefault) {
+    throw new Error("The privacy validation scenario requires another owned list.");
+  }
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).uncheck();
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(uncheckedDefault);
+  await connection.getByRole("button", { name: "Save permissions", exact: true }).click();
+  await assertVisible(page, "Where new ideas go must be one of the checked lists.");
+  if (await connection.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
+      await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked() ||
+      !await connection.getByLabel(listName, { exact: true }).isChecked() ||
+      await connection.locator(`input[name="wishlist"][value="${uncheckedDefault}"]`).isChecked() ||
+      await connection.getByLabel("New ideas go to", { exact: true }).inputValue() !== uncheckedDefault) {
+    throw new Error("Permission validation discarded submitted privacy, list, or default choices.");
+  }
+  await connection.locator("fieldset").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-app-validation-privacy.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "connected-app-validation-privacy-mobile.png") });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await connection.getByLabel("New ideas go to", { exact: true }).selectOption(allowedList.id);
+  assertions.push("validation retains unchecked existing-item access and the submitted list and default choices");
+
   // Permission changes are effective on the app's existing token.
   await connection.getByLabel("Allow all wishlists", { exact: true }).check();
   await connection.getByLabel("Manage existing items in allowed lists", { exact: true }).uncheck();

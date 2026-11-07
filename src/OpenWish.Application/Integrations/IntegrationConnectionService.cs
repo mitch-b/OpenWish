@@ -280,6 +280,16 @@ public class IntegrationConnectionService(
             connection.AllowedWishlists.Add(new IntegrationConnectionWishlist { WishlistId = wishlistId });
         }
 
+        var pending = await context.IntegrationAuthorizationCodes
+            .Where(c => c.UserId == grant.UserId && c.ClientId == grant.ClientId && c.Id < grant.Id && c.ConsumedOn == null)
+            .ToListAsync();
+        var allowedSet = allowedIds.ToHashSet();
+        context.IntegrationAuthorizationCodes.RemoveRange(pending.Where(c =>
+            (c.AllowAllWishlists && !grant.AllowAllWishlists) ||
+            (c.ManageExistingItems && !grant.ManageExistingItems) ||
+            (!grant.AllowAllWishlists && !c.GrantedWishlistIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).All(allowedSet.Contains))));
+
         await context.SaveChangesAsync();
         if (app.IsSelfRegistered && context.Database.IsRelational())
         {

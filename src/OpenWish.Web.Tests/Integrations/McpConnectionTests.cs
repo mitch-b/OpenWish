@@ -483,6 +483,48 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
         Assert.DoesNotContain("refresh_token", Strings(server.RootElement.GetProperty("grant_types_supported")));
     }
 
+    [Fact]
+    public async Task PartialUpdate_PreservesLongExistingContent_ButRejectsInvalidNewValues()
+    {
+        using var owner = await SignInAsync();
+        var list = await owner.CreateWishlistAsync(Unique("Long existing idea"));
+        var destination = await owner.CreateWishlistAsync(Unique("Move long idea"));
+        var description = new string('x', IntegrationItemRequest.DescriptionMaxLength + 1);
+        var own = await owner.AddOwnItemAsync(list.PublicId,
+            new WishlistItemModel { Name = "Existing idea", Description = description });
+        await using var mcp = await ConnectSdkClientAsync(owner, [list.PublicId, destination.PublicId]);
+        var updated = await CallAsync<IntegrationItemModel>(mcp, "update_idea", new()
+        {
+            ["ideaId"] = own.PublicId,
+            ["priority"] = 1,
+            ["wishlistId"] = destination.PublicId
+        });
+        Assert.Equal(description, updated.Description);
+        Assert.Equal(1, updated.Priority);
+        Assert.Equal(destination.PublicId, updated.WishlistId);
+        var invalidDescription = await mcp.CallToolAsync("update_idea", new Dictionary<string, object?>
+        {
+            ["ideaId"] = own.PublicId,
+            ["description"] = description
+        });
+        Assert.True(invalidDescription.IsError);
+        var invalidUrl = await mcp.CallToolAsync("update_idea", new Dictionary<string, object?>
+        {
+            ["ideaId"] = own.PublicId,
+            ["url"] = "javascript:alert(1)"
+        });
+        Assert.True(invalidUrl.IsError);
+        var invalidPriority = await mcp.CallToolAsync("update_idea", new Dictionary<string, object?>
+        {
+            ["ideaId"] = own.PublicId,
+            ["priority"] = 4
+        });
+        Assert.True(invalidPriority.IsError);
+        var saved = Assert.Single(await owner.GetItemsAsync(destination.PublicId));
+        Assert.Equal(description, saved.Description);
+        Assert.Equal(1, saved.Priority);
+    }
+
     private async Task<McpClient> ConnectSdkClientAsync(OpenWishBrowser owner, IReadOnlyList<string> wishlistIds,
         bool manageExistingItems = true)
     {

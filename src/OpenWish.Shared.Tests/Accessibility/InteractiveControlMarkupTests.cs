@@ -46,6 +46,8 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("href=\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
         Assert.Contains("<span>Integrations</span>", navMenu, StringComparison.Ordinal);
+        Assert.Contains("Match=\"@(IsIntegrationsPage ? NavLinkMatch.All : NavLinkMatch.Prefix)\"", navMenu, StringComparison.Ordinal);
+        Assert.Contains("\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
         Assert.Contains("href=\"Account/Manage/ConnectedApps\">Integrations</NavLink>", accountMenu, StringComparison.Ordinal);
         Assert.Contains("Read the app developer guide", page, StringComparison.Ordinal);
         Assert.Contains("href=\"/llms.txt\"", page, StringComparison.Ordinal);

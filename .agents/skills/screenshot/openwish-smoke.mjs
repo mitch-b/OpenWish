@@ -4870,6 +4870,11 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Read the app developer guide" }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Read llms.txt" }).waitFor({ state: "visible" });
+  const primaryNavigation = page.locator("#primary-navigation");
+  if (await primaryNavigation.locator('a[href="Account/Manage/ConnectedApps"]').getAttribute("aria-current") !== "page" ||
+      await primaryNavigation.locator('a[href="Account/Manage"]').getAttribute("aria-current") !== null) {
+    throw new Error("Integrations and account navigation should not both appear active.");
+  }
   await visit(page, "/Account/Manage/ConnectedApps", "Integrations", []);
   const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
   await connection.getByText("2 ideas added").waitFor({ state: "visible" });

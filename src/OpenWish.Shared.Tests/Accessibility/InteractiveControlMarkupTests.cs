@@ -56,6 +56,37 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void IntegrationListPicker_IsSharedBoundedAndProgressivelyEnhanced()
+    {
+        var picker = ReadComponent("OpenWish.Web", "Components", "Shared", "IntegrationWishlistPicker.razor");
+        var css = ReadComponent("OpenWish.Web", "Components", "Shared", "IntegrationWishlistPicker.razor.css");
+        var page = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor");
+        var consent = ReadComponent("OpenWish.Web", "Components", "Pages", "Integrations", "ConnectApp.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+        var initializer = ReadComponent("OpenWish.Web", "wwwroot", "OpenWish.Web.lib.module.js");
+
+        Assert.Contains("<IntegrationWishlistPicker", page, StringComparison.Ordinal);
+        Assert.Contains("<IntegrationWishlistPicker", consent, StringComparison.Ordinal);
+        Assert.Contains("else if (editing)", page, StringComparison.Ordinal);
+        Assert.Contains("@layout OpenWish.Web.Components.Layout.MainLayout", page, StringComparison.Ordinal);
+        Assert.Contains("<PageHeader Title=\"Integrations\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-picker-tools", picker, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=", picker, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", picker, StringComparison.Ordinal);
+        Assert.Contains("name=\"wishlist\"", picker, StringComparison.Ordinal);
+        Assert.Contains("max-height: 18rem", css, StringComparison.Ordinal);
+        Assert.Contains("overflow-y: auto", css, StringComparison.Ordinal);
+        Assert.Contains("selectedIds.has(option.value)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("option.querySelector('input[name=\"wishlist\"]').disabled", script, StringComparison.Ordinal);
+        Assert.Contains("'enhancedload'", initializer, StringComparison.Ordinal);
+        Assert.Contains("data-copy-feedback=\"mcp-copy-status\"", page, StringComparison.Ordinal);
+        Assert.Contains("Could not copy. Select the address", script, StringComparison.Ordinal);
+        var pageCss = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor.css");
+        Assert.Contains(".connected-apps-copy-status:empty {\n    margin: 0;", pageCss, StringComparison.Ordinal);
+        Assert.Contains("scroll-margin-top: 5rem;", pageCss, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Dashboard_PersistsEachHydratedContentSection()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");

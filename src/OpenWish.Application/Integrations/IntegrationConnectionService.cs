@@ -56,6 +56,9 @@ public class IntegrationConnectionService(
                 !c.Deleted);
 
         var allowedIds = connection?.AllowedWishlists.Select(a => a.WishlistId).ToHashSet() ?? [];
+        var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
+            connection?.DefaultWishlistId,
+            wishlists.Where(w => allowedIds.Contains(w.Id)).Select(w => w.Id).ToList());
         var options = wishlists
             .Select(w => new ConsentWishlistOption(
                 w.PublicId,
@@ -63,7 +66,7 @@ public class IntegrationConnectionService(
                 w.Icon,
                 w.ItemCount,
                 allowedIds.Contains(w.Id),
-                connection?.DefaultWishlistId == w.Id,
+                effectiveDefaultId == w.Id,
                 w.EventName))
             .ToList();
 
@@ -482,13 +485,17 @@ public class IntegrationConnectionService(
             .Select(connection =>
             {
                 var app = apps[connection.ClientId];
-                var wishlists = connection.AllowedWishlists
-                    .Where(a => a.Wishlist is { Deleted: false })
+                var activeAllowed = connection.AllowedWishlists
+                    .Where(a => a.Wishlist is { Deleted: false } wishlist && wishlist.OwnerId == userId)
+                    .ToList();
+                var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
+                    connection.DefaultWishlistId, activeAllowed.Select(a => a.WishlistId).ToList());
+                var wishlists = activeAllowed
                     .Select(a => new ConnectedAppWishlist(
                         a.Wishlist!.PublicId,
                         a.Wishlist.Name,
                         a.Wishlist.Icon,
-                        a.WishlistId == connection.DefaultWishlistId))
+                        a.WishlistId == effectiveDefaultId))
                     .OrderByDescending(w => w.IsDefault)
                     .ThenBy(w => w.Name, StringComparer.CurrentCultureIgnoreCase)
                     .ToList();

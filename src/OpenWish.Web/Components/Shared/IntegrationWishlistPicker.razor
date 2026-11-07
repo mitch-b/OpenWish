@@ -1,0 +1,34 @@
+@using OpenWish.Application.Integrations
+
+<div class="integration-picker" data-integration-picker>
+    <div class="integration-picker-tools" hidden data-picker-tools>
+        <label for="@($"{Id}-search")">Find a list</label>
+        <input type="search" class="form-control" id="@($"{Id}-search")" data-picker-search autocomplete="off" aria-controls="@($"{Id}-options")" placeholder="Search list names" />
+        <label class="integration-picker-selected">
+            <input type="checkbox" class="form-check-input" data-picker-selected /> Selected only
+        </label>
+    </div>
+    <p class="integration-picker-status" role="status" aria-live="polite" data-picker-status>@SelectedIds.Count selected of @Options.Count lists</p>
+    <ul class="integration-picker-options" id="@($"{Id}-options")" role="list">
+        @foreach (var wishlist in Options)
+        {
+            var inputId = $"{Id}-{wishlist.PublicId}";
+            <li data-picker-option data-picker-name="@wishlist.Name">
+                <label class="integration-picker-option" for="@inputId">
+                    <input class="form-check-input" type="checkbox" id="@inputId" name="wishlist" value="@wishlist.PublicId" checked="@SelectedIds.Contains(wishlist.PublicId)" />
+                    <span>
+                        <strong>@wishlist.Name</strong>
+                        <span class="integration-picker-meta">@(wishlist.ItemCount == 1 ? "1 idea" : $"{wishlist.ItemCount} ideas")@(wishlist.EventName is not null ? $" - {wishlist.EventName}" : "")</span>
+                    </span>
+                </label>
+            </li>
+        }
+    </ul>
+    <p class="integration-picker-empty" data-picker-empty hidden>No matching lists. Clear the search or turn off Selected only.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Id { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<ConsentWishlistOption> Options { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlySet<string> SelectedIds { get; set; } = new HashSet<string>();
+}

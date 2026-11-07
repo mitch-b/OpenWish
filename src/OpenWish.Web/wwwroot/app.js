@@ -3,13 +3,68 @@ window.openWishLastCopy = Promise.resolve(false);
 document.addEventListener("click", function (event) {
     const button = event.target instanceof Element ? event.target.closest("[data-copy-text]") : null;
     if (button && !button.disabled) {
-        window.openWishLastCopy = window.openWishCopyText(button.getAttribute("data-copy-text") ?? "").then(() => true, () => false);
+        const feedback = document.getElementById(button.getAttribute("data-copy-feedback") ?? "");
+        window.openWishLastCopy = window.openWishCopyText(button.getAttribute("data-copy-text") ?? "").then(() => {
+            if (feedback) feedback.textContent = "Address copied. Paste it into your assistant.";
+            return true;
+        }, () => {
+            if (feedback) feedback.textContent = "Could not copy. Select the address and copy it manually.";
+            return false;
+        });
     }
 });
 
 window.openWishLastCopyResult = function () {
     return window.openWishLastCopy;
 };
+
+function updateIntegrationPicker(picker) {
+    const search = picker.querySelector("[data-picker-search]").value.trim().toLocaleLowerCase();
+    const selectedOnly = picker.querySelector("[data-picker-selected]").checked;
+    const options = [...picker.querySelectorAll("[data-picker-option]")];
+    const selected = options.filter(option => option.querySelector('input[name="wishlist"]').checked);
+    let visible = 0;
+    for (const option of options) {
+        option.hidden = !option.dataset.pickerName.toLocaleLowerCase().includes(search) ||
+            (selectedOnly && !option.querySelector('input[name="wishlist"]').checked);
+        if (!option.hidden) visible += 1;
+    }
+    picker.querySelector("[data-picker-status]").textContent =
+        `${selected.length} selected of ${options.length} lists. ${visible} shown.`;
+    picker.querySelector("[data-picker-empty]").hidden = visible !== 0;
+
+    // Search never disables checkboxes: hidden selections must still be posted.
+    const defaultSelect = picker.closest("form")?.querySelector('select[name="defaultWishlist"]');
+    if (defaultSelect) {
+        const selectedIds = new Set(selected.map(option => option.querySelector('input[name="wishlist"]').value));
+        for (const option of defaultSelect.options) {
+            option.disabled = !selectedIds.has(option.value);
+        }
+        if (!selectedIds.has(defaultSelect.value)) {
+            defaultSelect.value = selectedIds.values().next().value ?? "";
+        }
+    }
+}
+
+window.openWishInitializeIntegrationPickers = function () {
+    for (const picker of document.querySelectorAll("[data-integration-picker]")) {
+        picker.querySelector("[data-picker-tools]").hidden = false;
+        updateIntegrationPicker(picker);
+    }
+};
+
+document.addEventListener("DOMContentLoaded", window.openWishInitializeIntegrationPickers);
+document.addEventListener("keydown", event => {
+    if (event.key === "Enter" && event.target instanceof Element && event.target.matches("[data-picker-search]")) {
+        event.preventDefault();
+    }
+});
+for (const eventName of ["input", "change"]) {
+    document.addEventListener(eventName, event => {
+        const picker = event.target instanceof Element ? event.target.closest("[data-integration-picker]") : null;
+        if (picker) updateIntegrationPicker(picker);
+    });
+}
 
 window.openWishCopyText = async function (text) {
     if (navigator.clipboard?.writeText) {

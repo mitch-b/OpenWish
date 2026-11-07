@@ -383,7 +383,7 @@ public class IntegrationItemService(
             .ToListAsync();
 
         // If the person deleted the default list, new ideas fall back to the oldest list still allowed.
-        var effectiveDefaultId = wishlists.Any(w => w.Id == defaultId) ? defaultId : wishlists.FirstOrDefault()?.Id;
+        var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(defaultId, wishlists.Select(w => w.Id).ToList());
         return wishlists.ToDictionary(
             w => w.Id,
             w => new AllowedWishlist(w.Id, w.PublicId, w.Name, w.Icon, w.Id == effectiveDefaultId));

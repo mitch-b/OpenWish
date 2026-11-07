@@ -1,6 +1,6 @@
 .event-card {
+    position: relative;
     height: 100%;
-    overflow: hidden;
     transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
@@ -86,9 +86,10 @@
 
 .event-card-link {
     display: inline-flex;
+    min-height: 2.75rem;
     align-items: center;
     gap: 0.35rem;
-    color: var(--color-primary-bg);
+    color: var(--color-link);
     font-size: 0.82rem;
     font-weight: 700;
     text-decoration: none;
@@ -98,14 +99,56 @@
     text-decoration: underline;
 }
 
+.event-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+.event-card:has(.event-card-link:focus-visible) {
+    outline: 3px solid var(--color-link-hover);
+    outline-offset: 3px;
+}
+
+.event-card-link:focus-visible {
+    outline: none;
+}
+
+.event-card-actions {
+    position: relative;
+    z-index: 2;
+}
+
+.event-card:has(.kebab-menu[aria-expanded="true"]) {
+    z-index: 3;
+}
+
 .kebab-menu {
     display: grid;
-    min-width: 2.2rem;
-    width: 2.2rem;
-    min-height: 2.2rem;
+    min-width: 2.75rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
     place-items: center;
     padding: 0;
     border: 0;
     background: transparent;
     color: var(--color-text-muted);
+}
+
+.kebab-menu:hover,
+.kebab-menu:focus-visible,
+.kebab-menu[aria-expanded="true"] {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .event-card {
+        transition: none;
+    }
+
+    .event-card:hover {
+        transform: none;
+    }
 }

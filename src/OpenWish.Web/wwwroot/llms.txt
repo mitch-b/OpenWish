@@ -1,0 +1,17 @@
+# OpenWish
+
+> OpenWish is a self-hosted wishlist and gift-exchange app. Integrations can add gift ideas only to lists a person explicitly allows.
+
+## Integrations
+
+- [Integration guide](https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md): operator setup, app developer contract, OAuth flows, MCP setup, tools, and privacy boundaries.
+- [Manage integrations](/Account/Manage/ConnectedApps): signed-in page to review connected apps, choose allowed lists, disconnect apps, and find the MCP connection address when enabled.
+- [OAuth authorization server metadata](/.well-known/oauth-authorization-server): endpoint discovery for registered server-side apps and, when enabled, MCP clients.
+- App API base path: `/api/integrations/v1`. Apps must be registered by the OpenWish operator and use confidential server-side OAuth; keep the client secret and bearer token on the app server. Apps can manage only their own ideas on lists the person allows.
+- OAuth connection: the person signs in to OpenWish, reviews consent, and selects allowed lists. App tokens work only with integration endpoints, not OpenWish browser, social, or gift-coordination APIs.
+
+## AI assistants and MCP
+
+- MCP endpoint: `/mcp`. It is optional and available only when the OpenWish operator enables `OpenWishSettings__Integrations__Mcp__Enabled`.
+- MCP clients discover OAuth metadata, open a browser sign-in and consent flow, and get access only to the person's selected lists and ideas that assistant added. Do not ask the person to paste their OpenWish password or bearer token into an assistant.
+- Supported client setup and limitations are documented in the [MCP guide](https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp).

@@ -38,6 +38,22 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void Integrations_AreDiscoverableAndExplainAppAndMcpSetup()
+    {
+        var navMenu = ReadComponent("OpenWish.Web", "Components", "Layout", "NavMenu.razor");
+        var accountMenu = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");
+        var page = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Manage", "ConnectedApps.razor");
+
+        Assert.Contains("href=\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
+        Assert.Contains("<span>Integrations</span>", navMenu, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Manage/ConnectedApps\">Integrations</NavLink>", accountMenu, StringComparison.Ordinal);
+        Assert.Contains("Read the app developer guide", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"/llms.txt\"", page, StringComparison.Ordinal);
+        Assert.Contains("OpenWishSettings__Integrations__Mcp__Enabled", page, StringComparison.Ordinal);
+        Assert.Contains("sign in and choose which lists it can use", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Dashboard_PersistsEachHydratedContentSection()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");

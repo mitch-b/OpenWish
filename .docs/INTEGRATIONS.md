@@ -89,10 +89,11 @@ scheme detection instead, configure only the actual proxy's addresses in
 Do not trust arbitrary forwarded headers from the internet.
 
 OpenWish validates each entry at startup and logs a warning instead of failing
-when one is incomplete. When no app is valid, the Connected apps page is
-hidden and the OAuth endpoints report that nothing is registered. Plain HTTP
-redirect URIs are accepted for trusted home networks but logged as a warning;
-use HTTPS anywhere else.
+when one is incomplete. The Integrations page remains available in the signed-in
+navigation even when no app is registered, so people can find the setup guide
+and see whether MCP is enabled. When no app is valid, the app OAuth endpoints
+report that nothing is registered. Plain HTTP redirect URIs are accepted for
+trusted home networks but logged as a warning; use HTTPS anywhere else.
 
 For local development with Aspire, put the same keys (with `:` separators) in
 the AppHost user secrets, for example

@@ -230,6 +230,7 @@
         "app logs, edits, and removes ideas without seeing reservations",
         "ideas show their source app, and editing one explains the sync",
         "WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it",
+        "Integrations are reachable from navigation and explain app, llms.txt, and MCP setup",
         "a non-member cannot read the private list the app writes to",
         "disconnecting revokes the token and keeps the ideas"
       ]

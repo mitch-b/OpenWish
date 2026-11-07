@@ -77,7 +77,6 @@ else
     <ul class="connected-apps" role="list">
         @foreach (var connection in connections)
         {
-            var options = listOptions[connection.ConnectionId];
             var confirming = string.Equals(DisconnectConnectionId, connection.ConnectionId, StringComparison.Ordinal);
             <li class="connected-app" id="connection-@connection.ConnectionId">
                 <header class="connected-app-header">
@@ -127,6 +126,7 @@ else
                 }
                 else
                 {
+                    var options = listOptions[connection.ConnectionId];
                     <form method="post" @formname="@($"lists-{connection.ConnectionId}")" @onsubmit="() => SaveListsAsync(connection)" class="connected-app-lists">
                         <AntiforgeryToken />
                         <fieldset>

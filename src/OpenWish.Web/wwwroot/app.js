@@ -18,7 +18,7 @@ window.openWishLastCopyResult = function () {
     return window.openWishLastCopy;
 };
 
-function updateIntegrationPicker(picker) {
+function updateIntegrationPicker(picker, reconcileDefault = false) {
     const search = picker.querySelector("[data-picker-search]").value.trim().toLocaleLowerCase();
     const selectedOnly = picker.querySelector("[data-picker-selected]").checked;
     const options = [...picker.querySelectorAll("[data-picker-option]")];
@@ -34,14 +34,17 @@ function updateIntegrationPicker(picker) {
     picker.querySelector("[data-picker-empty]").hidden = visible !== 0;
 
     // Search never disables checkboxes: hidden selections must still be posted.
-    const defaultSelect = picker.closest("form")?.querySelector('select[name="defaultWishlist"]');
+    const form = picker.closest("form");
+    const defaultSelect = form?.querySelector('select[name="defaultWishlist"]');
     if (defaultSelect) {
+        const allowAllWishlists = form.querySelector('input[name="allowAllWishlists"]')?.checked === true;
         const selectedIds = new Set(selected.map(option => option.querySelector('input[name="wishlist"]').value));
-        for (const option of defaultSelect.options) {
-            option.disabled = !selectedIds.has(option.value);
-        }
-        if (!selectedIds.has(defaultSelect.value)) {
+        if (reconcileDefault && !allowAllWishlists && !selectedIds.has(defaultSelect.value)) {
             defaultSelect.value = selectedIds.values().next().value ?? "";
+        }
+        for (const option of defaultSelect.options) {
+            // Keep a submitted invalid default visible when rendering a validation error.
+            option.disabled = !allowAllWishlists && !selectedIds.has(option.value) && option.value !== defaultSelect.value;
         }
     }
 }
@@ -61,8 +64,12 @@ document.addEventListener("keydown", event => {
 });
 for (const eventName of ["input", "change"]) {
     document.addEventListener(eventName, event => {
-        const picker = event.target instanceof Element ? event.target.closest("[data-integration-picker]") : null;
-        if (picker) updateIntegrationPicker(picker);
+        if (!(event.target instanceof Element)) return;
+        const permissionsChanged = event.target.matches('input[name="wishlist"], input[name="allowAllWishlists"]');
+        const picker = event.target.closest("[data-integration-picker]") ??
+            (event.target.matches('input[name="allowAllWishlists"]')
+                ? event.target.closest("form")?.querySelector("[data-integration-picker]") : null);
+        if (picker) updateIntegrationPicker(picker, permissionsChanged);
     });
 }
 

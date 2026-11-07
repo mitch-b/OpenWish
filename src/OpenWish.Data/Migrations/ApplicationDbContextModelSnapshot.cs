@@ -798,6 +798,9 @@ namespace OpenWish.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AllowAllWishlists")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Audience")
                         .HasColumnType("integer");
 
@@ -831,6 +834,9 @@ namespace OpenWish.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
+
+                    b.Property<bool>("ManageExistingItems")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("RedirectUri")
                         .IsRequired()
@@ -911,6 +917,9 @@ namespace OpenWish.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<bool>("AllowAllWishlists")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("AppName")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -937,6 +946,9 @@ namespace OpenWish.Data.Migrations
 
                     b.Property<DateTimeOffset?>("LastUsedOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ManageExistingItems")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("PreviousRefreshTokenHash")
                         .HasMaxLength(64)

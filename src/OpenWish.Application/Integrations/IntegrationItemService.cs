@@ -63,13 +63,13 @@ public class IntegrationItemService(
         if (!string.IsNullOrWhiteSpace(externalId))
         {
             var normalized = externalId.Trim();
-            query = query.Where(i => i.ExternalId == normalized);
+            query = query.Where(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized);
         }
 
         var items = await query
             .OrderBy(i => i.CreatedOn)
             .ToListAsync();
-        return items.Select(item => ToModel(item, allowed[item.WishlistId])).ToList();
+        return items.Select(item => ToModel(item, allowed[item.WishlistId], caller)).ToList();
     }
 
     public async Task<IntegrationItemModel?> GetItemAsync(IntegrationCaller caller, string itemId)
@@ -79,7 +79,7 @@ public class IntegrationItemService(
         var item = await OwnedItems(context, caller, allowed.Keys)
             .FirstOrDefaultAsync(i => i.PublicId == itemId);
 
-        return item is null ? null : ToModel(item, allowed[item.WishlistId]);
+        return item is null ? null : ToModel(item, allowed[item.WishlistId], caller);
     }
 
     public async Task<IntegrationWriteResult> CreateItemAsync(IntegrationCaller caller, IntegrationItemRequest request)
@@ -130,7 +130,7 @@ public class IntegrationItemService(
         await using var context = await _contextFactory.CreateDbContextAsync();
         await ReleaseExternalIdFromDeletedListsAsync(context, caller, normalized);
         var item = await context.WishlistItems
-            .FirstOrDefaultAsync(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized && !i.Deleted);
+            .FirstOrDefaultAsync(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized && !i.Deleted && !i.IsHiddenFromOwner);
 
         if (item is null)
         {
@@ -143,7 +143,11 @@ public class IntegrationItemService(
             // Another request created the same idea first; apply this one as an update instead.
             await using var retryContext = await _contextFactory.CreateDbContextAsync();
             item = await retryContext.WishlistItems
-                .FirstAsync(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized && !i.Deleted);
+                .FirstOrDefaultAsync(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized && !i.Deleted && !i.IsHiddenFromOwner);
+            if (item is null)
+            {
+                return new(IntegrationWriteStatus.NotFound);
+            }
             var retryAllowed = await GetAllowedWishlistsAsync(retryContext, caller);
             return retryAllowed.ContainsKey(item.WishlistId)
                 ? await UpdateAsync(retryContext, caller, item, retryAllowed, request)
@@ -179,7 +183,7 @@ public class IntegrationItemService(
         var allowed = await GetAllowedWishlistsAsync(context, caller);
         var item = await OwnedItems(context, caller, allowed.Keys)
             .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.ExternalId == normalized);
+            .FirstOrDefaultAsync(i => i.SourceConnectionId == caller.ConnectionId && i.ExternalId == normalized);
 
         return item is not null && await RemoveAsync(caller, item);
     }
@@ -238,7 +242,7 @@ public class IntegrationItemService(
             item.Id);
         _logger.LogInformation("Connected app {ClientId} added an idea for user {UserId}.", caller.ClientId, caller.UserId);
 
-        return new(IntegrationWriteStatus.Created, ToModel(item, target));
+        return new(IntegrationWriteStatus.Created, ToModel(item, target, caller));
     }
 
     private async Task<IntegrationWriteResult> UpdateAsync(
@@ -270,7 +274,10 @@ public class IntegrationItemService(
             item.Priority = request.Priority > 0 ? request.Priority : null;
         }
 
-        item.SourceAppName = caller.AppName;
+        if (item.SourceConnectionId == caller.ConnectionId)
+        {
+            item.SourceAppName = caller.AppName;
+        }
         item.UpdatedOn = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync();
 
@@ -281,7 +288,7 @@ public class IntegrationItemService(
             target.Id,
             item.Id);
 
-        return new(IntegrationWriteStatus.Updated, ToModel(item, target));
+        return new(IntegrationWriteStatus.Updated, ToModel(item, target, caller));
     }
 
     private async Task<bool> RemoveAsync(IntegrationCaller caller, WishlistItem item)
@@ -312,7 +319,8 @@ public class IntegrationItemService(
     {
         var allowedIds = allowedWishlistIds.ToList();
         return context.WishlistItems.Where(i =>
-            i.SourceConnectionId == caller.ConnectionId &&
+            (i.SourceConnectionId == caller.ConnectionId ||
+                context.IntegrationConnections.Any(c => c.Id == caller.ConnectionId && c.UserId == caller.UserId && c.ManageExistingItems)) &&
             !i.Deleted &&
             !i.IsHiddenFromOwner &&
             allowedIds.Contains(i.WishlistId));
@@ -368,22 +376,22 @@ public class IntegrationItemService(
 
     private static async Task<Dictionary<int, AllowedWishlist>> GetAllowedWishlistsAsync(ApplicationDbContext context, IntegrationCaller caller)
     {
-        var defaultId = await context.IntegrationConnections
-            .Where(c => c.Id == caller.ConnectionId)
-            .Select(c => c.DefaultWishlistId)
-            .FirstOrDefaultAsync();
+        var connection = await context.IntegrationConnections
+            .Where(c => c.Id == caller.ConnectionId && c.UserId == caller.UserId)
+            .Select(c => new { c.DefaultWishlistId, c.AllowAllWishlists })
+            .SingleAsync();
 
-        var wishlists = await context.IntegrationConnectionWishlists
+        var wishlists = await context.Wishlists
             .AsNoTracking()
-            .Where(a => a.IntegrationConnectionId == caller.ConnectionId)
-            .Select(a => a.Wishlist!)
-            .Where(w => w.OwnerId == caller.UserId && !w.Deleted)
+            .Where(w => w.OwnerId == caller.UserId && !w.Deleted &&
+                (connection.AllowAllWishlists || context.IntegrationConnectionWishlists.Any(a =>
+                    a.IntegrationConnectionId == caller.ConnectionId && a.WishlistId == w.Id)))
             .OrderBy(w => w.Id)
             .Select(w => new { w.Id, w.PublicId, w.Name, w.Icon })
             .ToListAsync();
 
         // If the person deleted the default list, new ideas fall back to the oldest list still allowed.
-        var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(defaultId, wishlists.Select(w => w.Id).ToList());
+        var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(connection.DefaultWishlistId, wishlists.Select(w => w.Id).ToList());
         return wishlists.ToDictionary(
             w => w.Id,
             w => new AllowedWishlist(w.Id, w.PublicId, w.Name, w.Icon, w.Id == effectiveDefaultId));
@@ -406,10 +414,10 @@ public class IntegrationItemService(
             .ToList();
     }
 
-    private static IntegrationItemModel ToModel(WishlistItem item, AllowedWishlist wishlist) => new()
+    private static IntegrationItemModel ToModel(WishlistItem item, AllowedWishlist wishlist, IntegrationCaller caller) => new()
     {
         Id = item.PublicId,
-        ExternalId = item.ExternalId,
+        ExternalId = item.SourceConnectionId == caller.ConnectionId ? item.ExternalId : null,
         WishlistId = wishlist.PublicId,
         WishlistName = wishlist.Name,
         Name = item.Name,

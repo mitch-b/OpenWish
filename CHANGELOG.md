@@ -2,6 +2,15 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## Unreleased - 2026-11-07
+
+### Added
+
+- Connected-app consent offers all current and future owned wishlists (off by
+  default) and managing existing ideas in allowed lists (on for new consent).
+  Both permissions can be changed from Integrations. Existing connections
+  retain their earlier access, and gift-coordination details remain private.
+
 ## [0.13.0] - 2026-11-06
 
 ### Added

@@ -34,6 +34,12 @@ sequenceDiagram
   choose one or more lists, or start a new private list right there. New ideas
   go to the first list they choose, unless they create a new private list;
   that new list becomes the default even when existing lists are also selected.
+  **Allow all wishlists** starts off; turning it on includes all lists they own
+  now and create later, including private lists. **Manage existing items in
+  allowed lists** starts on, so the app can see, edit, move, and remove ideas
+  they or other apps added. Turn it off to limit access to the app's own ideas.
+  Existing connections retain their previously approved, narrower access until
+  the person explicitly changes permissions or reconnects.
 - **Where ideas came from.** Ideas an app adds show a small "From {app}" badge
   in grid, list, and card views, for the owner and for shoppers. When the owner
   edits one, OpenWish explains that the app keeps it in sync. Privacy and
@@ -49,15 +55,18 @@ sequenceDiagram
   JavaScript; search and selected-only filtering are enhancements.
   If the default list is deleted, new ideas go to the oldest remaining allowed
   list; the summary and editor show that same effective destination.
+  The editor also controls all-wishlist and existing-item permissions. Submitted
+  privacy choices stay in place when a validation error needs correcting.
   Disconnecting stops the app immediately; ideas it added stay on the list.
 
 ### What an app can never see
 
-An app acts only for the person who connected it, only on the lists they
-chose, and only on the ideas it added itself. It never receives:
+An app acts only for the person who connected it and only on allowed lists.
+When managing existing items is off, it can only access ideas it added itself.
+It never receives:
 
 - who reserved, purchased, or commented on anything;
-- ideas the person added in OpenWish or through another app;
+- hidden surprises (ideas hidden from the wishlist owner);
 - other people's lists, friends, events, or email addresses.
 
 An app's token works only on `/api/integrations/v1`. It cannot sign in to
@@ -155,13 +164,14 @@ look for OAuth metadata at the root of the host.
 | Tool | What it does |
 |---|---|
 | `list_wishlists` | The lists the person allowed, including the default list. |
-| `list_ideas` | Ideas this assistant added, optionally on one list. |
+| `list_ideas` | Accessible ideas, optionally on one allowed list. |
 | `add_idea` | Adds an idea with a name and optional notes, links, price, store, and priority. |
-| `update_idea` | Changes only the fields passed, on an idea this assistant added. |
-| `remove_idea` | Removes an idea this assistant added. |
+| `update_idea` | Changes only the fields passed, on an accessible idea. |
+| `remove_idea` | Removes an accessible idea. |
 
-Assistants never see reservations, purchases, comments, friends, or ideas they
-did not add, and they cannot read a person's whole wishlist.
+Assistants never see reservations, purchases, comments, friends, or hidden
+surprises. Existing ideas are accessible only when the person allows managing
+them; turning that permission off restricts the assistant to its own ideas.
 
 ### Compatibility
 
@@ -328,7 +338,7 @@ means the person disconnected; forget the token and offer to reconnect.
 |---|---|---|
 | `GET` | `/me` | Connection, app, the person's display name, and allowed lists |
 | `GET` | `/wishlists` | Lists the person allowed; one has `isDefault: true` |
-| `GET` | `/items?wishlistId=&externalId=` | Ideas your app added on allowed lists |
+| `GET` | `/items?wishlistId=&externalId=` | Accessible ideas on allowed lists; an `externalId` filter only matches your app's ideas |
 | `GET` | `/items/{id}` | One idea |
 | `POST` | `/items` | Add an idea: `201`, or `409 duplicate_external_id` with `itemId` |
 | `PUT` | `/items/{id}` | Update an idea: `200` |
@@ -368,6 +378,10 @@ Request body for `POST` and `PUT`:
 - `externalId` is your stable identifier. It is unique among your active
   ideas for that person, so `PUT /items/external/{externalId}` is a safe,
   repeatable sync operation.
+- Existing ideas can be managed by their OpenWish `id` when permitted.
+  Editing or moving them preserves their original source and privacy flags.
+  Other apps' external identifiers are not exposed, and external-ID routes
+  always operate only on ideas your connection added.
 
 Each idea in a response looks like:
 

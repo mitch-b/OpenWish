@@ -24,5 +24,7 @@ public class IntegrationConnection : BaseEntity
     public DateTimeOffset? RevokedOn { get; set; }
     public int? DefaultWishlistId { get; set; }
     public Wishlist? DefaultWishlist { get; set; }
+    public bool AllowAllWishlists { get; set; }
+    public bool ManageExistingItems { get; set; }
     public ICollection<IntegrationConnectionWishlist> AllowedWishlists { get; set; } = [];
 }

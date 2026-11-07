@@ -58,19 +58,21 @@ public class IntegrationConnectionService(
         var allowedIds = connection?.AllowedWishlists.Select(a => a.WishlistId).ToHashSet() ?? [];
         var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
             connection?.DefaultWishlistId,
-            wishlists.Where(w => allowedIds.Contains(w.Id)).Select(w => w.Id).ToList());
+            wishlists.Where(w => connection?.AllowAllWishlists == true || allowedIds.Contains(w.Id))
+                .Select(w => w.Id).ToList());
         var options = wishlists
             .Select(w => new ConsentWishlistOption(
                 w.PublicId,
                 w.Name,
                 w.Icon,
                 w.ItemCount,
-                allowedIds.Contains(w.Id),
+                connection?.AllowAllWishlists == true || allowedIds.Contains(w.Id),
                 effectiveDefaultId == w.Id,
                 w.EventName))
             .ToList();
 
-        return new ConsentState(options, connection is not null);
+        return new ConsentState(options, connection is not null,
+            connection?.AllowAllWishlists ?? false, connection?.ManageExistingItems ?? true);
     }
 
     public async Task<AuthorizationApprovalResult> ApproveAsync(string userId, AuthorizationApproval approval)
@@ -90,7 +92,7 @@ public class IntegrationConnectionService(
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        if (requestedIds.Count == 0 && string.IsNullOrEmpty(newWishlistName))
+        if (!approval.AllowAllWishlists && requestedIds.Count == 0 && string.IsNullOrEmpty(newWishlistName))
         {
             return new(null, AuthorizationApprovalError.NoWishlistSelected);
         }
@@ -99,16 +101,17 @@ public class IntegrationConnectionService(
         await using var transaction = await LockConnectionAsync(context, userId, approval.ClientId);
         var selected = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.OwnerId == userId && !w.Deleted && requestedIds.Contains(w.PublicId))
+            .Where(w => w.OwnerId == userId && !w.Deleted && (approval.AllowAllWishlists || requestedIds.Contains(w.PublicId)))
+            .OrderBy(w => w.Id)
             .Select(w => new { w.Id, w.PublicId })
             .ToListAsync();
 
-        if (selected.Count != requestedIds.Count)
+        if (requestedIds.Any(id => !selected.Any(w => w.PublicId == id)))
         {
             return new(null, AuthorizationApprovalError.WishlistNotFound);
         }
 
-        var grantedIds = requestedIds
+        var grantedIds = (approval.AllowAllWishlists ? selected.Select(w => w.PublicId) : requestedIds)
             .Select(publicId => selected.First(w => w.PublicId == publicId).Id)
             .ToList();
         var defaultId = selected.FirstOrDefault(w => w.PublicId == approval.DefaultWishlistPublicId)?.Id;
@@ -124,6 +127,11 @@ public class IntegrationConnectionService(
         }
 
         var now = DateTimeOffset.UtcNow;
+        if (grantedIds.Count == 0)
+        {
+            return new(null, AuthorizationApprovalError.NoWishlistSelected);
+        }
+
         var code = IntegrationTokens.NewAuthorizationCode();
         context.IntegrationAuthorizationCodes.Add(new IntegrationAuthorizationCode
         {
@@ -135,6 +143,8 @@ public class IntegrationConnectionService(
             Audience = approval.Audience,
             GrantedWishlistIds = string.Join(',', grantedIds),
             DefaultWishlistId = defaultId ?? grantedIds[0],
+            AllowAllWishlists = approval.AllowAllWishlists,
+            ManageExistingItems = approval.ManageExistingItems,
             CreatedOn = now,
             ExpiresOn = now.Add(AuthorizationCodeLifetime)
         });
@@ -258,6 +268,8 @@ public class IntegrationConnectionService(
 
         connection.AppName = app.DisplayName;
         connection.Audience = grant.Audience;
+        connection.AllowAllWishlists = grant.AllowAllWishlists;
+        connection.ManageExistingItems = grant.ManageExistingItems;
         // A fresh authorization starts a new refresh-token family.
         connection.RefreshTokenHash = null;
         var tokens = IssueTokens(connection, now);
@@ -271,6 +283,16 @@ public class IntegrationConnectionService(
         {
             connection.AllowedWishlists.Add(new IntegrationConnectionWishlist { WishlistId = wishlistId });
         }
+
+        var pending = await context.IntegrationAuthorizationCodes
+            .Where(c => c.UserId == grant.UserId && c.ClientId == grant.ClientId && c.Id < grant.Id && c.ConsumedOn == null)
+            .ToListAsync();
+        var allowedSet = allowedIds.ToHashSet();
+        context.IntegrationAuthorizationCodes.RemoveRange(pending.Where(c =>
+            (c.AllowAllWishlists && !grant.AllowAllWishlists) ||
+            (c.ManageExistingItems && !grant.ManageExistingItems) ||
+            (!grant.AllowAllWishlists && !c.GrantedWishlistIds
+                .Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).All(allowedSet.Contains))));
 
         await context.SaveChangesAsync();
         if (app.IsSelfRegistered && context.Database.IsRelational())
@@ -481,21 +503,26 @@ public class IntegrationConnectionService(
             apps[clientId] = await _clientStore.FindAsync(clientId);
         }
 
+        var allOwnedWishlists = connections.Any(c => c.AllowAllWishlists)
+            ? await context.Wishlists.AsNoTracking()
+                .Where(w => w.OwnerId == userId && !w.Deleted).OrderBy(w => w.Id).ToListAsync()
+            : [];
+
         return connections
             .Select(connection =>
             {
                 var app = apps[connection.ClientId];
-                var activeAllowed = connection.AllowedWishlists
+                var activeAllowed = connection.AllowAllWishlists ? allOwnedWishlists : connection.AllowedWishlists
                     .Where(a => a.Wishlist is { Deleted: false } wishlist && wishlist.OwnerId == userId)
-                    .ToList();
+                    .Select(a => a.Wishlist!).OrderBy(w => w.Id).ToList();
                 var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
-                    connection.DefaultWishlistId, activeAllowed.Select(a => a.WishlistId).ToList());
+                    connection.DefaultWishlistId, activeAllowed.Select(w => w.Id).ToList());
                 var wishlists = activeAllowed
-                    .Select(a => new ConnectedAppWishlist(
-                        a.Wishlist!.PublicId,
-                        a.Wishlist.Name,
-                        a.Wishlist.Icon,
-                        a.WishlistId == effectiveDefaultId))
+                    .Select(w => new ConnectedAppWishlist(
+                        w.PublicId,
+                        w.Name,
+                        w.Icon,
+                        w.Id == effectiveDefaultId))
                     .OrderByDescending(w => w.IsDefault)
                     .ThenBy(w => w.Name, StringComparer.CurrentCultureIgnoreCase)
                     .ToList();
@@ -512,7 +539,9 @@ public class IntegrationConnectionService(
                     ideaCounts.GetValueOrDefault(connection.Id),
                     wishlists,
                     app?.IsSelfRegistered ?? IntegrationClientStore.IsSelfRegisteredId(connection.ClientId),
-                    connection.Audience);
+                    connection.Audience,
+                    connection.AllowAllWishlists,
+                    connection.ManageExistingItems);
             })
             .ToList();
     }
@@ -521,7 +550,9 @@ public class IntegrationConnectionService(
         string userId,
         string connectionPublicId,
         IReadOnlyCollection<string> wishlistPublicIds,
-        string? defaultWishlistPublicId)
+        string? defaultWishlistPublicId,
+        bool allowAllWishlists = false,
+        bool manageExistingItems = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);
         ArgumentNullException.ThrowIfNull(wishlistPublicIds);
@@ -530,7 +561,7 @@ public class IntegrationConnectionService(
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        if (requestedIds.Count == 0)
+        if (!allowAllWishlists && requestedIds.Count == 0)
         {
             return false;
         }
@@ -560,10 +591,12 @@ public class IntegrationConnectionService(
         }
 
         var selected = await context.Wishlists
-            .Where(w => w.OwnerId == userId && !w.Deleted && requestedIds.Contains(w.PublicId))
+            .Where(w => w.OwnerId == userId && !w.Deleted && (allowAllWishlists || requestedIds.Contains(w.PublicId)))
+            .OrderBy(w => w.Id)
             .Select(w => new { w.Id, w.PublicId })
             .ToListAsync();
-        if (selected.Count != requestedIds.Count)
+        if (selected.Count == 0 || requestedIds.Any(id => !selected.Any(w => w.PublicId == id)) ||
+            (defaultWishlistPublicId is not null && !selected.Any(w => w.PublicId == defaultWishlistPublicId)))
         {
             return false;
         }
@@ -575,7 +608,9 @@ public class IntegrationConnectionService(
         }
 
         connection.DefaultWishlistId = selected.FirstOrDefault(w => w.PublicId == defaultWishlistPublicId)?.Id
-            ?? selected.First(w => w.PublicId == requestedIds[0]).Id;
+            ?? selected[0].Id;
+        connection.AllowAllWishlists = allowAllWishlists;
+        connection.ManageExistingItems = manageExistingItems;
         connection.UpdatedOn = DateTimeOffset.UtcNow;
         await InvalidatePendingGrantsAsync(context, connection);
         await context.SaveChangesAsync();

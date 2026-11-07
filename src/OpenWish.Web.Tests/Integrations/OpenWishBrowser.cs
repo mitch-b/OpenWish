@@ -58,10 +58,19 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
     }
 
     /// <summary>Opens the consent screen and approves it with the chosen lists. Returns the redirect back to the app.</summary>
-    public async Task<Uri> ApproveAsync(string authorizeUrl, IEnumerable<string> wishlistIds, string? newListName = null)
+    public async Task<Uri> ApproveAsync(string authorizeUrl, IEnumerable<string> wishlistIds, string? newListName = null,
+        bool allowAllWishlists = false, bool manageExistingItems = true)
     {
         var page = await GetPageAsync(authorizeUrl);
         var fields = FormFields(page, "consent-approve");
+        if (allowAllWishlists)
+        {
+            fields.Add(new("allowAllWishlists", "true"));
+        }
+        if (manageExistingItems)
+        {
+            fields.Add(new("manageExistingItems", "true"));
+        }
         foreach (var wishlistId in wishlistIds)
         {
             fields.Add(new("wishlist", wishlistId));
@@ -97,13 +106,22 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
             $"POST {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
     }
 
-    public async Task SaveConnectedListsAsync(string connectionId, IEnumerable<string> wishlistIds, string defaultWishlistId)
+    public async Task SaveConnectedListsAsync(string connectionId, IEnumerable<string> wishlistIds, string defaultWishlistId,
+        bool allowAllWishlists = false, bool manageExistingItems = true)
     {
         var url = $"Account/Manage/ConnectedApps?edit={Uri.EscapeDataString(connectionId)}";
         var page = await GetPageAsync(url);
         var fields = FormFields(page, $"lists-{connectionId}");
         fields.AddRange(wishlistIds.Select(id => new KeyValuePair<string, string>("wishlist", id)));
         fields.Add(new("defaultWishlist", defaultWishlistId));
+        if (allowAllWishlists)
+        {
+            fields.Add(new("allowAllWishlists", "true"));
+        }
+        if (manageExistingItems)
+        {
+            fields.Add(new("manageExistingItems", "true"));
+        }
         var response = await Client.PostAsync(url, new FormUrlEncodedContent(fields));
         Assert.True(response.StatusCode == HttpStatusCode.Redirect,
             $"POST {url} returned {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");

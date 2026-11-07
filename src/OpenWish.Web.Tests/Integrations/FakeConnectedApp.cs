@@ -106,9 +106,11 @@ public sealed class FakeConnectedApp(FakeAppRegistration registration, Func<Http
     }
 
     /// <summary>Signs the app in through the person's browser: consent, callback, and code exchange.</summary>
-    public async Task ConnectAsync(OpenWishBrowser browser, IEnumerable<string> wishlistIds, string? newListName = null)
+    public async Task ConnectAsync(OpenWishBrowser browser, IEnumerable<string> wishlistIds, string? newListName = null,
+        bool allowAllWishlists = false, bool manageExistingItems = true)
     {
-        var callback = await browser.ApproveAsync(BuildAuthorizeUrl(), wishlistIds, newListName);
+        var callback = await browser.ApproveAsync(BuildAuthorizeUrl(), wishlistIds, newListName,
+            allowAllWishlists, manageExistingItems);
         await ExchangeAsync(ReadCallback(callback));
     }
 

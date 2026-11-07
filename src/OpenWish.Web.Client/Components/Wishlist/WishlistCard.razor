@@ -54,7 +54,7 @@ else
                 </a>
                 @if (isCurrentUserOwner)
                 {
-                    <div class="dropdown d-inline-block">
+                    <div class="dropdown d-inline-block wishlist-card-actions">
                         <button class="btn btn-outline-secondary btn-sm kebab-menu"
                                 type="button"
                                 id="dropdownMenu@(Wishlist.Id)"
@@ -113,11 +113,12 @@ else
         }
     }
 
-    private void ShowDeleteDialog()
+    private Task ShowDeleteDialog()
     {
-        deleteDialog.Show(
-            "Delete Wishlist",
-            $"Are you sure you want to delete the wishlist '{Wishlist?.Name}'? This action cannot be undone."
+        return deleteDialog.ShowAsync(
+            "Delete wishlist",
+            $"Are you sure you want to delete the wishlist '{Wishlist?.Name}'? This action cannot be undone.",
+            $"dropdownMenu{Wishlist?.Id}"
         );
     }
 

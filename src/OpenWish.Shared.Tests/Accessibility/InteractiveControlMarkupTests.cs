@@ -790,6 +790,26 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void WishlistCards_StretchNavigationWithoutCoveringOverflowActions()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor.css");
+
+        Assert.Contains("class=\"dropdown d-inline-block wishlist-card-actions\"", markup, StringComparison.Ordinal);
+        Assert.Contains(".wishlist-card-link::after {", styles, StringComparison.Ordinal);
+        Assert.Contains("inset: 0;", styles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 1;", styles, StringComparison.Ordinal);
+        var actionStyles = styles[
+            styles.IndexOf(".wishlist-card-actions {", StringComparison.Ordinal)..styles.IndexOf(".kebab-menu {", StringComparison.Ordinal)];
+        Assert.Contains("position: relative;", actionStyles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 2;", actionStyles, StringComparison.Ordinal);
+        Assert.Contains(".wishlist-card:has(.wishlist-card-link:focus-visible)", styles, StringComparison.Ordinal);
+        Assert.Contains("return deleteDialog.ShowAsync(", markup, StringComparison.Ordinal);
+        Assert.Contains("$\"dropdownMenu{Wishlist?.Id}\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistManagement_LoadFailuresAreActionable()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "ManageWishlist.razor");

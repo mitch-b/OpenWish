@@ -227,14 +227,17 @@ else
 
         var user = await UserAccessor.GetRequiredUserAsync(HttpContext);
         userId = user.Id;
-        connections = [.. await ConnectionService.GetConnectedAppsAsync(userId)];
+        var loadedConnections = await ConnectionService.GetConnectedAppsAsync(userId);
+        var loadedListOptions = new Dictionary<string, IReadOnlyList<ConsentWishlistOption>>();
 
-        foreach (var connection in connections)
+        foreach (var connection in loadedConnections)
         {
             var state = await ConnectionService.GetConsentStateAsync(userId, connection.ClientId);
-            listOptions[connection.ConnectionId] = state.Wishlists;
+            loadedListOptions[connection.ConnectionId] = state.Wishlists;
         }
 
+        listOptions = loadedListOptions;
+        connections = [.. loadedConnections];
         var connectedClientIds = connections.Select(c => c.ClientId).ToHashSet(StringComparer.Ordinal);
         availableApps = Registry.Apps.Where(app => !connectedClientIds.Contains(app.ClientId)).ToList();
     }

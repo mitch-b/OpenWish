@@ -1995,7 +1995,9 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The installed app cannot receive shared product links.");
   }
 
+  const dashboardCircuit = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Quick add an idea", visitedRoutes);
+  await assertDashboardWelcomeSurvivesHydration(page, dashboardCircuit);
   if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
     throw new Error("Pages do not link the web app manifest.");
   }

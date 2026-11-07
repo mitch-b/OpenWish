@@ -7,11 +7,13 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
+playwright_image="openwish-playwright:1.64.1-${run_id}"
 invite_test_image="openwish-invite-tests:${run_id}"
 release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 built_invite_test_image=false
+built_playwright_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
 evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/pr-assets/verification}"
 walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/pr-assets/walkthrough}"
@@ -39,6 +41,9 @@ cleanup() {
   if [[ "$built_invite_test_image" == "true" ]]; then
     docker image rm "$invite_test_image" >/dev/null 2>&1 || true
   fi
+  if [[ "$built_playwright_image" == "true" ]]; then
+    docker image rm "$playwright_image" >/dev/null 2>&1 || true
+  fi
   return "$exit_code"
 }
 trap cleanup EXIT
@@ -50,8 +55,9 @@ rm -f \
   "$evidence_directory/openwish-e2e-result.json"
 
 docker build \
-  --tag openwish-playwright:1.64.1 \
+  --tag "$playwright_image" \
   .agents/skills/screenshot
+built_playwright_image=true
 
 if [[ -z "${OPENWISH_PREBUILT_VERIFICATION_IMAGE:-}" ]]; then
   docker build \
@@ -83,7 +89,7 @@ docker run --rm \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
-  openwish-playwright:1.64.1
+  "$playwright_image"
 
 docker run --rm \
   --network "$network_name" \
@@ -93,11 +99,11 @@ docker run --rm \
 if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
   docker run --rm --entrypoint tar \
     --volume "$docker_evidence_directory:/evidence:ro" \
-    openwish-playwright:1.64.1 -C /evidence -cf - . |
+    "$playwright_image" -C /evidence -cf - . |
     tar -C "$evidence_directory" -xf -
   docker run --rm --entrypoint tar \
     --volume "$docker_walkthrough_directory:/walkthrough:ro" \
-    openwish-playwright:1.64.1 -C /walkthrough -cf - . |
+    "$playwright_image" -C /walkthrough -cf - . |
     tar -C "$walkthrough_directory" -xf -
 fi
 

@@ -82,6 +82,8 @@ path, and can leave broken links after force-pushes or cleanup.
 ## Capture workflow
 
 Run `scripts/verify-e2e.sh`. The script starts an isolated verification stack,
+uses run-specific app and browser-verifier image tags so concurrent checkouts
+cannot overwrite one another's test scripts,
 runs committed multi-user Playwright assertions, writes machine-readable
 results to ignored `pr-assets/verification/`, and generates walkthrough
 captures in ignored `pr-assets/walkthrough/`. The `browser-evidence` Actions

@@ -1,12 +1,21 @@
 name: "Copilot Setup Steps"
 
 # Allow testing of the setup steps from your repository's "Actions" tab.
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/copilot-setup-steps.yaml'
+  push:
+    branches: ["main"]
+    paths:
+      - '.github/workflows/copilot-setup-steps.yaml'
 
 jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
   copilot-setup-steps:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     # Set the permissions to the lowest permissions possible needed for your steps.
     # Copilot will be given its own token for its operations.
@@ -21,14 +30,19 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install .NET SDK
-        run: |
-          wget https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh -O dotnet-install.sh
-          chmod +x dotnet-install.sh
-          ./dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet
-          rm -f dotnet-install.sh
-          echo "DOTNET_ROOT=/usr/share/dotnet" >> $GITHUB_ENV
-          echo "/usr/share/dotnet" >> $GITHUB_PATH
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
 
       - name: Verify .NET installation
         run: |
           dotnet --version
+
+      - name: Verify Docker prerequisites
+        run: |
+          docker info
+          docker compose version
+
+      - name: Restore solution
+        working-directory: src
+        run: dotnet restore

@@ -13,8 +13,8 @@ export OPENWISH_VERIFICATION_IMAGE="$verification_image"
 built_verification_image=false
 built_invite_test_image=false
 compose=(docker compose -p "$project_name" -f compose.verify.yml)
-evidence_directory="$repository_root/.docs/images/verification"
-walkthrough_directory="$repository_root/.docs/images/walkthrough"
+evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/.docs/images/verification}"
+walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/.docs/images/walkthrough}"
 docker_repository_root="$repository_root"
 
 # Docker runs on Mate's host, while this script runs in Mate's container. Keep
@@ -23,13 +23,14 @@ if [[ -n "${MATE_HOST_WORKSPACE:-}" && "$repository_root" == /workspace/* ]]; th
   docker_repository_root="${MATE_HOST_WORKSPACE%/}/${repository_root#/workspace/}"
 fi
 
-docker_evidence_directory="$docker_repository_root/.docs/images/verification"
-docker_walkthrough_directory="$docker_repository_root/.docs/images/walkthrough"
+docker_evidence_directory="${evidence_directory/#$repository_root/$docker_repository_root}"
+docker_walkthrough_directory="${walkthrough_directory/#$repository_root/$docker_repository_root}"
 
 cleanup() {
   local exit_code=$?
+  "${compose[@]}" logs --no-color web > "$evidence_directory/openwish-e2e-web.log" 2>&1 || true
   if ((exit_code != 0)); then
-    "${compose[@]}" logs web >&2 || true
+    cat "$evidence_directory/openwish-e2e-web.log" >&2
   fi
   "${compose[@]}" down --remove-orphans
   if [[ "$built_verification_image" == "true" ]]; then

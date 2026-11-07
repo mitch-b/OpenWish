@@ -30,8 +30,12 @@ Use the following prompt for a scheduled unattended OpenWish improvement:
 > semantic version level, add a dated note under `.docs/releases/`, and update
 > `CHANGELOG.md` and `src/OpenWish.Web/wwwroot/releases.json` consistently.
 >
-> Run `dotnet format --verify-no-changes`, `dotnet build`, `dotnet test`, and
-> `scripts/verify-e2e.sh`. The browser test is a hard acceptance gate: require
+> From the repository root, run `scripts/verify-dotnet.sh` and
+> `scripts/verify-e2e.sh`. The .NET script is the exact CI gate and must run
+> every solution test, including PostgreSQL-backed `OpenWish.Web.Tests`;
+> targeted tests and a successful Docker build are not substitutes. Fix
+> format analyzer diagnostics, including naming rules, before pushing.
+> The browser test is a hard acceptance gate: require
 > authenticated API assertions, data-bearing UI assertions, no browser
 > errors, no failed responses, clean web logs, and desktop/mobile screenshots.
 > Use only the repository-provided Docker Playwright workflow and its
@@ -55,6 +59,12 @@ Use the following prompt for a scheduled unattended OpenWish improvement:
 > deferred polish findings and update the major-feature tracking issue as
 > `PLAN.md` describes. If any prerequisite or gate fails, leave no new PR and
 > report the blocker.
+> After updating from `main` or resolving conflicts, rerun both gates on the
+> resulting tree. If authorized to merge, wait for required `dotnet` and
+> `browser` checks on the latest PR revision; never bypass branch protection
+> or retry an unexplained failure until a lucky run passes. Inspect the
+> `dotnet-test-results` and `browser-evidence` artifacts and report unresolved
+> failures instead.
 
 The automation host may adapt checkout paths, unique branch names, and
 artifact destinations, but it should not weaken the acceptance gates.

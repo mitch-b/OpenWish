@@ -126,6 +126,13 @@
     color: var(--color-text-muted);
 }
 
+.kebab-menu:hover,
+.kebab-menu:focus-visible,
+.kebab-menu[aria-expanded="true"] {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .wishlist-card {
         transition: none;

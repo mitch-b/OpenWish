@@ -137,7 +137,7 @@ else
                         <strong>@(_event.IsGiftExchange ? "You're in this gift exchange." : "You're in this event.")</strong>
                         Add a few gift ideas now@(_event.IsGiftExchange ? ", then you can leave the rest to the organizer." : " so friends know what to get.")
                     </div>
-                    <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
+                    <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
                 </div>
             }
         }

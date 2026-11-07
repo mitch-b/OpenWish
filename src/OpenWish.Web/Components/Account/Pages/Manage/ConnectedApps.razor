@@ -14,22 +14,40 @@
 @inject IIntegrationClientStore ClientStore
 @inject IOptions<OpenWishSettings> Settings
 
-<PageTitle>Connected apps</PageTitle>
+<PageTitle>Integrations</PageTitle>
 
 <StatusMessage Message="@errorMessage" />
-<h3>Connected apps</h3>
-<p class="text-muted connected-apps-intro">Apps and AI assistants you connect can add ideas to the lists you choose. They never see reservations, purchases, comments, or your friends.</p>
+<h3>Integrations</h3>
+<p class="text-muted connected-apps-intro">Connect trusted apps or an AI assistant to add gift ideas to the lists you choose. They cannot see reservations, purchases, comments, or your friends.</p>
+
+<section class="connected-apps-guide" aria-labelledby="connected-apps-guide-title">
+    <h4 id="connected-apps-guide-title">Build an app</h4>
+    <p>OpenWish supports server-side apps that use OAuth and a private client secret. The person who runs this OpenWish must register the app before it can connect.</p>
+    <div class="connected-apps-guide-links">
+        <a href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#for-app-developers">Read the app developer guide</a>
+        <a href="/llms.txt">Read llms.txt</a>
+    </div>
+</section>
 
 @if (mcpUrl is not null)
 {
     <section class="connected-apps-mcp" aria-labelledby="mcp-title">
         <h4 id="mcp-title"><OpenWishIcon Name="stars" /> Connect an AI assistant</h4>
-        <p id="mcp-help">Add OpenWish as a custom connector or MCP server in Claude, ChatGPT, or VS Code, using this address. The assistant sends you back here to choose its lists.</p>
+        <p id="mcp-help">Add this MCP server to Claude, ChatGPT, VS Code, or another assistant that supports remote MCP with OAuth. Sign in to OpenWish in the browser, approve the connection, and choose which lists it can use. You do not need to copy a password or token.</p>
         <div class="connected-apps-mcp-url">
             <label class="visually-hidden" for="mcp-url">OpenWish MCP server address</label>
             <input class="form-control" id="mcp-url" value="@mcpUrl" readonly aria-describedby="mcp-help" />
             <button type="button" class="btn btn-outline-secondary" data-copy-text="@mcpUrl"><OpenWishIcon Name="copy" /> Copy</button>
         </div>
+        <a class="connected-apps-mcp-guide" href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp">MCP setup and supported assistants</a>
+    </section>
+}
+else
+{
+    <section class="connected-apps-mcp" aria-labelledby="mcp-title">
+        <h4 id="mcp-title"><OpenWishIcon Name="stars" /> AI assistants and MCP</h4>
+        <p>This OpenWish's MCP server is turned off. Ask the person who runs it to enable <code>OpenWishSettings__Integrations__Mcp__Enabled</code>. Once enabled, add this site's <code>/mcp</code> address to your assistant, then sign in and choose which lists it can use.</p>
+        <a class="connected-apps-mcp-guide" href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp">MCP setup and supported assistants</a>
     </section>
 }
 
@@ -41,7 +59,7 @@
             <h4 id="connected-apps-empty-title">No apps are connected</h4>
             @if (mcpUrl is not null && !Registry.IsEnabled)
             {
-                <p>Add the address above to an AI assistant. It brings you back here to choose which lists it can use.</p>
+                <p>Add the MCP address above to an AI assistant. It brings you back here to sign in, approve the connection, and choose its lists.</p>
             }
             else if (Registry.IsEnabled)
             {
@@ -59,7 +77,6 @@ else
     <ul class="connected-apps" role="list">
         @foreach (var connection in connections)
         {
-            var options = listOptions[connection.ConnectionId];
             var confirming = string.Equals(DisconnectConnectionId, connection.ConnectionId, StringComparison.Ordinal);
             <li class="connected-app" id="connection-@connection.ConnectionId">
                 <header class="connected-app-header">
@@ -109,6 +126,7 @@ else
                 }
                 else
                 {
+                    var options = listOptions[connection.ConnectionId];
                     <form method="post" @formname="@($"lists-{connection.ConnectionId}")" @onsubmit="() => SaveListsAsync(connection)" class="connected-app-lists">
                         <AntiforgeryToken />
                         <fieldset>

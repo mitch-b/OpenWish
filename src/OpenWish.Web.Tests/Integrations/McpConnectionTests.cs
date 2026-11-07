@@ -30,6 +30,20 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
     private const string LoopbackRedirect = "http://127.0.0.1:33418/callback";
 
     [Fact]
+    public async Task LlmsTxt_IsPublicAndExplainsIntegrationDiscoveryAndConsent()
+    {
+        using var client = factory.CreateApiClient();
+        using var response = await client.GetAsync("llms.txt");
+        var content = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("/api/integrations/v1", content);
+        Assert.Contains("OpenWishSettings__Integrations__Mcp__Enabled", content);
+        Assert.Contains("browser sign-in and consent flow", content);
+        Assert.Contains(".docs/INTEGRATIONS.md", content);
+    }
+
+    [Fact]
     public async Task UnauthenticatedRequest_ChallengesWithProtectedResourceMetadata()
     {
         using var client = factory.CreateApiClient();

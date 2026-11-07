@@ -2,6 +2,29 @@
     max-width: 62ch;
 }
 
+.connected-apps-guide {
+    margin: 1.25rem 0 0;
+    padding: 1rem 0;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.connected-apps-guide h4 {
+    margin: 0 0 0.35rem;
+    font-size: 1.05rem;
+}
+
+.connected-apps-guide p {
+    max-width: 62ch;
+    margin-bottom: 0.55rem;
+    color: var(--color-text-muted);
+}
+
+.connected-apps-guide-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
 .connected-apps {
     display: grid;
     gap: 1rem;
@@ -283,6 +306,11 @@
     flex: 0 0 auto;
     align-items: center;
     gap: 0.4rem;
+}
+
+.connected-apps-mcp-guide {
+    display: inline-block;
+    margin-top: 0.65rem;
 }
 
 .connected-app-kind {

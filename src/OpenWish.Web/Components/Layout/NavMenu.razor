@@ -59,8 +59,13 @@
             <OpenWishIcon Name="people" /> <span>Friends</span>
           </NavLink>
         </div>
+        <div class="nav-item">
+          <NavLink class="nav-link" href="Account/Manage/ConnectedApps">
+            <OpenWishIcon Name="link-45deg" /> <span>Integrations</span>
+          </NavLink>
+        </div>
         <div class="nav-item account-nav-item">
-          <NavLink class="nav-link" href="Account/Manage">
+          <NavLink class="nav-link" href="Account/Manage" Match="@(IsIntegrationsPage ? NavLinkMatch.All : NavLinkMatch.Prefix)">
             <OpenWishIcon Name="person-circle" /> <span>@context.User.Identity?.Name</span>
           </NavLink>
         </div>
@@ -105,6 +110,10 @@
 @code {
   private string? currentUrl;
   private int _pendingInvitationCount;
+  private bool IsIntegrationsPage => string.Equals(
+    currentUrl?.TrimEnd('/'),
+    "Account/Manage/ConnectedApps",
+    StringComparison.OrdinalIgnoreCase);
 
   protected override async Task OnInitializedAsync()
   {

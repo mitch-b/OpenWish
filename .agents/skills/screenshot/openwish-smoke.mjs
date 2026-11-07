@@ -4952,7 +4952,16 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   assertions.push("ideas show their source app, and editing one explains the sync");
   assertions.push("WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it");
 
-  await visit(page, "/Account/Manage/ConnectedApps", "Connected apps", []);
+  await page.getByRole("link", { name: "Integrations", exact: true }).click();
+  await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Read the app developer guide" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Read llms.txt" }).waitFor({ state: "visible" });
+  const primaryNavigation = page.locator("#primary-navigation");
+  if (await primaryNavigation.locator('a[href="Account/Manage/ConnectedApps"]').getAttribute("aria-current") !== "page" ||
+      await primaryNavigation.locator('a[href="Account/Manage"]').getAttribute("aria-current") !== null) {
+    throw new Error("Integrations and account navigation should not both appear active.");
+  }
+  await visit(page, "/Account/Manage/ConnectedApps", "Integrations", []);
   const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
   await connection.getByText("2 ideas added").waitFor({ state: "visible" });
   await connection.getByLabel(listName).waitFor({ state: "visible" });
@@ -4960,6 +4969,11 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
     throw new Error("The connected app's list was not shown as allowed.");
   }
   await screenshot(page, "connected-apps.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertResponsiveWidths(page, [{ width: 390, height: 844 }]);
+  await screenshot(page, "connected-apps-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  assertions.push("Integrations are reachable from navigation and explain app, llms.txt, and MCP setup");
 
   // A friend cannot open the new private list the app writes to.
   const friendContext = await browser.newContext();

@@ -4783,10 +4783,29 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
     );
   }
 
+  const friendContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const friendPage = await friendContext.newPage();
+  await login(friendContext, "friend", friendEmail);
+  await visit(
+    friendPage,
+    `/events/${manifest.eventPublicId}`,
+    "Your gift giver can't see any ideas from you yet.",
+    []
+  );
+  const postDrawWishlistReminder = friendPage.getByTestId("participant-add-wishlist-after-draw");
+  await postDrawWishlistReminder.waitFor({ state: "visible" });
+  await screenshot(friendPage, "event-wishlist-reminder-after-draw.png");
+  await friendPage.setViewportSize({ width: 390, height: 844 });
+  await screenshot(friendPage, "event-wishlist-reminder-after-draw-mobile.png");
+  await friendContext.close();
+
   results.push({
     scenario: "match-without-wishlist",
     loginStatus,
-    assertions: ["recipient without an attached wishlist has no dead-end shopping action"]
+    assertions: [
+      "recipient without an attached wishlist has no dead-end shopping action",
+      "a participant without a shared wishlist gets the post-draw reminder on desktop and mobile"
+    ]
   });
   await context.close();
 }

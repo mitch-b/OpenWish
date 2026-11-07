@@ -5178,7 +5178,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await friendContext.close();
   assertions.push("a non-member cannot read the private list the app writes to");
 
-  await connection.getByRole("link", { name: "Disconnect", exact: true }).click();
+  await connection.getByRole("link", { name: `Disconnect ${connectedApp.name}`, exact: true }).click();
   await page.getByRole("heading", { name: `Disconnect ${connectedApp.name}?` }).waitFor({ state: "visible" });
   await screenshot(page, "connected-app-disconnect.png");
   await page.getByRole("button", { name: `Disconnect ${connectedApp.name}` }).click();

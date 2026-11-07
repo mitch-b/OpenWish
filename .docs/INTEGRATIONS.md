@@ -129,6 +129,12 @@ and adds it to their assistant as a custom connector or remote MCP server. The
 assistant opens OpenWish in a browser, the person approves it and chooses its
 lists, and the assistant appears in Connected apps labeled "AI assistant".
 
+Sign in to OpenWish with your email and password or an external sign-in provider
+configured by your host, such as Google. If you're already signed in, the
+connection uses that account. Check the signed-in account on the consent screen
+before approving; the assistant receives its own scoped token, not your
+OpenWish password or external-provider credentials.
+
 OpenWish must be reachable over HTTPS at the root of its host name; hosted
 assistants such as Claude and ChatGPT connect from their own servers, so a
 home-network-only address works only for assistants running on the same

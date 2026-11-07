@@ -110,7 +110,7 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
     }
 
     /// <summary>The hidden fields Blazor renders for a named static form: its handler name and antiforgery token.</summary>
-    private static List<KeyValuePair<string, string>> FormFields(string html, string formName)
+    internal static List<KeyValuePair<string, string>> FormFields(string html, string formName)
     {
         var form = FormPattern().Matches(html)
             .Select(match => match.Value)
@@ -127,6 +127,20 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
         ];
     }
 
+    internal static string AntiforgeryToken(string html)
+    {
+        var token = AntiforgeryPattern().Match(html);
+        Assert.True(token.Success, "The page has no antiforgery token.");
+        return WebUtility.HtmlDecode(token.Groups["value"].Value);
+    }
+
+    internal static string ExternalLoginReturnUrl(string html)
+    {
+        var input = ExternalLoginReturnUrlPattern().Match(html);
+        Assert.True(input.Success, "The external sign-in form has no return URL.");
+        return WebUtility.HtmlDecode(input.Groups["value"].Value);
+    }
+
     public void Dispose() => Client.Dispose();
 
     [GeneratedRegex("<form[\\s\\S]*?</form>", RegexOptions.IgnoreCase)]
@@ -134,4 +148,7 @@ public sealed partial class OpenWishBrowser(HttpClient client) : IDisposable
 
     [GeneratedRegex("name=\"__RequestVerificationToken\"[^>]*value=\"(?<value>[^\"]+)\"|value=\"(?<value>[^\"]+)\"[^>]*name=\"__RequestVerificationToken\"")]
     private static partial Regex AntiforgeryPattern();
+
+    [GeneratedRegex("name=\"ReturnUrl\"\\s+value=\"(?<value>[^\"]*)\"")]
+    private static partial Regex ExternalLoginReturnUrlPattern();
 }

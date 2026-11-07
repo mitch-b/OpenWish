@@ -436,6 +436,78 @@ async function assertTextContrast(locator, description) {
   }
 }
 
+async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, screenshotPrefix) {
+  const route = `/wishlists/${manifest.wishlistPublicId}`;
+  const link = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  const card = page.locator(".wishlist-card").filter({ has: link });
+  const returnToCards = async () => {
+    await visit(page, "/wishlists", "Family Gift Ideas", visitedRoutes);
+    await page.waitForLoadState("networkidle");
+    const search = page.getByRole("searchbox", { name: "Search wishlists" });
+    await search.fill("Family");
+    await page.getByRole("status").filter({ hasText: "1 wishlist found." }).waitFor({ state: "attached" });
+    const clearSearch = page.getByRole("button", { name: "Clear wishlist search" });
+    await clearSearch.click();
+    await clearSearch.waitFor({ state: "hidden" });
+  };
+  await page.waitForLoadState("networkidle");
+  await link.waitFor({ state: "visible" });
+  await page.keyboard.press("Tab");
+  await link.focus();
+  const focusStyle = await card.evaluate(element => getComputedStyle(element).outlineStyle);
+  if (focusStyle !== "solid") {
+    throw new Error("Keyboard focus did not outline the whole wishlist card.");
+  }
+  await card.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, `${screenshotPrefix}.png`) });
+  await page.keyboard.press("Enter");
+  await page.waitForURL(`${baseUrl}${route}`);
+  await returnToCards();
+
+  for (const selector of [".card-title", ".wishlist-card-icon", ".wishlist-meta", ".card-footer-row"]) {
+    const target = card.locator(selector);
+    await target.scrollIntoViewIfNeeded();
+    const bounds = await target.boundingBox();
+    if (!bounds) {
+      throw new Error(`Wishlist card region ${selector} was not visible.`);
+    }
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.waitForURL(`${baseUrl}${route}`);
+    await returnToCards();
+  }
+  await card.scrollIntoViewIfNeeded();
+  const bounds = await card.boundingBox();
+  await page.mouse.click(bounds.x + 10, bounds.y + 10);
+  await page.waitForURL(`${baseUrl}${route}`);
+  await returnToCards();
+
+  const overflow = card.getByRole("button", { name: "Actions for Family Gift Ideas" });
+  await overflow.click();
+  const deleteAction = card.getByRole("button", { name: "Delete", exact: true });
+  await deleteAction.waitFor({ state: "visible" });
+  if (new URL(page.url()).pathname !== "/wishlists") {
+    throw new Error("The wishlist overflow menu navigated instead of opening.");
+  }
+  await deleteAction.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, `${screenshotPrefix}-overflow.png`) });
+  await deleteAction.click();
+  const dialog = page.getByRole("dialog", { name: "Delete wishlist", exact: true });
+  await dialog.waitFor({ state: "visible" });
+  await screenshot(page, `${screenshotPrefix}-delete-confirmation.png`);
+  if (new URL(page.url()).pathname !== "/wishlists") {
+    throw new Error("A wishlist overflow action navigated instead of opening its confirmation.");
+  }
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await dialog.waitFor({ state: "hidden" });
+  if (!(await overflow.evaluate(element => element === document.activeElement))) {
+    throw new Error("Canceling wishlist deletion did not return focus to its overflow button.");
+  }
+  await page.keyboard.press("Enter");
+  await deleteAction.waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await deleteAction.waitFor({ state: "hidden" });
+}
+
 async function restoreWishlistSharing(page, manifest, friendName) {
   const managementPath = `/wishlists/${manifest.wishlistPublicId}/manage`;
   if (new URL(page.url()).pathname !== managementPath) {
@@ -722,6 +794,17 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await assertTextContrast(familyWishlistLink, "Wishlist card navigation link");
   await screenshot(page, "wishlists.png");
+
+  for (const [label, viewport] of [
+    ["desktop", { width: 1440, height: 1000 }],
+    ["tablet", { width: 900, height: 1000 }],
+    ["mobile", { width: 390, height: 844 }]
+  ]) {
+    await page.setViewportSize(viewport);
+    await verifyWishlistCardNavigation(page, manifest, visitedRoutes, `wishlist-cards-${label}`);
+    await assertNoHorizontalScroll(page, `Wishlist cards at ${label} width`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   const ownTab = page.getByRole("tab", { name: "My Wishlists" });
   const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
@@ -1634,6 +1717,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
+  await verifyWishlistCardNavigation(page, manifest, visitedRoutes, "wishlist-cards-dark");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage`, "Manage wishlist", visitedRoutes);
   await page.locator('.friends-access-card[aria-busy="false"]').waitFor({ state: "visible" });
@@ -1794,6 +1878,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "dashboard data",
       "owned and friend wishlists",
       "authenticated owned and friend wishlist API data",
+      "whole-card wishlist navigation and independent overflow actions on desktop, tablet, mobile, and dark theme",
+      "wishlist keyboard navigation, named deletion confirmation, and cancel focus restoration",
       "wishlist tab navigation preserves scroll and Tab enters the selected panel",
       "wishlist items and pricing",
       "accessible product links",

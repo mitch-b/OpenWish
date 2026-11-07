@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -68,6 +70,9 @@ public sealed class OpenWishAppFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseSetting("OpenWishSettings:EnableDevelopmentLogin", "true");
         builder.UseSetting("OpenWishSettings:BaseUri", "https://wish.example.test/");
         builder.UseSetting("OpenWishSettings:Integrations:Mcp:Enabled", "true");
+        builder.ConfigureServices(services => services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, TestExternalLoginHandler>(
+                TestExternalLoginHandler.SchemeName, "Test external provider", _ => { }));
 
         Register(builder, 0, Studio, "Send pieces from your notebook to OpenWish.");
         Register(builder, 1, Pantry, null);

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ using ModelContextProtocol.Authentication;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using OpenWish.Data;
+using OpenWish.Data.Entities;
 using OpenWish.Shared.Integrations;
 using OpenWish.Shared.Models;
 using Xunit;
@@ -82,6 +84,101 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
         Assert.Contains("none", Strings(root.GetProperty("token_endpoint_auth_methods_supported")));
         Assert.Equal(["S256"], Strings(root.GetProperty("code_challenge_methods_supported")));
         Assert.True(root.GetProperty("authorization_response_iss_parameter_supported").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AssistantConnection_UsesTheAccountAuthenticatedInTheBrowser(bool externalLogin)
+    {
+        const string password = "Test-password-123!";
+        var email = externalLogin ? TestExternalLoginHandler.Email : $"{Guid.NewGuid():N}@example.test";
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+            var created = externalLogin ? await users.CreateAsync(user) : await users.CreateAsync(user, password);
+            Assert.True(created.Succeeded, string.Join(", ", created.Errors.Select(e => e.Description)));
+            if (externalLogin)
+            {
+                var linked = await users.AddLoginAsync(user, new UserLoginInfo(
+                    TestExternalLoginHandler.SchemeName, TestExternalLoginHandler.ProviderKey, "Test external provider"));
+                Assert.True(linked.Succeeded, string.Join(", ", linked.Errors.Select(e => e.Description)));
+            }
+        }
+
+        using var other = await SignInAsync();
+        var otherList = await other.CreateWishlistAsync(Unique("Other person list"));
+        using var browser = factory.CreateBrowser();
+        var client = await RegisterAsync();
+        var flow = AuthorizationFlow.Start(client.ClientId, LoopbackRedirect);
+
+        var challenge = await browser.Client.GetAsync(flow.AuthorizeUrl);
+        Assert.Equal(HttpStatusCode.Redirect, challenge.StatusCode);
+        var loginUrl = new Uri(browser.Client.BaseAddress!, challenge.Headers.Location!);
+        Assert.Equal("/Account/Login", loginUrl.AbsolutePath);
+        var returnUrl = QueryHelpers.ParseQuery(loginUrl.Query)["ReturnUrl"].ToString();
+        Assert.Equal("/" + flow.AuthorizeUrl, returnUrl);
+
+        var loginPage = await browser.GetPageAsync(loginUrl.PathAndQuery);
+        HttpResponseMessage signIn;
+        if (externalLogin)
+        {
+            Assert.Contains("Continue with Test external provider", loginPage);
+            var externalReturnUrl = OpenWishBrowser.ExternalLoginReturnUrl(loginPage);
+            Assert.Equal(returnUrl, externalReturnUrl);
+            signIn = await browser.Client.PostAsync("Account/PerformExternalLogin", new FormUrlEncodedContent(
+            [
+                new("__RequestVerificationToken", OpenWishBrowser.AntiforgeryToken(loginPage)),
+                new("provider", TestExternalLoginHandler.SchemeName),
+                new("returnUrl", externalReturnUrl)
+            ]));
+            Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+            Assert.StartsWith("/Account/ExternalLogin", new Uri(browser.Client.BaseAddress!, signIn.Headers.Location!).PathAndQuery);
+            signIn = await browser.Client.GetAsync(signIn.Headers.Location);
+        }
+        else
+        {
+            var invalidFields = OpenWishBrowser.FormFields(loginPage, "login");
+            invalidFields.Add(new("Input.Email", email));
+            invalidFields.Add(new("Input.Password", "Incorrect-password-123!"));
+            var rejected = await browser.Client.PostAsync(loginUrl.PathAndQuery, new FormUrlEncodedContent(invalidFields));
+            Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+            Assert.Contains("Invalid login attempt", await rejected.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.Redirect, (await browser.Client.GetAsync(flow.AuthorizeUrl)).StatusCode);
+
+            var fields = OpenWishBrowser.FormFields(await browser.GetPageAsync(loginUrl.PathAndQuery), "login");
+            fields.Add(new("Input.Email", email));
+            fields.Add(new("Input.Password", password));
+            signIn = await browser.Client.PostAsync(loginUrl.PathAndQuery, new FormUrlEncodedContent(fields));
+        }
+
+        Assert.Equal(HttpStatusCode.Redirect, signIn.StatusCode);
+        Assert.Equal(returnUrl, new Uri(browser.Client.BaseAddress!, signIn.Headers.Location!).PathAndQuery);
+
+        var list = await browser.CreateWishlistAsync(Unique("Authenticated user list"));
+        var consent = await browser.GetPageAsync(flow.AuthorizeUrl);
+        Assert.Contains(list.Name, consent);
+        Assert.DoesNotContain(otherList.Name, consent);
+        var code = flow.ReadCode(await browser.ApproveAsync(flow.AuthorizeUrl, [list.PublicId]));
+        var tokenResponse = await TokenAsync(new()
+        {
+            ["grant_type"] = "authorization_code",
+            ["code"] = code,
+            ["redirect_uri"] = LoopbackRedirect,
+            ["client_id"] = client.ClientId,
+            ["code_verifier"] = flow.CodeVerifier!,
+            ["resource"] = Resource
+        });
+        Assert.Equal(HttpStatusCode.OK, tokenResponse.StatusCode);
+        var token = (await tokenResponse.Content.ReadFromJsonAsync<IntegrationTokenResponse>())!;
+
+        var http = factory.CreateApiClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        var transport = new HttpClientTransport(new HttpClientTransportOptions { Endpoint = new Uri(Resource) }, http, ownsHttpClient: true);
+        await using var mcp = await McpClient.CreateAsync(transport);
+        var allowed = Assert.Single(await CallAsync<List<IntegrationWishlistModel>>(mcp, "list_wishlists"));
+        Assert.Equal(list.PublicId, allowed.Id);
     }
 
     [Fact]

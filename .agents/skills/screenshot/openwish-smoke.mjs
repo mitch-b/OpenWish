@@ -482,6 +482,8 @@ async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, scree
   await returnToCards();
 
   const overflow = card.getByRole("button", { name: "Actions for Family Gift Ideas" });
+  await verifyOverflowHover(page, overflow);
+  await page.screenshot({ path: path.join(walkthroughDirectory, `${screenshotPrefix}-hover.png`) });
   await overflow.click();
   const deleteAction = card.getByRole("button", { name: "Delete", exact: true });
   await deleteAction.waitFor({ state: "visible" });
@@ -506,6 +508,75 @@ async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, scree
   await deleteAction.waitFor({ state: "visible" });
   await page.keyboard.press("Escape");
   await deleteAction.waitFor({ state: "hidden" });
+}
+
+async function verifyOverflowHover(page, overflow) {
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(250);
+  const restingBackground = await overflow.evaluate(element => getComputedStyle(element).backgroundColor);
+  await overflow.hover();
+  await page.waitForTimeout(250);
+  const hoveredBackground = await overflow.evaluate(element => getComputedStyle(element).backgroundColor);
+  if (restingBackground === hoveredBackground || hoveredBackground === "rgba(0, 0, 0, 0)") {
+    throw new Error("The card overflow button did not show a visible hover background.");
+  }
+}
+
+async function verifyEventCardNavigation(page, eventPublicId, visitedRoutes) {
+  const route = `/events/${eventPublicId}`;
+  const card = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
+  const link = card.getByRole("link", { name: /Continue setup/ });
+  const returnToCards = async () => {
+    await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
+    await page.waitForLoadState("networkidle");
+  };
+  for (const viewport of [
+    { width: 1440, height: 1000, name: "desktop" },
+    { width: 390, height: 700, name: "mobile" }
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.keyboard.press("Tab");
+    await link.focus();
+    if (await card.evaluate(element => getComputedStyle(element).outlineStyle) !== "solid") {
+      throw new Error("Keyboard focus did not outline the whole event card.");
+    }
+    await page.keyboard.press("Enter");
+    await page.waitForURL(`${baseUrl}${route}`);
+    await returnToCards();
+    for (const selector of [".card-title", ".event-card-icon", ".event-meta", ".card-footer-row"]) {
+      const target = card.locator(selector);
+      await target.scrollIntoViewIfNeeded();
+      const bounds = await target.boundingBox();
+      if (!bounds) throw new Error(`Event card region ${selector} was not visible.`);
+      await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      await page.waitForURL(`${baseUrl}${route}`);
+      await returnToCards();
+    }
+    await card.scrollIntoViewIfNeeded();
+    const bounds = await card.boundingBox();
+    await page.mouse.click(bounds.x + 10, bounds.y + 10);
+    await page.waitForURL(`${baseUrl}${route}`);
+    await returnToCards();
+    const overflow = card.getByRole("button", { name: "Actions for Neighborhood Gift Exchange" });
+    await assertMinimumTouchTarget(overflow, "Event overflow action");
+    await verifyOverflowHover(page, overflow);
+    await page.screenshot({ path: path.join(walkthroughDirectory, `event-cards-${viewport.name}-hover.png`) });
+    await overflow.click();
+    const deleteAction = card.getByRole("button", { name: "Delete", exact: true });
+    await deleteAction.waitFor({ state: "visible" });
+    await deleteAction.click();
+    const dialog = page.getByRole("dialog", { name: "Delete event", exact: true });
+    await dialog.waitFor({ state: "visible" });
+    if (new URL(page.url()).pathname !== "/events") {
+      throw new Error("An event overflow action navigated instead of opening its confirmation.");
+    }
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await dialog.waitFor({ state: "detached" });
+    if (!(await overflow.evaluate(element => element === document.activeElement))) {
+      throw new Error("Canceling event deletion did not restore focus to the overflow button.");
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
 }
 
 async function restoreWishlistSharing(page, manifest, friendName) {
@@ -1501,8 +1572,34 @@ async function verifyOwnerJourney(browser, manifest, results) {
     "Mobile gift exchange invitation action"
   );
   await screenshot(page, "secret-santa-setup-mobile.png");
+  for (const [label, fragment] of [
+    ["Invite people", "event-invitations"],
+    ["Add wishlist", "event-wishlists"],
+    ["Review lists", "event-wishlists"],
+    ["Go to draw", "gift-exchange"]
+  ]) {
+    await setupSteps.getByRole("link", { name: label, exact: true }).click();
+    await page.waitForURL(`${baseUrl}/events/${createdEventPublicId}#${fragment}`);
+    await assertVisible(page, "Ready the exchange");
+    const target = page.locator(`#${fragment}`);
+    await target.waitFor({ state: "visible" });
+    await page.waitForFunction(section => {
+      const bounds = document.getElementById(section)?.getBoundingClientRect();
+      return bounds && bounds.top < window.innerHeight && bounds.bottom > 0;
+    }, fragment);
+    if (label === "Invite people") {
+      await target.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: path.join(walkthroughDirectory, "event-invite-shortcut-mobile.png") });
+    }
+  }
   await page.setViewportSize({ width: 1440, height: 1000 });
 
+  await setupSteps.getByRole("link", { name: "Invite people", exact: true }).click();
+  await page.waitForURL(`${baseUrl}/events/${createdEventPublicId}#event-invitations`);
+  await page.locator("#event-invitations").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(walkthroughDirectory, "event-invite-shortcut-desktop.png") });
   await page.getByRole("button", { name: "Invite people" }).first().click();
   await assertVisible(page, "Paste as many addresses as you need");
   if (await page.getByRole("dialog", { name: "Invite to event" }).getAttribute("aria-busy") !== "false") {
@@ -1842,6 +1939,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Two-factor authentication is off.");
 
   await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
+  await verifyEventCardNavigation(page, createdEventPublicId, visitedRoutes);
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
   const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Gift Exchange" });
   await createdEventActions.click();
@@ -1887,6 +1985,9 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "authenticated owned and friend wishlist API data",
       "whole-card wishlist navigation and independent overflow actions on desktop, tablet, mobile, and dark theme",
       "wishlist keyboard navigation, named deletion confirmation, and cancel focus restoration",
+      "wishlist overflow hover feedback on desktop, tablet, mobile, and dark theme",
+      "whole-card event navigation, keyboard focus, independent overflow actions, and mobile touch targets",
+      "organizer setup shortcuts preserve the event route and scroll to invitations, wishlists, and draw",
       "wishlist tab navigation preserves scroll and Tab enters the selected panel",
       "wishlist items and pricing",
       "accessible product links",

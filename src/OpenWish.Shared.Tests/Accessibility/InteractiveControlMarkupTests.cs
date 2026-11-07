@@ -859,6 +859,57 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventCards_StretchNavigationWithoutCoveringOverflowActions()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor.css");
+
+        Assert.Contains("class=\"dropdown d-inline-block event-card-actions\"", markup, StringComparison.Ordinal);
+        Assert.Contains(".event-card-link::after {", styles, StringComparison.Ordinal);
+        Assert.Contains("inset: 0;", styles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 1;", styles, StringComparison.Ordinal);
+        Assert.Contains(".event-card-actions {", styles, StringComparison.Ordinal);
+        Assert.Contains("z-index: 2;", styles, StringComparison.Ordinal);
+        Assert.Contains(".event-card:has(.event-card-link:focus-visible)", styles, StringComparison.Ordinal);
+        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Wishlist", "WishlistCard")]
+    [InlineData("Event", "EventCard")]
+    public void CardOverflowActions_HaveExplicitHoverFocusAndOpenStates(string directory, string component)
+    {
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", directory, $"{component}.razor.css");
+
+        Assert.Contains(".kebab-menu:hover,", styles, StringComparison.Ordinal);
+        Assert.Contains(".kebab-menu:focus-visible,", styles, StringComparison.Ordinal);
+        Assert.Contains(".kebab-menu[aria-expanded=\"true\"] {", styles, StringComparison.Ordinal);
+        Assert.Contains("background: var(--color-surface-hover);", styles, StringComparison.Ordinal);
+        Assert.Contains("color: var(--color-text);", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventSectionLinks_IncludeTheEventRouteBeforeTheFragment()
+    {
+        var setup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "SecretSantaSetup.razor");
+        foreach (var section in new[] { "event-invitations", "event-wishlists", "gift-exchange" })
+        {
+            Assert.Contains($"ActionHref=\"@($\"/events/{{Event.PublicId}}#{section}\")\"", setup, StringComparison.Ordinal);
+        }
+
+        foreach (var component in new[] { "GiftExchangeDisplay", "EventReservedItems" })
+        {
+            var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", $"{component}.razor");
+            Assert.Contains("href=\"@($\"/events/{EventId}#event-wishlists\")\"", markup, StringComparison.Ordinal);
+        }
+
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+        Assert.Contains("href=\"@($\"/events/{EventId}#event-wishlists\")\"", details, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WishlistManagement_LoadFailuresAreActionable()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "ManageWishlist.razor");

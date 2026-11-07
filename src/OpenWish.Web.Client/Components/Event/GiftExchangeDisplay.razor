@@ -59,7 +59,7 @@
                 @if (!WishlistsLoaded)
                 {
                     <p role="status">Checking shared gift ideas...</p>
-                    <a class="btn btn-outline-primary gift-match-action" href="#event-wishlists">See event wishlists</a>
+                    <a class="btn btn-outline-primary gift-match-action" href="@($"/events/{EventId}#event-wishlists")">See event wishlists</a>
                 }
                 else if (_recipientWishlist != null && RecipientItemCount > 0)
                 {

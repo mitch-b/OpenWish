@@ -121,6 +121,24 @@ public sealed partial class FamilyExchangeJourneyTests(OpenWishAppFactory factor
         Assert.Equal(HttpStatusCode.BadRequest, repeated.StatusCode);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    public async Task EmailInvitations_RejectBlankAddressesWithoutServerErrors(string email)
+    {
+        using var organizer = factory.CreateBrowser();
+        await organizer.SignInAsync("owner");
+        var created = await organizer.Client.PostAsJsonAsync("api/events",
+            new EventModel { Name = $"Blank email {Guid.NewGuid():N}", Date = DateTimeOffset.UtcNow.AddDays(30), EventUsers = [] });
+        created.EnsureSuccessStatusCode();
+        var eventModel = (await created.Content.ReadFromJsonAsync<EventModel>())!;
+
+        var invitation = await organizer.Client.PostAsJsonAsync($"api/events/{eventModel.PublicId}/invitations/email", new { Email = email });
+
+        Assert.Equal(HttpStatusCode.BadRequest, invitation.StatusCode);
+    }
+
     [Fact]
     public async Task MissingInvitationAndMalformedConfirmation_OfferRecoveryInsteadOfServerErrors()
     {

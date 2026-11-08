@@ -579,7 +579,10 @@ public class EventService(
 
     public async Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new InvalidOperationException("Enter an email address to send an invitation.");
+        }
         email = email.Trim();
         var normalizedEmail = email.ToUpperInvariant();
 

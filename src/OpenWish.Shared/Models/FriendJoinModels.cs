@@ -25,6 +25,10 @@ public record FriendJoinPreviewModel
 {
     public FriendJoinStatus Status { get; set; }
     public string? DisplayName { get; set; }
+
+    /// <summary>Set only once the two people are friends (Connected or AlreadyFriends), to open their lists.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? FriendUserName { get; set; }
 }
 
 public record FriendJoinRequestModel

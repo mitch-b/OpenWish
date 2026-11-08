@@ -1682,10 +1682,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
     name: "Accept friend request from TaylorDemo"
   });
   await page.getByRole("heading", { name: "Friend requests (1)" }).waitFor({ state: "visible" });
-  const requestsPanelOrder = await page.getByTestId("friend-requests-panel")
-    .evaluate(element => getComputedStyle(element).order);
-  if (requestsPanelOrder !== "-1") {
-    throw new Error("Pending friend requests were not shown before the other friends panels.");
+  const requestsFirst = await page.locator(".friends-layout .card").first()
+    .evaluate(element => element.dataset.testid === "friend-requests-panel");
+  if (!requestsFirst) {
+    throw new Error("Pending friend requests were not the first panel in reading and tab order.");
   }
   await acceptTaylorRequest.click();
   await page.getByRole("heading", { name: "Friend requests", exact: true }).waitFor({ state: "visible" });
@@ -1700,6 +1700,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
     .waitFor({ state: "visible" });
   await friendInvites.fill("new-friend@example.com");
   await sendInvitations.click({ trial: true });
+  const pendingInvitesResponse = await context.request.get(`${baseUrl}/api/friends/pending-invites`);
+  if (!pendingInvitesResponse.ok()) {
+    throw new Error(`Pending invitations returned ${pendingInvitesResponse.status()}.`);
+  }
+  const pendingInvites = await pendingInvitesResponse.json();
+  if (!Array.isArray(pendingInvites)) {
+    throw new Error("Pending email invitations did not return a list.");
+  }
   const jordanLists = page.getByRole("link", { name: "View wishlists shared by JordanDemo" });
   await jordanLists.waitFor({ state: "visible" });
   await jordanLists.click();

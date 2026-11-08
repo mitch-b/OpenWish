@@ -1205,7 +1205,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"RetryLoadRequests\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryLoadRequests()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
-        Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any()", markup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any())", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Resend invitation to @invite.Email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Cancel invitation to @invite.Email\"", markup, StringComparison.Ordinal);
         Assert.True(
             markup.IndexOf("var sentRequests = await", StringComparison.Ordinal) <
             markup.IndexOf("_receivedRequests = receivedRequests.ToList();", StringComparison.Ordinal));

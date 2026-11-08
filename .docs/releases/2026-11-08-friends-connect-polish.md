@@ -1,8 +1,9 @@
 # Connecting with friends is quicker - November 8, 2026
 
 The Friends page now puts friend requests waiting for your answer first and
-shows how many there are. Sending email invitations refreshes Sent requests
-immediately, so the page matches what you just did. Empty friends and requests
+shows how many there are. Email invitations, including to people who have not
+joined yet, appear in Sent requests immediately and can be resent or canceled
+there. Empty friends and requests
 lists explain what to do next instead of pointing at a user search that does not
 exist; OpenWish connections stay inside people you already know.
 

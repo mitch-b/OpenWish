@@ -132,6 +132,8 @@
                 }
                 
                 bool result = await FriendService.SendFriendInvitesByEmailAsync(_currentUserId, emails);
+                // Recipients are saved one by one, so a partial batch still changes Sent requests.
+                await OnInvitesSent.InvokeAsync();
                 
                 if (result)
                 {
@@ -140,7 +142,7 @@
                         ? "Invitation sent successfully."
                         : $"Invitations sent successfully to {emails.Count} email addresses.";
                     inviteEmails = ""; // Clear the input field
-                    await OnInvitesSent.InvokeAsync();
+
                 }
                 else
                 {

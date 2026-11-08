@@ -89,9 +89,9 @@
     private bool _focusNextAction;
     private ElementReference _nextAction;
 
-    private string ListsHref => string.IsNullOrWhiteSpace(_preview?.DisplayName) || _preview.DisplayName == "OpenWish member"
+    private string ListsHref => string.IsNullOrWhiteSpace(_preview?.FriendUserName)
         ? "wishlists?tab=friends"
-        : $"wishlists?tab=friends&owner={Uri.EscapeDataString(_preview.DisplayName)}";
+        : $"wishlists?tab=friends&owner={Uri.EscapeDataString(_preview.FriendUserName)}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

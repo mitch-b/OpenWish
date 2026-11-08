@@ -72,6 +72,7 @@ public class FriendJoinServiceTests
 
         Assert.Equal(FriendJoinStatus.Valid, preview.Status);
         Assert.Equal("Alice", preview.DisplayName);
+        Assert.Null(preview.FriendUserName);
         Assert.DoesNotContain("example.com", System.Text.Json.JsonSerializer.Serialize(preview));
     }
 
@@ -128,6 +129,7 @@ public class FriendJoinServiceTests
 
         Assert.Equal(FriendJoinStatus.Connected, result.Status);
         Assert.Equal("Alice", result.DisplayName);
+        Assert.Equal("Alice", result.FriendUserName);
         await using (var verify = new ApplicationDbContext(db))
         {
             Assert.Equal(2, await verify.Friends.CountAsync(f => !f.Deleted));

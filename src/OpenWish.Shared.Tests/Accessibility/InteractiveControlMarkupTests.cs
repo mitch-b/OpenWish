@@ -1909,6 +1909,8 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("data-testid=\"participant-add-wishlist-after-draw\"", markup, StringComparison.Ordinal);
         Assert.Contains("_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedGiftIdeas", markup, StringComparison.Ordinal);
+        Assert.Contains("Help your gift giver choose something you'll love.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("gift giver can't see any ideas", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1923,6 +1925,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("AutoFocusName=\"true\"", manager, StringComparison.Ordinal);
         Assert.Contains("Add my first gift idea", manager, StringComparison.Ordinal);
         Assert.Contains("Name = \"My gift ideas\"", manager, StringComparison.Ordinal);
+        Assert.Contains("IsFriendsOnly = true", manager, StringComparison.Ordinal);
         Assert.Contains("IsCollaborative = false", manager, StringComparison.Ordinal);
     }
 

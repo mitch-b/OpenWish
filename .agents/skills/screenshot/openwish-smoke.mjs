@@ -2490,13 +2490,11 @@ async function verifyFamilyExchangeJourney(browser, results) {
   await page.getByTestId("participant-wishlist-shared").waitFor({ state: "visible" });
   const sharedLists = await requestJson(guest, "GET", `/api/events/${event.publicId}/wishlists`);
   const myList = sharedLists.find(list => list.name === "My gift ideas");
-  if (!myList || myList.isPrivate || myList.isCollaborative ||
+  if (!myList || myList.isPrivate || myList.isCollaborative || !myList.isFriendsOnly ||
       !myList.items.some(item => item.name === "A cozy family board game")) {
     throw new Error(`Guest gift ideas were not shared correctly: ${JSON.stringify(sharedLists)}`);
   }
 
-  // Another tab removes the list while this tab still shows its removal action.
-  await requestJson(guest, "DELETE", `/api/events/${event.publicId}/wishlists/${myList.publicId}`);
   const ownLists = page.locator(".event-wishlist-manager section").first();
   const remove = ownLists.getByRole("button", { name: "Remove", exact: true });
   await remove.click();
@@ -2508,6 +2506,9 @@ async function verifyFamilyExchangeJourney(browser, results) {
     throw new Error("Wishlist removal did not restore keyboard focus.");
   }
   await remove.click();
+  await dialog.getByRole("button", { name: "Keep wishlist" }).waitFor({ state: "visible" });
+  // Mutate only after the dialog is interactive, not during prerender-to-client activation.
+  await requestJson(guest, "DELETE", `/api/events/${event.publicId}/wishlists/${myList.publicId}`);
   await dialog.getByRole("button", { name: "Remove", exact: true }).click();
   await dialog.getByRole("alert").waitFor({ state: "visible" });
   await screenshot(page, "family-wishlist-removal-recovery-mobile.png");
@@ -2530,6 +2531,10 @@ async function verifyFamilyExchangeJourney(browser, results) {
   const denied = await outsider.request.get(`${baseUrl}/api/events/${event.publicId}/wishlists`);
   if (denied.status() !== 403) {
     throw new Error("Someone outside the exchange could read guest wishlists.");
+  }
+  const regularWishlistDenied = await outsider.request.get(`${baseUrl}/api/wishlists/${myList.publicId}`);
+  if (regularWishlistDenied.status() !== 403) {
+    throw new Error("Someone outside the exchange could read the guest's event-only list through the wishlist API.");
   }
   await outsider.close();
   const expectedRemovalFailure = `${baseUrl}/api/events/${event.publicId}/wishlists/${myList.publicId}`;
@@ -4961,7 +4966,7 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
   await visit(
     friendPage,
     `/events/${manifest.eventPublicId}`,
-    "Your gift giver can't see any ideas from you yet.",
+    "Help your gift giver choose something you'll love.",
     []
   );
   const postDrawWishlistReminder = friendPage.getByTestId("participant-add-wishlist-after-draw");

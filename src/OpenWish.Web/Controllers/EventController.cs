@@ -440,7 +440,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
             var invitation = await _eventService.ClaimEventInvitationByEmailAsync(eventPublicId, userId, request.Email);
             if (invitation is null)
             {
-                return NotFound("No invitation found for this event and email.");
+                return NoContent();
             }
 
             return Ok(invitation);
@@ -455,7 +455,7 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
         catch (KeyNotFoundException)
         {
-            return NotFound("This event or invitation is no longer available.");
+            return NotFound("This event is no longer available.");
         }
     }
 

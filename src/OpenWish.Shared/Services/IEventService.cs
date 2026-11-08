@@ -192,6 +192,7 @@ public interface IEventService
     /// <param name="userId">The newly registered user ID.</param>
     /// <param name="email">The email address used in the invitation (for verification).</param>
     /// <returns>The claimed event user model, or null if no matching invitation exists.</returns>
+    /// <exception cref="KeyNotFoundException">The event is unavailable.</exception>
     Task<EventUserModel?> ClaimEventInvitationByEmailAsync(string eventPublicId, string userId, string? email);
 
     /// <summary>Accepts an event invitation by internal invitation ID.</summary>

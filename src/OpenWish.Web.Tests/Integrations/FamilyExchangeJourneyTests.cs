@@ -140,6 +140,97 @@ public sealed partial class FamilyExchangeJourneyTests(OpenWishAppFactory factor
         Assert.Contains("Send a new confirmation link", confirmation);
     }
 
+    [Theory]
+    [InlineData("not!base64")]
+    [InlineData("dGVzdA")]
+    public async Task InvalidConfirmation_DoesNotExposeTheAccountsEmail(string code)
+    {
+        using var browser = factory.CreateBrowser();
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = await CreateFamilyUserAsync(userManager, "confirmation", confirmed: false);
+        var confirmation = await browser.GetPageAsync(
+            $"/Account/ConfirmEmail?UserId={user.Id}&Code={Uri.EscapeDataString(code)}");
+
+        Assert.Contains("Send a new confirmation link", confirmation);
+        Assert.DoesNotContain(user.Email!, confirmation, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Uri.EscapeDataString(user.Email!), confirmation, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task InvitationClaim_DistinguishesAnUnavailableEventFromNoMatchingInvitation()
+    {
+        using var organizer = factory.CreateBrowser();
+        await organizer.SignInAsync("owner");
+        using var guest = factory.CreateBrowser();
+        await guest.SignInAsync("guest");
+        var created = await organizer.Client.PostAsJsonAsync("api/events",
+            new EventModel { Name = $"No invitation {Guid.NewGuid():N}", Date = DateTimeOffset.UtcNow.AddDays(30), EventUsers = [] });
+        created.EnsureSuccessStatusCode();
+        var eventModel = (await created.Content.ReadFromJsonAsync<EventModel>())!;
+
+        var noInvitation = await guest.Client.PostAsJsonAsync($"api/events/{eventModel.PublicId}/invitations/claim",
+            new { Email = "playwright-guest@openwish.local" });
+        Assert.Equal(HttpStatusCode.NoContent, noInvitation.StatusCode);
+        var noEvent = await guest.Client.PostAsJsonAsync("api/events/missing-family-event/invitations/claim",
+            new { Email = "playwright-guest@openwish.local" });
+        Assert.Equal(HttpStatusCode.NotFound, noEvent.StatusCode);
+    }
+
+    [Fact]
+    public async Task EventOnlyWishlist_RestrictsOutsideFriendsAndPreservesSurpriseIdeas()
+    {
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var host = await CreateFamilyUserAsync(userManager, "host");
+        var participant = await CreateFamilyUserAsync(userManager, "participant");
+        var outsideFriend = await CreateFamilyUserAsync(userManager, "outside");
+        var service = scope.ServiceProvider.GetRequiredService<IEventService>();
+        var eventModel = await service.CreateEventAsync(new()
+        {
+            Name = $"Family privacy {Guid.NewGuid():N}",
+            Date = DateTimeOffset.UtcNow.AddDays(30),
+            IsGiftExchange = true
+        }, host.Id);
+        var invitation = await service.InviteByEmailToEventByPublicIdAsync(eventModel.PublicId, host.Id, participant.Email!);
+        Assert.True(await service.AcceptEventInvitationByPublicIdAsync(invitation.PublicId, participant.Id));
+        using var participantBrowser = factory.CreateBrowser();
+        await SignInWithPasswordAsync(participantBrowser, participant.Email!);
+        var created = await participantBrowser.Client.PostAsJsonAsync($"api/events/{eventModel.PublicId}/wishlists",
+            new WishlistModel { Name = "My gift ideas", IsFriendsOnly = true });
+        created.EnsureSuccessStatusCode();
+        var wishlist = (await created.Content.ReadFromJsonAsync<WishlistModel>())!;
+        Assert.Empty(wishlist.Permissions);
+
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var entity = await context.Wishlists.SingleAsync(list => list.PublicId == wishlist.PublicId);
+        context.Friends.Add(new Friend { UserId = participant.Id, FriendUserId = outsideFriend.Id });
+        context.WishlistItems.Add(new WishlistItem
+        {
+            WishlistId = entity.Id,
+            Name = "A secret gift idea",
+            IsHiddenFromOwner = true
+        });
+        var drawnEvent = await context.Events.SingleAsync(item => item.PublicId == eventModel.PublicId);
+        drawnEvent.NamesDrawnOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+
+        using var outsiderBrowser = factory.CreateBrowser();
+        await SignInWithPasswordAsync(outsiderBrowser, outsideFriend.Email!);
+        var denied = await outsiderBrowser.Client.GetAsync($"api/wishlists/{wishlist.PublicId}");
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        var ownerView = (await participantBrowser.Client.GetFromJsonAsync<WishlistModel>($"api/wishlists/{wishlist.PublicId}"))!;
+        Assert.Empty(ownerView.Items);
+        using var hostBrowser = factory.CreateBrowser();
+        await SignInWithPasswordAsync(hostBrowser, host.Email!);
+        var giverView = (await hostBrowser.Client.GetFromJsonAsync<WishlistModel>($"api/wishlists/{wishlist.PublicId}"))!;
+        Assert.Contains(giverView.Items, item => item.Name == "A secret gift idea");
+        var eventPage = await participantBrowser.GetPageAsync($"/events/{eventModel.PublicId}");
+        Assert.Contains("Help your gift giver choose something", eventPage);
+        Assert.DoesNotContain("gift giver can&#x27;t see any ideas", eventPage);
+        Assert.DoesNotContain("A secret gift idea", eventPage);
+    }
+
     [Fact]
     public async Task InvitationClaim_TreatsUnderscoresAsLiteralEmailCharacters()
     {
@@ -166,6 +257,23 @@ public sealed partial class FamilyExchangeJourneyTests(OpenWishAppFactory factor
 
     [GeneratedRegex("href=\"([^\"]+)\"[^>]*>Sign in and continue</a>")]
     private static partial Regex ContinueLinkPattern();
+
+    private static async Task<ApplicationUser> CreateFamilyUserAsync(UserManager<ApplicationUser> manager, string role, bool confirmed = true)
+    {
+        var email = $"family-{role}-{Guid.NewGuid():N}@example.test";
+        var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = confirmed };
+        Assert.True((await manager.CreateAsync(user, "Family-Test-2026!")).Succeeded);
+        return user;
+    }
+
+    private static async Task SignInWithPasswordAsync(OpenWishBrowser browser, string email)
+    {
+        var login = await browser.GetPageAsync("/Account/Login");
+        var fields = OpenWishBrowser.FormFields(login, "login");
+        fields.AddRange([new("Input.Email", email), new("Input.Password", "Family-Test-2026!")]);
+        var response = await browser.Client.PostAsync("/Account/Login", new FormUrlEncodedContent(fields));
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+    }
 
     private sealed class ConfirmationSender : IEmailSender<ApplicationUser>
     {

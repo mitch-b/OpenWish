@@ -46,13 +46,19 @@
                     <div class="alert alert-success" role="status" data-testid="join-success">
                         You're now connected with @_preview.DisplayName.
                     </div>
-                    <a class="btn btn-primary" href="friends">Go to friends</a>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" href="@ListsHref" data-testid="join-view-lists" @ref="_nextAction">View their lists</a>
+                        <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                    </div>
                     break;
                 case FriendJoinStatus.AlreadyFriends:
                     <div class="alert alert-info" role="status" data-testid="join-already">
                         You're already friends with @_preview.DisplayName.
                     </div>
-                    <a class="btn btn-primary" href="friends">Go to friends</a>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" href="@ListsHref">View their lists</a>
+                        <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                    </div>
                     break;
                 case FriendJoinStatus.OwnCode:
                     <div class="alert alert-info" role="status" data-testid="join-own">
@@ -80,6 +86,21 @@
     private bool _loading = true;
     private bool _failed;
     private bool _busy;
+    private bool _focusNextAction;
+    private ElementReference _nextAction;
+
+    private string ListsHref => string.IsNullOrWhiteSpace(_preview?.DisplayName) || _preview.DisplayName == "OpenWish member"
+        ? "wishlists?tab=friends"
+        : $"wishlists?tab=friends&owner={Uri.EscapeDataString(_preview.DisplayName)}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusNextAction)
+        {
+            _focusNextAction = false;
+            await _nextAction.FocusAsync();
+        }
+    }
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -114,6 +135,7 @@
         try
         {
             _preview = await FriendJoinService.RedeemJoinCodeAsync(_userId ?? string.Empty, Code);
+            _focusNextAction = _preview?.Status == FriendJoinStatus.Connected;
         }
         catch (Exception ex)
         {

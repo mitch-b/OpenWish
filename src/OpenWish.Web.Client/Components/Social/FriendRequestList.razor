@@ -9,7 +9,7 @@
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
         <div>
-            <h2>Friend requests</h2>
+            <h2>Friend requests@(_receivedRequests.Count > 0 ? $" ({_receivedRequests.Count})" : "")</h2>
             <p>Choose who joins your trusted circle.</p>
         </div>
     </div>
@@ -35,7 +35,7 @@
     else if (!_receivedRequests.Any())
     {
         <div class="alert alert-info">
-            No pending friend requests.
+            No requests waiting for you. People who ask to connect will show up here.
         </div>
     }
     else
@@ -72,7 +72,7 @@
 
     @if (string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any())
     {
-        <h5 class="mt-4 mb-3">Sent requests</h5>
+        <h3 class="h5 mt-4 mb-3">Sent requests</h3>
         <div class="list-group">
             @foreach (var request in _sentRequests)
             {
@@ -130,6 +130,9 @@
     [Parameter]
     public EventCallback OnFriendshipsChanged { get; set; }
 
+    [Parameter]
+    public EventCallback<int> OnReceivedCountChanged { get; set; }
+
     private List<FriendRequestModel> _receivedRequests = [];
     private List<FriendRequestModel> _sentRequests = [];
     private bool _loading = true;
@@ -176,6 +179,7 @@
 
                 _receivedRequests = receivedRequests.ToList();
                 _sentRequests = sentRequests.ToList();
+                await OnReceivedCountChanged.InvokeAsync(_receivedRequests.Count);
             }
         }
         catch (Exception ex)

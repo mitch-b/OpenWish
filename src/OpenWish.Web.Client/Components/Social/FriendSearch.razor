@@ -59,6 +59,9 @@
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback OnInvitesSent { get; set; }
+
     // Invite by email variables
     private string inviteEmails = "";
     private bool _sendingInvites = false;
@@ -137,6 +140,7 @@
                         ? "Invitation sent successfully."
                         : $"Invitations sent successfully to {emails.Count} email addresses.";
                     inviteEmails = ""; // Clear the input field
+                    await OnInvitesSent.InvokeAsync();
                 }
                 else
                 {

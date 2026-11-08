@@ -12,10 +12,10 @@
                 Description="Connect with friends and manage trusted sharing relationships." />
 
     <div class="friends-layout">
-        <div>
+        <div class="friends-primary">
             <div class="card friends-panel mb-4">
                 <div class="card-body">
-                    <FriendSearch />
+                    <FriendSearch OnInvitesSent="HandleRequestSent" />
                 </div>
             </div>
             
@@ -27,9 +27,10 @@
 
             <FriendSuggestions OnRequestSent="HandleRequestSent" />
 
-            <div class="card friends-panel mb-4">
+            <div class="card friends-panel mb-4 @(_hasReceivedRequests ? "friends-panel-urgent" : "")" data-testid="friend-requests-panel">
                 <div class="card-body">
-                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
+                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged"
+                                       OnReceivedCountChanged="HandleReceivedCountChanged" />
                 </div>
             </div>
         </div>
@@ -47,6 +48,9 @@
 @code {
     private FriendList? _friendList;
     private FriendRequestList? _requestList;
+    private bool _hasReceivedRequests;
+
+    private void HandleReceivedCountChanged(int count) => _hasReceivedRequests = count > 0;
 
     private Task HandleRequestSent() => _requestList?.ReloadAsync() ?? Task.CompletedTask;
 

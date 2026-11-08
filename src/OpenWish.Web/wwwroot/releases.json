@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.14.0",
+    "date": "2026-11-08",
+    "title": "Connecting with friends is quicker",
+    "summary": "The Friends page puts waiting requests first, stays current after you invite, and leads you to new friends' lists.",
+    "highlights": [
+      "Waiting friend requests move to the top and show how many need an answer.",
+      "Sent requests update as soon as you send email invitations.",
+      "Empty friends and requests lists explain what to do next.",
+      "After connecting in person, jump straight to your new friend's lists."
+    ]
+  },
+  {
     "version": "0.13.0",
     "date": "2026-11-06",
     "title": "Bring gift ideas from your other apps",

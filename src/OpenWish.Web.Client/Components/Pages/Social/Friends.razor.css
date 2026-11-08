@@ -9,6 +9,16 @@
     align-items: start;
 }
 
+.friends-primary {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Requests waiting for an answer come before everything else. */
+.friends-panel-urgent {
+    order: -1;
+}
+
 .friends-panel {
     box-shadow: var(--shadow-sm);
 }

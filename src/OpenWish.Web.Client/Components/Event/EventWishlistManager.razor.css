@@ -100,6 +100,7 @@
 .event-wishlist-manager .event-participant-row {
     padding: 0.75rem 1rem;
     background: var(--color-surface-alt);
+    overflow-wrap: anywhere;
 }
 
 .event-wishlist-manager .event-participant-row + .event-participant-row {
@@ -119,6 +120,10 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.375rem 0.625rem;
+    min-width: 0;
+}
+
+.event-wishlist-manager .event-participant-wishlist .event-wishlist-summary {
     min-width: 0;
 }
 

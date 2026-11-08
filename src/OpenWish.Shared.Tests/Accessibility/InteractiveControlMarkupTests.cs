@@ -1972,6 +1972,22 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventWishlistSharing_PreservesVisibleActionNameAndWrapsLongParticipantText()
+    {
+        var manager = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor.css");
+
+        Assert.Contains("aria-label=\"@GetShareWishlistAccessibleName(onlyWishlist)\"", manager, StringComparison.Ordinal);
+        Assert.Contains("<span>@GetShareWishlistButtonText()</span>", manager, StringComparison.Ordinal);
+        Assert.Contains("private string GetShareWishlistButtonText() => _isSubmitting ? \"Sharing wishlist...\" : \"Share wishlist\";", manager, StringComparison.Ordinal);
+        Assert.Contains("$\"{GetShareWishlistButtonText()} {wishlist.Name}\"", manager, StringComparison.Ordinal);
+        Assert.Contains(".event-wishlist-manager .event-participant-row {", styles, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", styles, StringComparison.Ordinal);
+        Assert.Contains(".event-wishlist-manager .event-participant-wishlist .event-wishlist-summary {", styles, StringComparison.Ordinal);
+        Assert.Contains("min-width: 0;", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ExchangeReadiness_WaitsForLoadedGiftIdeas()
     {
         var setup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "SecretSantaSetup.razor");

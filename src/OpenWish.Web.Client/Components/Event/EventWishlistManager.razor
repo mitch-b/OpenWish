@@ -120,11 +120,11 @@ else
                         var onlyWishlist = attachableWishlists[0];
                         <button class="btn btn-primary event-wishlist-share-button"
                                 type="button"
-                                aria-label="Share @onlyWishlist.Name"
+                                aria-label="@GetShareWishlistAccessibleName(onlyWishlist)"
                                 disabled="@_isSubmitting"
                                 @onclick="() => AttachWishlistAsync(onlyWishlist)">
                             <OpenWishIcon Name="link-45deg" />
-                            <span>@(_isSubmitting ? "Sharing wishlist..." : "Share wishlist")</span>
+                            <span>@GetShareWishlistButtonText()</span>
                         </button>
                         <span class="text-muted small event-wishlist-share-target">@onlyWishlist.Name</span>
                     }
@@ -487,6 +487,11 @@ else
         _selectedWishlistId = wishlist.Id;
         await AttachSelectedWishlistAsync();
     }
+
+    private string GetShareWishlistButtonText() => _isSubmitting ? "Sharing wishlist..." : "Share wishlist";
+
+    private string GetShareWishlistAccessibleName(WishlistModel wishlist) =>
+        $"{GetShareWishlistButtonText()} {wishlist.Name}";
 
     private void PromptWishlistRemoval(int wishlistId)
     {

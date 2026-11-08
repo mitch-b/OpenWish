@@ -17,6 +17,52 @@ namespace OpenWish.Application.Tests.Services;
 
 public class EventServicePreviousPairingsTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Draw_OnlyNamesRecipientsInMessagesWhenGiftBoxRevealIsOff(bool useGiftBoxReveal)
+    {
+        var (service, database, recorder) = await CreateServiceAsync(people: 2, copied: false);
+        await using (var context = Open(database))
+        {
+            var evt = await context.Events.SingleAsync(e => e.PublicId == "next");
+            evt.UseGiftBoxReveal = useGiftBoxReveal;
+            await context.SaveChangesAsync();
+        }
+
+        await service.DrawNamesByPublicIdAsync("next", "u0");
+
+        Assert.Equal(2, recorder.DrawnEmails.Count);
+        Assert.Equal(2, recorder.DrawnNotifications.Count);
+        Assert.All(recorder.DrawnEmails, email =>
+        {
+            Assert.Equal("https://openwish.local/events/next", email.Link);
+            if (useGiftBoxReveal)
+            {
+                Assert.Null(email.RecipientName);
+            }
+            else
+            {
+                Assert.Contains(email.RecipientName, new[] { "u0", "u1" });
+            }
+        });
+        Assert.All(recorder.DrawnNotifications, notification =>
+        {
+            if (useGiftBoxReveal)
+            {
+                Assert.Equal("Your gift exchange match is ready", notification.Title);
+                Assert.Contains("Open your gift", notification.Message);
+                Assert.DoesNotContain("u0", notification.Message);
+                Assert.DoesNotContain("u1", notification.Message);
+            }
+            else
+            {
+                Assert.Equal("Gift Exchange Names Drawn!", notification.Title);
+                Assert.Contains(" is u", notification.Message);
+            }
+        });
+    }
+
     [Fact]
     public async Task Draw_ForACopiedEventAvoidsThePreviousPairingsWhenPossible()
     {
@@ -123,6 +169,8 @@ public class EventServicePreviousPairingsTests
     {
         public List<string> Emails { get; } = [];
         public int Notifications { get; set; }
+        public List<(string? RecipientName, string Link)> DrawnEmails { get; } = [];
+        public List<(string Title, string Message)> DrawnNotifications { get; } = [];
     }
 
     private class Recorder<T> : DispatchProxy where T : class
@@ -145,6 +193,11 @@ public class EventServicePreviousPairingsTests
             else if (targetMethod.Name == "CreateNotificationAsync")
             {
                 _recorder.Notifications++;
+                _recorder.DrawnNotifications.Add(((string)args![2]!, (string)args[3]!));
+            }
+            else if (targetMethod.Name == "SendGiftExchangeDrawnEmailAsync")
+            {
+                _recorder.DrawnEmails.Add(((string?)args![2], (string)args[3]!));
             }
 
             var returnType = targetMethod.ReturnType;

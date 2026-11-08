@@ -11,6 +11,10 @@ box, or opens it with the keyboard, to see their drawn name. The name, budget,
 date, and gift-idea action take over immediately. Reduced-motion preferences
 disable the reveal animation.
 
+For gift-box events, drawn-name emails and in-app notifications say the match
+is ready without naming the recipient. Events with the option off keep their
+existing named notifications.
+
 Opening is remembered on the assignment, not in browser storage: later visits
 and other devices go directly to the match. A new draw gets a fresh opening.
 The option is off by default for existing and new events; running an event

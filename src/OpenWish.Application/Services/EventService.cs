@@ -1570,8 +1570,10 @@ public class EventService(
                 await _notificationService.CreateNotificationAsync(
                     ownerId,
                     giver.UserId!,
-                    "Gift Exchange Names Drawn!",
-                    $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
+                    eventEntity.UseGiftBoxReveal ? "Your gift exchange match is ready" : "Gift Exchange Names Drawn!",
+                    eventEntity.UseGiftBoxReveal
+                        ? $"Your match for {eventEntity.Name} is ready. Open your gift to see who you're shopping for."
+                        : $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
                     "GiftExchangeDrawn");
             }
 
@@ -1580,7 +1582,7 @@ public class EventService(
                 await _emailSender.SendGiftExchangeDrawnEmailAsync(
                     giver.Email,
                     eventEntity.Name,
-                    receiverName,
+                    eventEntity.UseGiftBoxReveal ? null : receiverName,
                     eventLink);
             }
         }

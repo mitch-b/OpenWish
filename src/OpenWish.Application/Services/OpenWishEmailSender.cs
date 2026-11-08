@@ -76,12 +76,19 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// </summary>
     /// <param name="toEmail">Recipient email address</param>
     /// <param name="eventName">Name of the event</param>
-    /// <param name="recipientName">Name of the person they're buying for</param>
+    /// <param name="recipientName">Name of the person they're buying for, or null to preserve the gift-box reveal</param>
     /// <param name="eventLink">Link to event details</param>
     /// <returns></returns>
-    public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink)
+    public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string? recipientName, string eventLink)
     {
         _logger.LogInformation("Sending gift exchange drawn email for event {EventName}", eventName);
+        if (recipientName is null)
+        {
+            return SendEmailAsync(toEmail, $"Your gift exchange match is ready - {SanitizeSubject(eventName)}",
+                WrapInHtmlFormattedEmail($"<p>The names have been drawn for <strong>{Encode(eventName)}</strong>.</p>" +
+                    $"<p>Your match is ready. <a href='{Encode(eventLink)}'>Open your gift</a> to see who you're shopping for.</p>"));
+        }
+
         var subject = $"🎁 Gift Exchange Names Drawn - {SanitizeSubject(eventName)}";
         eventName = Encode(eventName);
         recipientName = Encode(recipientName);

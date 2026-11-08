@@ -541,6 +541,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("BuildParticipantGroups() is not { Count: > 0 } participantGroups", markup, StringComparison.Ordinal);
         Assert.Contains("@foreach (var participant in participantGroups)", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-participant-list\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-participant-header\"", markup, StringComparison.Ordinal);
+        Assert.Contains("PublicDisplayName.ForGiftRecipient(participant.User.UserName, participant.GuestDisplayName)", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-wishlist-actions\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"text-muted small event-wishlist-share-target\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"btn-group\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -82,7 +82,22 @@ public class EventServiceRevealTests
         var pairings = (await service.GetRevealedPairingsByPublicIdAsync("event", "host")).ToList();
 
         Assert.DoesNotContain(pairings, p => p.GiverName.Contains('@') || p.ReceiverName.Contains('@'));
-        Assert.Contains(pairings, p => p.GiverName == "Invited guest" && p.ReceiverName == "host");
+        Assert.Contains(pairings, p => p.GiverName == "member" && p.ReceiverName == "host");
+    }
+
+    [Fact]
+    public async Task Reveal_PreservesTheParticipantChosenName()
+    {
+        var (service, _) = await CreateServiceAsync(
+            daysFromNow: -2,
+            memberUserName: "member@example.com",
+            memberGuestDisplayName: "Summer guest");
+        await service.RevealGiftExchangeByPublicIdAsync("event", "host");
+
+        var pairings = (await service.GetRevealedPairingsByPublicIdAsync("event", "host")).ToList();
+
+        Assert.Contains(pairings, p => p.GiverName == "Summer guest" && p.ReceiverName == "host");
+        Assert.DoesNotContain(pairings, p => p.GiverName.Contains('@') || p.ReceiverName.Contains('@'));
     }
 
     [Fact]
@@ -99,7 +114,11 @@ public class EventServiceRevealTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.DrawNamesAsync(model.Id, "host"));
     }
 
-    private static async Task<(EventService Service, string Database)> CreateServiceAsync(int daysFromNow, bool drawn = true, string memberUserName = "member")
+    private static async Task<(EventService Service, string Database)> CreateServiceAsync(
+        int daysFromNow,
+        bool drawn = true,
+        string memberUserName = "member",
+        string? memberGuestDisplayName = null)
     {
         var databaseName = Guid.NewGuid().ToString();
         var services = new ServiceCollection();
@@ -120,11 +139,35 @@ public class EventServiceRevealTests
                 IsGiftExchange = true,
                 NamesDrawnOn = drawn ? DateTimeOffset.UtcNow.AddDays(-20) : null
             };
-            evt.EventUsers.Add(new EventUser { User = member, Status = "Accepted", IsAccepted = true });
+            var memberParticipant = new EventUser
+            {
+                User = member,
+                UserId = member.Id,
+                GuestDisplayName = memberGuestDisplayName,
+                Status = "Accepted",
+                IsAccepted = true
+            };
+            evt.EventUsers.Add(memberParticipant);
             if (drawn)
             {
-                evt.GiftExchanges.Add(new GiftExchange { Giver = host, Receiver = member, GiverId = "host", ReceiverId = "member", ReceiverPreferences = string.Empty });
-                evt.GiftExchanges.Add(new GiftExchange { Giver = member, Receiver = host, GiverId = "member", ReceiverId = "host", ReceiverPreferences = string.Empty });
+                evt.GiftExchanges.Add(new GiftExchange
+                {
+                    Giver = host,
+                    Receiver = member,
+                    GiverId = "host",
+                    ReceiverId = "member",
+                    ReceiverParticipant = memberParticipant,
+                    ReceiverPreferences = string.Empty
+                });
+                evt.GiftExchanges.Add(new GiftExchange
+                {
+                    Giver = member,
+                    Receiver = host,
+                    GiverId = "member",
+                    ReceiverId = "host",
+                    GiverParticipant = memberParticipant,
+                    ReceiverPreferences = string.Empty
+                });
             }
 
             seed.Events.Add(evt);

@@ -2,7 +2,7 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
-## Unreleased - 2026-11-07
+## [0.14.0] - 2026-11-08
 
 ### Added
 
@@ -18,6 +18,13 @@ All notable user-facing changes to OpenWish are documented here.
 - Mismatched and declined invitations offer a clear route back to events.
 - Participants without a shared wishlist are reminded to add one after the
   exchange draw.
+- Friends page: waiting friend requests come first and are counted in
+  their heading.
+- Email invitations, including to people not yet on OpenWish, appear in Sent
+  requests straight away and can be resent or canceled there.
+- Empty friends and requests lists explain what to do next.
+- After connecting in person, focus moves to "View their lists", which opens
+  that friend's lists, even for accounts without a public display name.
 
 ## [0.13.0] - 2026-11-06
 

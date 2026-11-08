@@ -9,7 +9,7 @@
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
         <div>
-            <h2>Friend requests</h2>
+            <h2>Friend requests@(_receivedRequests.Count > 0 ? $" ({_receivedRequests.Count})" : "")</h2>
             <p>Choose who joins your trusted circle.</p>
         </div>
     </div>
@@ -35,7 +35,7 @@
     else if (!_receivedRequests.Any())
     {
         <div class="alert alert-info">
-            No pending friend requests.
+            No requests waiting for you. People who ask to connect will show up here.
         </div>
     }
     else
@@ -70,10 +70,40 @@
         </div>
     }
 
-    @if (string.IsNullOrWhiteSpace(_loadErrorMessage) && _sentRequests.Any())
+    @if (string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any()))
     {
-        <h5 class="mt-4 mb-3">Sent requests</h5>
+        <h3 class="h5 mt-4 mb-3">Sent requests</h3>
         <div class="list-group">
+            @foreach (var invite in _pendingInvites)
+            {
+                <div class="list-group-item d-flex justify-content-between align-items-center" data-testid="pending-invite">
+                    <div class="text-break">
+                        <OpenWishIcon Name="envelope" Class="me-2" />
+                        @invite.Email
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-secondary">Invited</span>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Email invitation actions">
+                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1"
+                                    type="button"
+                                    disabled="@_processingRequestId.HasValue"
+                                    aria-label="Resend invitation to @invite.Email"
+                                    @onclick="() => ResendInvite(invite)">
+                                <OpenWishIcon Name="arrow-clockwise" />
+                                <span>@(_processingRequestId == invite.Id ? "Resending..." : "Resend")</span>
+                            </button>
+                            <button class="btn btn-outline-danger d-flex align-items-center gap-1"
+                                    type="button"
+                                    disabled="@_processingRequestId.HasValue"
+                                    aria-label="Cancel invitation to @invite.Email"
+                                    @onclick="() => CancelInvite(invite)">
+                                <OpenWishIcon Name="trash" />
+                                <span>Cancel</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
             @foreach (var request in _sentRequests)
             {
                 <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -132,6 +162,7 @@
 
     private List<FriendRequestModel> _receivedRequests = [];
     private List<FriendRequestModel> _sentRequests = [];
+    private List<PendingFriendInviteModel> _pendingInvites = [];
     private bool _loading = true;
     private string? _currentUserId;
     private int? _processingRequestId;
@@ -176,6 +207,7 @@
 
                 _receivedRequests = receivedRequests.ToList();
                 _sentRequests = sentRequests.ToList();
+                _pendingInvites = (await FriendService.GetPendingFriendInvitesAsync(_currentUserId)).ToList();
             }
         }
         catch (Exception ex)
@@ -333,6 +365,70 @@
         {
             Logger.LogError(ex, "Failed to resend friend request {FriendRequestId}", request.Id);
             _errorMessage = $"The friend request to {receiverName} could not be resent. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
+        }
+    }
+
+    private async Task ResendInvite(PendingFriendInviteModel invite)
+    {
+        try
+        {
+            BeginRequestAction(invite.Id);
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                await FriendService.ResendPendingFriendInviteAsync(invite.Id, _currentUserId);
+                await LoadRequests(clearFeedback: false, silent: true);
+                _statusMessage = $"Invitation sent to {invite.Email} again.";
+            }
+            else
+            {
+                _errorMessage = "Sign in again to resend this invitation.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to resend friend invitation {InviteId}", invite.Id);
+            _errorMessage = $"The invitation to {invite.Email} could not be resent. Try again.";
+        }
+        finally
+        {
+            _processingRequestId = null;
+        }
+    }
+
+    private async Task CancelInvite(PendingFriendInviteModel invite)
+    {
+        try
+        {
+            BeginRequestAction(invite.Id);
+            _currentUserId ??= await UserContextService.GetUserIdAsync();
+
+            if (_currentUserId != null)
+            {
+                if (await FriendService.CancelPendingFriendInviteAsync(invite.Id, _currentUserId))
+                {
+                    await LoadRequests(clearFeedback: false, silent: true);
+                    _statusMessage = $"Invitation to {invite.Email} canceled.";
+                }
+                else
+                {
+                    _errorMessage = $"The invitation to {invite.Email} is no longer pending. Refresh and try again.";
+                }
+            }
+            else
+            {
+                _errorMessage = "Sign in again to cancel this invitation.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to cancel friend invitation {InviteId}", invite.Id);
+            _errorMessage = $"The invitation to {invite.Email} could not be canceled. Try again.";
         }
         finally
         {

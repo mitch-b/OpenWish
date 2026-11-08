@@ -197,7 +197,13 @@ public class FriendJoinService(IDbContextFactory<ApplicationDbContext> contextFa
             // The friendship is already saved; a missed notification must not undo it.
         }
 
-        return new FriendJoinPreviewModel { Status = FriendJoinStatus.Connected, DisplayName = preview.DisplayName };
+        var friendUserName = await context.Users.Where(u => u.Id == ownerId).Select(u => u.UserName).FirstOrDefaultAsync();
+        return new FriendJoinPreviewModel
+        {
+            Status = FriendJoinStatus.Connected,
+            DisplayName = preview.DisplayName,
+            FriendUserName = friendUserName
+        };
     }
 
     private static async Task<(FriendJoinCode? Entity, FriendJoinPreviewModel Preview)> ResolveAsync(
@@ -239,7 +245,8 @@ public class FriendJoinService(IDbContextFactory<ApplicationDbContext> contextFa
         return (entity, new FriendJoinPreviewModel
         {
             Status = alreadyFriends ? FriendJoinStatus.AlreadyFriends : FriendJoinStatus.Valid,
-            DisplayName = displayName
+            DisplayName = displayName,
+            FriendUserName = alreadyFriends ? ownerName : null
         });
     }
 

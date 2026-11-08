@@ -59,6 +59,9 @@
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback OnInvitesSent { get; set; }
+
     // Invite by email variables
     private string inviteEmails = "";
     private bool _sendingInvites = false;
@@ -129,6 +132,8 @@
                 }
                 
                 bool result = await FriendService.SendFriendInvitesByEmailAsync(_currentUserId, emails);
+                // Recipients are saved one by one, so a partial batch still changes Sent requests.
+                await OnInvitesSent.InvokeAsync();
                 
                 if (result)
                 {
@@ -137,6 +142,7 @@
                         ? "Invitation sent successfully."
                         : $"Invitations sent successfully to {emails.Count} email addresses.";
                     inviteEmails = ""; // Clear the input field
+
                 }
                 else
                 {

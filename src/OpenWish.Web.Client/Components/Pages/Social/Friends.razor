@@ -13,9 +13,15 @@
 
     <div class="friends-layout">
         <div>
+            <div class="card friends-panel mb-4" data-testid="friend-requests-panel">
+                <div class="card-body">
+                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
+                </div>
+            </div>
+
             <div class="card friends-panel mb-4">
                 <div class="card-body">
-                    <FriendSearch />
+                    <FriendSearch OnInvitesSent="HandleRequestSent" />
                 </div>
             </div>
             
@@ -26,12 +32,6 @@
             </div>
 
             <FriendSuggestions OnRequestSent="HandleRequestSent" />
-
-            <div class="card friends-panel mb-4">
-                <div class="card-body">
-                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
-                </div>
-            </div>
         </div>
         
         <div>

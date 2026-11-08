@@ -2696,7 +2696,11 @@ async function verifyAccountFreeGuests(browser, results) {
   await organizerPage.waitForLoadState("networkidle");
   const remove = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Remove guest", exact: true });
   await remove.waitFor({ state: "visible" });
-  await remove.evaluate(element => element.scrollIntoView({ block: "center" }));
+  await remove.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+  const removalBounds = await remove.boundingBox();
+  if (!removalBounds || removalBounds.y < 0 || removalBounds.y + removalBounds.height > organizerPage.viewportSize().height) {
+    throw new Error("The declined-guest recovery capture did not frame the removal action.");
+  }
   await organizerPage.screenshot({ path: path.join(walkthroughDirectory, "guest-declined-invitation-desktop.png") });
   await remove.click();
   await organizerPage.getByRole("dialog", { name: "Remove guest?", exact: true })

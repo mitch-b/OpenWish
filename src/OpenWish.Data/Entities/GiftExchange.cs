@@ -16,4 +16,5 @@ public class GiftExchange : BaseEntity
     public bool IsAnonymous { get; set; } // Indicates if the pairing is anonymous
     public string ReceiverPreferences { get; set; } // Receiver's gift preferences or notes
     public decimal? Budget { get; set; } // Budget for this specific exchange
+    public DateTimeOffset? MatchOpenedOn { get; set; }
 }

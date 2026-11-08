@@ -385,6 +385,7 @@ public class EventService(
         eventModel.GiftExchangeStyle = eventModel.GiftExchangeStyle is null
             ? existingEvent.GiftExchangeStyle
             : NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
+        eventModel.UseGiftBoxReveal ??= existingEvent.UseGiftBoxReveal;
         _mapper.Map(eventModel, existingEvent);
         existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
 
@@ -1015,6 +1016,7 @@ public class EventService(
             Budget = source.Budget,
             IsGiftExchange = source.IsGiftExchange,
             GiftExchangeStyle = NormalizeGiftExchangeStyle(source.GiftExchangeStyle),
+            UseGiftBoxReveal = source.UseGiftBoxReveal,
             Tags = source.Tags,
             CreatedOn = now,
             UpdatedOn = now
@@ -2146,6 +2148,46 @@ public class EventService(
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
         return await GetMyGiftExchangeAsync(eventEntity.Id, userId);
+    }
+
+    public async Task<GiftExchangeModel> OpenGiftExchangeMatchAsync(string eventPublicId, string assignmentPublicId, string userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventId = await context.Events
+            .Where(e => e.PublicId == eventPublicId && !e.Deleted)
+            .Select(e => (int?)e.Id)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("This event is no longer available.");
+        await using var lockTransaction = await LockEventRowAsync(context, eventId);
+        var eventEntity = await context.Events
+            .Include(e => e.CreatedBy)
+            .Include(e => e.EventUsers)
+            .SingleAsync(e => e.Id == eventId);
+        if (eventEntity.Deleted || !IsEventMember(eventEntity, userId))
+        {
+            throw new UnauthorizedAccessException("You must be part of this event.");
+        }
+
+        var assignment = await context.GiftExchanges
+            .Include(ge => ge.Receiver)
+            .Include(ge => ge.Giver)
+            .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId &&
+                ge.PublicId == assignmentPublicId && !ge.Deleted)
+            ?? throw new InvalidOperationException("Your assignment changed. Reload your match.");
+        if (!assignment.MatchOpenedOn.HasValue)
+        {
+            assignment.MatchOpenedOn = DateTimeOffset.UtcNow;
+            assignment.UpdatedOn = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync();
+            await context.Entry(assignment).ReloadAsync();
+        }
+        if (lockTransaction is not null)
+        {
+            await lockTransaction.CommitAsync();
+        }
+        return _mapper.Map<GiftExchangeModel>(assignment);
     }
 
     public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesAsync(int eventId)

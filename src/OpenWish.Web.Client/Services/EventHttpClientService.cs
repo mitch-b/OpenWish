@@ -368,6 +368,14 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         throw new NotImplementedException("Use GetPairingRulesByPublicIdAsync instead");
     }
 
+    public async Task<GiftExchangeModel> OpenGiftExchangeMatchAsync(string eventPublicId, string assignmentPublicId, string userId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/my-gift-exchange/{assignmentPublicId}/open", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<GiftExchangeModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize your gift exchange match.");
+    }
+
     public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId)
     {
         return await httpClient.GetFromJsonAsync<IEnumerable<CustomPairingRuleModel>>($"api/events/{eventPublicId}/pairing-rules")

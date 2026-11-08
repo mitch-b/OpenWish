@@ -1653,7 +1653,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await giftExchangeOption.getAttribute("class"))?.includes("event-type-option-selected")) {
     throw new Error("Gift exchange was not the default event type.");
   }
-  const secretSantaStyle = page.getByRole("button", { name: /Secret Santa.*familiar holiday/i });
+  const secretSantaStyle = page.getByRole("button", { name: /Secret Santa.*private holiday/i });
   await secretSantaStyle.click();
   await page.locator("#name").waitFor({
     state: "visible"
@@ -2552,6 +2552,173 @@ async function verifyProductCaptureJourney(browser, results) {
       "shared text pasted into the product field imports the link and name",
       "dark quick add contrast",
       "view-only shared wishlists are not offered for quick add"
+    ]
+  });
+}
+
+async function verifyFirstMatchOpening(browser, results) {
+  const withoutScripts = await browser.newContext({ javaScriptEnabled: false });
+  const plainSignup = await withoutScripts.newPage();
+  await plainSignup.goto(`${baseUrl}/Account/Register`);
+  if (await plainSignup.getByRole("button", { name: "Show passwords", exact: true }).isVisible()) {
+    throw new Error("Registration without JavaScript displays a nonfunctional password toggle.");
+  }
+  await plainSignup.getByRole("button", { name: "Create account", exact: true }).waitFor({ state: "visible" });
+  await withoutScripts.close();
+  const anonymous = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const signup = await anonymous.newPage();
+  const signupDiagnostics = monitorPage(signup);
+  const returnUrl = `/events/${expectedManifest.eventPublicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`;
+  await signup.goto(`${baseUrl}/Account/Register?email=${encodeURIComponent(guestEmail)}&ReturnUrl=${encodeURIComponent(returnUrl)}`);
+  await signup.getByRole("button", { name: "Show passwords", exact: true }).click();
+  for (const label of ["Password", "Confirm password"]) {
+    if (await signup.getByLabel(label, { exact: true }).getAttribute("type") !== "text") {
+      throw new Error("Show passwords did not reveal both registration fields.");
+    }
+  }
+  await signup.getByRole("button", { name: "Hide passwords", exact: true }).click();
+  await signup.getByLabel("Password", { exact: true }).fill("short");
+  await signup.getByLabel("Confirm password", { exact: true }).fill("short");
+  await signup.getByRole("button", { name: "Create account", exact: true }).click();
+  await signup.getByText("Use 6 to 100 characters for your password.", { exact: true }).first().waitFor({ state: "visible" });
+  if (await signup.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
+    throw new Error("Registration validation lost the invitation email.");
+  }
+  await screenshot(signup, "registration-validation.png");
+  await signup.goto(`${baseUrl}/Account/Register?email=${encodeURIComponent(guestEmail)}&ReturnUrl=${encodeURIComponent(returnUrl)}`);
+  await screenshot(signup, "registration-desktop.png");
+  await assertResponsiveWidths(signup, [
+    { width: 320, height: 700 }, { width: 768, height: 900 }, { width: 1024, height: 900 }
+  ]);
+  await signup.setViewportSize({ width: 390, height: 844 });
+  await screenshot(signup, "registration-mobile.png");
+  await signup.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await assertTextContrast(signup.getByRole("heading", { name: "Create your account" }), "Dark registration title");
+  await screenshot(signup, "registration-mobile-dark.png");
+  await anonymous.close();
+
+  const organizer = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const participant = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await login(organizer, "owner", ownerEmail);
+  await login(participant, "friend", friendEmail);
+  const json = async (context, method, route, data) => {
+    const response = await context.request.fetch(`${baseUrl}/api/events${route}`, { method, data });
+    if (!response.ok()) throw new Error(`Match opening ${method} ${route}: ${response.status()} ${await response.text()}`);
+    return response.status() === 204 ? null : response.json();
+  };
+  const evt = await json(organizer, "POST", "", {
+    name: "A thoughtful winter exchange",
+    date: "2026-12-25T18:00:00Z", budget: 40,
+    isGiftExchange: true, useGiftBoxReveal: true, eventUsers: []
+  });
+  const invite = await json(organizer, "POST", `/${evt.publicId}/invitations/email`, { email: friendEmail });
+  await json(participant, "POST", `/invitations/by-public-id/${invite.publicId}/accept`);
+  await json(organizer, "POST", `/${evt.publicId}/draw-names`);
+  const organizerPage = await organizer.newPage();
+  const organizerDiagnostics = monitorPage(organizerPage);
+  await organizerPage.goto(`${baseUrl}/events/new`);
+  await organizerPage.waitForLoadState("networkidle");
+  await verifyCompactEventForm(organizerPage);
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).waitFor({ state: "visible" });
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  const revealChoice = organizerPage.getByLabel("Let each person unwrap their match");
+  if (!(await revealChoice.isChecked())) throw new Error("The organizer's saved reveal option wasn't selected.");
+  await screenshot(organizerPage, "match-reveal-setting.png");
+  const page = await participant.newPage();
+  const diagnostics = monitorPage(page);
+  const captureMatch = async fileName => {
+    await page.locator(".gift-match").evaluate(element => {
+      const offset = window.innerWidth > 640 ? 88 : 16;
+      window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - offset, behavior: "instant" });
+    });
+    await page.screenshot({ path: path.join(walkthroughDirectory, fileName) });
+  };
+  await page.goto(`${baseUrl}/events/${evt.publicId}`);
+  await page.waitForLoadState("networkidle");
+  const unopened = page.getByTestId("gift-match-unopened");
+  await unopened.waitFor({ state: "visible" });
+  if (await page.locator(".gift-match-name").count()) throw new Error("Recipient was displayed before opening the gift.");
+  await captureMatch("match-unopened-desktop.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 900 }, { width: 768, height: 900 }, { width: 1024, height: 900 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureMatch("match-unopened-mobile.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await assertTextContrast(page.locator(".gift-box-label"), "Dark gift box label");
+  await captureMatch("match-unopened-mobile-dark.png");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const open = page.getByRole("button", { name: "Open my gift", exact: true });
+  await open.focus();
+  await page.keyboard.press("Enter");
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.activeElement?.id === "revealed-match-name");
+  if (await page.locator(".gift-match-introduction").evaluate(element => getComputedStyle(element).animationName) !== "none") {
+    throw new Error("Reduced-motion match opening still animated.");
+  }
+  const saved = await json(participant, "GET", `/${evt.publicId}/my-gift-exchange`);
+  if (!saved.matchOpenedOn) throw new Error("Match opening was not persisted.");
+  await captureMatch("match-opened-mobile.png");
+  await page.reload();
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Repeat visits make the participant open the same gift again.");
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await captureMatch("match-opened-desktop.png");
+
+  const secondDevice = await browser.newContext();
+  await login(secondDevice, "friend", friendEmail);
+  const secondPage = await secondDevice.newPage();
+  await secondPage.goto(`${baseUrl}/events/${evt.publicId}`);
+  await secondPage.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await secondPage.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Match opening did not survive a new browser session.");
+  }
+  await secondDevice.close();
+  await json(organizer, "POST", `/${evt.publicId}/reset-gift-exchange`);
+  await json(organizer, "POST", `/${evt.publicId}/draw-names`);
+  await page.reload();
+  await unopened.waitFor({ state: "visible" });
+  await organizerPage.reload();
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).waitFor({ state: "visible" });
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  await revealChoice.uncheck();
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).click();
+  await organizerPage.getByText("Event changes saved.", { exact: true }).waitFor({ state: "visible" });
+  if ((await json(organizer, "GET", `/${evt.publicId}`)).useGiftBoxReveal !== false) {
+    throw new Error("The organizer's reveal choice did not save through the event form.");
+  }
+  await page.reload();
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Turning off the event option still requires gift opening.");
+  }
+  if (signupDiagnostics.browserErrors.length || signupDiagnostics.failedResponses.length ||
+      diagnostics.browserErrors.length || diagnostics.failedResponses.length ||
+      organizerDiagnostics.browserErrors.length || organizerDiagnostics.failedResponses.length) {
+    throw new Error(`Registration/reveal browser errors: ${JSON.stringify({ signupDiagnostics, diagnostics })}`);
+  }
+  await organizer.close();
+  await participant.close();
+  results.push({
+    scenario: "registration-and-first-match",
+    assertions: [
+      "visible labels, optional password visibility and specific validation retain invitation context",
+      "registration at desktop, tablet and mobile widths in both themes",
+      "optional first-open box does not display the recipient before interaction",
+      "keyboard reveal focuses the drawn name and respects reduced motion",
+      "opening persists across reloads and a second browser session",
+      "a new draw has a fresh gift while disabling the option shows the match directly"
     ]
   });
 }
@@ -5735,7 +5902,7 @@ try {
   }
 
   const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
-  if (selectedScenario && !["connected-app", "family-exchange"].includes(selectedScenario)) {
+  if (selectedScenario && !["connected-app", "family-exchange", "first-match"].includes(selectedScenario)) {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
@@ -5751,8 +5918,11 @@ try {
     await verifyMobileJourney(browser, manifest, results);
     await verifyUnsharedMatchWishlist(browser, manifest, results);
     await verifyFamilyExchangeJourney(browser, results);
+    await verifyFirstMatchOpening(browser, results);
   }
-  if (selectedScenario === "family-exchange") {
+  if (selectedScenario === "first-match") {
+    await verifyFirstMatchOpening(browser, results);
+  } else if (selectedScenario === "family-exchange") {
     await verifyFamilyExchangeJourney(browser, results);
   } else {
     await verifyConnectedAppJourney(browser, results);

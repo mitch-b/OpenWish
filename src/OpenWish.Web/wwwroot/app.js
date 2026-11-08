@@ -385,3 +385,21 @@ document.addEventListener("paste", event => {
     listener.invokeMethodAsync("ImportPastedProductLink", text)
         .catch(error => console.error("Unable to add the pasted product link.", error));
 });
+window.openWishInitializePasswordToggles = function () {
+    for (const button of document.querySelectorAll("[data-password-toggle]")) {
+        button.hidden = false;
+    }
+};
+
+document.addEventListener("DOMContentLoaded", window.openWishInitializePasswordToggles);
+document.addEventListener("click", event => {
+    const button = event.target instanceof Element ? event.target.closest("[data-password-toggle]") : null;
+    if (!button) return;
+    const show = button.getAttribute("aria-pressed") !== "true";
+    for (const id of button.getAttribute("aria-controls").split(" ")) {
+        const input = document.getElementById(id);
+        if (input instanceof HTMLInputElement) input.type = show ? "text" : "password";
+    }
+    button.setAttribute("aria-pressed", String(show));
+    button.textContent = show ? "Hide passwords" : "Show passwords";
+});

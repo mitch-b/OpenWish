@@ -488,6 +488,9 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("timezone('utc', now())");
 
+                    b.Property<bool>("UseGiftBoxReveal")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CopiedFromEventId");
@@ -752,6 +755,9 @@ namespace OpenWish.Data.Migrations
 
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("MatchOpenedOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PublicId")
                         .IsRequired()

@@ -738,6 +738,32 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpPost("{eventPublicId}/my-gift-exchange/{assignmentPublicId}/open")]
+    public async Task<ActionResult<GiftExchangeModel>> OpenGiftExchangeMatch(string eventPublicId, string assignmentPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            return Ok(await _eventService.OpenGiftExchangeMatchAsync(eventPublicId, assignmentPublicId, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
+        }
+    }
+
     [HttpGet("{eventPublicId}/pairing-rules")]
     public async Task<ActionResult<IEnumerable<CustomPairingRuleModel>>> GetPairingRules(string eventPublicId)
     {

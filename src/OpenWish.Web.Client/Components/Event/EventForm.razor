@@ -49,17 +49,28 @@
                         aria-pressed="@IsSecretSantaStyle"
                         @onclick="SelectSecretSantaStyle">
                     <OpenWishIcon Name="stars" />
-                    <span><strong>Secret Santa</strong><small>A familiar holiday name for a private name draw.</small></span>
+                    <span><strong>Secret Santa</strong><small>A private holiday name draw.</small></span>
                 </button>
                 <button type="button"
                         class="exchange-style-option @(!IsSecretSantaStyle ? "exchange-style-option-selected" : string.Empty)"
                         aria-pressed="@(!IsSecretSantaStyle)"
                         @onclick="SelectGiftExchangeStyle">
                     <OpenWishIcon Name="gift" />
-                    <span><strong>Gift exchange</strong><small>Flexible for birthdays, teams, families, and any occasion.</small></span>
+                    <span><strong>Gift exchange</strong><small>Flexible for any occasion.</small></span>
                 </button>
             </div>
         </fieldset>
+        <details class="exchange-reveal-choice mb-3">
+            <summary>
+                <span>First match reveal <small class="text-muted">(optional)</small></span>
+                <span class="exchange-reveal-summary">@(GiftBoxReveal ? "Gift box" : "Show match") <OpenWishIcon Name="chevron-right" Class="exchange-reveal-chevron" /></span>
+            </summary>
+            <div class="form-check">
+                <InputCheckbox id="gift-box-reveal" class="form-check-input" @bind-Value="GiftBoxReveal" aria-describedby="gift-box-reveal-help" />
+                <label for="gift-box-reveal" class="form-check-label fw-bold">Let each person unwrap their match</label>
+            </div>
+            <p id="gift-box-reveal-help" class="form-text mb-0">A gift box for each new draw. Later visits go straight to the match.</p>
+        </details>
     }
 
     <div class="mb-3">
@@ -123,7 +134,12 @@
     [Parameter] public bool LockEventType { get; set; }
     [Parameter] public bool AutoFocusName { get; set; }
 
-    private bool _isEditMode => Model?.Id > 0;
+    private bool _isEditMode => !string.IsNullOrEmpty(Model?.PublicId);
+    private bool GiftBoxReveal
+    {
+        get => Model?.UseGiftBoxReveal == true;
+        set => Model!.UseGiftBoxReveal = value;
+    }
     private bool IsSecretSantaStyle => string.Equals(Model?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal);
     private string EventNamePlaceholder => IsSecretSantaStyle
         ? "e.g. Family Secret Santa 2026"

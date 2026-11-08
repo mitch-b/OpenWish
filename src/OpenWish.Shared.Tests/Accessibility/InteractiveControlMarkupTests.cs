@@ -1759,6 +1759,38 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void FirstMatchOpening_IsOptionalSemanticAndReducedMotionSafe()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor.css");
+        var form = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor");
+        Assert.Contains("UseGiftBoxReveal && _giftExchange?.MatchOpenedOn is null", markup, StringComparison.Ordinal);
+        Assert.Contains("type=\"button\" class=\"gift-box-button\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"gift-box-help\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-hidden=\"true\"", markup, StringComparison.Ordinal);
+        Assert.Contains("ElementId=\"revealed-match-name\"", markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", markup, StringComparison.Ordinal);
+        Assert.Contains("prefers-reduced-motion: reduce", styles, StringComparison.Ordinal);
+        Assert.Contains("animation: none", styles, StringComparison.Ordinal);
+        Assert.Contains("for=\"gift-box-reveal\"", form, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"gift-box-reveal-help\"", form, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Registration_KeepsLabelsVisibleAndPasswordToggleProgressive()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Register.razor");
+        Assert.DoesNotContain("form-floating", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"Input.Email\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"Input.Password\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"Input.ConfirmPassword\"", markup, StringComparison.Ordinal);
+        Assert.Contains("hidden data-password-toggle", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"Input.Password Input.ConfirmPassword\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-pressed=\"false\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Enter your password again to confirm it.", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PasswordRecovery_ExplainsPrivateOutcomeAndProvidesSafeNavigation()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ForgotPassword.razor");

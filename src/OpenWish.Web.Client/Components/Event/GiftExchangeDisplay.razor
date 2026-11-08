@@ -32,10 +32,39 @@
     }
     else
     {
-        <div class="gift-match-content">
+        @if (NeedsFirstOpen)
+        {
+            <div class="gift-match-unopened" data-testid="gift-match-unopened" aria-busy="@_opening">
+                <div class="gift-match-invitation">
+                    <h3>A little surprise, just for you</h3>
+                    <p>The names are drawn. Open your gift to see who you're shopping for.</p>
+                    <p class="gift-match-privacy"><OpenWishIcon Name="eye-slash" /><span>Only your match is shown here. The rest stays a surprise.</span></p>
+                </div>
+                <button type="button" class="gift-box-button" disabled="@_opening" @onclick="OpenMatch" aria-describedby="gift-box-help">
+                    <span class="gift-box" aria-hidden="true"><span class="gift-box-bow"></span><span class="gift-box-lid"></span><span class="gift-box-body"></span></span>
+                    <span class="gift-box-label">@(_opening ? "Opening your gift..." : "Open my gift")</span>
+                </button>
+                <p id="gift-box-help" class="gift-box-help">Tap, click, or press Enter. This is only for your first visit.</p>
+                @if (_openError is not null)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @_openError
+                        <button type="button" class="btn btn-outline-danger mt-2" @onclick="LoadGiftExchange">Reload my match</button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+        <div class="gift-match-content @(_justOpened ? "gift-match-just-opened" : string.Empty)" data-testid="gift-match-opened">
+            @if (_justOpened)
+            {
+                <p class="visually-hidden" role="status">@($"Your gift is open. You're shopping for {RecipientDisplayName}.")</p>
+                <FocusOnFirstRender ElementId="revealed-match-name" />
+            }
             <div class="gift-match-introduction">
                 <p class="gift-match-label">You're shopping for</p>
-                <h3 class="gift-match-name">@RecipientDisplayName</h3>
+                <h3 id="revealed-match-name" class="gift-match-name" tabindex="-1">@RecipientDisplayName</h3>
             </div>
 
             <dl class="gift-match-facts">
@@ -88,6 +117,7 @@
                 <span>@($"Your match stays private. {RecipientDisplayName} won't see your reservations.")</span>
             </p>
         </div>
+        }
     }
 </section>
 
@@ -96,6 +126,7 @@
     [Parameter] public string CurrentUserId { get; set; } = string.Empty;
     [Parameter] public DateTimeOffset ExchangeDate { get; set; }
     [Parameter] public bool WishlistsLoaded { get; set; }
+    [Parameter] public bool UseGiftBoxReveal { get; set; }
     [Parameter] public ICollection<WishlistModel>? EventWishlists { get; set; }
     [Parameter] public EventCallback<decimal?> OnMatchBudgetResolved { get; set; }
 
@@ -103,6 +134,10 @@
     private WishlistModel? _recipientWishlist;
     private bool _loading = true;
     private string? _errorMessage;
+    private string? _openError;
+    private bool _opening;
+    private bool _justOpened;
+    private bool NeedsFirstOpen => UseGiftBoxReveal && _giftExchange?.MatchOpenedOn is null;
 
     private string RecipientDisplayName => _giftExchange?.Receiver?.UserName
         ?? _giftExchange?.Receiver?.Email
@@ -155,6 +190,8 @@
     {
         _loading = true;
         _errorMessage = null;
+        _openError = null;
+        _justOpened = false;
         try
         {
             _giftExchange = await EventService.GetMyGiftExchangeByPublicIdAsync(EventId, CurrentUserId);
@@ -172,6 +209,31 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task OpenMatch()
+    {
+        if (_opening || _giftExchange is null)
+        {
+            return;
+        }
+        _opening = true;
+        _openError = null;
+        try
+        {
+            _giftExchange = await EventService.OpenGiftExchangeMatchAsync(EventId, _giftExchange.PublicId, CurrentUserId);
+            UpdateRecipientWishlist();
+            _justOpened = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to open the gift exchange match for event {EventPublicId}", EventId);
+            _openError = "We couldn't confirm your gift was opened. Try again, or reload your match if the organizer changed the draw.";
+        }
+        finally
+        {
+            _opening = false;
         }
     }
 }

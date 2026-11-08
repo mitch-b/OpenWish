@@ -119,14 +119,18 @@
                                     </small>
                                 </div>
                             </div>
-                            @if (IsOwner && (AllowGuests || invitation.GuestDisplayName is not null) && invitation.UserId is null && invitation.Status is "Pending" or "Accepted")
+                            @if (IsOwner && (AllowGuests || invitation.GuestDisplayName is not null || HasStatus(invitation, "Rejected")) &&
+                                invitation.UserId is null && invitation.Status is "Pending" or "Accepted" or "Rejected")
                             {
                                 <div class="d-flex flex-wrap gap-2">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm"
-                                            disabled="@(IsInvitationActionBusy || !AllowGuests)"
-                                            @onclick="() => HandleGuestAccess(invitation, false)">
-                                        @(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")
-                                    </button>
+                                    @if (!HasStatus(invitation, "Rejected"))
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@(IsInvitationActionBusy || !AllowGuests)"
+                                                @onclick="() => HandleGuestAccess(invitation, false)">
+                                            @(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")
+                                        </button>
+                                    }
                                     @if (invitation.HasGuestAccess)
                                     {
                                         <button type="button" class="btn btn-outline-danger btn-sm"
@@ -614,6 +618,8 @@
         _isSending = true;
         _errorMessage = null;
         _successMessage = null;
+        var attemptedInvitation = false;
+        var failedEmailAddresses = new List<string>();
 
         try
         {
@@ -642,6 +648,7 @@
                 {
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, address);
                         invitedAddresses.Add(address);
                     }
@@ -649,6 +656,7 @@
                     {
                         Logger.LogWarning(ex, "Failed to invite {InviteeEmail} to event {EventPublicId}", address, EventId);
                         failedAddresses.Add(address);
+                        failedEmailAddresses.Add(address);
                     }
                 }
 
@@ -690,6 +698,7 @@
 
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteUserToEventByPublicIdAsync(EventId, userId, friendId);
                         invitedFriends.Add((friendId, friendName));
                     }
@@ -710,6 +719,7 @@
                 {
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, email);
                         invitedEmails.Add(email);
                     }
@@ -717,11 +727,13 @@
                     {
                         Logger.LogWarning(ex, "Failed to invite pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
                         failedFriends.Add(email);
+                        failedEmailAddresses.Add(email);
                     }
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "Unexpected failure inviting pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
                         failedFriends.Add(email);
+                        failedEmailAddresses.Add(email);
                     }
                 }
 
@@ -753,8 +765,6 @@
                     return;
                 }
             }
-
-            await LoadInvitations();
         }
         catch (Exception ex)
         {
@@ -763,6 +773,16 @@
         }
         finally
         {
+            if (attemptedInvitation)
+            {
+                await LoadInvitations();
+                if (AllowGuests && failedEmailAddresses.Any(email =>
+                    _invitations.Any(invitation => invitation.UserId is null &&
+                        string.Equals(invitation.InviteeEmail, email, StringComparison.OrdinalIgnoreCase))))
+                {
+                    _errorMessage = "Some private invitations already exist, but their email wasn't sent. Close this dialog and use Resend private access on the saved invitation. Check any remaining addresses before retrying.";
+                }
+            }
             _isSending = false;
         }
     }

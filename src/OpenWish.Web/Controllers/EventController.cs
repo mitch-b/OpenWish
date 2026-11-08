@@ -595,6 +595,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Forbid(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("invitations/{eventUserId}/resend")]

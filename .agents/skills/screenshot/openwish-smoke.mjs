@@ -2568,11 +2568,11 @@ async function verifyAccountFreeGuests(browser, results) {
     return response.status() === 204 ? null : response.json();
   };
   const email = `guest-no-account-${Date.now()}@example.test`;
-  const latestLink = async () => {
+  const latestLink = async (recipientEmail = email) => {
     const response = await organizer.request.get(`${mailUrl}/api/v1/messages`);
     if (!response.ok()) throw new Error(`Mail capture returned ${response.status()}.`);
     const inbox = await response.json();
-    const message = inbox.messages.find(message => message.To.some(to => to.Address === email));
+    const message = inbox.messages.find(message => message.To.some(to => to.Address === recipientEmail));
     if (!message) throw new Error("Guest access email was not delivered.");
     const detail = await organizer.request.get(`${mailUrl}/api/v1/message/${message.ID}`);
     const content = await detail.json();
@@ -2598,6 +2598,7 @@ async function verifyAccountFreeGuests(browser, results) {
     await page.waitForURL(`${baseUrl}/guest`);
   };
   await connect(await latestLink());
+  if (await page.locator("main").count() !== 1) throw new Error("The guest page has nested main landmarks.");
   await page.getByLabel("Your name for the group").fill("Morgan Guest");
   await screenshot(page, "guest-invitation-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -2682,12 +2683,31 @@ async function verifyAccountFreeGuests(browser, results) {
   await page.reload();
   await page.getByRole("alert").filter({ hasText: "unavailable" }).waitFor();
   await screenshot(page, "guest-access-revoked-mobile.png");
+  const declineEvent = await api("POST", "", {
+    name: "Plans can change", date: "2026-12-25T18:00:00Z",
+    isGiftExchange: true, allowGuestParticipants: true, eventUsers: []
+  });
+  const declineEmail = `guest-declining-${Date.now()}@example.test`;
+  await api("POST", `/${declineEvent.publicId}/invitations/email`, { email: declineEmail });
+  await connect(await latestLink(declineEmail));
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  await page.getByRole("heading", { name: "Invitation declined" }).waitFor();
+  await organizerPage.goto(`${baseUrl}/events/${declineEvent.publicId}`);
+  await organizerPage.waitForLoadState("networkidle");
+  const remove = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Remove guest", exact: true });
+  await remove.waitFor({ state: "visible" });
+  await screenshot(organizerPage, "guest-declined-invitation-desktop.png");
+  await remove.click();
+  await organizerPage.getByRole("dialog", { name: "Remove guest?", exact: true })
+    .getByRole("button", { name: "Remove guest", exact: true }).click();
+  await organizerPage.getByRole("status").filter({ hasText: "Guest removed from the event." }).waitFor();
+  await api("POST", `/${declineEvent.publicId}/invitations/email`, { email: declineEmail });
   if (diagnostics.browserErrors.length) throw new Error(`Guest browser errors: ${diagnostics.browserErrors.join(" | ")}`);
   results.push({ scenario: "account-free-guests", assertions: [
     "email-linked acceptance without registration", "fragment removed before explicit redemption",
     "guest cookie rejected by normal APIs", "private first opening, keyboard focus and reduced motion",
     "persistent opening across devices and without JavaScript", "organizer setting and revocation",
-    "desktop/mobile, light/dark and no horizontal overflow"
+    "desktop/mobile, light/dark and no horizontal overflow", "declined guest removal and reinvitation", "one main landmark"
   ] });
   await organizer.close();
   await guest.close();

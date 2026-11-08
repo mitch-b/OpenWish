@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Mail;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -853,6 +854,13 @@ public class EventService(
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventId = await context.EventUsers.Where(eu => eu.Id == eventUserId && !eu.Deleted)
+            .Select(eu => (int?)eu.EventId).SingleOrDefaultAsync();
+        if (eventId is null)
+        {
+            return false;
+        }
+        await using var transaction = await LockEventRowAsync(context, eventId.Value);
         var eventUser = await context.EventUsers
                 .Include(eu => eu.Event)
                     .ThenInclude(e => e.CreatedBy)
@@ -874,6 +882,10 @@ public class EventService(
         eventUser.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
         return true;
     }
 
@@ -1424,10 +1436,11 @@ public class EventService(
             throw new InvalidOperationException("Sign in with the email address that received this invitation.");
         }
 
-        var eventEntity = await context.Events
-            .FirstOrDefaultAsync(e => e.PublicId == eventPublicId && !e.Deleted)
+        var eventId = await context.Events.Where(e => e.PublicId == eventPublicId && !e.Deleted)
+            .Select(e => (int?)e.Id).SingleOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
-
+        await using var transaction = await LockEventRowAsync(context, eventId);
+        var eventEntity = await context.Events.SingleAsync(e => e.Id == eventId && !e.Deleted);
         var eventUser = await context.EventUsers
             .Include(eu => eu.Event)
             .Include(eu => eu.User)
@@ -1454,7 +1467,6 @@ public class EventService(
             eventUser.GuestTokenHash = null;
             eventUser.GuestAccessExpiresOn = null;
             eventUser.UpdatedOn = DateTimeOffset.UtcNow;
-            await context.SaveChangesAsync();
             eventUser.User = user;
             updatedParticipantLink = true;
         }
@@ -1471,6 +1483,11 @@ public class EventService(
         if (updatedParticipantLink)
         {
             await UpdateEventParticipantReferencesAsync(context, eventEntity.Id, userId, normalizedEmail);
+            await context.SaveChangesAsync();
+        }
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
         }
 
         return _mapper.Map<EventUserModel>(eventUser);
@@ -1490,41 +1507,40 @@ public class EventService(
             return false;
         }
 
-        var pendingEmailInvites = await context.EventUsers
+        var eligibleInvitations = context.EventUsers
             .Where(eu =>
                 eu.UserId == null &&
                 !eu.Deleted &&
+                !eu.Event!.Deleted &&
                 (eu.Status == "Pending" || (eu.Status == "Accepted" &&
                     (eu.Event!.AllowGuestParticipants || eu.GuestDisplayName != null))) &&
                 ((!eu.Event!.AllowGuestParticipants && eu.GuestDisplayName == null) || user.EmailConfirmed) &&
                 eu.InviteeEmail != null &&
-                eu.InviteeEmail.ToLower() == normalizedEmail)
-            .ToListAsync();
-
-        if (pendingEmailInvites.Count == 0)
-        {
-            return false;
-        }
-
-        var affectedEventIds = new HashSet<int>();
-
-        foreach (var eventUser in pendingEmailInvites)
-        {
-            eventUser.UserId = user.Id;
-            eventUser.GuestTokenHash = null;
-            eventUser.GuestAccessExpiresOn = null;
-            eventUser.UpdatedOn = DateTimeOffset.UtcNow;
-            affectedEventIds.Add(eventUser.EventId);
-        }
-
-        await context.SaveChangesAsync();
+                eu.InviteeEmail.ToLower() == normalizedEmail);
+        var affectedEventIds = await eligibleInvitations.Select(eu => eu.EventId).Distinct().Order().ToListAsync();
+        var attached = false;
 
         foreach (var eventId in affectedEventIds)
         {
+            await using var transaction = await LockEventRowAsync(context, eventId);
+            var invitations = await eligibleInvitations.Where(eu => eu.EventId == eventId).ToListAsync();
+            foreach (var eventUser in invitations)
+            {
+                eventUser.UserId = user.Id;
+                eventUser.GuestTokenHash = null;
+                eventUser.GuestAccessExpiresOn = null;
+                eventUser.UpdatedOn = DateTimeOffset.UtcNow;
+                attached = true;
+            }
             await UpdateEventParticipantReferencesAsync(context, eventId, user.Id, normalizedEmail);
+            await context.SaveChangesAsync();
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync();
+            }
         }
 
-        return true;
+        return attached;
     }
 
     private static void ValidateEventCreatorPermission(Event eventEntity, string userId)
@@ -1657,36 +1673,60 @@ public class EventService(
         // Send notifications to all participants
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var eventLink = $"{baseUri}/events/{eventEntity.PublicId}";
+        var deliveryFailures = 0;
         foreach (var (giver, receiver) in assignments)
         {
-            var receiverName = receiver.DisplayName;
-
-            if (!string.IsNullOrWhiteSpace(giver.UserId))
+            try
             {
-                await _notificationService.CreateNotificationAsync(
-                    ownerId,
-                    giver.UserId!,
-                    eventEntity.UseGiftBoxReveal ? "Your gift exchange match is ready" : "Gift Exchange Names Drawn!",
-                    eventEntity.UseGiftBoxReveal
-                        ? $"Your match for {eventEntity.Name} is ready. Open your gift to see who you're shopping for."
-                        : $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
-                    "GiftExchangeDrawn");
-            }
-
-            if (!string.IsNullOrWhiteSpace(giver.Email))
-            {
-                if (giver.UserId is null && eventEntity.AllowGuestParticipants && giver.ParticipantId.HasValue)
+                var receiverName = receiver.DisplayName;
+                var userId = giver.UserId;
+                var email = giver.Email;
+                if (userId is null && eventEntity.AllowGuestParticipants && giver.ParticipantId.HasValue)
                 {
                     var guest = eventEntity.EventUsers.Single(p => p.Id == giver.ParticipantId);
-                    await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(guest.PublicId, ownerId);
-                    continue;
+                    try
+                    {
+                        await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(guest.PublicId, ownerId);
+                        continue;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        var attached = await context.EventUsers.AsNoTracking().Include(p => p.User)
+                            .SingleAsync(p => p.Id == guest.Id && !p.Deleted);
+                        if (attached.UserId is null)
+                        {
+                            throw;
+                        }
+                        userId = attached.UserId;
+                        email = attached.User!.Email!;
+                    }
                 }
-                await _emailSender.SendGiftExchangeDrawnEmailAsync(
-                    giver.Email,
-                    eventEntity.Name,
-                    eventEntity.UseGiftBoxReveal ? null : receiverName,
-                    eventLink);
+                if (!string.IsNullOrWhiteSpace(userId))
+                {
+                    await _notificationService.CreateNotificationAsync(
+                        ownerId, userId,
+                        eventEntity.UseGiftBoxReveal ? "Your gift exchange match is ready" : "Gift Exchange Names Drawn!",
+                        eventEntity.UseGiftBoxReveal
+                            ? $"Your match for {eventEntity.Name} is ready. Open your gift to see who you're shopping for."
+                            : $"Your gift exchange recipient for {eventEntity.Name} is {receiverName}!",
+                        "GiftExchangeDrawn");
+                }
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    await _emailSender.SendGiftExchangeDrawnEmailAsync(
+                        email, eventEntity.Name, eventEntity.UseGiftBoxReveal ? null : receiverName, eventLink);
+                }
             }
+            catch (Exception ex) when (ex is HttpRequestException or SmtpException or InvalidOperationException)
+            {
+                _logger.LogWarning(ex, "Draw notification delivery failed for event {EventPublicId}, participant {ParticipantKey}",
+                    eventEntity.PublicId, giver.Key);
+                deliveryFailures++;
+            }
+        }
+        if (deliveryFailures > 0)
+        {
+            throw new HttpRequestException($"Names were drawn, but {deliveryFailures} participant notification(s) could not be delivered. Check the event and resend private access for affected guests.");
         }
 
         return await GetEventAsync(eventId);
@@ -1878,16 +1918,17 @@ public class EventService(
         addParticipant($"user:{eventEntity.CreatedBy.Id}",
             eventEntity.CreatedBy.Id,
             eventEntity.CreatedBy.Email,
-            eventEntity.CreatedBy.UserName ?? eventEntity.CreatedBy.Email ?? eventEntity.CreatedBy.Id);
+            PublicDisplayName.ForGiftRecipient(eventEntity.CreatedBy.UserName, null));
 
-        foreach (var eventUser in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant))
+        foreach (var eventUser in eventEntity.EventUsers.Where(IsEligibleGiftExchangeParticipant).OrderBy(eu => eu.Id))
         {
             if (!string.IsNullOrWhiteSpace(eventUser.UserId) && eventUser.User != null)
             {
                 addParticipant($"user:{eventUser.UserId}",
                     eventUser.UserId,
                     eventUser.User.Email,
-                    eventUser.User.UserName ?? eventUser.User.Email ?? eventUser.UserId);
+                    PublicDisplayName.ForGiftRecipient(eventUser.User.UserName, eventUser.GuestDisplayName),
+                    eventUser.Id);
             }
             else if (!string.IsNullOrWhiteSpace(eventUser.InviteeEmail))
             {

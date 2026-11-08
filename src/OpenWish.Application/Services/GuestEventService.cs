@@ -152,7 +152,7 @@ public sealed class GuestEventService(
             participant.IsAccepted, evt.NamesDrawnOn is null, assignment is not null, needsOpening,
             assignment?.PublicId,
             assignment is null || needsOpening ? null :
-                PublicDisplayName.From(assignment.Receiver?.UserName ?? assignment.ReceiverParticipant?.GuestDisplayName, "Invited guest"));
+                PublicDisplayName.ForGiftRecipient(assignment.Receiver?.UserName, assignment.ReceiverParticipant?.GuestDisplayName));
         if (transaction is not null)
         {
             await transaction.CommitAsync();
@@ -187,9 +187,9 @@ public sealed class GuestEventService(
             throw new InvalidOperationException("This invitation has already been answered or the draw has started.");
         }
         var name = displayName?.Trim();
-        if (accept && (string.IsNullOrWhiteSpace(name) || name.Length > 80 || name.Any(char.IsControl)))
+        if (accept && (string.IsNullOrWhiteSpace(name) || name.Length > 80 || name.Contains('@') || name.Any(char.IsControl)))
         {
-            throw new ArgumentException("Enter a display name of 1 to 80 characters.");
+            throw new ArgumentException("Enter a display name of 1 to 80 characters, not an email address.");
         }
         participant.GuestDisplayName = accept ? name : null;
         participant.Status = accept ? "Accepted" : "Rejected";

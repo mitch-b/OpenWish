@@ -11,6 +11,9 @@ and joins the draw without registering. After names are drawn, a fresh private
 email lets them see only their own recipient, date, budget, and organizer's
 guidance. The optional gift box works for guests too; opening is remembered on
 the assignment across visits and devices. Guest emails never name the recipient.
+Recipient labels preserve the participant's chosen group name after an account
+upgrade. For existing accounts whose username is an email, the label uses the
+account handle rather than exposing the full email address.
 
 Guests cannot browse event membership, group pairings, wishlists, reservations,
 comments, or ordinary account APIs. Sharing gift ideas remains an optional
@@ -27,10 +30,14 @@ Reopening the current email restores access without registration.
 The organizer can resend private access, revoke it on all devices, or remove a
 guest before drawing. Resending rotates the link and invalidates earlier links
 and sessions. Removing an accepted participant after drawing requires a reset.
+Declined invitations can be removed and invited again before drawing.
 Disabling guest access revokes credentials immediately; turning it back on does
 not resurrect them, so resend private access. A reset invalidates old access,
 and a new draw issues new links. Running an event again copies the setting but
 creates fresh, pending invitations with separate credentials.
+Account attachment and assignment relinking share the draw's event lock and
+commit together. A failed draw email does not stop other deliveries; the draw
+is preserved and the organizer gets an explicit delivery-recovery message.
 
 Only token hashes are stored. A random 256-bit credential arrives in the URL
 fragment rather than server logs or query strings. The page removes that

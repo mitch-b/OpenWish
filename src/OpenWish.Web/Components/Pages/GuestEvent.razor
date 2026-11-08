@@ -6,7 +6,7 @@
 
 <PageTitle>Your private gift exchange - OpenWish</PageTitle>
 
-<main class="guest-event">
+<div class="guest-event">
     @if (ErrorMessage is not null)
     {
         <div class="alert alert-danger" role="alert">@ErrorMessage</div>
@@ -104,7 +104,7 @@
         <input type="hidden" name="token" value="" />
         <button type="submit" class="btn btn-primary btn-lg">Continue with my private invitation</button>
     </form>
-</main>
+</div>
 
 @code {
     [CascadingParameter] private HttpContext? HttpContext { get; set; }
@@ -116,7 +116,7 @@
     private string? ErrorMessage => Error switch
     {
         "unavailable" => "This private access is unavailable or expired. Ask the organizer to resend your invitation.",
-        "name" => "Enter a name of 1 to 80 characters, then accept the invitation.",
+        "name" => "Enter a name of 1 to 80 characters, not an email address, then accept the invitation.",
         "response" => "Choose Accept invitation or Decline.",
         "changed" => "The invitation or draw has changed. Open your latest invitation email.",
         "retry" => "Your gift couldn't be opened. Reload this page to check your match before trying again.",

@@ -9,10 +9,12 @@ public sealed class CapturedEmailSender : ISender
 {
     public ConcurrentQueue<CapturedEmail> Messages { get; } = new();
     public bool FailGuestDelivery { get; set; }
+    public string? FailGuestAddress { get; set; }
 
     public SendResponse Send(IFluentEmail email, CancellationToken? token = null)
     {
-        if (FailGuestDelivery && email.Data.Body.Contains("#access=", StringComparison.Ordinal))
+        if ((FailGuestDelivery || email.Data.ToAddresses.Any(to => to.EmailAddress == FailGuestAddress)) &&
+            email.Data.Body.Contains("#access=", StringComparison.Ordinal))
         {
             var failure = new SendResponse();
             failure.ErrorMessages.Add("Synthetic guest delivery failure.");

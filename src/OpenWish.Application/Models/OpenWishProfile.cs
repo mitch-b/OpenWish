@@ -108,8 +108,8 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap()
             .ForMember(dest => dest.ReceiverDisplayName, opt => opt.MapFrom(src =>
-                src.Receiver != null ? src.Receiver.UserName :
-                src.ReceiverParticipant != null ? src.ReceiverParticipant.GuestDisplayName : null));
+                PublicDisplayName.ForGiftRecipient(src.Receiver != null ? src.Receiver.UserName : null,
+                    src.ReceiverParticipant != null ? src.ReceiverParticipant.GuestDisplayName : null)));
         CreateMap<CustomPairingRuleModel, CustomPairingRule>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();

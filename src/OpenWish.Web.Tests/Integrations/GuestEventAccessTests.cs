@@ -206,6 +206,8 @@ public sealed partial class GuestEventAccessTests(OpenWishAppFactory factory)
         await ConnectAsync(guest, token);
         var invalid = await PostFormAsync(guest, "guest/respond", new("displayName", " "), new("response", "accept"));
         Assert.Equal("/guest?error=name", invalid.Headers.Location!.OriginalString);
+        var emailName = await PostFormAsync(guest, "guest/respond", new("displayName", invite.InviteeEmail!), new("response", "accept"));
+        Assert.Equal("/guest?error=name", emailName.Headers.Location!.OriginalString);
         await PostFormAsync(guest, "guest/respond", new("displayName", "Guest person"), new("response", "accept"));
         (await owner.Client.PostAsync($"api/events/{evt.PublicId}/draw-names", null)).EnsureSuccessStatusCode();
         var freshToken = TokenFor(invite.InviteeEmail!);
@@ -275,6 +277,130 @@ public sealed partial class GuestEventAccessTests(OpenWishAppFactory factory)
 
     private ApplicationDbContext OpenContext() =>
         factory.Services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext();
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AccountAttachment_WaitsForTheEventLockAndRacingDrawKeepsTheMatchAccessible(bool automatic)
+    {
+        using var owner = factory.CreateBrowser();
+        using var guest = factory.CreateBrowser();
+        await owner.SignInAsync("owner");
+        var evt = await CreateEventAsync(owner);
+        using var scope = factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<OpenWish.Shared.Services.IEventService>();
+        var email = $"racing-claim-{Guid.NewGuid():N}@example.test";
+        var invitation = await service.InviteByEmailToEventByPublicIdAsync(evt.PublicId, evt.CreatedBy!.Id, email);
+        await ConnectAsync(guest, TokenFor(email));
+        await PostFormAsync(guest, "guest/respond", new("displayName", "Cabin friend"), new("response", "accept"));
+        var userId = "racing-" + invitation.PublicId;
+        await using var blocker = OpenContext();
+        blocker.Users.Add(new ApplicationUser
+        {
+            Id = userId,
+            UserName = email,
+            Email = email,
+            NormalizedEmail = email.ToUpperInvariant(),
+            EmailConfirmed = true
+        });
+        await blocker.SaveChangesAsync();
+        var eventId = await blocker.Events.Where(e => e.PublicId == evt.PublicId).Select(e => e.Id).SingleAsync();
+        await using var transaction = await blocker.Database.BeginTransactionAsync();
+        await blocker.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"Events\" WHERE \"Id\" = {eventId} FOR UPDATE");
+        Task attachment = automatic
+            ? service.GetPendingInvitationsForUserAsync(userId)
+            : service.ClaimEventInvitationByEmailAsync(evt.PublicId, userId, email);
+        var draw = service.DrawNamesByPublicIdAsync(evt.PublicId, evt.CreatedBy.Id);
+        await Task.Delay(200);
+        var waitedForLock = !attachment.IsCompleted;
+        await transaction.CommitAsync();
+        await Task.WhenAll(attachment, draw);
+        Assert.True(waitedForLock, "Account attachment must wait for the same event lock as drawing.");
+        var match = await service.GetMyGiftExchangeByPublicIdAsync(evt.PublicId, userId);
+        Assert.NotNull(match);
+        await using var context = OpenContext();
+        var participant = await context.EventUsers.SingleAsync(p => p.PublicId == invitation.PublicId);
+        Assert.Equal(userId, participant.UserId);
+        Assert.Equal("Cabin friend", participant.GuestDisplayName);
+        Assert.Null(participant.GuestTokenHash);
+    }
+
+    [Fact]
+    public async Task FailedDrawMail_DoesNotSkipLaterGuestsAndCancellationReturnsTheResetRequirement()
+    {
+        using var owner = factory.CreateBrowser();
+        using var firstGuest = factory.CreateBrowser();
+        using var secondGuest = factory.CreateBrowser();
+        await owner.SignInAsync("owner");
+        var evt = await CreateEventAsync(owner);
+        using var scope = factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<OpenWish.Shared.Services.IEventService>();
+        var firstEmail = $"first-draw-{Guid.NewGuid():N}@example.test";
+        var secondEmail = $"second-draw-{Guid.NewGuid():N}@example.test";
+        var first = await service.InviteByEmailToEventByPublicIdAsync(evt.PublicId, evt.CreatedBy!.Id, firstEmail);
+        var second = await service.InviteByEmailToEventByPublicIdAsync(evt.PublicId, evt.CreatedBy.Id, secondEmail);
+        await ConnectAsync(firstGuest, TokenFor(firstEmail));
+        await ConnectAsync(secondGuest, TokenFor(secondEmail));
+        await PostFormAsync(firstGuest, "guest/respond", new("displayName", "First guest"), new("response", "accept"));
+        await PostFormAsync(secondGuest, "guest/respond", new("displayName", "Second guest"), new("response", "accept"));
+        factory.Emails.FailGuestAddress = firstEmail;
+        try
+        {
+            var result = await owner.Client.PostAsync($"api/events/{evt.PublicId}/draw-names", null);
+            Assert.Equal(HttpStatusCode.BadGateway, result.StatusCode);
+            Assert.Contains("Names were drawn", await result.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            factory.Emails.FailGuestAddress = null;
+        }
+        Assert.Contains(factory.Emails.Messages, m => m.To == secondEmail && m.Subject.StartsWith("Your private match is ready", StringComparison.Ordinal));
+        await using var context = OpenContext();
+        var firstParticipant = await context.EventUsers.SingleAsync(p => p.PublicId == first.PublicId);
+        var secondParticipant = await context.EventUsers.SingleAsync(p => p.PublicId == second.PublicId);
+        Assert.Null(firstParticipant.GuestEmailSentOn);
+        Assert.NotNull(secondParticipant.GuestEmailSentOn);
+        Assert.NotNull((await context.Events.SingleAsync(e => e.PublicId == evt.PublicId)).NamesDrawnOn);
+        var cancellation = await owner.Client.DeleteAsync($"api/events/invitations/{firstParticipant.Id}");
+        Assert.Equal(HttpStatusCode.BadRequest, cancellation.StatusCode);
+        Assert.Contains("Reset the gift exchange", await cancellation.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GuestMatch_ShowsTheRegisteredRecipientsHandleWithoutTheirEmail()
+    {
+        using var owner = factory.CreateBrowser();
+        using var guest = factory.CreateBrowser();
+        await owner.SignInAsync("owner");
+        var evt = await CreateEventAsync(owner);
+        using var scope = factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<OpenWish.Shared.Services.IEventService>();
+        var email = $"recipient-name-{Guid.NewGuid():N}@example.test";
+        await service.InviteByEmailToEventByPublicIdAsync(evt.PublicId, evt.CreatedBy!.Id, email);
+        await ConnectAsync(guest, TokenFor(email));
+        await PostFormAsync(guest, "guest/respond", new("displayName", "Morgan"), new("response", "accept"));
+        await service.DrawNamesByPublicIdAsync(evt.PublicId, evt.CreatedBy.Id);
+        await ConnectAsync(guest, TokenFor(email));
+        await using var context = OpenContext();
+        var recipient = await context.Users.SingleAsync(u => u.Id == evt.CreatedBy.Id);
+        var originalName = recipient.UserName;
+        try
+        {
+            recipient.UserName = "avery.person@example.test";
+            await context.SaveChangesAsync();
+            var assignmentId = await context.GiftExchanges.Where(g => g.Event!.PublicId == evt.PublicId && g.GiverId == null)
+                .Select(g => g.PublicId).SingleAsync();
+            await PostFormAsync(guest, "guest/open", new KeyValuePair<string, string>("assignmentPublicId", assignmentId));
+            var page = await guest.GetPageAsync("guest");
+            Assert.Contains("avery person", page);
+            Assert.DoesNotContain("avery.person@example.test", page);
+        }
+        finally
+        {
+            recipient.UserName = originalName;
+            await context.SaveChangesAsync();
+        }
+    }
 
     private static async Task<EventModel> CreateEventAsync(OpenWishBrowser owner)
     {

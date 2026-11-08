@@ -41,7 +41,7 @@
                         For privacy, the result is the same whether or not an account matches.
                     </div>
                     <button type="submit" class="w-100 btn btn-lg btn-primary">Send confirmation email</button>
-                    <p class="mt-3 mb-0"><a href="Account/Login">Back to log in</a></p>
+                    <p class="mt-3 mb-0"><a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Back to log in</a></p>
                 </EditForm>
             </section>
         </div>
@@ -51,12 +51,35 @@
 @code {
     private string? message;
 
+    private InputModel? _input;
+
     [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+    private InputModel Input
+    {
+        get => _input ??= new();
+        set => _input = value;
+    }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "email")]
+    private string? InvitedEmail { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && !string.IsNullOrWhiteSpace(InvitedEmail))
+        {
+            Input.Email = InvitedEmail.Trim();
+        }
+    }
 
     private async Task OnValidSubmitAsync()
     {
-        var user = await UserManager.FindByEmailAsync(Input.Email!);
+        var user = await UserManager.FindByEmailAsync(Input.Email.Trim());
         if (user is null)
         {
             message = "Verification email sent. Please check your email.";
@@ -68,7 +91,7 @@
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
             BaseUriService.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
-            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, callbackUrl);
 
         message = "Verification email sent. Please check your email.";

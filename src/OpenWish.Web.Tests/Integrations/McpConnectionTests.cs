@@ -146,7 +146,7 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
             invalidFields.Add(new("Input.Password", "Incorrect-password-123!"));
             var rejected = await browser.Client.PostAsync(loginUrl.PathAndQuery, new FormUrlEncodedContent(invalidFields));
             Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
-            Assert.Contains("Invalid login attempt", await rejected.Content.ReadAsStringAsync());
+            Assert.Contains("Check your email and password", await rejected.Content.ReadAsStringAsync());
             Assert.Equal(HttpStatusCode.Redirect, (await browser.Client.GetAsync(flow.AuthorizeUrl)).StatusCode);
 
             var fields = OpenWishBrowser.FormFields(await browser.GetPageAsync(loginUrl.PathAndQuery), "login");

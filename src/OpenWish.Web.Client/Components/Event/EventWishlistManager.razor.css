@@ -22,6 +22,16 @@
     line-height: 1.5;
 }
 
+.event-wishlist-manager .list-group-item,
+.event-wishlist-manager .btn {
+    overflow-wrap: anywhere;
+}
+
+.event-wishlist-manager .btn {
+    min-height: 44px;
+    white-space: normal;
+}
+
 @media (max-width: 575.98px) {
     .event-wishlist-manager .card-body {
         padding: 1rem;

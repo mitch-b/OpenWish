@@ -579,11 +579,15 @@ public class EventService(
 
     public async Task<EventUserModel> InviteByEmailToEventAsync(int eventId, string inviterId, string email)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(email);
+        email = email.Trim();
+        var normalizedEmail = email.ToUpperInvariant();
+
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var eventEntity = await context.Events
                 .Include(e => e.CreatedBy)
-                .FirstOrDefaultAsync(e => e.Id == eventId);
+                .FirstOrDefaultAsync(e => e.Id == eventId && !e.Deleted);
 
         if (eventEntity == null)
         {
@@ -594,7 +598,7 @@ public class EventService(
         ValidateEventCreatorPermission(eventEntity, inviterId);
 
         // Check if user with this email exists
-        var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var existingUser = await context.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
         if (existingUser != null)
         {
             // User exists, send regular invitation
@@ -603,7 +607,8 @@ public class EventService(
 
         // Check if email invitation already exists
         var existingEmailInvite = await context.EventUsers
-                .FirstOrDefaultAsync(eu => eu.EventId == eventId && eu.InviteeEmail == email && !eu.Deleted);
+                .FirstOrDefaultAsync(eu => eu.EventId == eventId &&
+                    eu.InviteeEmail != null && eu.InviteeEmail.ToUpper() == normalizedEmail && !eu.Deleted);
 
         if (existingEmailInvite != null)
         {
@@ -1346,7 +1351,7 @@ public class EventService(
                 eu.EventId == eventEntity.Id &&
                 !eu.Deleted &&
                 (eu.UserId == userId ||
-                 (eu.InviteeEmail != null && EF.Functions.ILike(eu.InviteeEmail, normalizedEmail))));
+                 (eu.InviteeEmail != null && eu.InviteeEmail.ToLower() == normalizedEmail)));
 
         if (eventUser == null)
         {
@@ -1401,7 +1406,7 @@ public class EventService(
                 !eu.Deleted &&
                 eu.Status == "Pending" &&
                 eu.InviteeEmail != null &&
-                EF.Functions.ILike(eu.InviteeEmail, normalizedEmail))
+                eu.InviteeEmail.ToLower() == normalizedEmail)
             .ToListAsync();
 
         if (pendingEmailInvites.Count == 0)

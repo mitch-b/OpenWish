@@ -670,7 +670,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       });
     });
     const returnUrl = isMobile ? "/wishlists" : "/";
-    await visit(page, `/Account/Login?ReturnUrl=${encodeURIComponent(returnUrl)}`, "Single sign-on", visitedRoutes);
+    await visit(page, `/Account/Login?ReturnUrl=${encodeURIComponent(returnUrl)}`, "Or continue with", visitedRoutes);
 
     const externalLoginForm = page.locator("form.external-login-form");
     if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
@@ -2393,6 +2393,172 @@ async function verifyProductCaptureJourney(browser, results) {
   });
 }
 
+async function verifyFamilyExchangeJourney(browser, results) {
+  const anonymous = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const signupPage = await anonymous.newPage();
+  const signupDiagnostics = monitorPage(signupPage);
+  const invitationRoute = `/events/${expectedManifest.eventPublicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`;
+  await signupPage.goto(`${baseUrl}${invitationRoute}`);
+  await signupPage.getByRole("link", { name: "Create account", exact: true }).click();
+  if (await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
+    throw new Error("Event invitation signup lost the invited email address.");
+  }
+  if (await signupPage.evaluate(() => document.activeElement?.id) !== "Input.Password") {
+    throw new Error("Invitation signup did not focus the password after prefilling the email.");
+  }
+  await screenshot(signupPage, "family-invitation-signup.png");
+  await signupPage.setViewportSize({ width: 390, height: 844 });
+  await screenshot(signupPage, "family-invitation-signup-mobile.png");
+  await signupPage.getByRole("link", { name: "Log in", exact: true }).click();
+  const loginUrl = new URL(signupPage.url());
+  if (loginUrl.searchParams.get("ReturnUrl") !== invitationRoute ||
+      await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
+    throw new Error("Switching to sign in lost the invitation or email.");
+  }
+  if (await signupPage.evaluate(() => document.activeElement?.id) !== "Input.Password") {
+    throw new Error("Invitation sign-in did not focus the password.");
+  }
+  if (await signupPage.getByText("Single sign-on", { exact: true }).count()) {
+    throw new Error("Guest sign-in still uses identity-provider jargon.");
+  }
+  await anonymous.close();
+
+  const organizer = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const guest = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await login(organizer, "owner", ownerEmail);
+  await login(guest, "guest", guestEmail);
+  const requestJson = async (context, method, route, data) => {
+    const response = await context.request.fetch(`${baseUrl}${route}`, { method, data });
+    if (!response.ok()) {
+      throw new Error(`Family journey ${method} ${route}: ${response.status()} ${await response.text()}`);
+    }
+    return response.status() === 204 ? null : response.json();
+  };
+  const event = await requestJson(organizer, "POST", "/api/events", {
+    name: "Family practice exchange",
+    description: "Bring one thoughtful gift. The organizer handles the draw.",
+    date: "2026-12-25T18:00:00Z",
+    budget: 40,
+    isGiftExchange: true,
+    giftExchangeStyle: "SecretSanta",
+    eventUsers: []
+  });
+  await requestJson(organizer, "POST", `/api/events/${event.publicId}/invitations/email`, {
+    email: ` ${guestEmail.toUpperCase()} `
+  });
+  const page = await guest.newPage();
+  const diagnostics = monitorPage(page);
+  await page.goto(`${baseUrl}/events/${event.publicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`);
+  await page.getByRole("button", { name: "Accept invite", exact: true }).click();
+  await page.getByRole("link", { name: "Continue and add my wishlist" }).click();
+  await page.getByTestId("participant-add-wishlist").waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Add my wishlist", exact: true }).click();
+  const manager = page.locator(".event-wishlist-manager");
+  await manager.getByRole("button", { name: "Create a wishlist for this event", exact: true }).click();
+  await manager.getByTestId("event-wishlist-sharing").waitFor({ state: "visible" });
+  if (await manager.getByRole("radio").count() ||
+      await manager.getByLabel("Let invited people add ideas to this list").count()) {
+    throw new Error("Event wishlist creation offers irrelevant sharing or collaboration choices.");
+  }
+  const name = manager.getByLabel("Wishlist name");
+  if (await name.inputValue() !== "My gift ideas") {
+    throw new Error("New guests must still invent a wishlist name.");
+  }
+  await name.focus();
+  await manager.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "family-event-wishlist-form.png") });
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 568 },
+    { width: 768, height: 900 },
+    { width: 1024, height: 900 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await manager.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "family-event-wishlist-form-mobile.png") });
+  await manager.getByRole("button", { name: "Create wishlist", exact: true }).click();
+  await manager.getByRole("link", { name: "Add my first gift idea", exact: true }).waitFor({ state: "visible" });
+  await page.getByTestId("participant-add-wishlist").getByRole("link", { name: "Add gift ideas" })
+    .waitFor({ state: "visible" });
+  if (await page.getByTestId("participant-wishlist-shared").count()) {
+    throw new Error("An empty wishlist is being described as ready.");
+  }
+  await manager.getByRole("link", { name: "Add my first gift idea", exact: true }).click();
+  await page.getByLabel("Name", { exact: true }).fill("A cozy family board game");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByText("A cozy family board game", { exact: true }).first().waitFor({ state: "visible" });
+  await page.goto(`${baseUrl}/events/${event.publicId}`);
+  await page.getByTestId("participant-wishlist-shared").waitFor({ state: "visible" });
+  const sharedLists = await requestJson(guest, "GET", `/api/events/${event.publicId}/wishlists`);
+  const myList = sharedLists.find(list => list.name === "My gift ideas");
+  if (!myList || myList.isPrivate || myList.isCollaborative ||
+      !myList.items.some(item => item.name === "A cozy family board game")) {
+    throw new Error(`Guest gift ideas were not shared correctly: ${JSON.stringify(sharedLists)}`);
+  }
+
+  // Another tab removes the list while this tab still shows its removal action.
+  await requestJson(guest, "DELETE", `/api/events/${event.publicId}/wishlists/${myList.publicId}`);
+  const ownLists = page.locator(".event-wishlist-manager section").first();
+  const remove = ownLists.getByRole("button", { name: "Remove", exact: true });
+  await remove.click();
+  const dialog = page.getByRole("dialog", { name: "Remove wishlist" });
+  await dialog.getByRole("button", { name: "Keep wishlist" }).waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "hidden" });
+  if (!(await remove.evaluate(element => element === document.activeElement))) {
+    throw new Error("Wishlist removal did not restore keyboard focus.");
+  }
+  await remove.click();
+  await dialog.getByRole("button", { name: "Remove", exact: true }).click();
+  await dialog.getByRole("alert").waitFor({ state: "visible" });
+  await screenshot(page, "family-wishlist-removal-recovery-mobile.png");
+  await dialog.getByRole("button", { name: "Keep wishlist" }).click();
+  await requestJson(guest, "POST", `/api/events/${event.publicId}/wishlists/attach`, { wishlistPublicId: myList.publicId });
+  await page.goto(`${baseUrl}/events/${event.publicId}`);
+  await page.getByTestId("participant-wishlist-shared").waitFor({ state: "visible" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await screenshot(page, "family-event-ready.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "family-event-ready-mobile.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await screenshot(page, "family-event-ready-mobile-dark.png");
+
+  const outsider = await browser.newContext();
+  await login(outsider, "friend", friendEmail);
+  const denied = await outsider.request.get(`${baseUrl}/api/events/${event.publicId}/wishlists`);
+  if (denied.status() !== 403) {
+    throw new Error("Someone outside the exchange could read guest wishlists.");
+  }
+  await outsider.close();
+  const expectedRemovalFailure = `${baseUrl}/api/events/${event.publicId}/wishlists/${myList.publicId}`;
+  const unexpectedResponses = diagnostics.failedResponses.filter(response =>
+    response !== `404 ${expectedRemovalFailure}`);
+  if (signupDiagnostics.browserErrors.length || signupDiagnostics.failedResponses.length ||
+      diagnostics.browserErrors.length || unexpectedResponses.length) {
+    throw new Error(`Family journey browser errors: ${JSON.stringify({
+      signupDiagnostics, browserErrors: diagnostics.browserErrors, unexpectedResponses
+    })}`);
+  }
+  await organizer.close();
+  await guest.close();
+  results.push({
+    scenario: "family-exchange",
+    assertions: [
+      "guest signup and sign-in preserve the invited email and destination",
+      "email invitation finds existing accounts case-insensitively and trims whitespace",
+      "accepting leads directly to event wishlist creation without friending",
+      "event wishlist form has a sensible name, correct sharing and no irrelevant privacy choices",
+      "empty wishlists prompt for ideas instead of claiming readiness",
+      "first gift idea persists and makes the participant ready",
+      "wishlist removal traps and restores keyboard focus and keeps stale-operation errors visible",
+      "guest forms and readiness work at 320, 390, 768, 1024 and 1280px in light and dark themes",
+      "outsiders cannot read event wishlists"
+    ]
+  });
+}
+
 async function verifyDevelopmentLoginJourney(browser, results) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
@@ -3385,7 +3551,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await planPage.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-total").filter({ hasText: "249.99" }).waitFor({ state: "visible" });
-    await planPage.getByTestId("gift-plan-occasion").filter({ hasText: "In 21 days" }).waitFor({ state: "visible" });
+    const occasionDate = alexGroup.items.find(item => item.itemName === "Noise-Cancelling Headphones").eventDate;
+    if (!occasionDate) {
+      throw new Error("The reserved gift lost its occasion date.");
+    }
+    // A verification run can cross UTC midnight after the fixture was seeded.
+    const daysUntilOccasion = Math.floor(Date.parse(occasionDate) / 86400000) - Math.floor(Date.now() / 86400000);
+    await planPage.getByTestId("gift-plan-occasion").filter({ hasText: `In ${daysUntilOccasion} days` }).waitFor({ state: "visible" });
     await planPage.getByTestId("gift-plan-over-budget").filter({ hasText: "Over the $75.00 budget for Holiday Gift Exchange" }).waitFor({ state: "visible" });
     await screenshot(page, "gift-plan.png");
     const headphonesRow = planPage.getByTestId("gift-plan-item").filter({ hasText: "Noise-Cancelling Headphones" });
@@ -5389,7 +5561,7 @@ try {
   }
 
   const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
-  if (selectedScenario && selectedScenario !== "connected-app") {
+  if (selectedScenario && !["connected-app", "family-exchange"].includes(selectedScenario)) {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
@@ -5404,8 +5576,13 @@ try {
     await verifyOccasionRemindersJourney(browser, manifest, results);
     await verifyMobileJourney(browser, manifest, results);
     await verifyUnsharedMatchWishlist(browser, manifest, results);
+    await verifyFamilyExchangeJourney(browser, results);
   }
-  await verifyConnectedAppJourney(browser, results);
+  if (selectedScenario === "family-exchange") {
+    await verifyFamilyExchangeJourney(browser, results);
+  } else {
+    await verifyConnectedAppJourney(browser, results);
+  }
 
   await fs.writeFile(
     path.join(evidenceDirectory, "openwish-e2e-result.json"),

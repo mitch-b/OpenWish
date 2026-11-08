@@ -453,6 +453,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return BadRequest(ex.Message);
         }
+        catch (KeyNotFoundException)
+        {
+            return NotFound("This event or invitation is no longer available.");
+        }
     }
 
     [HttpPost("invitations/{eventUserId}/accept")]

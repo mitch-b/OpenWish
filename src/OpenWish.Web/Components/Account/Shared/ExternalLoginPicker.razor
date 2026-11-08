@@ -5,14 +5,10 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IdentityRedirectManager RedirectManager
 
-@if (externalLogins.Length == 0)
+@if (externalLogins.Length > 0)
 {
-    <p class="mb-0 text-muted">
-        Sign in with the account created for this OpenWish server. Your host can enable additional identity providers.
-    </p>
-}
-else
-{
+    <section class="auth-card auth-card-secondary">
+    <h2>Or continue with</h2>
     <form class="form-horizontal external-login-form"
           action="/Account/PerformExternalLogin"
           method="post"
@@ -28,6 +24,7 @@ else
             </div>
         </div>
     </form>
+    </section>
 }
 
 @code {

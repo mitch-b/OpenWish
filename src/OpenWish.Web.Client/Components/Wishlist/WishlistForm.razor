@@ -6,6 +6,7 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
+        <fieldset disabled="@IsSubmitting">
         <div class="mb-3">
             <label for="name" class="form-label">Wishlist name</label>
             <InputText id="name"
@@ -55,6 +56,14 @@
             <ValidationMessage For="@(() => Model.Icon)" />
         </div>
 
+        @if (IsEventWishlist)
+        {
+            <p class="form-text mb-4" data-testid="event-wishlist-sharing">
+                Shared with this event's participants. Your gift giver's reservations stay hidden from you.
+            </p>
+        }
+        else
+        {
         <div class="mb-3 form-check">
             <InputCheckbox id="isCollaborative" class="form-check-input" @bind-Value="@Model!.IsCollaborative" />
             <label class="form-check-label" for="isCollaborative">
@@ -120,6 +129,7 @@
                 </label>
             </div>
         </fieldset>
+        }
 
         <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
@@ -135,9 +145,10 @@
             </button>
             @if (OnCancel.HasDelegate)
             {
-                <button type="button" class="btn btn-outline-secondary" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="HandleCancel">Cancel</button>
             }
         </div>
+        </fieldset>
     </EditForm>
 }
 else
@@ -152,6 +163,7 @@ else
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool AutoFocusName { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
+    [Parameter] public bool IsEventWishlist { get; set; }
 
     private static readonly (string Value, string Label)[] IconOptions =
     [
@@ -200,6 +212,11 @@ else
 
     private async Task HandleSubmit()
     {
+        if (IsSubmitting)
+        {
+            return;
+        }
+
         if (OnSubmit.HasDelegate)
         {
             await OnSubmit.InvokeAsync(Model);
@@ -208,6 +225,11 @@ else
 
     private async Task HandleCancel()
     {
+        if (IsSubmitting)
+        {
+            return;
+        }
+
         if (OnCancel.HasDelegate)
         {
             await OnCancel.InvokeAsync();

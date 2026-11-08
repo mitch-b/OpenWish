@@ -541,6 +541,12 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("BuildParticipantGroups() is not { Count: > 0 } participantGroups", markup, StringComparison.Ordinal);
         Assert.Contains("@foreach (var participant in participantGroups)", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-participant-list\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-participant-header\"", markup, StringComparison.Ordinal);
+        Assert.Contains("PublicDisplayName.ForGiftRecipient(participant.User.UserName, participant.GuestDisplayName)", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"event-wishlist-actions\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"text-muted small event-wishlist-share-target\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("class=\"btn-group\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1963,6 +1969,22 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Name = \"My gift ideas\"", manager, StringComparison.Ordinal);
         Assert.Contains("IsFriendsOnly = true", manager, StringComparison.Ordinal);
         Assert.Contains("IsCollaborative = false", manager, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventWishlistSharing_PreservesVisibleActionNameAndWrapsLongParticipantText()
+    {
+        var manager = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor.css");
+
+        Assert.Contains("aria-label=\"@GetShareWishlistAccessibleName(onlyWishlist)\"", manager, StringComparison.Ordinal);
+        Assert.Contains("<span>@GetShareWishlistButtonText()</span>", manager, StringComparison.Ordinal);
+        Assert.Contains("private string GetShareWishlistButtonText() => _isSubmitting ? \"Sharing wishlist...\" : \"Share wishlist\";", manager, StringComparison.Ordinal);
+        Assert.Contains("$\"{GetShareWishlistButtonText()} {wishlist.Name}\"", manager, StringComparison.Ordinal);
+        Assert.Contains(".event-wishlist-manager .event-participant-row {", styles, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", styles, StringComparison.Ordinal);
+        Assert.Contains(".event-wishlist-manager .event-participant-wishlist .event-wishlist-summary {", styles, StringComparison.Ordinal);
+        Assert.Contains("min-width: 0;", styles, StringComparison.Ordinal);
     }
 
     [Fact]

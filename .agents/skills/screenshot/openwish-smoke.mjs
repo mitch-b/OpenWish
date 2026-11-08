@@ -183,9 +183,19 @@ async function assertNoEmptySpinnerStatuses(page, route) {
   }
 }
 
-async function screenshot(page, fileName, fullPage = false) {
-  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
+async function screenshot(page, fileName, fullPage = false, preserveScroll = false, scrollSelector = null) {
+  if (!preserveScroll) {
+    await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
+  }
   await page.waitForTimeout(500);
+  if (scrollSelector) {
+    const target = page.locator(scrollSelector);
+    await target.waitFor({ state: "visible" });
+    await target.evaluate(element => {
+      const top = window.scrollY + element.getBoundingClientRect().top - 96;
+      window.scrollTo({ top: Math.max(0, top), left: 0, behavior: "instant" });
+    });
+  }
   await assertDesktopSidebarContinuity(page);
   await page.screenshot({
     path: path.join(walkthroughDirectory, fileName),
@@ -1609,6 +1619,13 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("status").filter({ hasText: "Reserved items refreshed. 0 items found." })
     .waitFor({ state: "attached" });
   await screenshot(page, "event-details.png");
+  const eventWishlists = page.locator(".event-wishlist-manager");
+  await eventWishlists.locator(".event-participant-list").waitFor({ state: "visible" });
+  await screenshot(page, "event-wishlists.png", false, true, ".event-wishlist-manager");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "event-wishlists-mobile.png", false, true, ".event-wishlist-manager");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
   await assertResponsiveWidths(page, [
     { width: 320, height: 568 },
     { width: 768, height: 600 },
@@ -3808,7 +3825,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if ((await reveal.textContent()).includes("@")) {
       throw new Error("The revealed pairings disclosed an email address.");
     }
-    await screenshot(ownerPage, "exchange-revealed.png");
+    await screenshot(ownerPage, "exchange-revealed.png", false, true, '[data-testid="exchange-reveal"]');
 
     await friendPage.reload({ waitUntil: "domcontentloaded" });
     const friendReveal2 = friendPage.getByTestId("exchange-reveal");
@@ -3817,7 +3834,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (await friendReveal2.getByRole("button", { name: "Reveal assignments" }).count() !== 0) {
       throw new Error("A participant was offered the reveal button.");
     }
-    await screenshot(friendPage, "exchange-revealed-mobile.png");
+    await screenshot(friendPage, "exchange-revealed-mobile.png", false, true, '[data-testid="exchange-reveal"]');
 
     const guestAfter = await guestContext.request.get(`${baseUrl}/api/events/${pastEventId}/revealed-pairings`);
     if (guestAfter.status() !== 403) {

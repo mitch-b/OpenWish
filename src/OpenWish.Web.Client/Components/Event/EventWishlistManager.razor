@@ -71,30 +71,30 @@ else
                 </div>
             }
 
-            <section class="mb-4">
-                <h3 class="h5">Your wishlists</h3>
+            <section class="event-wishlist-owner-section mb-4">
+                <h3 class="h5 mb-2">Your wishlists</h3>
                 @{ var myWishlists = GetCurrentUserWishlists().ToList(); }
                 @if (!myWishlists.Any())
                 {
                     @if (!_showCreateForm)
                     {
-                    <div class="alert alert-info">
-                        <strong>Give your gift giver a few clues.</strong>
-                        Share an existing wishlist or make a quick one for this event.
-                    </div>
+                        <div class="alert alert-info mb-3">
+                            <strong>Give your gift giver a few clues.</strong>
+                            Share an existing wishlist or make a quick one for this event.
+                        </div>
                     }
                 }
                 else
                 {
-                    <ul class="list-group mb-3">
+                    <ul class="list-group event-wishlist-list mb-3">
                         @foreach (var wishlist in myWishlists)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
+                            <li class="list-group-item event-wishlist-row">
+                                <div class="event-wishlist-summary">
                                     <span class="fw-semibold">@wishlist.Name</span>
-                                    <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
+                                    <span class="badge bg-light text-dark event-wishlist-count">@GetItemCountText(wishlist)</span>
                                 </div>
-                                <div class="btn-group">
+                                <div class="event-wishlist-actions">
                                     <a href="/wishlists/@wishlist.PublicId/items/new"
                                        class="btn btn-primary btn-sm">Add gift ideas</a>
                                     <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
@@ -114,37 +114,41 @@ else
                 }
 
                 @{ var attachableWishlists = GetAttachableWishlists().ToList(); }
-                <div class="mb-3">
+                <div class="event-wishlist-tools">
                     @if (attachableWishlists.Count == 1)
                     {
                         var onlyWishlist = attachableWishlists[0];
-                        <button class="btn btn-primary w-100"
+                        <button class="btn btn-primary event-wishlist-share-button"
                                 type="button"
+                                aria-label="@GetShareWishlistAccessibleName(onlyWishlist)"
                                 disabled="@_isSubmitting"
                                 @onclick="() => AttachWishlistAsync(onlyWishlist)">
-                            <OpenWishIcon Name="link-45deg" Class="me-1" />
-                            @(_isSubmitting ? "Sharing wishlist..." : $"Share \"{onlyWishlist.Name}\"")
+                            <OpenWishIcon Name="link-45deg" />
+                            <span>@GetShareWishlistButtonText()</span>
                         </button>
+                        <span class="text-muted small event-wishlist-share-target">@onlyWishlist.Name</span>
                     }
                     else if (attachableWishlists.Count > 1)
                     {
-                        <label for="event-wishlist-select" class="form-label">Share an existing wishlist</label>
-                        <div class="input-group">
-                            <select id="event-wishlist-select" class="form-select"
-                                    @bind="_selectedWishlistId"
-                                    disabled="@_isSubmitting">
-                                <option value="">Select a wishlist</option>
-                                @foreach (var option in attachableWishlists)
-                                {
-                                    <option value="@option.Id">@option.Name</option>
-                                }
-                            </select>
-                            <button class="btn btn-primary"
-                                    type="button"
-                                    disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
-                                    @onclick="AttachSelectedWishlistAsync">
-                                @(_isSubmitting ? "Sharing..." : "Share wishlist")
-                            </button>
+                        <div class="event-wishlist-share-options">
+                            <label for="event-wishlist-select" class="form-label">Share an existing wishlist</label>
+                            <div class="input-group">
+                                <select id="event-wishlist-select" class="form-select"
+                                        @bind="_selectedWishlistId"
+                                        disabled="@_isSubmitting">
+                                    <option value="">Select a wishlist</option>
+                                    @foreach (var option in attachableWishlists)
+                                    {
+                                        <option value="@option.Id">@option.Name</option>
+                                    }
+                                </select>
+                                <button class="btn btn-primary"
+                                        type="button"
+                                        disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
+                                        @onclick="AttachSelectedWishlistAsync">
+                                    @(_isSubmitting ? "Sharing..." : "Share wishlist")
+                                </button>
+                            </div>
                         </div>
                     }
                     else if (HasUnattachedPrivateWishlist)
@@ -157,17 +161,17 @@ else
                     {
                         <div class="form-text">All of your available wishlists are already attached.</div>
                     }
-                </div>
 
-                @if (!_showCreateForm)
-                {
-                    <button class="btn @(myWishlists.Any() ? "btn-link px-0" : "btn-outline-primary w-100")"
-                        type="button"
-                        disabled="@_isSubmitting"
-                        @onclick="ToggleCreateForm">
-                        Create a wishlist for this event
-                    </button>
-                }
+                    @if (!_showCreateForm)
+                    {
+                        <button class="btn btn-outline-primary event-wishlist-create-button"
+                                type="button"
+                                disabled="@_isSubmitting"
+                                @onclick="ToggleCreateForm">
+                            Create a wishlist for this event
+                        </button>
+                    }
+                </div>
 
                 @if (_showCreateForm)
                 {
@@ -193,64 +197,62 @@ else
                 }
                 else
                 {
-                    <div class="list-group">
+                    <div class="event-participant-list">
                         @foreach (var participant in participantGroups)
                         {
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="fw-semibold">@participant.Label</div>
-                                        @if (!string.IsNullOrEmpty(participant.Email))
+                            <article class="event-participant-row">
+                                <div class="event-participant-header">
+                                    <div class="event-participant-identity">
+                                        <span class="fw-semibold">@participant.Label</span>
+                                        @if (string.IsNullOrWhiteSpace(participant.UserId) && !string.IsNullOrEmpty(participant.Email))
                                         {
-                                            <div class="small text-muted">@participant.Email</div>
+                                            <span class="small text-muted event-participant-email">@participant.Email</span>
                                         }
-                                        <div class="d-flex flex-wrap gap-2 mt-2">
-                                            <span class="badge bg-primary">@participant.Role</span>
-                                            @if (!string.Equals(participant.Status, "Owner", StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                <span class="badge @GetStatusBadgeClass(participant.Status)">@participant.Status</span>
-                                            }
-                                            @if (participant.IsCurrentUser)
-                                            {
-                                                <span class="badge bg-info text-dark">You</span>
-                                            }
-                                        </div>
+                                    </div>
+                                    <div class="event-participant-badges">
+                                        <span class="badge bg-primary">@participant.Role</span>
+                                        @if (!string.Equals(participant.Status, "Owner", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge @GetStatusBadgeClass(participant.Status)">@participant.Status</span>
+                                        }
+                                        @if (participant.IsCurrentUser)
+                                        {
+                                            <span class="badge bg-info text-dark">You</span>
+                                        }
                                     </div>
                                 </div>
 
-                                <div class="mt-3">
-                                    @if (participant.Wishlists.Any())
-                                    {
-                                        <ul class="list-unstyled mb-0">
-                                            @foreach (var wishlist in participant.Wishlists)
-                                            {
-                                                <li class="d-flex justify-content-between align-items-center mb-2">
-                                                    <div>
-                                                        <span class="fw-semibold">@wishlist.Name</span>
-                                                        <span class="badge bg-light text-dark ms-2">@GetItemCountText(wishlist)</span>
-                                                    </div>
-                                                    <div class="btn-group">
-                                                        <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
-                                                        @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
-                                                        {
-                                                            <button class="btn btn-outline-secondary btn-sm"
-                                                                    id="@($"remove-participant-event-wishlist-{wishlist.Id}")"
-                                                                    disabled="@_isSubmitting"
-                                                                    @onclick="() => PromptWishlistRemoval(wishlist.Id)">
-                                                                Remove
-                                                            </button>
-                                                        }
-                                                    </div>
-                                                </li>
-                                            }
-                                        </ul>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-muted small">No wishlist attached.</div>
-                                    }
-                                </div>
-                            </div>
+                                @if (participant.Wishlists.Any())
+                                {
+                                    <ul class="event-participant-wishlists">
+                                        @foreach (var wishlist in participant.Wishlists)
+                                        {
+                                            <li class="event-participant-wishlist">
+                                                <div class="event-wishlist-summary">
+                                                    <span class="fw-semibold">@wishlist.Name</span>
+                                                    <span class="badge bg-light text-dark event-wishlist-count">@GetItemCountText(wishlist)</span>
+                                                </div>
+                                                <div class="event-wishlist-actions">
+                                                    <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
+                                                    @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
+                                                    {
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                id="@($"remove-participant-event-wishlist-{wishlist.Id}")"
+                                                                disabled="@_isSubmitting"
+                                                                @onclick="() => PromptWishlistRemoval(wishlist.Id)">
+                                                            Remove
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="event-participant-empty mb-0">No wishlist attached.</p>
+                                }
+                            </article>
                         }
                     </div>
                 }
@@ -486,6 +488,11 @@ else
         await AttachSelectedWishlistAsync();
     }
 
+    private string GetShareWishlistButtonText() => _isSubmitting ? "Sharing wishlist..." : "Share wishlist";
+
+    private string GetShareWishlistAccessibleName(WishlistModel wishlist) =>
+        $"{GetShareWishlistButtonText()} {wishlist.Name}";
+
     private void PromptWishlistRemoval(int wishlistId)
     {
         if (_isSubmitting)
@@ -665,7 +672,7 @@ else
 
             result.Add(new ParticipantWishlistViewModel
             {
-                Label = Event.CreatedBy.UserName ?? Event.CreatedBy.Email ?? "Event Owner",
+                Label = PublicDisplayName.ForGiftRecipient(Event.CreatedBy.UserName, null),
                 Email = Event.CreatedBy.Email,
                 UserId = ownerId,
                 Role = "Owner",
@@ -691,7 +698,9 @@ else
 
                 result.Add(new ParticipantWishlistViewModel
                 {
-                    Label = participant.User?.UserName ?? participant.GuestDisplayName ?? participant.User?.Email ?? participant.InviteeEmail ?? "Participant",
+                    Label = participant.User is not null
+                        ? PublicDisplayName.ForGiftRecipient(participant.User.UserName, participant.GuestDisplayName)
+                        : PublicDisplayName.From(participant.GuestDisplayName, "Invited guest"),
                     Email = participant.User?.Email ?? participant.InviteeEmail,
                     UserId = participantId,
                     InviteeEmail = participant.InviteeEmail,

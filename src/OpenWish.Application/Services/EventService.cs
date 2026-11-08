@@ -2278,16 +2278,18 @@ public class EventService(
             .Where(ge => ge.EventId == eventEntity.Id && !ge.Deleted)
             .Select(ge => new
             {
-                GiverName = ge.Giver != null ? ge.Giver.UserName : ge.GiverParticipant != null ? ge.GiverParticipant.GuestDisplayName : null,
-                ReceiverName = ge.Receiver != null ? ge.Receiver.UserName : ge.ReceiverParticipant != null ? ge.ReceiverParticipant.GuestDisplayName : null
+                GiverUserName = ge.Giver != null ? ge.Giver.UserName : ge.GiverParticipant != null && ge.GiverParticipant.User != null ? ge.GiverParticipant.User.UserName : null,
+                GiverGuestName = ge.GiverParticipant != null ? ge.GiverParticipant.GuestDisplayName : null,
+                ReceiverUserName = ge.Receiver != null ? ge.Receiver.UserName : ge.ReceiverParticipant != null && ge.ReceiverParticipant.User != null ? ge.ReceiverParticipant.User.UserName : null,
+                ReceiverGuestName = ge.ReceiverParticipant != null ? ge.ReceiverParticipant.GuestDisplayName : null
             })
             .ToListAsync();
 
-        // Guests invited only by email have no username, and an email must never be shared with the group.
+        // Account handles and participant-provided names are safe to share; email-only guests stay anonymous.
         return pairings
             .Select(p => new RevealedPairingModel(
-                PublicDisplayName.From(p.GiverName, "Invited guest"),
-                PublicDisplayName.From(p.ReceiverName, "Invited guest")))
+                PublicDisplayName.ForGiftRecipient(p.GiverUserName, p.GiverGuestName),
+                PublicDisplayName.ForGiftRecipient(p.ReceiverUserName, p.ReceiverGuestName)))
             .OrderBy(p => p.GiverName, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

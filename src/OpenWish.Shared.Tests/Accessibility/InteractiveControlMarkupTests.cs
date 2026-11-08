@@ -567,7 +567,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("placeholder=\"@EventNamePlaceholder\"", markup, StringComparison.Ordinal);
         Assert.Contains("Suggested budget per gift", markup, StringComparison.Ordinal);
         Assert.Contains(".exchange-style-options", styles, StringComparison.Ordinal);
-        Assert.Contains("grid-template-columns: 1fr;", styles, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("min-height: 8rem;", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("min-height: 5.75rem;", styles, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -450,7 +450,10 @@
     background: var(--color-surface);
     border: 2px solid var(--color-border-muted);
     border-radius: 16px;
-    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 1rem;
     margin-bottom: 1.5rem;
     animation: slideDown 0.3s ease;
 }
@@ -467,11 +470,7 @@
 }
 
 .filter-section {
-    margin-bottom: 1.5rem;
-}
-
-.filter-section:last-of-type {
-    margin-bottom: 1rem;
+    min-width: 0;
 }
 
 .filter-label {
@@ -479,7 +478,7 @@
     font-size: 0.875rem;
     text-transform: uppercase;
     color: var(--color-link-hover);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     display: block;
     letter-spacing: 0.5px;
 }
@@ -491,7 +490,7 @@
 }
 
 .filter-chip {
-    padding: 0.625rem 1rem;
+    padding: 0.5rem 0.75rem;
     border: 2px solid var(--color-border-muted);
     border-radius: 24px;
     background: var(--color-surface);
@@ -543,7 +542,7 @@
 }
 
 .sort-option {
-    padding: 0.75rem 1.25rem;
+    padding: 0.5rem 0.75rem;
     border: 2px solid var(--color-border-muted);
     border-radius: 12px;
     background: var(--color-surface);
@@ -568,20 +567,35 @@
 }
 
 .price-range-slider {
-    padding: 1rem 0.5rem;
+    display: grid;
+    gap: 0.5rem;
 }
 
 .price-range-slider .form-range {
     width: 100%;
-    margin-bottom: 0.5rem;
+    min-height: 2.75rem;
+    margin: 0;
 }
 
 .filter-actions {
+    grid-column: 1 / -1;
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     justify-content: space-between;
     align-items: center;
-    padding-top: 1rem;
+    padding-top: 0.5rem;
     border-top: 1px solid var(--color-border-muted);
+}
+
+.filter-actions .btn {
+    min-height: 2.75rem;
+}
+
+@media (max-width: 767.98px) {
+    .filter-panel {
+        grid-template-columns: 1fr;
+    }
 }
 
 .filter-results {
@@ -1066,11 +1080,12 @@
         gap: 1rem;
     }
 
-    .filter-chips, .sort-options {
-        flex-direction: column;
+    .sort-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .filter-chip, .sort-option {
+    .sort-option {
         width: 100%;
         justify-content: center;
     }

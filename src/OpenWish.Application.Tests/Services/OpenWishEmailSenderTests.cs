@@ -9,6 +9,28 @@ namespace OpenWish.Application.Tests.Services;
 
 public class OpenWishEmailSenderTests
 {
+    [Fact]
+    public async Task GuestEmail_ExplainsPrivateAccessWithoutNamingTheMatch()
+    {
+        var capture = new CapturingSender();
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new CapturingEmailFactory(capture));
+        await sender.SendGuestEventAccessEmailAsync("guest@example.test", "Holiday <party>", "https://wish.example.test/guest#access=synthetic-token");
+        Assert.NotNull(capture.Email);
+        Assert.Contains("Holiday &lt;party&gt;", capture.Email.Data.Body);
+        Assert.Contains("No account is needed", capture.Email.Data.Body);
+        Assert.Contains("anyone you forward it to can use it", capture.Email.Data.Body);
+        Assert.Contains("expires in 30 days", capture.Email.Data.Body);
+        Assert.DoesNotContain("Your Gift Recipient", capture.Email.Data.Body);
+    }
+
+    [Fact]
+    public async Task GuestEmail_ReportsDeliveryFailureInsteadOfClaimingSuccess()
+    {
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new UnconfiguredEmailFactory());
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            sender.SendGuestEventAccessEmailAsync("guest@example.test", "Event", "https://wish.example.test/guest"));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("Recipient <name>")]

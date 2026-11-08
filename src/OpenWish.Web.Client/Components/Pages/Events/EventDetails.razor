@@ -342,6 +342,7 @@ else
                     <div id="event-invitations">
                         <EventInvitations EventId="@EventId"
                                           IsOwner="true"
+                                          AllowGuests="@(_event.AllowGuestParticipants == true && _event.IsGiftExchange)"
                                           CurrentUserId="@_currentUserId"
                                           NamesDrawn="@_event.NamesDrawnOn.HasValue" />
                     </div>

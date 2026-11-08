@@ -22,6 +22,7 @@ public class Event : BaseEntity
     public bool IsGiftExchange { get; set; } // Indicates if this event has Gift Exchange
     public string GiftExchangeStyle { get; set; } = "GiftExchange";
     public bool UseGiftBoxReveal { get; set; }
+    public bool AllowGuestParticipants { get; set; }
     public ICollection<GiftExchange> GiftExchanges { get; set; } // Gift Exchange pairings for the event
     public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
     public DateTimeOffset? AssignmentsRevealedOn { get; set; } // Set when the organizer shares who drew whom after the occasion

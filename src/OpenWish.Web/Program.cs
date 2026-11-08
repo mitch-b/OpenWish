@@ -142,13 +142,24 @@ var openWishSettings = builder.Configuration.GetSection(nameof(OpenWishSettings)
 if (!string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpFrom) &&
     !string.IsNullOrWhiteSpace(openWishSettings.EmailConfig?.SmtpHost))
 {
-    builder.Services
-        .AddFluentEmail(openWishSettings.EmailConfig.SmtpFrom)
-        .AddSmtpSender(
+    var emailServices = builder.Services.AddFluentEmail(openWishSettings.EmailConfig.SmtpFrom);
+    if (builder.Environment.IsDevelopment() &&
+        builder.Configuration.GetValue<bool>("Development:UseInsecureMailCapture"))
+    {
+        emailServices.AddSmtpSender(() => new System.Net.Mail.SmtpClient(
+            openWishSettings.EmailConfig.SmtpHost, openWishSettings.EmailConfig.SmtpPort ?? 1025)
+        {
+            EnableSsl = false
+        });
+    }
+    else
+    {
+        emailServices.AddSmtpSender(
             openWishSettings.EmailConfig.SmtpHost,
             openWishSettings.EmailConfig.SmtpPort ?? 587,
             openWishSettings.EmailConfig.SmtpUser,
             openWishSettings.EmailConfig.SmtpPass);
+    }
 }
 else
 {
@@ -156,10 +167,19 @@ else
     builder.Services.AddFluentEmail(openWishSettings.EmailConfig?.SmtpFrom ?? "no-reply@openwish.local");
 }
 
-builder.Services.AddControllers();
+builder.Services.AddControllersWithViews();
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("guest-access", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
     options.AddPolicy("authentication", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -271,6 +291,11 @@ app.Use(async (context, next) =>
     context.Response.Headers["Referrer-Policy"] = "no-referrer";
     context.Response.Headers.XFrameOptions = "DENY";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    if (context.Request.Path.StartsWithSegments("/guest"))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+    }
     context.Response.OnStarting(() =>
     {
         // The consent page adds the validated redirect origin of a self-registered MCP client.

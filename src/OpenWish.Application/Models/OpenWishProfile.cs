@@ -64,8 +64,16 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.GiftExchanges, opt => opt.MapFrom(src => src.GiftExchanges))
             .ForMember(dest => dest.PairingRules, opt => opt.MapFrom(src => src.PairingRules));
         CreateMap<EventUserModel, EventUser>()
+            .ForMember(dest => dest.GuestTokenHash, opt => opt.Ignore())
+            .ForMember(dest => dest.GuestAccessExpiresOn, opt => opt.Ignore())
+            .ForMember(dest => dest.GuestEmailSentOn, opt => opt.Ignore())
+            .ForMember(dest => dest.GuestDisplayName, opt => opt.Ignore())
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap()
+            .ForMember(dest => dest.HasGuestAccess, opt => opt.MapFrom(src => src.GuestTokenHash != null))
+            .ForMember(dest => dest.GuestDisplayName, opt => opt.MapFrom(src => src.GuestDisplayName))
+            .ForMember(dest => dest.GuestEmailSentOn, opt => opt.MapFrom(src => src.GuestEmailSentOn))
+            .ForMember(dest => dest.GuestAccessExpiresOn, opt => opt.MapFrom(src => src.GuestAccessExpiresOn))
             .ForMember(dest => dest.Event, opt => opt.Ignore());
 
         // Social feature mappings
@@ -93,8 +101,15 @@ public class OpenWishProfile : Profile
             .ReverseMap()
             .ForMember(dest => dest.Action, opt => opt.MapFrom(src => NotificationActionMapper.Deserialize(src.ActionData)));
         CreateMap<GiftExchangeModel, GiftExchange>()
+            .ForMember(dest => dest.GiverParticipant, opt => opt.Ignore())
+            .ForMember(dest => dest.GiverParticipantId, opt => opt.Ignore())
+            .ForMember(dest => dest.ReceiverParticipant, opt => opt.Ignore())
+            .ForMember(dest => dest.ReceiverParticipantId, opt => opt.Ignore())
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
-            .ReverseMap();
+            .ReverseMap()
+            .ForMember(dest => dest.ReceiverDisplayName, opt => opt.MapFrom(src =>
+                src.Receiver != null ? src.Receiver.UserName :
+                src.ReceiverParticipant != null ? src.ReceiverParticipant.GuestDisplayName : null));
         CreateMap<CustomPairingRuleModel, CustomPairingRule>()
             .ForMember(dest => dest.PublicId, opt => opt.Condition(src => !string.IsNullOrEmpty(src.PublicId))) // only map PublicId if not empty
             .ReverseMap();

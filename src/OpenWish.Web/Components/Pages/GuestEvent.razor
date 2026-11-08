@@ -1,0 +1,141 @@
+@page "/guest"
+@attribute [AllowAnonymous]
+@using OpenWish.Application.Services
+@using OpenWish.Web.Services
+@inject GuestEventService GuestService
+
+<PageTitle>Your private gift exchange - OpenWish</PageTitle>
+
+<main class="guest-event">
+    @if (ErrorMessage is not null)
+    {
+        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+    }
+    @if (Declined)
+    {
+        <h1>Invitation declined</h1>
+        <p>The organizer can see your response. Ask them for a new invitation if your plans change.</p>
+    }
+    else if (_view is null)
+    {
+        <div class="guest-intro-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></div>
+        <h1>A private invitation, just for you</h1>
+        <p>No account is needed. Open the private link from your invitation email to join and see your own match.</p>
+        <noscript><p>Enable JavaScript to safely open the link from your email. Once connected, joining and viewing your match work without JavaScript.</p></noscript>
+        <p class="guest-privacy">Keep your invitation link private. Anyone you forward it to can use it. If it expires or stops working, ask the organizer to resend it.</p>
+    }
+    else
+    {
+        <h1>@_view.EventName</h1>
+        @if (!_view.Accepted && !_view.CanRespond)
+        {
+            <h2>The draw has already started</h2>
+            <p>You weren't included because this invitation wasn't accepted before the draw. Ask the organizer to reset the exchange if you want to join.</p>
+        }
+        else if (!_view.Accepted)
+        {
+            <p>Join this gift exchange without creating an account. Only accepted participants enter the draw.</p>
+            <form method="post" action="/guest/respond" class="guest-response">
+                <AntiforgeryToken />
+                <label for="guest-display-name" class="form-label fw-bold">Your name for the group</label>
+                <input id="guest-display-name" name="displayName" class="form-control" maxlength="80" autocomplete="nickname" aria-describedby="guest-name-help" />
+                <p id="guest-name-help" class="form-text">Use a name your group will recognize. Your email address is not your public name.</p>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" name="response" value="accept" class="btn btn-primary">Accept invitation</button>
+                    <button type="submit" name="response" value="decline" class="btn btn-outline-secondary">Decline</button>
+                </div>
+            </form>
+        }
+        else if (!_view.HasMatch)
+        {
+            <h2>You're in, @_view.DisplayName</h2>
+            <p role="status">Your invitation is accepted. The organizer will email a fresh private link when names are drawn.</p>
+        }
+        else if (_view.NeedsOpening)
+        {
+            <h2>A little surprise, just for you</h2>
+            <p>The names are drawn. Open your gift to see who you're shopping for.</p>
+            <form method="post" action="/guest/open">
+                <AntiforgeryToken />
+                <input type="hidden" name="assignmentPublicId" value="@_view.AssignmentPublicId" />
+                <button type="submit" class="guest-gift">
+                    <GiftBoxArt />
+                    <strong>Open my gift</strong>
+                </button>
+            </form>
+        }
+        else
+        {
+            <p class="guest-match-label">You're shopping for</p>
+            <h2 id="guest-match-name" tabindex="-1" class="guest-match-name @(Opened ? "guest-match-opened" : null)">@_view.RecipientName</h2>
+            @if (Opened)
+            {
+                <p role="status">Your match is opened and remembered. Later visits show the name directly.</p>
+            }
+        }
+        <dl class="guest-facts">
+            <div><dt>Gift exchange date</dt><dd><time datetime="@_view.Date.ToString("O")" data-guest-event-date>@_view.Date.UtcDateTime.ToString("MMMM d, yyyy 'at' HH:mm 'UTC'")</time></dd></div>
+            @if (_view.Budget.HasValue)
+            {
+                <div><dt>Suggested budget</dt><dd>@_view.Budget.Value.ToString("C")</dd></div>
+            }
+        </dl>
+        @if (!string.IsNullOrWhiteSpace(_view.Guidance))
+        {
+            <h2 class="h5">From your organizer</h2>
+            <p class="guest-guidance">@_view.Guidance</p>
+        }
+        <p class="guest-privacy">Only your own match is shown here. Guest access does not include wishlists, reservations, comments, or the group's other pairings.</p>
+        <details class="mb-3">
+            <summary>Want to share gift ideas? <span class="text-muted">(optional)</span></summary>
+            <p class="mt-2">Create an account with your invited email to use wishlists. After confirming that email, your participation and opened match carry over.</p>
+            <form method="post" action="/guest/account">
+                <AntiforgeryToken />
+                <button type="submit" class="btn btn-outline-secondary">Continue with an account</button>
+            </form>
+        </details>
+        <form method="post" action="/guest/leave">
+            <AntiforgeryToken />
+            <button type="submit" class="btn btn-outline-secondary">Close private access on this device</button>
+        </form>
+    }
+    <form method="post" action="/guest/access" data-guest-access hidden>
+        <AntiforgeryToken />
+        <input type="hidden" name="token" value="" />
+        <button type="submit" class="btn btn-primary btn-lg">Continue with my private invitation</button>
+    </form>
+</main>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+    [SupplyParameterFromQuery] public string? Error { get; set; }
+    [SupplyParameterFromQuery] public bool Declined { get; set; }
+    [SupplyParameterFromQuery] public bool Opened { get; set; }
+    private GuestEventView? _view;
+
+    private string? ErrorMessage => Error switch
+    {
+        "unavailable" => "This private access is unavailable or expired. Ask the organizer to resend your invitation.",
+        "name" => "Enter a name of 1 to 80 characters, then accept the invitation.",
+        "response" => "Choose Accept invitation or Decline.",
+        "changed" => "The invitation or draw has changed. Open your latest invitation email.",
+        "retry" => "Your gift couldn't be opened. Reload this page to check your match before trying again.",
+        _ => null
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpContext is not null)
+        {
+            var session = await GuestEventAuthentication.GetSessionAsync(HttpContext);
+            if (session is not null)
+            {
+                _view = await GuestService.GetViewAsync(session);
+                if (_view is null)
+                {
+                    Error = "unavailable";
+                }
+            }
+        }
+    }
+}

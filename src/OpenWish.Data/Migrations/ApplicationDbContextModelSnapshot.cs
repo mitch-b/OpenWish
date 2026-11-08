@@ -423,6 +423,9 @@ namespace OpenWish.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AllowGuestParticipants")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("AssignmentsRevealedOn")
                         .HasColumnType("timestamp with time zone");
 
@@ -522,6 +525,20 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("EventId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("GuestAccessExpiresOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GuestDisplayName")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset?>("GuestEmailSentOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GuestTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<DateTimeOffset>("InvitationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -561,6 +578,9 @@ namespace OpenWish.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("GuestTokenHash")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -753,6 +773,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<string>("GiverId")
                         .HasColumnType("text");
 
+                    b.Property<int?>("GiverParticipantId")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean");
 
@@ -770,6 +793,9 @@ namespace OpenWish.Data.Migrations
 
                     b.Property<string>("ReceiverId")
                         .HasColumnType("text");
+
+                    b.Property<int?>("ReceiverParticipantId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReceiverPreferences")
                         .IsRequired()
@@ -791,7 +817,11 @@ namespace OpenWish.Data.Migrations
 
                     b.HasIndex("GiverId");
 
+                    b.HasIndex("GiverParticipantId");
+
                     b.HasIndex("ReceiverId");
+
+                    b.HasIndex("ReceiverParticipantId");
 
                     b.ToTable("GiftExchanges");
                 });
@@ -1980,16 +2010,30 @@ namespace OpenWish.Data.Migrations
                         .HasForeignKey("GiverId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("OpenWish.Data.Entities.EventUser", "GiverParticipant")
+                        .WithMany()
+                        .HasForeignKey("GiverParticipantId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("OpenWish.Data.Entities.ApplicationUser", "Receiver")
                         .WithMany()
                         .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("OpenWish.Data.Entities.EventUser", "ReceiverParticipant")
+                        .WithMany()
+                        .HasForeignKey("ReceiverParticipantId")
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Event");
 
                     b.Navigation("Giver");
 
+                    b.Navigation("GiverParticipant");
+
                     b.Navigation("Receiver");
+
+                    b.Navigation("ReceiverParticipant");
                 });
 
             modelBuilder.Entity("OpenWish.Data.Entities.IntegrationAuthorizationCode", b =>

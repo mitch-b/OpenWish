@@ -62,9 +62,14 @@
         </fieldset>
         <details class="exchange-reveal-choice mb-3">
             <summary>
-                <span>First match reveal <small class="text-muted">(optional)</small></span>
+                <span>Guest access and reveal <small class="text-muted">(optional)</small></span>
                 <span class="exchange-reveal-summary">@(GiftBoxReveal ? "Gift box" : "Show match") <OpenWishIcon Name="chevron-right" Class="exchange-reveal-chevron" /></span>
             </summary>
+            <div class="form-check">
+                <InputCheckbox id="allow-guest-participants" class="form-check-input" @bind-Value="AllowGuests" aria-describedby="allow-guests-help" />
+                <label for="allow-guest-participants" class="form-check-label fw-bold">Allow guests without an account</label>
+            </div>
+            <p id="allow-guests-help" class="form-text">People without accounts get private email links to accept and view only their own match. Disabling this revokes their access; re-enable and resend to restore it.</p>
             <div class="form-check">
                 <InputCheckbox id="gift-box-reveal" class="form-check-input" @bind-Value="GiftBoxReveal" aria-describedby="gift-box-reveal-help" />
                 <label for="gift-box-reveal" class="form-check-label fw-bold">Let each person unwrap their match</label>
@@ -139,6 +144,11 @@
     {
         get => Model?.UseGiftBoxReveal == true;
         set => Model!.UseGiftBoxReveal = value;
+    }
+    private bool AllowGuests
+    {
+        get => Model?.AllowGuestParticipants == true;
+        set => Model!.AllowGuestParticipants = value;
     }
     private bool IsSecretSantaStyle => string.Equals(Model?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal);
     private string EventNamePlaceholder => IsSecretSantaStyle

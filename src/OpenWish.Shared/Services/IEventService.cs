@@ -9,6 +9,9 @@ namespace OpenWish.Shared.Services;
 /// </summary>
 public interface IEventService
 {
+    Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
+    Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
+    Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId);
     /// <summary>Creates a new undrawn event from an existing one, copying details, pending invitations, and pairing rules. Organizer only.</summary>
     Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId);
 

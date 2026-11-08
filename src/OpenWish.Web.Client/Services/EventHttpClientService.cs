@@ -400,4 +400,24 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         var response = await httpClient.DeleteAsync($"api/events/pairing-rules/{ruleId}");
         return response.IsSuccessStatusCode;
     }
+    public async Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/send", null);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/revoke", null);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/remove", null);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
 }

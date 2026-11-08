@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,6 +26,20 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReleaseNotesService, ReleaseNotesService>();
         // API controllers (outside Razor context) need to use HttpContextAccessor - Do not call GetAuthenticationStateAsync outside of the DI scope for a Razor component. Typically, this means you can call it only within a Razor component or inside another DI service that is resolved for a Razor component.
         services.AddScoped<ApiUserContextService>();
+        services.AddAuthentication().AddCookie(GuestEventAuthentication.Scheme, options =>
+        {
+            options.Cookie.Name = "OpenWish.EventGuest";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.Cookie.Path = "/guest";
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+            options.SlidingExpiration = false;
+        });
+        services.AddOptions<CookieAuthenticationOptions>(GuestEventAuthentication.Scheme)
+            .Configure<IWebHostEnvironment>((options, environment) =>
+                options.Cookie.SecurePolicy = environment.IsDevelopment()
+                    ? CookieSecurePolicy.SameAsRequest
+                    : CookieSecurePolicy.Always);
 
         // Add OpenAIClient to the service collection
         var apiKey = configuration[$"{nameof(OpenWishSettings)}:{nameof(OpenWishSettings.OpenAI)}:{nameof(OpenAISettings.ApiKey)}"];

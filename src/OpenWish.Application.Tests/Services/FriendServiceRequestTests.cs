@@ -661,6 +661,7 @@ public class FriendServiceRequestTests
         }
         public Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink) => Task.CompletedTask;
         public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string? recipientName, string eventLink) => Task.CompletedTask;
+        public Task SendGuestEventAccessEmailAsync(string toEmail, string eventName, string accessLink, bool matchReady = false) => Task.CompletedTask;
         public Task SendGiftExchangeResetEmailAsync(string toEmail, string eventName, string eventLink) => Task.CompletedTask;
         public Task SendEmailAsync(string toEmail, string subject, string message) => Task.CompletedTask;
     }

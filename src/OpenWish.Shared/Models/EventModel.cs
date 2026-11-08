@@ -19,6 +19,7 @@ public class EventModel : BaseEntityModel
     // Null means an older client omitted the optional field during an update.
     public string? GiftExchangeStyle { get; set; }
     public bool? UseGiftBoxReveal { get; set; }
+    public bool? AllowGuestParticipants { get; set; }
     public DateTimeOffset? NamesDrawnOn { get; set; } // Timestamp when names were drawn for gift exchange
     public DateTimeOffset? AssignmentsRevealedOn { get; set; } // Set when the organizer reveals who drew whom after the occasion
     public IEnumerable<string> Tags { get; set; } = [];

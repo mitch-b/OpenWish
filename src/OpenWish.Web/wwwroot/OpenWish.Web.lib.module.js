@@ -2,9 +2,11 @@
     blazor.addEventListener('enhancedload', () => {
         globalThis.openWishInitializeIntegrationPickers();
         globalThis.openWishInitializePasswordToggles();
+        globalThis.openWishInitializeGuestAccess();
     });
     globalThis.openWishInitializeIntegrationPickers();
     globalThis.openWishInitializePasswordToggles();
+    globalThis.openWishInitializeGuestAccess();
 
     if (globalThis.openWishPasteRegistered) {
         return;

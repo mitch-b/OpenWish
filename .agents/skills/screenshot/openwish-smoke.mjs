@@ -2556,6 +2556,143 @@ async function verifyProductCaptureJourney(browser, results) {
   });
 }
 
+async function verifyAccountFreeGuests(browser, results) {
+  const organizer = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const guest = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const mailUrl = process.env.OPENWISH_MAIL_URL;
+  if (!mailUrl) throw new Error("Account-free verification requires an isolated mail capture service.");
+  await login(organizer, "owner", ownerEmail);
+  const api = async (method, route, data) => {
+    const response = await organizer.request.fetch(`${baseUrl}/api/events${route}`, { method, data });
+    if (!response.ok()) throw new Error(`Guest setup ${method}: ${response.status()} ${await response.text()}`);
+    return response.status() === 204 ? null : response.json();
+  };
+  const email = `guest-no-account-${Date.now()}@example.test`;
+  const latestLink = async () => {
+    const response = await organizer.request.get(`${mailUrl}/api/v1/messages`);
+    if (!response.ok()) throw new Error(`Mail capture returned ${response.status()}.`);
+    const inbox = await response.json();
+    const message = inbox.messages.find(message => message.To.some(to => to.Address === email));
+    if (!message) throw new Error("Guest access email was not delivered.");
+    const detail = await organizer.request.get(`${mailUrl}/api/v1/message/${message.ID}`);
+    const content = await detail.json();
+    if (content.HTML.includes("Your Gift Recipient")) throw new Error("The guest email spoiled the match.");
+    const token = content.HTML.match(/#access=([A-F0-9]{64})/)?.[1];
+    if (!token) throw new Error("The guest email had no private access link.");
+    return `${baseUrl}/guest#access=${token}`;
+  };
+  const evt = await api("POST", "", {
+    name: "Cabin gifts, no accounts needed", date: "2026-12-25T18:00:00Z",
+    budget: 35, description: "Choose something cozy for a winter weekend.",
+    isGiftExchange: true, allowGuestParticipants: true, useGiftBoxReveal: true, eventUsers: []
+  });
+  const invite = await api("POST", `/${evt.publicId}/invitations/email`, { email });
+  const page = await guest.newPage();
+  const diagnostics = monitorPage(page);
+  const connect = async link => {
+    await page.goto(link);
+    const button = page.getByRole("button", { name: "Continue with my private invitation" });
+    await button.waitFor({ state: "visible" });
+    if (new URL(page.url()).hash) throw new Error("The guest credential remained in browser history.");
+    await button.click();
+    await page.waitForURL(`${baseUrl}/guest`);
+  };
+  await connect(await latestLink());
+  await page.getByLabel("Your name for the group").fill("Morgan Guest");
+  await screenshot(page, "guest-invitation-desktop.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "guest invitation");
+  await assertMinimumTouchTarget(page.getByRole("button", { name: "Accept invitation" }), "Guest accept");
+  await screenshot(page, "guest-invitation-mobile.png");
+  await page.getByRole("button", { name: "Accept invitation" }).click();
+  await page.getByRole("heading", { name: "You're in, Morgan Guest" }).waitFor();
+  const guestApi = await guest.request.get(`${baseUrl}/api/events/${evt.publicId}/my-gift-exchange`);
+  if (guestApi.status() !== 401) throw new Error("The guest session authenticated to the ordinary event API.");
+  // Mail scanners can follow links, but the first explicit form post is still required.
+  const invitations = await api("GET", `/${evt.publicId}/invitations`);
+  if (!invitations.find(i => i.publicId === invite.publicId)?.isAccepted) throw new Error("Guest acceptance wasn't saved.");
+  await api("POST", `/${evt.publicId}/draw-names`);
+  await page.reload();
+  await page.getByRole("alert").filter({ hasText: "unavailable" }).waitFor();
+  const matchLink = await latestLink();
+  await connect(matchLink);
+  const gift = page.getByRole("button", { name: "Open my gift", exact: true });
+  await gift.waitFor({ state: "visible" });
+  if (await page.locator("#guest-match-name").count()) throw new Error("The guest match was rendered before opening.");
+  await assertMinimumTouchTarget(gift, "Guest gift opening");
+  await screenshot(page, "guest-match-unopened-mobile.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await screenshot(page, "guest-match-unopened-mobile-dark.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.setAttribute("data-bs-theme", "light");
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await screenshot(page, "guest-match-unopened-desktop.png");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await gift.focus();
+  await page.keyboard.press("Enter");
+  const name = page.locator("#guest-match-name");
+  await name.waitFor({ state: "visible" });
+  await page.waitForLoadState("networkidle");
+  if (!(await name.evaluate(element => element === document.activeElement))) throw new Error("The guest reveal didn't focus the drawn name.");
+  if (await name.evaluate(element => getComputedStyle(element).animationName) !== "none") throw new Error("The guest reveal ignored reduced motion.");
+  await screenshot(page, "guest-match-opened-desktop.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "guest match");
+  await screenshot(page, "guest-match-opened-mobile.png");
+  await page.reload();
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) throw new Error("Returning guests had to open their match again.");
+  const secondDevice = await browser.newContext({ javaScriptEnabled: false });
+  const csrfPage = await secondDevice.newPage();
+  await csrfPage.goto(`${baseUrl}/guest`);
+  const csrf = await csrfPage.locator('input[name="__RequestVerificationToken"]').first().inputValue();
+  const connected = await secondDevice.request.post(`${baseUrl}/guest/access`, {
+    form: { token: new URLSearchParams(new URL(matchLink).hash.slice(1)).get("access"), __RequestVerificationToken: csrf },
+    maxRedirects: 0
+  });
+  if (connected.status() !== 302) throw new Error("Second-device guest access couldn't be redeemed.");
+  await csrfPage.goto(`${baseUrl}/guest`);
+  if (await csrfPage.getByRole("button", { name: "Open my gift", exact: true }).count()) throw new Error("Opening wasn't preserved across devices.");
+  await secondDevice.close();
+  const organizerPage = await organizer.newPage();
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  if (!await organizerPage.getByLabel("Allow guests without an account").isChecked()) throw new Error("The saved guest setting was lost.");
+  if (!await organizerPage.getByRole("button", { name: "Resend private access", exact: true }).isEnabled()) {
+    throw new Error("The event-management invitation panel did not receive the enabled guest setting.");
+  }
+  await screenshot(organizerPage, "guest-event-setting.png");
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}`);
+  await organizerPage.waitForLoadState("networkidle");
+  const revoke = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Revoke private access", exact: true });
+  await revoke.click();
+  const dialog = organizerPage.getByRole("dialog", { name: "Revoke private guest access?" });
+  await dialog.waitFor({ state: "visible" });
+  await screenshot(organizerPage, "guest-revoke-confirmation.png");
+  await dialog.getByRole("button", { name: "Keep private access" }).click();
+  await dialog.waitFor({ state: "hidden" });
+  await revoke.click();
+  await dialog.getByRole("button", { name: "Revoke private access", exact: true }).click();
+  await organizerPage.getByRole("status").filter({ hasText: "Private guest access revoked." }).waitFor();
+  await page.reload();
+  await page.getByRole("alert").filter({ hasText: "unavailable" }).waitFor();
+  await screenshot(page, "guest-access-revoked-mobile.png");
+  if (diagnostics.browserErrors.length) throw new Error(`Guest browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  results.push({ scenario: "account-free-guests", assertions: [
+    "email-linked acceptance without registration", "fragment removed before explicit redemption",
+    "guest cookie rejected by normal APIs", "private first opening, keyboard focus and reduced motion",
+    "persistent opening across devices and without JavaScript", "organizer setting and revocation",
+    "desktop/mobile, light/dark and no horizontal overflow"
+  ] });
+  await organizer.close();
+  await guest.close();
+}
+
 async function verifyFirstMatchOpening(browser, results) {
   const withoutScripts = await browser.newContext({ javaScriptEnabled: false });
   const plainSignup = await withoutScripts.newPage();
@@ -5902,7 +6039,7 @@ try {
   }
 
   const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
-  if (selectedScenario && !["connected-app", "family-exchange", "first-match"].includes(selectedScenario)) {
+  if (selectedScenario && !["connected-app", "family-exchange", "first-match", "account-free-guests"].includes(selectedScenario)) {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
@@ -5919,8 +6056,11 @@ try {
     await verifyUnsharedMatchWishlist(browser, manifest, results);
     await verifyFamilyExchangeJourney(browser, results);
     await verifyFirstMatchOpening(browser, results);
+    await verifyAccountFreeGuests(browser, results);
   }
-  if (selectedScenario === "first-match") {
+  if (selectedScenario === "account-free-guests") {
+    await verifyAccountFreeGuests(browser, results);
+  } else if (selectedScenario === "first-match") {
     await verifyFirstMatchOpening(browser, results);
   } else if (selectedScenario === "family-exchange") {
     await verifyFamilyExchangeJourney(browser, results);

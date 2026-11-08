@@ -41,7 +41,7 @@
                     <p class="gift-match-privacy"><OpenWishIcon Name="eye-slash" /><span>Only your match is shown here. The rest stays a surprise.</span></p>
                 </div>
                 <button type="button" class="gift-box-button" disabled="@_opening" @onclick="OpenMatch" aria-describedby="gift-box-help">
-                    <span class="gift-box" aria-hidden="true"><span class="gift-box-bow"></span><span class="gift-box-lid"></span><span class="gift-box-body"></span></span>
+                    <GiftBoxArt />
                     <span class="gift-box-label">@(_opening ? "Opening your gift..." : "Open my gift")</span>
                 </button>
                 <p id="gift-box-help" class="gift-box-help">Tap, click, or press Enter. This is only for your first visit.</p>
@@ -139,7 +139,8 @@
     private bool _justOpened;
     private bool NeedsFirstOpen => UseGiftBoxReveal && _giftExchange?.MatchOpenedOn is null;
 
-    private string RecipientDisplayName => _giftExchange?.Receiver?.UserName
+    private string RecipientDisplayName => _giftExchange?.ReceiverDisplayName
+        ?? _giftExchange?.Receiver?.UserName
         ?? _giftExchange?.Receiver?.Email
         ?? _giftExchange?.ReceiverEmail
         ?? "your match";

@@ -32,6 +32,32 @@ public class EventService(
     private readonly string? _baseUri = openWishSettings.Value.BaseUri;
     private readonly ILogger<EventService> _logger = logger;
 
+    public async Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        if (!await context.EventUsers.AnyAsync(p => p.PublicId == participantPublicId && p.Event!.PublicId == eventPublicId && !p.Deleted))
+        {
+            throw new KeyNotFoundException("This invitation is no longer available.");
+        }
+        await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(participantPublicId, ownerId);
+        return true;
+    }
+
+    public async Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<GuestEventService>().RevokeAccessAsync(eventPublicId, participantPublicId, ownerId);
+        return true;
+    }
+
+    public async Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<GuestEventService>().RevokeAccessAsync(eventPublicId, participantPublicId, ownerId, removeParticipant: true);
+        return true;
+    }
+
     private static bool IsEventOwner(Event eventEntity, string userId) =>
         string.Equals(eventEntity.CreatedBy?.Id, userId, StringComparison.Ordinal);
 
@@ -136,6 +162,10 @@ public class EventService(
                 ?? throw new KeyNotFoundException($"User with id {creatorId} not found");
 
         eventModel.GiftExchangeStyle = NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
+        if (!eventModel.IsGiftExchange)
+        {
+            eventModel.AllowGuestParticipants = false;
+        }
         var eventEntity = _mapper.Map<Event>(eventModel);
         eventEntity.CreatedBy = creator;
         eventEntity.CreatedOn = DateTimeOffset.UtcNow;
@@ -161,6 +191,8 @@ public class EventService(
                         .ThenInclude(ew => ew.Owner)
                     .Include(e => e.GiftExchanges)
                         .ThenInclude(ge => ge.Receiver)
+                    .Include(e => e.GiftExchanges)
+                        .ThenInclude(ge => ge.ReceiverParticipant)
                     .FirstOrDefaultAsync(e => e.Id == id && !e.Deleted);
 
         if (eventEntity == null)
@@ -370,6 +402,7 @@ public class EventService(
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var transaction = await LockEventRowAsync(context, id);
         var existingEvent = await context.Events
             .Include(e => e.CreatedBy)
             .FirstOrDefaultAsync(e => e.Id == id && !e.Deleted)
@@ -386,10 +419,29 @@ public class EventService(
             ? existingEvent.GiftExchangeStyle
             : NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
         eventModel.UseGiftBoxReveal ??= existingEvent.UseGiftBoxReveal;
+        eventModel.AllowGuestParticipants ??= existingEvent.AllowGuestParticipants;
+        if (!eventModel.IsGiftExchange)
+        {
+            eventModel.AllowGuestParticipants = false;
+        }
+        if (existingEvent.AllowGuestParticipants && eventModel.AllowGuestParticipants == false)
+        {
+            var guests = await context.EventUsers.Where(p => p.EventId == id && p.UserId == null).ToListAsync();
+            foreach (var guest in guests)
+            {
+                guest.GuestTokenHash = null;
+                guest.GuestAccessExpiresOn = null;
+                guest.GuestEmailSentOn = null;
+            }
+        }
         _mapper.Map(eventModel, existingEvent);
         existingEvent.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         var updatedModel = _mapper.Map<EventModel>(existingEvent);
         return updatedModel;
@@ -608,6 +660,10 @@ public class EventService(
             // User exists, send regular invitation
             return await InviteUserToEventAsync(eventId, inviterId, existingUser.Id);
         }
+        if (eventEntity.AllowGuestParticipants && eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before inviting additional guests.");
+        }
 
         // Check if email invitation already exists
         var existingEmailInvite = await context.EventUsers
@@ -635,6 +691,12 @@ public class EventService(
         await context.SaveChangesAsync();
 
         // Send email invitation
+        if (eventEntity.AllowGuestParticipants && eventEntity.IsGiftExchange)
+        {
+            await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(eventUser.PublicId, inviterId);
+            await context.Entry(eventUser).ReloadAsync();
+            return _mapper.Map<EventUserModel>(eventUser);
+        }
         var inviter = await context.Users.FindAsync(inviterId);
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
         var inviteLink = $"{baseUri}/events/{eventEntity.PublicId}/accept-invite?email={Uri.EscapeDataString(email)}";
@@ -804,6 +866,10 @@ public class EventService(
         // Verify inviter is the event creator
         ValidateEventCreatorPermission(eventUser.Event, inviterId);
 
+        if (eventUser.IsAccepted && eventUser.Event!.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Reset the gift exchange before removing an accepted participant.");
+        }
         eventUser.Deleted = true;
         eventUser.UpdatedOn = DateTimeOffset.UtcNow;
 
@@ -829,6 +895,12 @@ public class EventService(
         // Verify inviter is the event creator
         ValidateEventCreatorPermission(eventUser.Event, inviterId);
 
+        if (eventUser.UserId is null && eventUser.Event!.AllowGuestParticipants &&
+            eventUser.Status is "Pending" or "Accepted")
+        {
+            await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(eventUser.PublicId, inviterId);
+            return true;
+        }
         if (eventUser.Status != "Pending")
         {
             return false;
@@ -1017,6 +1089,7 @@ public class EventService(
             IsGiftExchange = source.IsGiftExchange,
             GiftExchangeStyle = NormalizeGiftExchangeStyle(source.GiftExchangeStyle),
             UseGiftBoxReveal = source.UseGiftBoxReveal,
+            AllowGuestParticipants = source.AllowGuestParticipants,
             Tags = source.Tags,
             CreatedOn = now,
             UpdatedOn = now
@@ -1106,6 +1179,12 @@ public class EventService(
 
             foreach (var email in invitedEmails)
             {
+                if (copy.AllowGuestParticipants && copy.IsGiftExchange)
+                {
+                    var guest = copy.EventUsers.Single(p => p.InviteeEmail == email);
+                    await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(guest.PublicId, ownerId);
+                    continue;
+                }
                 await _emailSender.SendEventInviteEmailAsync(
                     email, inviterName, copy.Name,
                     $"{baseUri}/events/{copy.PublicId}/accept-invite?email={Uri.EscapeDataString(email)}");
@@ -1367,7 +1446,13 @@ public class EventService(
 
         if (string.IsNullOrEmpty(eventUser.UserId))
         {
+            if ((eventEntity.AllowGuestParticipants || eventUser.GuestDisplayName is not null) && !user.EmailConfirmed)
+            {
+                throw new UnauthorizedAccessException("Confirm your invited email before claiming guest participation.");
+            }
             eventUser.UserId = userId;
+            eventUser.GuestTokenHash = null;
+            eventUser.GuestAccessExpiresOn = null;
             eventUser.UpdatedOn = DateTimeOffset.UtcNow;
             await context.SaveChangesAsync();
             eventUser.User = user;
@@ -1409,7 +1494,9 @@ public class EventService(
             .Where(eu =>
                 eu.UserId == null &&
                 !eu.Deleted &&
-                eu.Status == "Pending" &&
+                (eu.Status == "Pending" || (eu.Status == "Accepted" &&
+                    (eu.Event!.AllowGuestParticipants || eu.GuestDisplayName != null))) &&
+                ((!eu.Event!.AllowGuestParticipants && eu.GuestDisplayName == null) || user.EmailConfirmed) &&
                 eu.InviteeEmail != null &&
                 eu.InviteeEmail.ToLower() == normalizedEmail)
             .ToListAsync();
@@ -1424,6 +1511,8 @@ public class EventService(
         foreach (var eventUser in pendingEmailInvites)
         {
             eventUser.UserId = user.Id;
+            eventUser.GuestTokenHash = null;
+            eventUser.GuestAccessExpiresOn = null;
             eventUser.UpdatedOn = DateTimeOffset.UtcNow;
             affectedEventIds.Add(eventUser.EventId);
         }
@@ -1469,6 +1558,7 @@ public class EventService(
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await using var transaction = await LockEventRowAsync(context, eventId);
 
         var eventEntity = await context.Events
             .Include(e => e.CreatedBy)
@@ -1542,8 +1632,10 @@ public class EventService(
                 EventId = eventId,
                 GiverId = giver.UserId,
                 GiverEmail = giver.Email,
+                GiverParticipantId = giver.ParticipantId,
                 ReceiverId = receiver.UserId,
                 ReceiverEmail = receiver.Email,
+                ReceiverParticipantId = receiver.ParticipantId,
                 IsAnonymous = false,
                 ReceiverPreferences = string.Empty,
                 Budget = eventEntity.Budget,
@@ -1557,6 +1649,10 @@ public class EventService(
         eventEntity.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         // Send notifications to all participants
         var baseUri = _baseUri?.TrimEnd('/') ?? "";
@@ -1579,6 +1675,12 @@ public class EventService(
 
             if (!string.IsNullOrWhiteSpace(giver.Email))
             {
+                if (giver.UserId is null && eventEntity.AllowGuestParticipants && giver.ParticipantId.HasValue)
+                {
+                    var guest = eventEntity.EventUsers.Single(p => p.Id == giver.ParticipantId);
+                    await scope.ServiceProvider.GetRequiredService<GuestEventService>().SendAccessAsync(guest.PublicId, ownerId);
+                    continue;
+                }
                 await _emailSender.SendGiftExchangeDrawnEmailAsync(
                     giver.Email,
                     eventEntity.Name,
@@ -1622,7 +1724,7 @@ public class EventService(
     }
 
     // Serializes reveal and reset on the event row so neither can act on a stale check.
-    private static async Task<IDbContextTransaction?> LockEventRowAsync(ApplicationDbContext context, int eventId)
+    internal static async Task<IDbContextTransaction?> LockEventRowAsync(ApplicationDbContext context, int eventId)
     {
         if (!context.Database.IsRelational())
         {
@@ -1670,6 +1772,12 @@ public class EventService(
             .Where(ge => ge.EventId == eventId)
             .ToListAsync();
         context.GiftExchanges.RemoveRange(giftExchanges);
+        foreach (var guest in eventEntity.EventUsers.Where(p => p.UserId is null))
+        {
+            guest.GuestTokenHash = null;
+            guest.GuestAccessExpiresOn = null;
+            guest.GuestEmailSentOn = null;
+        }
 
         // Reset the NamesDrawnOn timestamp
         eventEntity.NamesDrawnOn = null;
@@ -1735,7 +1843,7 @@ public class EventService(
         return await ResetGiftExchangeAsync(eventEntity.Id, ownerId);
     }
 
-    private sealed record GiftExchangeParticipant(string Key, string? UserId, string Email, string NormalizedEmail, string DisplayName);
+    private sealed record GiftExchangeParticipant(string Key, string? UserId, string Email, string NormalizedEmail, string DisplayName, int? ParticipantId);
     private sealed record PairingExclusion(string? SourceUserId, string? SourceEmail, string? TargetUserId, string? TargetEmail);
 
     private static List<GiftExchangeParticipant> BuildGiftExchangeParticipants(Event eventEntity)
@@ -1750,7 +1858,7 @@ public class EventService(
         var participants = new List<GiftExchangeParticipant>();
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        void addParticipant(string key, string? userId, string? email, string? displayName)
+        void addParticipant(string key, string? userId, string? email, string? displayName, int? participantId = null)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -1763,7 +1871,7 @@ public class EventService(
                 var trimmedEmail = email.Trim();
                 var normalizedEmail = NormalizeEmail(trimmedEmail)!;
                 var resolvedName = string.IsNullOrWhiteSpace(displayName) ? trimmedEmail : displayName;
-                participants.Add(new GiftExchangeParticipant(key, userId, trimmedEmail, normalizedEmail, resolvedName));
+                participants.Add(new GiftExchangeParticipant(key, userId, trimmedEmail, normalizedEmail, resolvedName, participantId));
             }
         }
 
@@ -1787,7 +1895,8 @@ public class EventService(
                 addParticipant($"invite:{eventUser.Id}",
                     null,
                     normalizedEmail,
-                    normalizedEmail);
+                    eventUser.GuestDisplayName ?? normalizedEmail,
+                    eventUser.Id);
             }
         }
 
@@ -2051,6 +2160,7 @@ public class EventService(
         var giftExchange = await context.GiftExchanges
             .AsNoTracking()
             .Include(ge => ge.Receiver)
+            .Include(ge => ge.ReceiverParticipant)
             .Include(ge => ge.Giver)
             .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId && !ge.Deleted);
 
@@ -2127,8 +2237,8 @@ public class EventService(
             .Where(ge => ge.EventId == eventEntity.Id && !ge.Deleted)
             .Select(ge => new
             {
-                GiverName = ge.Giver != null ? ge.Giver.UserName : null,
-                ReceiverName = ge.Receiver != null ? ge.Receiver.UserName : null
+                GiverName = ge.Giver != null ? ge.Giver.UserName : ge.GiverParticipant != null ? ge.GiverParticipant.GuestDisplayName : null,
+                ReceiverName = ge.Receiver != null ? ge.Receiver.UserName : ge.ReceiverParticipant != null ? ge.ReceiverParticipant.GuestDisplayName : null
             })
             .ToListAsync();
 
@@ -2174,6 +2284,7 @@ public class EventService(
 
         var assignment = await context.GiftExchanges
             .Include(ge => ge.Receiver)
+            .Include(ge => ge.ReceiverParticipant)
             .Include(ge => ge.Giver)
             .FirstOrDefaultAsync(ge => ge.EventId == eventId && ge.GiverId == userId &&
                 ge.PublicId == assignmentPublicId && !ge.Deleted)

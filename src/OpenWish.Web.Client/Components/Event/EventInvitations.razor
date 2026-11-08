@@ -16,7 +16,7 @@
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
             <div>
                 <h3 class="h4 mb-1">Invite participants</h3>
-                <p class="small text-muted mb-0">Invitees sign in and accept before they can be included in the draw.</p>
+                <p class="small text-muted mb-0">@(AllowGuests ? "Email guests can accept and view their own match without an account. Keep private links private." : "Invitees sign in and accept before they can be included in the draw.")</p>
             </div>
             @if (IsOwner)
             {
@@ -108,8 +108,9 @@
                                 }
                                 else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
                                 {
-                                    <strong>@invitation.InviteeEmail</strong>
-                                    <span>Not registered</span>
+                                    <strong>@(invitation.GuestDisplayName ?? invitation.InviteeEmail)</strong>
+                                    <span>@invitation.InviteeEmail</span>
+                                    <span>@GuestAccessStatus(invitation)</span>
                                 }
                                 <div class="mt-1">
                                     <span class="badge @GetStatusBadgeClass(invitation.Status)">@invitation.Status</span>
@@ -118,7 +119,36 @@
                                     </small>
                                 </div>
                             </div>
-                            @if (IsOwner && HasStatus(invitation, "Pending"))
+                            @if (IsOwner && (AllowGuests || invitation.GuestDisplayName is not null || HasStatus(invitation, "Rejected")) &&
+                                invitation.UserId is null && invitation.Status is "Pending" or "Accepted" or "Rejected")
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (!HasStatus(invitation, "Rejected"))
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@(IsInvitationActionBusy || !AllowGuests)"
+                                                @onclick="() => HandleGuestAccess(invitation, false)">
+                                            @(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")
+                                        </button>
+                                    }
+                                    @if (invitation.HasGuestAccess)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                                id="@($"revoke-guest-{invitation.PublicId}")"
+                                                disabled="@IsInvitationActionBusy"
+                                                @onclick="() => PromptGuestRevoke(invitation, false)">
+                                            @(IsProcessingGuest(invitation, "guest-revoke") ? "Revoking..." : "Revoke private access")
+                                        </button>
+                                    }
+                                    @if (!NamesDrawn)
+                                    {
+                                        <button type="button" class="btn btn-outline-danger btn-sm" disabled="@IsInvitationActionBusy"
+                                                id="@($"remove-guest-{invitation.PublicId}")"
+                                                @onclick="() => PromptGuestRevoke(invitation, true)">Remove guest</button>
+                                    }
+                                </div>
+                            }
+                            else if (IsOwner && HasStatus(invitation, "Pending"))
                             {
                                 <div class="d-flex flex-wrap gap-2">
                                     <button class="btn btn-outline-secondary btn-sm"
@@ -227,6 +257,20 @@
         }
     </div>
 </div>
+
+<Dialog @ref="_guestRevokeDialog" Title="@(_removeGuest ? "Remove guest?" : "Revoke private guest access?")"
+        DescriptionId="guest-revoke-description" ReturnFocusElementId="@(_guestPendingRevoke is null ? null : $"{(_removeGuest ? "remove" : "revoke")}-guest-{_guestPendingRevoke.PublicId}")"
+        CanClose="@(!IsInvitationActionBusy)">
+    <p id="guest-revoke-description">This stops the private link and access on every device for <strong>@(_guestPendingRevoke?.GuestDisplayName ?? _guestPendingRevoke?.InviteeEmail)</strong>. @(_removeGuest ? "They will no longer be included in the draw." : "Their place in the draw is unchanged.")</p>
+    <p class="text-muted">@(_removeGuest ? "Send a new invitation if you want them to join again." : "Resend private access to restore it with a fresh link.")</p>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@IsInvitationActionBusy"
+                @onclick="CloseGuestRevoke">@(_removeGuest ? "Keep guest" : "Keep private access")</button>
+        <button type="button" class="btn btn-danger" disabled="@IsInvitationActionBusy" @onclick="ConfirmGuestRevoke">
+            @(IsInvitationActionBusy ? (_removeGuest ? "Removing..." : "Revoking...") : (_removeGuest ? "Remove guest" : "Revoke private access"))
+        </button>
+    </div>
+</Dialog>
 
 @if (_showRemoveConfirmation && _invitationPendingRemoval != null)
 {
@@ -435,6 +479,11 @@
     [Parameter] public bool IsOwner { get; set; }
     [Parameter] public string? CurrentUserId { get; set; }
     [Parameter] public bool NamesDrawn { get; set; }
+    [Parameter] public bool AllowGuests { get; set; }
+    private Dialog? _guestRevokeDialog;
+    private EventUserModel? _guestPendingRevoke;
+    private bool _removeGuest;
+    private string? _processingGuestPublicId;
 
     private List<EventUserModel> _invitations = new();
     private List<ApplicationUserModel>? _friends = null;
@@ -569,6 +618,8 @@
         _isSending = true;
         _errorMessage = null;
         _successMessage = null;
+        var attemptedInvitation = false;
+        var failedEmailAddresses = new List<string>();
 
         try
         {
@@ -597,6 +648,7 @@
                 {
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, address);
                         invitedAddresses.Add(address);
                     }
@@ -604,6 +656,7 @@
                     {
                         Logger.LogWarning(ex, "Failed to invite {InviteeEmail} to event {EventPublicId}", address, EventId);
                         failedAddresses.Add(address);
+                        failedEmailAddresses.Add(address);
                     }
                 }
 
@@ -645,6 +698,7 @@
 
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteUserToEventByPublicIdAsync(EventId, userId, friendId);
                         invitedFriends.Add((friendId, friendName));
                     }
@@ -665,6 +719,7 @@
                 {
                     try
                     {
+                        attemptedInvitation = true;
                         await EventService.InviteByEmailToEventByPublicIdAsync(EventId, userId, email);
                         invitedEmails.Add(email);
                     }
@@ -672,11 +727,13 @@
                     {
                         Logger.LogWarning(ex, "Failed to invite pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
                         failedFriends.Add(email);
+                        failedEmailAddresses.Add(email);
                     }
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "Unexpected failure inviting pending friend {InviteeEmail} to event {EventPublicId}", email, EventId);
                         failedFriends.Add(email);
+                        failedEmailAddresses.Add(email);
                     }
                 }
 
@@ -708,8 +765,6 @@
                     return;
                 }
             }
-
-            await LoadInvitations();
         }
         catch (Exception ex)
         {
@@ -718,6 +773,16 @@
         }
         finally
         {
+            if (attemptedInvitation)
+            {
+                await LoadInvitations();
+                if (AllowGuests && failedEmailAddresses.Any(email =>
+                    _invitations.Any(invitation => invitation.UserId is null &&
+                        string.Equals(invitation.InviteeEmail, email, StringComparison.OrdinalIgnoreCase))))
+                {
+                    _errorMessage = "Some private invitations already exist, but their email wasn't sent. Close this dialog and use Resend private access on the saved invitation. Check any remaining addresses before retrying.";
+                }
+            }
             _isSending = false;
         }
     }
@@ -910,6 +975,60 @@
             userId => EventService.ResendEventInvitationAsync(invitationId, userId));
     }
 
+    private async Task HandleGuestAccess(EventUserModel invitation, bool revoke)
+    {
+        if (IsInvitationActionBusy)
+        {
+            return;
+        }
+        _processingGuestPublicId = invitation.PublicId;
+        try
+        {
+        await RunInvitationActionAsync(
+            invitation.Id, revoke ? "guest-revoke" : "guest-send",
+            revoke ? "Private guest access revoked." : "A fresh private link was emailed. Previous links and sessions no longer work.",
+            revoke ? "Private access couldn't be revoked. Reload and try again." : "Private access couldn't be emailed. Reload and resend.",
+            userId => revoke
+                ? EventService.RevokeGuestAccessAsync(EventId, invitation.PublicId, userId)
+                : EventService.SendGuestAccessAsync(EventId, invitation.PublicId, userId));
+        }
+        finally
+        {
+            _processingGuestPublicId = null;
+        }
+    }
+
+    private bool IsProcessingGuest(EventUserModel invitation, string action) =>
+        _processingGuestPublicId == invitation.PublicId && IsProcessingInvitation(invitation.Id, action);
+
+    private void PromptGuestRevoke(EventUserModel invitation, bool remove)
+    {
+        _guestPendingRevoke = invitation;
+        _removeGuest = remove;
+        _guestRevokeDialog?.Show();
+    }
+
+    private Task CloseGuestRevoke() => _guestRevokeDialog?.CloseAsync() ?? Task.CompletedTask;
+
+    private async Task ConfirmGuestRevoke()
+    {
+        if (_guestPendingRevoke is not null)
+        {
+            if (_removeGuest)
+            {
+                var invitation = _guestPendingRevoke;
+                await RunInvitationActionAsync(invitation.Id, "guest-remove", "Guest removed from the event.",
+                    "The guest couldn't be removed. Reset a drawn exchange before changing participants.",
+                    userId => EventService.RemoveGuestParticipantAsync(EventId, invitation.PublicId, userId));
+            }
+            else
+            {
+                await HandleGuestAccess(_guestPendingRevoke, true);
+            }
+            await CloseGuestRevoke();
+        }
+    }
+
     private async Task HandleCancelInvitation(int invitationId)
     {
         var name = GetInvitationName(invitationId);
@@ -1001,6 +1120,10 @@
 
     private static string GetInvitationDisplayName(EventUserModel invitation)
     {
+        if (!string.IsNullOrWhiteSpace(invitation.GuestDisplayName))
+        {
+            return invitation.GuestDisplayName;
+        }
         if (!string.IsNullOrWhiteSpace(invitation.User?.UserName))
         {
             return invitation.User.UserName!;
@@ -1017,6 +1140,21 @@
         }
 
         return "this participant";
+    }
+
+    private string GuestAccessStatus(EventUserModel invitation)
+    {
+        if (!AllowGuests)
+        {
+            return invitation.GuestDisplayName is not null ? "Guest access disabled for this event" : "Not registered";
+        }
+        if (invitation.GuestAccessExpiresOn <= DateTimeOffset.UtcNow)
+        {
+            return "Guest access expired; resend it";
+        }
+        return invitation.HasGuestAccess
+            ? (invitation.GuestEmailSentOn.HasValue ? "Guest access emailed" : "Guest email needs resend")
+            : "Guest access revoked or not sent";
     }
 
     private string GetInvitationName(int invitationId)

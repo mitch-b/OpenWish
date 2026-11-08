@@ -80,6 +80,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(eu => eu.UserId)
             .OnDelete(DeleteBehavior.NoAction);
 
+        modelBuilder.Entity<EventUser>().Property(eu => eu.GuestDisplayName).HasMaxLength(80);
+        modelBuilder.Entity<EventUser>().Property(eu => eu.GuestTokenHash).HasMaxLength(64);
+        modelBuilder.Entity<EventUser>().HasIndex(eu => eu.GuestTokenHash).IsUnique();
+        modelBuilder.Entity<GiftExchange>()
+            .HasOne(ge => ge.GiverParticipant).WithMany()
+            .HasForeignKey(ge => ge.GiverParticipantId).OnDelete(DeleteBehavior.NoAction);
+        modelBuilder.Entity<GiftExchange>()
+            .HasOne(ge => ge.ReceiverParticipant).WithMany()
+            .HasForeignKey(ge => ge.ReceiverParticipantId).OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<GiftExchange>()
             .HasOne(ge => ge.Receiver)
             .WithMany()

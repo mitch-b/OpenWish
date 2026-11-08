@@ -120,7 +120,7 @@
     line-height: 1.5;
 }
 
-.gift-match-privacy svg {
+.gift-match-privacy ::deep svg {
     flex: 0 0 auto;
     margin-top: 0.15rem;
 }
@@ -153,5 +153,101 @@
 @media (max-width: 380px) {
     .gift-match-facts {
         grid-template-columns: minmax(0, 1fr);
+    }
+}
+.gift-match-unopened {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.7fr);
+    align-items: center;
+    gap: 1rem 2rem;
+}
+
+.gift-match-invitation h3 {
+    max-width: 20ch;
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+}
+
+.gift-match-invitation > p {
+    max-width: 44ch;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.gift-box-button {
+    display: grid;
+    justify-items: center;
+    gap: 1.5rem;
+    min-height: 15rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.gift-box-button:hover {
+    border-color: var(--color-primary-bg);
+}
+
+.gift-box-button:focus-visible,
+.gift-match-name:focus-visible {
+    outline: 3px solid var(--color-primary-bg);
+    outline-offset: 4px;
+}
+
+.gift-box-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.gift-box-button:hover ::deep .gift-box-lid,
+.gift-box-button:focus-visible ::deep .gift-box-lid {
+    transform: translateY(-0.25rem) rotate(-2deg);
+}
+
+.gift-box-label {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.gift-box-help {
+    grid-column: 2;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.gift-match-unopened > .alert {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.gift-match-just-opened .gift-match-introduction {
+    animation: gift-match-appear 350ms ease-out;
+}
+
+@keyframes gift-match-appear {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gift-box-button:hover ::deep .gift-box-lid,
+    .gift-box-button:focus-visible ::deep .gift-box-lid { transform: none; }
+    .gift-match-just-opened .gift-match-introduction { animation: none; }
+}
+
+@media (max-width: 767.98px) {
+    .gift-match-unopened {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .gift-box-help {
+        grid-column: 1;
     }
 }

@@ -8,8 +8,10 @@ public class GiftExchangeModel : BaseEntityModel
     public ApplicationUserModel? Giver { get; set; }
     public string? ReceiverId { get; set; }
     public string? ReceiverEmail { get; set; }
+    public string? ReceiverDisplayName { get; set; }
     public ApplicationUserModel? Receiver { get; set; }
     public bool IsAnonymous { get; set; }
     public string? ReceiverPreferences { get; set; }
     public decimal? Budget { get; set; }
+    public DateTimeOffset? MatchOpenedOn { get; set; }
 }

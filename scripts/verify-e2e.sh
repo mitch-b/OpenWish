@@ -84,6 +84,7 @@ docker run --rm \
   --ipc=host \
   --network "$network_name" \
   --env OPENWISH_BASE_URL=http://web:8080 \
+  --env OPENWISH_MAIL_URL=http://mail:8025 \
   --env "OPENWISH_RELEASE_VERSION=$release_version" \
   --env OPENWISH_EVIDENCE_DIR=/evidence \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \

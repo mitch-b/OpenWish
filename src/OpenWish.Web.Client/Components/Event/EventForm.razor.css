@@ -94,3 +94,56 @@
 .exchange-style-option small {
     color: var(--color-text-muted);
 }
+.exchange-reveal-choice {
+    padding: 0.25rem 0.75rem;
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-surface-alt);
+    border-radius: 0.75rem;
+}
+
+.exchange-reveal-choice summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    color: var(--color-text);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.exchange-reveal-choice summary::-webkit-details-marker {
+    display: none;
+}
+
+.exchange-reveal-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.exchange-reveal-choice[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+.exchange-reveal-choice[open] ::deep .exchange-reveal-chevron {
+    transform: rotate(90deg);
+}
+
+.exchange-reveal-choice .form-check {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-left: 0;
+}
+
+.exchange-reveal-choice ::deep .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+}

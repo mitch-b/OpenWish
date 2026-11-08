@@ -64,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IWishlistService, WishlistService>();
         services.AddScoped<IEventService, EventService>();
+        services.AddScoped<GuestEventService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IGiftPlanService, GiftPlanService>();

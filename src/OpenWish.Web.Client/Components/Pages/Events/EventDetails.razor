@@ -194,7 +194,8 @@ else
             <div class="col-lg-8">
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
-                    <GiftExchangeDisplay EventId="@EventId"
+                    <GiftExchangeDisplay @key="_event.NamesDrawnOn" EventId="@EventId"
+                                         UseGiftBoxReveal="@(_event.UseGiftBoxReveal == true)"
                                          CurrentUserId="@_currentUserId"
                                          ExchangeDate="@_event.Date"
                                          WishlistsLoaded="@_wishlistsLoaded"
@@ -341,6 +342,7 @@ else
                     <div id="event-invitations">
                         <EventInvitations EventId="@EventId"
                                           IsOwner="true"
+                                          AllowGuests="@(_event.AllowGuestParticipants == true && _event.IsGiftExchange)"
                                           CurrentUserId="@_currentUserId"
                                           NamesDrawn="@_event.NamesDrawnOn.HasValue" />
                     </div>

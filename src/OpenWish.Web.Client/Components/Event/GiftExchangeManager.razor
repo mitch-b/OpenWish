@@ -446,8 +446,8 @@
                     if (!HasEmail(normalizedEmail))
                     {
                         _participants.Add(new ParticipantOption(
-                            $"invite:{eventUser.Id}",
-                            $"{normalizedEmail} (email invite)",
+                            $"invite:{eventUser.PublicId}",
+                            eventUser.GuestDisplayName ?? $"{normalizedEmail} (email invite)",
                             null,
                             normalizedEmail));
                     }

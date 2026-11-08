@@ -10,6 +10,10 @@ public class EventUserModel : BaseEntityModel
     public string? UserId { get; set; }
     public ApplicationUserModel? User { get; set; }
     public string? InviteeEmail { get; set; }
+    public string? GuestDisplayName { get; set; }
+    public bool HasGuestAccess { get; set; }
+    public DateTimeOffset? GuestEmailSentOn { get; set; }
+    public DateTimeOffset? GuestAccessExpiresOn { get; set; }
     public DateTimeOffset InvitationDate { get; set; }
     public string Status { get; set; } = "Pending"; // "Pending", "Accepted", "Rejected"
     public bool IsAccepted { get; set; } // Backward compatibility

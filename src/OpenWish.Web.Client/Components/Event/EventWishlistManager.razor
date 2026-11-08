@@ -679,7 +679,7 @@ else
         if (Event.EventUsers != null)
         {
             foreach (var participant in Event.EventUsers
-                .OrderBy(eu => eu.User?.UserName ?? eu.User?.Email ?? eu.InviteeEmail ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+                .OrderBy(eu => eu.User?.UserName ?? eu.GuestDisplayName ?? eu.User?.Email ?? eu.InviteeEmail ?? string.Empty, StringComparer.OrdinalIgnoreCase))
             {
                 var participantId = participant.User?.Id;
                 IReadOnlyList<WishlistModel> participantWishlists = Array.Empty<WishlistModel>();
@@ -691,7 +691,7 @@ else
 
                 result.Add(new ParticipantWishlistViewModel
                 {
-                    Label = participant.User?.UserName ?? participant.User?.Email ?? participant.InviteeEmail ?? "Participant",
+                    Label = participant.User?.UserName ?? participant.GuestDisplayName ?? participant.User?.Email ?? participant.InviteeEmail ?? "Participant",
                     Email = participant.User?.Email ?? participant.InviteeEmail,
                     UserId = participantId,
                     InviteeEmail = participant.InviteeEmail,

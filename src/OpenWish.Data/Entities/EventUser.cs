@@ -9,6 +9,10 @@ public class EventUser : BaseEntity
     public ApplicationUser? User { get; set; }
 
     public string? InviteeEmail { get; set; } // Email for invitations to non-registered users
+    public string? GuestDisplayName { get; set; }
+    public string? GuestTokenHash { get; set; }
+    public DateTimeOffset? GuestAccessExpiresOn { get; set; }
+    public DateTimeOffset? GuestEmailSentOn { get; set; }
 
     public DateTimeOffset InvitationDate { get; set; }
     public string Status { get; set; } = "Pending"; // "Pending", "Accepted", "Rejected"

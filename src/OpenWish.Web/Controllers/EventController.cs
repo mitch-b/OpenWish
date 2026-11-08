@@ -16,6 +16,53 @@ public class EventController(IEventService eventService, ApiUserContextService u
     private readonly IEventService _eventService = eventService;
     private readonly ApiUserContextService _userContextService = userContextService;
 
+    [HttpPost("{eventPublicId}/invitations/{participantPublicId}/guest-access/{operation}")]
+    [EnableRateLimiting("invitations")]
+    public async Task<IActionResult> ManageGuestAccess(string eventPublicId, string participantPublicId, string operation)
+    {
+        var ownerId = await _userContextService.GetUserIdAsync();
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            if (operation == "send")
+            {
+                await _eventService.SendGuestAccessAsync(eventPublicId, participantPublicId, ownerId);
+            }
+            else if (operation == "revoke")
+            {
+                await _eventService.RevokeGuestAccessAsync(eventPublicId, participantPublicId, ownerId);
+            }
+            else if (operation == "remove")
+            {
+                await _eventService.RemoveGuestParticipantAsync(eventPublicId, participantPublicId, ownerId);
+            }
+            else
+            {
+                return BadRequest("Choose send, revoke, or remove.");
+            }
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
+        }
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EventModel>>> GetEvents()
     {
@@ -400,6 +447,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return BadRequest(ex.Message);
         }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
+        }
     }
 
     [HttpGet("{eventPublicId}/invitations")]
@@ -544,6 +595,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         {
             return Forbid(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPost("invitations/{eventUserId}/resend")]
@@ -566,6 +621,14 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (UnauthorizedAccessException ex)
         {
             return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
         }
     }
 
@@ -607,6 +670,10 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (InvalidOperationException ex)
         {
             return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
         }
     }
 
@@ -735,6 +802,32 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (UnauthorizedAccessException ex)
         {
             return Forbid(ex.Message);
+        }
+    }
+
+    [HttpPost("{eventPublicId}/my-gift-exchange/{assignmentPublicId}/open")]
+    public async Task<ActionResult<GiftExchangeModel>> OpenGiftExchangeMatch(string eventPublicId, string assignmentPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            return Ok(await _eventService.OpenGiftExchangeMatchAsync(eventPublicId, assignmentPublicId, userId));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(ex.Message);
         }
     }
 

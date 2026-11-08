@@ -76,12 +76,19 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
     /// </summary>
     /// <param name="toEmail">Recipient email address</param>
     /// <param name="eventName">Name of the event</param>
-    /// <param name="recipientName">Name of the person they're buying for</param>
+    /// <param name="recipientName">Name of the person they're buying for, or null to preserve the gift-box reveal</param>
     /// <param name="eventLink">Link to event details</param>
     /// <returns></returns>
-    public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink)
+    public Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string? recipientName, string eventLink)
     {
         _logger.LogInformation("Sending gift exchange drawn email for event {EventName}", eventName);
+        if (recipientName is null)
+        {
+            return SendEmailAsync(toEmail, $"Your gift exchange match is ready - {SanitizeSubject(eventName)}",
+                WrapInHtmlFormattedEmail($"<p>The names have been drawn for <strong>{Encode(eventName)}</strong>.</p>" +
+                    $"<p>Your match is ready. <a href='{Encode(eventLink)}'>Open your gift</a> to see who you're shopping for.</p>"));
+        }
+
         var subject = $"🎁 Gift Exchange Names Drawn - {SanitizeSubject(eventName)}";
         eventName = Encode(eventName);
         recipientName = Encode(recipientName);
@@ -97,6 +104,30 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             $"<p style='color: #6c757d; font-size: 14px;'>Visit the event page to see {recipientName}'s wishlist and start planning the perfect gift!</p>" +
             $"</div>");
         return SendEmailAsync(toEmail, subject, body);
+    }
+
+    public async Task SendGuestEventAccessEmailAsync(string toEmail, string eventName, string accessLink, bool matchReady = false)
+    {
+        var subject = $"{(matchReady ? "Your private match is ready" : "Your private invitation")} - {SanitizeSubject(eventName)}";
+        var introduction = matchReady
+            ? $"<p>The names have been drawn for <strong>{Encode(eventName)}</strong>. Your own match is ready.</p>"
+            : $"<p>You're invited to <strong>{Encode(eventName)}</strong>. No account is needed.</p>";
+        var body = WrapInHtmlFormattedEmail(
+            introduction +
+            $"<p><a href='{Encode(accessLink)}'>{(matchReady ? "View my private match" : "Open my private invitation")}</a></p>" +
+            "<p>This link gives access to your invitation and your own match. Keep it private: anyone you forward it to can use it.</p>" +
+            "<p>The link expires in 30 days. Ask the organizer for a fresh email if it expires or stops working.</p>");
+        try
+        {
+            if (!await TrySendEmailAsync(toEmail, subject, body))
+            {
+                throw new HttpRequestException("Guest access email could not be delivered. Resend access from the event.");
+            }
+        }
+        catch (SmtpException ex)
+        {
+            throw new HttpRequestException("Guest access email could not be delivered. Resend access from the event.", ex);
+        }
     }
 
     /// <summary>

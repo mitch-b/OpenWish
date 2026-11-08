@@ -10,7 +10,8 @@ public interface IAppEmailSender
     Task SendPasswordResetLinkAsync(string toEmail, string resetLink);
     Task SendFriendInviteEmailAsync(string toEmail, string inviterName, string inviteLink);
     Task SendEventInviteEmailAsync(string toEmail, string inviterName, string eventName, string inviteLink);
-    Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string recipientName, string eventLink);
+    Task SendGuestEventAccessEmailAsync(string toEmail, string eventName, string accessLink, bool matchReady = false);
+    Task SendGiftExchangeDrawnEmailAsync(string toEmail, string eventName, string? recipientName, string eventLink);
     Task SendGiftExchangeResetEmailAsync(string toEmail, string eventName, string eventLink);
     Task SendEmailAsync(string toEmail, string subject, string message);
 }

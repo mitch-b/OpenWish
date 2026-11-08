@@ -1,3 +1,4 @@
+using FluentEmail.Core.Interfaces;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -28,6 +29,7 @@ public sealed class OpenWishAppFactory : WebApplicationFactory<Program>, IAsyncL
 
     private PostgreSqlContainer? _container;
     private string _connectionString = string.Empty;
+    public CapturedEmailSender Emails { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -73,6 +75,7 @@ public sealed class OpenWishAppFactory : WebApplicationFactory<Program>, IAsyncL
         builder.ConfigureServices(services => services.AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, TestExternalLoginHandler>(
                 TestExternalLoginHandler.SchemeName, "Test external provider", _ => { }));
+        builder.ConfigureServices(services => services.AddSingleton<ISender>(Emails));
 
         Register(builder, 0, Studio, "Send pieces from your notebook to OpenWish.");
         Register(builder, 1, Pantry, null);

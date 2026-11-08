@@ -1,4 +1,6 @@
 services:
+  mail:
+    image: axllent/mailpit:v1.27
   db:
     image: postgres:18
     environment:
@@ -15,9 +17,14 @@ services:
     image: ${OPENWISH_VERIFICATION_IMAGE}
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Development__UseInsecureMailCapture: "true"
       ConnectionStrings__OpenWish: Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification
       OpenWishSettings__OwnDatabaseUpgrades: "true"
       OpenWishSettings__EnableDevelopmentLogin: "true"
+      OpenWishSettings__BaseUri: http://web:8080
+      OpenWishSettings__EmailConfig__SmtpHost: mail
+      OpenWishSettings__EmailConfig__SmtpPort: "1025"
+      OpenWishSettings__EmailConfig__SmtpFrom: no-reply@openwish.local
       OpenWishSettings__Integrations__Mcp__Enabled: "true"
       Authentication__Google__ClientId: playwright-test-client-id
       Authentication__Google__ClientSecret: playwright-test-client-secret
@@ -29,5 +36,7 @@ services:
       OpenWishSettings__Integrations__Apps__0__HomepageUrl: http://127.0.0.1:4455/
       OpenWishSettings__Integrations__Apps__0__RedirectUris__0: http://127.0.0.1:4455/openwish/callback
     depends_on:
+      mail:
+        condition: service_started
       db:
         condition: service_healthy

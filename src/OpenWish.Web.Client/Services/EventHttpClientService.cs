@@ -368,6 +368,14 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         throw new NotImplementedException("Use GetPairingRulesByPublicIdAsync instead");
     }
 
+    public async Task<GiftExchangeModel> OpenGiftExchangeMatchAsync(string eventPublicId, string assignmentPublicId, string userId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/my-gift-exchange/{assignmentPublicId}/open", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<GiftExchangeModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize your gift exchange match.");
+    }
+
     public async Task<IEnumerable<CustomPairingRuleModel>> GetPairingRulesByPublicIdAsync(string eventPublicId, string requestorId)
     {
         return await httpClient.GetFromJsonAsync<IEnumerable<CustomPairingRuleModel>>($"api/events/{eventPublicId}/pairing-rules")
@@ -391,5 +399,25 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         var response = await httpClient.DeleteAsync($"api/events/pairing-rules/{ruleId}");
         return response.IsSuccessStatusCode;
+    }
+    public async Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/send", null);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/revoke", null);
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId)
+    {
+        var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/remove", null);
+        response.EnsureSuccessStatusCode();
+        return true;
     }
 }

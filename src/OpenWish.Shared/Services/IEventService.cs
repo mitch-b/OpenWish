@@ -9,6 +9,9 @@ namespace OpenWish.Shared.Services;
 /// </summary>
 public interface IEventService
 {
+    Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
+    Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
+    Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId);
     /// <summary>Creates a new undrawn event from an existing one, copying details, pending invitations, and pairing rules. Organizer only.</summary>
     Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId);
 
@@ -280,6 +283,7 @@ public interface IEventService
     /// <param name="userId">The user ID requesting their assignment.</param>
     /// <returns>The gift exchange model with recipient info, or null if exchange not yet drawn or user not assigned.</returns>
     Task<GiftExchangeModel?> GetMyGiftExchangeByPublicIdAsync(string eventPublicId, string userId);
+    Task<GiftExchangeModel> OpenGiftExchangeMatchAsync(string eventPublicId, string assignmentPublicId, string userId);
 
     /// <summary>Lists all custom pairing rules configured for an event by internal ID.</summary>
     /// <param name="eventId">The internal event ID.</param>

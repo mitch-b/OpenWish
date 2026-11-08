@@ -1653,7 +1653,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   if (!(await giftExchangeOption.getAttribute("class"))?.includes("event-type-option-selected")) {
     throw new Error("Gift exchange was not the default event type.");
   }
-  const secretSantaStyle = page.getByRole("button", { name: /Secret Santa.*familiar holiday/i });
+  const secretSantaStyle = page.getByRole("button", { name: /Secret Santa.*private holiday/i });
   await secretSantaStyle.click();
   await page.locator("#name").waitFor({
     state: "visible"
@@ -2552,6 +2552,335 @@ async function verifyProductCaptureJourney(browser, results) {
       "shared text pasted into the product field imports the link and name",
       "dark quick add contrast",
       "view-only shared wishlists are not offered for quick add"
+    ]
+  });
+}
+
+async function verifyAccountFreeGuests(browser, results) {
+  const organizer = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const guest = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const mailUrl = process.env.OPENWISH_MAIL_URL;
+  if (!mailUrl) throw new Error("Account-free verification requires an isolated mail capture service.");
+  await login(organizer, "owner", ownerEmail);
+  const api = async (method, route, data) => {
+    const response = await organizer.request.fetch(`${baseUrl}/api/events${route}`, { method, data });
+    if (!response.ok()) throw new Error(`Guest setup ${method}: ${response.status()} ${await response.text()}`);
+    return response.status() === 204 ? null : response.json();
+  };
+  const email = `guest-no-account-${Date.now()}@example.test`;
+  const latestLink = async (recipientEmail = email) => {
+    const response = await organizer.request.get(`${mailUrl}/api/v1/messages`);
+    if (!response.ok()) throw new Error(`Mail capture returned ${response.status()}.`);
+    const inbox = await response.json();
+    const message = inbox.messages.find(message => message.To.some(to => to.Address === recipientEmail));
+    if (!message) throw new Error("Guest access email was not delivered.");
+    const detail = await organizer.request.get(`${mailUrl}/api/v1/message/${message.ID}`);
+    const content = await detail.json();
+    if (content.HTML.includes("Your Gift Recipient")) throw new Error("The guest email spoiled the match.");
+    const token = content.HTML.match(/#access=([A-F0-9]{64})/)?.[1];
+    if (!token) throw new Error("The guest email had no private access link.");
+    return `${baseUrl}/guest#access=${token}`;
+  };
+  const evt = await api("POST", "", {
+    name: "Cabin gifts, no accounts needed", date: "2026-12-25T18:00:00Z",
+    budget: 35, description: "Choose something cozy for a winter weekend.",
+    isGiftExchange: true, allowGuestParticipants: true, useGiftBoxReveal: true, eventUsers: []
+  });
+  const invite = await api("POST", `/${evt.publicId}/invitations/email`, { email });
+  const page = await guest.newPage();
+  const diagnostics = monitorPage(page);
+  const connect = async link => {
+    await page.goto(link);
+    const button = page.getByRole("button", { name: "Continue with my private invitation" });
+    await button.waitFor({ state: "visible" });
+    if (new URL(page.url()).hash) throw new Error("The guest credential remained in browser history.");
+    await button.click();
+    await page.waitForURL(`${baseUrl}/guest`);
+  };
+  await connect(await latestLink());
+  if (await page.locator("main").count() !== 1) throw new Error("The guest page has nested main landmarks.");
+  await page.getByLabel("Your name for the group").fill("Morgan Guest");
+  await screenshot(page, "guest-invitation-desktop.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "guest invitation");
+  await assertMinimumTouchTarget(page.getByRole("button", { name: "Accept invitation" }), "Guest accept");
+  await screenshot(page, "guest-invitation-mobile.png");
+  await page.getByRole("button", { name: "Accept invitation" }).click();
+  await page.getByRole("heading", { name: "You're in, Morgan Guest" }).waitFor();
+  const guestApi = await guest.request.get(`${baseUrl}/api/events/${evt.publicId}/my-gift-exchange`);
+  if (guestApi.status() !== 401) throw new Error("The guest session authenticated to the ordinary event API.");
+  // Mail scanners can follow links, but the first explicit form post is still required.
+  const invitations = await api("GET", `/${evt.publicId}/invitations`);
+  if (!invitations.find(i => i.publicId === invite.publicId)?.isAccepted) throw new Error("Guest acceptance wasn't saved.");
+  await api("POST", `/${evt.publicId}/draw-names`);
+  await page.reload();
+  await page.getByRole("alert").filter({ hasText: "unavailable" }).waitFor();
+  const matchLink = await latestLink();
+  await connect(matchLink);
+  const gift = page.getByRole("button", { name: "Open my gift", exact: true });
+  await gift.waitFor({ state: "visible" });
+  if (await page.locator("#guest-match-name").count()) throw new Error("The guest match was rendered before opening.");
+  await assertMinimumTouchTarget(gift, "Guest gift opening");
+  await screenshot(page, "guest-match-unopened-mobile.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await screenshot(page, "guest-match-unopened-mobile-dark.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.setAttribute("data-bs-theme", "light");
+  });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await screenshot(page, "guest-match-unopened-desktop.png");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await gift.focus();
+  await page.keyboard.press("Enter");
+  const name = page.locator("#guest-match-name");
+  await name.waitFor({ state: "visible" });
+  await page.waitForLoadState("networkidle");
+  if (!(await name.evaluate(element => element === document.activeElement))) throw new Error("The guest reveal didn't focus the drawn name.");
+  if (await name.evaluate(element => getComputedStyle(element).animationName) !== "none") throw new Error("The guest reveal ignored reduced motion.");
+  await screenshot(page, "guest-match-opened-desktop.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "guest match");
+  await screenshot(page, "guest-match-opened-mobile.png");
+  await page.reload();
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) throw new Error("Returning guests had to open their match again.");
+  const secondDevice = await browser.newContext({ javaScriptEnabled: false });
+  const csrfPage = await secondDevice.newPage();
+  await csrfPage.goto(`${baseUrl}/guest`);
+  const csrf = await csrfPage.locator('input[name="__RequestVerificationToken"]').first().inputValue();
+  const connected = await secondDevice.request.post(`${baseUrl}/guest/access`, {
+    form: { token: new URLSearchParams(new URL(matchLink).hash.slice(1)).get("access"), __RequestVerificationToken: csrf },
+    maxRedirects: 0
+  });
+  if (connected.status() !== 302) throw new Error("Second-device guest access couldn't be redeemed.");
+  await csrfPage.goto(`${baseUrl}/guest`);
+  if (await csrfPage.getByRole("button", { name: "Open my gift", exact: true }).count()) throw new Error("Opening wasn't preserved across devices.");
+  await secondDevice.close();
+  const organizerPage = await organizer.newPage();
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  if (!await organizerPage.getByLabel("Allow guests without an account").isChecked()) throw new Error("The saved guest setting was lost.");
+  if (!await organizerPage.getByRole("button", { name: "Resend private access", exact: true }).isEnabled()) {
+    throw new Error("The event-management invitation panel did not receive the enabled guest setting.");
+  }
+  await screenshot(organizerPage, "guest-event-setting.png");
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}`);
+  await organizerPage.waitForLoadState("networkidle");
+  const revoke = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Revoke private access", exact: true });
+  await revoke.click();
+  const dialog = organizerPage.getByRole("dialog", { name: "Revoke private guest access?" });
+  await dialog.waitFor({ state: "visible" });
+  await screenshot(organizerPage, "guest-revoke-confirmation.png");
+  await dialog.getByRole("button", { name: "Keep private access" }).click();
+  await dialog.waitFor({ state: "hidden" });
+  await revoke.click();
+  await dialog.getByRole("button", { name: "Revoke private access", exact: true }).click();
+  await organizerPage.getByRole("status").filter({ hasText: "Private guest access revoked." }).waitFor();
+  await page.reload();
+  await page.getByRole("alert").filter({ hasText: "unavailable" }).waitFor();
+  await screenshot(page, "guest-access-revoked-mobile.png");
+  const declineEvent = await api("POST", "", {
+    name: "Plans can change", date: "2026-12-25T18:00:00Z",
+    isGiftExchange: true, allowGuestParticipants: true, eventUsers: []
+  });
+  const declineEmail = `guest-declining-${Date.now()}@example.test`;
+  await api("POST", `/${declineEvent.publicId}/invitations/email`, { email: declineEmail });
+  await connect(await latestLink(declineEmail));
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  await page.getByRole("heading", { name: "Invitation declined" }).waitFor();
+  await organizerPage.goto(`${baseUrl}/events/${declineEvent.publicId}`);
+  await organizerPage.waitForLoadState("networkidle");
+  const remove = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Remove guest", exact: true });
+  await remove.waitFor({ state: "visible" });
+  await remove.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
+  const removalBounds = await remove.boundingBox();
+  if (!removalBounds || removalBounds.y < 0 || removalBounds.y + removalBounds.height > organizerPage.viewportSize().height) {
+    throw new Error("The declined-guest recovery capture did not frame the removal action.");
+  }
+  await organizerPage.screenshot({ path: path.join(walkthroughDirectory, "guest-declined-invitation-desktop.png") });
+  await remove.click();
+  await organizerPage.getByRole("dialog", { name: "Remove guest?", exact: true })
+    .getByRole("button", { name: "Remove guest", exact: true }).click();
+  await organizerPage.getByRole("status").filter({ hasText: "Guest removed from the event." }).waitFor();
+  await api("POST", `/${declineEvent.publicId}/invitations/email`, { email: declineEmail });
+  if (diagnostics.browserErrors.length) throw new Error(`Guest browser errors: ${diagnostics.browserErrors.join(" | ")}`);
+  results.push({ scenario: "account-free-guests", assertions: [
+    "email-linked acceptance without registration", "fragment removed before explicit redemption",
+    "guest cookie rejected by normal APIs", "private first opening, keyboard focus and reduced motion",
+    "persistent opening across devices and without JavaScript", "organizer setting and revocation",
+    "desktop/mobile, light/dark and no horizontal overflow", "declined guest removal and reinvitation", "one main landmark"
+  ] });
+  await organizer.close();
+  await guest.close();
+}
+
+async function verifyFirstMatchOpening(browser, results) {
+  const withoutScripts = await browser.newContext({ javaScriptEnabled: false });
+  const plainSignup = await withoutScripts.newPage();
+  await plainSignup.goto(`${baseUrl}/Account/Register`);
+  if (await plainSignup.getByRole("button", { name: "Show passwords", exact: true }).isVisible()) {
+    throw new Error("Registration without JavaScript displays a nonfunctional password toggle.");
+  }
+  await plainSignup.getByRole("button", { name: "Create account", exact: true }).waitFor({ state: "visible" });
+  await withoutScripts.close();
+  const anonymous = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const signup = await anonymous.newPage();
+  const signupDiagnostics = monitorPage(signup);
+  const returnUrl = `/events/${expectedManifest.eventPublicId}/accept-invite?email=${encodeURIComponent(guestEmail)}`;
+  await signup.goto(`${baseUrl}/Account/Register?email=${encodeURIComponent(guestEmail)}&ReturnUrl=${encodeURIComponent(returnUrl)}`);
+  await signup.getByRole("button", { name: "Show passwords", exact: true }).click();
+  for (const label of ["Password", "Confirm password"]) {
+    if (await signup.getByLabel(label, { exact: true }).getAttribute("type") !== "text") {
+      throw new Error("Show passwords did not reveal both registration fields.");
+    }
+  }
+  await signup.getByRole("button", { name: "Hide passwords", exact: true }).click();
+  await signup.getByLabel("Password", { exact: true }).fill("short");
+  await signup.getByLabel("Confirm password", { exact: true }).fill("short");
+  await signup.getByRole("button", { name: "Create account", exact: true }).click();
+  await signup.getByText("Use 6 to 100 characters for your password.", { exact: true }).first().waitFor({ state: "visible" });
+  if (await signup.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
+    throw new Error("Registration validation lost the invitation email.");
+  }
+  await screenshot(signup, "registration-validation.png");
+  await signup.goto(`${baseUrl}/Account/Register?email=${encodeURIComponent(guestEmail)}&ReturnUrl=${encodeURIComponent(returnUrl)}`);
+  await screenshot(signup, "registration-desktop.png");
+  await assertResponsiveWidths(signup, [
+    { width: 320, height: 700 }, { width: 768, height: 900 }, { width: 1024, height: 900 }
+  ]);
+  await signup.setViewportSize({ width: 390, height: 844 });
+  await screenshot(signup, "registration-mobile.png");
+  await signup.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await assertTextContrast(signup.getByRole("heading", { name: "Create your account" }), "Dark registration title");
+  await screenshot(signup, "registration-mobile-dark.png");
+  await anonymous.close();
+
+  const organizer = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const participant = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  await login(organizer, "owner", ownerEmail);
+  await login(participant, "friend", friendEmail);
+  const json = async (context, method, route, data) => {
+    const response = await context.request.fetch(`${baseUrl}/api/events${route}`, { method, data });
+    if (!response.ok()) throw new Error(`Match opening ${method} ${route}: ${response.status()} ${await response.text()}`);
+    return response.status() === 204 ? null : response.json();
+  };
+  const evt = await json(organizer, "POST", "", {
+    name: "A thoughtful winter exchange",
+    date: "2026-12-25T18:00:00Z", budget: 40,
+    isGiftExchange: true, useGiftBoxReveal: true, eventUsers: []
+  });
+  const invite = await json(organizer, "POST", `/${evt.publicId}/invitations/email`, { email: friendEmail });
+  await json(participant, "POST", `/invitations/by-public-id/${invite.publicId}/accept`);
+  await json(organizer, "POST", `/${evt.publicId}/draw-names`);
+  const organizerPage = await organizer.newPage();
+  const organizerDiagnostics = monitorPage(organizerPage);
+  await organizerPage.goto(`${baseUrl}/events/new`);
+  await organizerPage.waitForLoadState("networkidle");
+  await verifyCompactEventForm(organizerPage);
+  await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).waitFor({ state: "visible" });
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  const revealChoice = organizerPage.getByLabel("Let each person unwrap their match");
+  if (!(await revealChoice.isChecked())) throw new Error("The organizer's saved reveal option wasn't selected.");
+  await screenshot(organizerPage, "match-reveal-setting.png");
+  const page = await participant.newPage();
+  const diagnostics = monitorPage(page);
+  const captureMatch = async fileName => {
+    await page.locator(".gift-match").evaluate(element => {
+      const offset = window.innerWidth > 640 ? 88 : 16;
+      window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - offset, behavior: "instant" });
+    });
+    await page.screenshot({ path: path.join(walkthroughDirectory, fileName) });
+  };
+  await page.goto(`${baseUrl}/events/${evt.publicId}`);
+  await page.waitForLoadState("networkidle");
+  const unopened = page.getByTestId("gift-match-unopened");
+  await unopened.waitFor({ state: "visible" });
+  if (await page.locator(".gift-match-name").count()) throw new Error("Recipient was displayed before opening the gift.");
+  await captureMatch("match-unopened-desktop.png");
+  await assertResponsiveWidths(page, [
+    { width: 320, height: 900 }, { width: 768, height: 900 }, { width: 1024, height: 900 }
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await captureMatch("match-unopened-mobile.png");
+  await page.evaluate(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.setAttribute("data-bs-theme", "dark");
+  });
+  await assertTextContrast(page.locator(".gift-box-label"), "Dark gift box label");
+  await captureMatch("match-unopened-mobile-dark.png");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const open = page.getByRole("button", { name: "Open my gift", exact: true });
+  await open.focus();
+  await page.keyboard.press("Enter");
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.activeElement?.id === "revealed-match-name");
+  if (await page.locator(".gift-match-introduction").evaluate(element => getComputedStyle(element).animationName) !== "none") {
+    throw new Error("Reduced-motion match opening still animated.");
+  }
+  const saved = await json(participant, "GET", `/${evt.publicId}/my-gift-exchange`);
+  if (!saved.matchOpenedOn) throw new Error("Match opening was not persisted.");
+  await captureMatch("match-opened-mobile.png");
+  await page.reload();
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Repeat visits make the participant open the same gift again.");
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await captureMatch("match-opened-desktop.png");
+
+  const secondDevice = await browser.newContext();
+  await login(secondDevice, "friend", friendEmail);
+  const secondPage = await secondDevice.newPage();
+  await secondPage.goto(`${baseUrl}/events/${evt.publicId}`);
+  await secondPage.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await secondPage.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Match opening did not survive a new browser session.");
+  }
+  await secondDevice.close();
+  await json(organizer, "POST", `/${evt.publicId}/reset-gift-exchange`);
+  await json(organizer, "POST", `/${evt.publicId}/draw-names`);
+  await page.reload();
+  await unopened.waitFor({ state: "visible" });
+  await organizerPage.reload();
+  await organizerPage.waitForLoadState("networkidle");
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).waitFor({ state: "visible" });
+  await organizerPage.locator(".exchange-reveal-choice summary").click();
+  await revealChoice.uncheck();
+  await organizerPage.getByRole("button", { name: "Save changes", exact: true }).click();
+  await organizerPage.getByText("Event changes saved.", { exact: true }).waitFor({ state: "visible" });
+  if ((await json(organizer, "GET", `/${evt.publicId}`)).useGiftBoxReveal !== false) {
+    throw new Error("The organizer's reveal choice did not save through the event form.");
+  }
+  await page.reload();
+  await page.getByTestId("gift-match-opened").waitFor({ state: "visible" });
+  if (await page.getByRole("button", { name: "Open my gift", exact: true }).count()) {
+    throw new Error("Turning off the event option still requires gift opening.");
+  }
+  if (signupDiagnostics.browserErrors.length || signupDiagnostics.failedResponses.length ||
+      diagnostics.browserErrors.length || diagnostics.failedResponses.length ||
+      organizerDiagnostics.browserErrors.length || organizerDiagnostics.failedResponses.length) {
+    throw new Error(`Registration/reveal browser errors: ${JSON.stringify({ signupDiagnostics, diagnostics })}`);
+  }
+  await organizer.close();
+  await participant.close();
+  results.push({
+    scenario: "registration-and-first-match",
+    assertions: [
+      "visible labels, optional password visibility and specific validation retain invitation context",
+      "registration at desktop, tablet and mobile widths in both themes",
+      "optional first-open box does not display the recipient before interaction",
+      "keyboard reveal focuses the drawn name and respects reduced motion",
+      "opening persists across reloads and a second browser session",
+      "a new draw has a fresh gift while disabling the option shows the match directly"
     ]
   });
 }
@@ -5735,7 +6064,7 @@ try {
   }
 
   const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
-  if (selectedScenario && !["connected-app", "family-exchange"].includes(selectedScenario)) {
+  if (selectedScenario && !["connected-app", "family-exchange", "first-match", "account-free-guests"].includes(selectedScenario)) {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
@@ -5751,8 +6080,14 @@ try {
     await verifyMobileJourney(browser, manifest, results);
     await verifyUnsharedMatchWishlist(browser, manifest, results);
     await verifyFamilyExchangeJourney(browser, results);
+    await verifyFirstMatchOpening(browser, results);
+    await verifyAccountFreeGuests(browser, results);
   }
-  if (selectedScenario === "family-exchange") {
+  if (selectedScenario === "account-free-guests") {
+    await verifyAccountFreeGuests(browser, results);
+  } else if (selectedScenario === "first-match") {
+    await verifyFirstMatchOpening(browser, results);
+  } else if (selectedScenario === "family-exchange") {
     await verifyFamilyExchangeJourney(browser, results);
   } else {
     await verifyConnectedAppJourney(browser, results);

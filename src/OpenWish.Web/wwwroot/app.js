@@ -385,3 +385,46 @@ document.addEventListener("paste", event => {
     listener.invokeMethodAsync("ImportPastedProductLink", text)
         .catch(error => console.error("Unable to add the pasted product link.", error));
 });
+window.openWishInitializePasswordToggles = function () {
+    for (const button of document.querySelectorAll("[data-password-toggle]")) {
+        button.hidden = false;
+    }
+};
+
+document.addEventListener("DOMContentLoaded", window.openWishInitializePasswordToggles);
+document.addEventListener("click", event => {
+    const button = event.target instanceof Element ? event.target.closest("[data-password-toggle]") : null;
+    if (!button) return;
+    const show = button.getAttribute("aria-pressed") !== "true";
+    for (const id of button.getAttribute("aria-controls").split(" ")) {
+        const input = document.getElementById(id);
+        if (input instanceof HTMLInputElement) input.type = show ? "text" : "password";
+    }
+    button.setAttribute("aria-pressed", String(show));
+    button.textContent = show ? "Hide passwords" : "Show passwords";
+});
+globalThis.openWishInitializeGuestAccess = function () {
+    const form = document.querySelector('form[data-guest-access]');
+    const token = new URLSearchParams(location.hash.slice(1)).get('access');
+    if (location.pathname === '/guest' && token) {
+        history.replaceState(null, '', location.pathname + location.search);
+        if (form && /^[0-9A-F]{64}$/.test(token)) {
+            const button = form.querySelector('button');
+            form.hidden = false;
+            form.addEventListener('submit', () => {
+                form.querySelector('input[name="token"]').value = token;
+                button.disabled = true;
+                button.textContent = 'Opening private invitation...';
+            }, { once: true });
+        }
+    }
+    const name = document.getElementById('guest-match-name');
+    if (name && new URLSearchParams(location.search).get('opened') === 'true') {
+        name.focus();
+    }
+    const eventDate = document.querySelector('time[data-guest-event-date]');
+    if (eventDate) {
+        eventDate.textContent = new Intl.DateTimeFormat(undefined, { dateStyle: 'long', timeStyle: 'short' })
+            .format(new Date(eventDate.dateTime));
+    }
+};

@@ -390,6 +390,148 @@ async function assertMinimumTouchTarget(locator, description) {
   }
 }
 
+async function verifyCompactFilters(page) {
+  const panel = page.locator("#wishlist-filters");
+  const toggle = page.getByRole("button", { name: "Filters", exact: true });
+  const measurements = [];
+  for (const [name, viewport, maximumHeight] of [
+    ["desktop", { width: 1440, height: 1000 }, 420],
+    ["tablet", { width: 900, height: 1000 }, 460],
+    ["mobile", { width: 390, height: 844 }, 650]
+  ]) {
+    await page.setViewportSize(viewport);
+    await panel.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
+    const height = await panel.evaluate(element => element.getBoundingClientRect().height);
+    if (height > maximumHeight) {
+      throw new Error(`${name} wishlist filters use ${height}px; expected at most ${maximumHeight}px.`);
+    }
+    for (const control of await panel.locator("button, input[type=range]").all()) {
+      await assertMinimumTouchTarget(control, `${name} filter control`);
+    }
+    await assertNoHorizontalScroll(page, `${name} expanded filters`);
+    await page.screenshot({ path: path.join(walkthroughDirectory, `compact-filters-${name}.png`) });
+    measurements.push({ name, height });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(walkthroughDirectory, "compact-filters-dark-mobile.png") });
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await panel.getByRole("button", { name: "High", exact: true }).click();
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await panel.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Remove priority filter" }).waitFor({ state: "visible" });
+  await page.keyboard.press("Enter");
+  await panel.getByRole("button", { name: "High", pressed: true }).waitFor({ state: "visible" });
+  await panel.getByRole("button", { name: "Clear all filters" }).click();
+  await assertResponsiveWidths(page, [{ width: 320, height: 568 }]);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fs.writeFile(
+    path.join(evidenceDirectory, "compact-filter-measurements.json"),
+    JSON.stringify(measurements, null, 2)
+  );
+}
+
+async function verifyCompactItemDialog(page, dialog) {
+  for (const [name, viewport] of [
+    ["desktop", { width: 1440, height: 1000 }],
+    ["tablet", { width: 900, height: 1000 }],
+    ["mobile", { width: 390, height: 844 }]
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(500);
+    const layout = await dialog.evaluate(element => {
+      const header = element.querySelector(".modal-header");
+      const body = element.querySelector(".modal-body");
+      const footer = element.querySelector(".modal-footer");
+      return {
+        headerHeight: header.getBoundingClientRect().height,
+        bodyPadding: Number.parseFloat(getComputedStyle(body).paddingTop),
+        footerTop: footer.getBoundingClientRect().top,
+        footerBottom: footer.getBoundingClientRect().bottom
+      };
+    });
+    if (layout.headerHeight > 80 || layout.bodyPadding > 16 ||
+        layout.footerTop < 0 || layout.footerBottom > viewport.height) {
+      throw new Error(`${name} item dialog lost compact insets or reachable actions: ${JSON.stringify(layout)}`);
+    }
+    for (const action of await dialog.locator(".modal-footer button, .btn-close").all()) {
+      await assertMinimumTouchTarget(action, `${name} item dialog action`);
+    }
+    await assertNoHorizontalScroll(page, `${name} item dialog`);
+    await page.screenshot({ path: path.join(walkthroughDirectory, `compact-item-dialog-${name}.png`) });
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+}
+
+async function verifyCompactItemForm(page) {
+  for (const [name, viewport] of [
+    ["desktop", { width: 1440, height: 1000 }],
+    ["tablet", { width: 900, height: 1000 }],
+    ["mobile", { width: 390, height: 844 }]
+  ]) {
+    await page.setViewportSize(viewport);
+    const columns = await page.locator(".item-fields").evaluate(element =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").length);
+    if (columns !== (name === "mobile" ? 1 : 2)) {
+      throw new Error(`${name} idea form has ${columns} columns instead of the compact responsive layout.`);
+    }
+    await assertNoHorizontalScroll(page, `${name} idea form`);
+    await screenshot(page, `compact-item-form-${name}.png`);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+}
+
+async function verifyCompactEventForm(page) {
+  const celebration = page.locator(".event-type-options").getByRole("button", { name: /^Birthday/ });
+  const exchange = page.locator(".event-type-options").getByRole("button", { name: /^Gift exchange/ });
+  await page.locator("#name").fill("Compact layout verification");
+  await celebration.focus();
+  await page.keyboard.press("Enter");
+  await page.locator(".exchange-style-options").waitFor({ state: "detached" });
+  await exchange.focus();
+  await page.keyboard.press("Enter");
+  await page.locator(".exchange-style-options").waitFor({ state: "visible" });
+  if (await page.locator("#name").inputValue() !== "Compact layout verification") {
+    throw new Error("Changing event types discarded the event name.");
+  }
+  await page.locator("#name").fill("");
+  const measurements = [];
+  for (const [name, viewport, maximumHeight] of [
+    ["desktop", { width: 1440, height: 1000 }, 850],
+    ["tablet", { width: 900, height: 1000 }, 1070],
+    ["mobile", { width: 390, height: 844 }, 1200]
+  ]) {
+    await page.setViewportSize(viewport);
+    const height = await page.locator("main form").evaluate(element => element.getBoundingClientRect().height);
+    const columns = await page.locator(".event-type-options").evaluate(element =>
+      getComputedStyle(element).gridTemplateColumns.split(" ").length);
+    if (columns !== (name === "desktop" ? 2 : 1)) {
+      throw new Error(`${name} event choices use ${columns} columns instead of fitting the available form width.`);
+    }
+    if (height > maximumHeight) {
+      throw new Error(`${name} event form uses ${height}px; expected at most ${maximumHeight}px.`);
+    }
+    for (const choice of await page.locator(".event-type-option, .exchange-style-option").all()) {
+      await assertMinimumTouchTarget(choice, `${name} event choice`);
+    }
+    await assertNoHorizontalScroll(page, `${name} event form`);
+    await screenshot(page, `compact-event-form-${name}.png`);
+    measurements.push({ name, height });
+  }
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+  await screenshot(page, "compact-event-form-dark-mobile.png");
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await fs.writeFile(
+    path.join(evidenceDirectory, "compact-event-measurements.json"),
+    JSON.stringify(measurements, null, 2)
+  );
+}
+
 async function assertTextContrast(locator, description) {
   const calculateContrast = element => {
     const parseColor = value => {
@@ -971,6 +1113,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await filtersButton.click();
   await page.getByRole("button", { name: "Filters", exact: true, expanded: true })
     .waitFor({ state: "visible" });
+  await verifyCompactFilters(page);
   const highPriorityFilter = page.locator("#wishlist-filters").getByRole("button", { name: "High" });
   await highPriorityFilter.click();
   await page.locator("#wishlist-filters").getByRole("button", { name: "High", pressed: true })
@@ -1068,6 +1211,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await addItemButton.click();
   const itemDialog = page.getByRole("dialog", { name: "Add item" });
   await itemDialog.waitFor({ state: "visible" });
+  await verifyCompactItemDialog(page, itemDialog);
   if (!(await addItemButton.evaluate(element => element.closest("[inert]") !== null))) {
     throw new Error("The item dialog did not make background content inert.");
   }
@@ -1389,6 +1533,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The item form allows an empty product URL import.");
   }
   await screenshot(page, "add-wishlist-item.png");
+  await verifyCompactItemForm(page);
   await productUrl.fill("not-a-web-address");
   await page.getByRole("button", { name: "Import" }).click();
   await page.getByRole("alert")
@@ -1521,6 +1666,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
     document.querySelector("#name")?.getAttribute("placeholder") === "e.g. Summer cabin gift swap"
   );
   await screenshot(page, "create-event.png");
+  await verifyCompactEventForm(page);
   if (await page.getByText("Step 1 of 3").count() !== 0) {
     throw new Error("The create event page still shows a step counter for a single-step form.");
   }
@@ -2014,6 +2160,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "accessible notification updates and deletion",
       "immediate wishlist discovery",
       "filtered wishlist recovery, collapsed item filters, and tablet layout",
+      "compact expanded filters and forms on desktop, tablet, and mobile with touch-sized controls",
+      "keyboard disclosure preserves filter choices and event details",
       "friend invitation validation",
       "accessible loading updates",
       "wishlist management labels and contrast",

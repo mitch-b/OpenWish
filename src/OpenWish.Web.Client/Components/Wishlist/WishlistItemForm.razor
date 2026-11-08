@@ -1,9 +1,9 @@
 @using OpenWish.Shared.Products
 
 <FocusOnFirstRender ElementId="product-url-import" Enabled="@(AutoFocusImport && string.IsNullOrWhiteSpace(InitialImportLink))" />
-<div class="url-import-section mb-4">
+<div class="url-import-section mb-3">
     <h2 class="h5">Have a product link?</h2>
-    <p class="text-muted mb-3">Optional shortcut: paste a link from any store and we'll fill in the details we can find. You can also enter an idea below.</p>
+    <p class="text-muted mb-2">Optional shortcut: paste a link from any store and we'll fill in the details we can find. You can also enter an idea below.</p>
     <ProductLinkImporter Model="@Model"
                          InputId="product-url-import"
                          HelpText="Links and text shared from shopping apps both work. Existing details won't be replaced."
@@ -16,54 +16,56 @@
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <div class="mb-3">
-        <label for="name" class="form-label">Name</label>
-        <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
-                   aria-describedby="item-name-help" placeholder="e.g., A travel mug" />
-        <div id="item-name-help" class="form-text">A name is enough to save an idea. Add other details whenever you like.</div>
-        <ValidationMessage For="@(() => Model.Name)" />
-    </div>
+    <div class="item-fields">
+        <div class="item-field-wide">
+            <label for="name" class="form-label">Name</label>
+            <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
+                       aria-describedby="item-name-help" placeholder="e.g., A travel mug" />
+            <div id="item-name-help" class="form-text">A name is enough to save an idea. Add other details whenever you like.</div>
+            <ValidationMessage For="@(() => Model.Name)" />
+        </div>
 
-    <div class="mb-3">
-        <label for="description" class="form-label">Description</label>
-        <InputTextArea id="description" class="form-control" rows="3" @bind-Value="@Model!.Description"
-                       placeholder="Color, size, or anything that would help a gift giver" />
-        <ValidationMessage For="@(() => Model.Description)" />
-    </div>
+        <div class="item-field-wide">
+            <label for="description" class="form-label">Description</label>
+            <InputTextArea id="description" class="form-control" rows="3" @bind-Value="@Model!.Description"
+                           placeholder="Color, size, or anything that would help a gift giver" />
+            <ValidationMessage For="@(() => Model.Description)" />
+        </div>
 
-    <div class="mb-3">
-        <label for="price" class="form-label">Estimated price <span class="text-muted fw-normal">(optional)</span></label>
-        <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" />
-        <ValidationMessage For="@(() => Model.Price)" />
-    </div>
+        <div>
+            <label for="price" class="form-label">Estimated price <span class="text-muted fw-normal">(optional)</span></label>
+            <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" />
+            <ValidationMessage For="@(() => Model.Price)" />
+        </div>
 
-    <div class="mb-3">
-        <label for="url" class="form-label">Product link <span class="text-muted fw-normal">(optional)</span></label>
-        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" />
-        <ValidationMessage For="@(() => Model.Url)" />
-    </div>
+        <div>
+            <label for="url" class="form-label">Product link <span class="text-muted fw-normal">(optional)</span></label>
+            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" />
+            <ValidationMessage For="@(() => Model.Url)" />
+        </div>
 
-    <div class="mb-3">
-        <label for="whereToBuy" class="form-label">Where to buy <span class="text-muted fw-normal">(optional)</span></label>
-        <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" />
-        <ValidationMessage For="@(() => Model.WhereToBuy)" />
-    </div>
+        <div>
+            <label for="whereToBuy" class="form-label">Where to buy <span class="text-muted fw-normal">(optional)</span></label>
+            <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" />
+            <ValidationMessage For="@(() => Model.WhereToBuy)" />
+        </div>
 
-    <div class="mb-3">
-        <label for="priority" class="form-label">Priority</label>
-        <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
-            <option value="">No priority</option>
-            <option value="1">High</option>
-            <option value="2">Medium</option>
-            <option value="3">Low</option>
-        </InputSelect>
-    </div>
+        <div>
+            <label for="priority" class="form-label">Priority</label>
+            <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
+                <option value="">No priority</option>
+                <option value="1">High</option>
+                <option value="2">Medium</option>
+                <option value="3">Low</option>
+            </InputSelect>
+        </div>
 
-    <div class="mb-3 form-check">
-        <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
-        <label class="form-check-label" for="isPrivate">Keep this idea private</label>
-        <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
-        <ValidationMessage For="@(() => Model.IsPrivate)" />
+        <div class="item-field-wide form-check">
+            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
+            <label class="form-check-label" for="isPrivate">Keep this idea private</label>
+            <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
+            <ValidationMessage For="@(() => Model.IsPrivate)" />
+        </div>
     </div>
 
     <div class="form-actions">

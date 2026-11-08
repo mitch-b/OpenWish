@@ -35,7 +35,7 @@
 }
 
 .modal-header {
-    padding: 1.5rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--color-border-muted);
     display: flex;
     justify-content: space-between;
@@ -60,8 +60,8 @@
     opacity: 0.6;
     transition: opacity 0.2s;
     padding: 0;
-    width: 2rem;
-    height: 2rem;
+    width: 2.75rem;
+    height: 2.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,14 +78,14 @@
 }
 
 .modal-body {
-    padding: 1.5rem;
+    padding: 1rem;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
 }
 
 .modal-footer {
-    padding: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
     border-top: 1px solid var(--color-border-muted);
     display: flex;
     justify-content: flex-end;
@@ -168,6 +168,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    min-height: 2.75rem;
 }
 
 .btn-primary {
@@ -259,10 +260,6 @@
     .modal-dialog-container {
         width: 95%;
         max-height: 95vh;
-    }
-
-    .modal-header {
-        padding: 1rem;
     }
 
     .modal-title {

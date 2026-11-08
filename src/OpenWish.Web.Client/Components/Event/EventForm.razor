@@ -8,29 +8,29 @@
         <ValidationSummary class="alert alert-danger" />
     }
 
-    <fieldset class="mb-4" disabled="@LockEventType">
+    <fieldset class="mb-3" disabled="@LockEventType">
         <legend class="form-label fw-bold">What are you planning?</legend>
-        <div class="row g-3">
-            <div class="col-sm-6">
-                <button type="button"
-                        class="event-type-option @(Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
-                        aria-pressed="@Model.IsGiftExchange"
-                        @onclick="SelectGiftExchange">
-                    <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
+        <div class="event-type-options">
+            <button type="button"
+                    class="event-type-option @(Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
+                    aria-pressed="@Model.IsGiftExchange"
+                    @onclick="SelectGiftExchange">
+                <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
+                <span class="event-type-copy">
                     <strong>Gift exchange</strong>
                     <small>Invite people, collect wishlists, and draw names privately.</small>
-                </button>
-            </div>
-            <div class="col-sm-6">
-                <button type="button"
-                        class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
-                        aria-pressed="@(!Model.IsGiftExchange)"
-                        @onclick="SelectCelebration">
-                    <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="stars" /></span>
+                </span>
+            </button>
+            <button type="button"
+                    class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
+                    aria-pressed="@(!Model.IsGiftExchange)"
+                    @onclick="SelectCelebration">
+                <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="stars" /></span>
+                <span class="event-type-copy">
                     <strong>Birthday or celebration</strong>
                     <small>Coordinate wishlists without drawing names.</small>
-                </button>
-            </div>
+                </span>
+            </button>
         </div>
         @if (LockEventType)
         {
@@ -40,7 +40,7 @@
 
     @if (Model!.IsGiftExchange)
     {
-        <fieldset class="mb-4">
+        <fieldset class="mb-3">
             <legend class="form-label fw-bold">Choose an exchange style</legend>
             <p class="form-text mt-0">Both styles keep assignments private. Choose the language your group will recognize.</p>
             <div class="exchange-style-options" role="group" aria-label="Gift exchange style">
@@ -62,7 +62,7 @@
         </fieldset>
     }
 
-    <div class="mb-4">
+    <div class="mb-3">
         <label for="name" class="form-label fw-bold">Event Name</label>
         <InputText id="name" class="form-control form-control-lg"
                    autofocus="@AutoFocusName"
@@ -70,14 +70,14 @@
         <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
     </div>
 
-    <div class="mb-4">
+    <div class="mb-3">
         <label for="description" class="form-label fw-bold">Note for your group <span class="text-muted fw-normal">(optional)</span></label>
         <InputTextArea id="description" class="form-control" rows="3" 
             placeholder="@DescriptionPlaceholder" @bind-Value="@Model!.Description" />
         <ValidationMessage For="@(() => Model.Description)" class="text-danger" />
     </div>
 
-    <div class="row mb-4">
+    <div class="row g-3 mb-3">
         <div class="col-md-6">
             <label for="date" class="form-label fw-bold">@DateLabel</label>
             <InputDate id="date" class="form-control" @bind-Value="@Model!.Date" />

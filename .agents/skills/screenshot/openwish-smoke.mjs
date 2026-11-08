@@ -2696,7 +2696,8 @@ async function verifyAccountFreeGuests(browser, results) {
   await organizerPage.waitForLoadState("networkidle");
   const remove = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Remove guest", exact: true });
   await remove.waitFor({ state: "visible" });
-  await screenshot(organizerPage, "guest-declined-invitation-desktop.png");
+  await remove.evaluate(element => element.scrollIntoView({ block: "center" }));
+  await organizerPage.screenshot({ path: path.join(walkthroughDirectory, "guest-declined-invitation-desktop.png") });
   await remove.click();
   await organizerPage.getByRole("dialog", { name: "Remove guest?", exact: true })
     .getByRole("button", { name: "Remove guest", exact: true }).click();

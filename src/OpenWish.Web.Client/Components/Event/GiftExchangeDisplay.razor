@@ -122,7 +122,7 @@
         : $"View {RecipientDisplayName}'s wishlist";
 
     private static int GetItemCount(WishlistModel wishlist) =>
-        wishlist.ItemCount > 0 ? wishlist.ItemCount : wishlist.Items?.Count ?? 0;
+        EventGiftIdeas.Count(wishlist);
 
     private string? _loadedKey;
 

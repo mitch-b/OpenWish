@@ -118,12 +118,16 @@ else
                 </p>
             }
             <div id="gift-exchange-setup">
-                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" />
+                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" WishlistsLoaded="@_wishlistsLoaded" />
             </div>
         }
         else if (_isAcceptedParticipant && !_isOwner && !_event.NamesDrawnOn.HasValue)
         {
-            @if (HasSharedWishlist)
+            @if (!_wishlistsLoaded)
+            {
+                <p role="status">Checking your shared gift ideas...</p>
+            }
+            else if (HasSharedGiftIdeas)
             {
                 <div class="alert alert-success" role="status" data-testid="participant-wishlist-shared">
                     <strong>Your wishlist is shared with this event.</strong>
@@ -137,19 +141,33 @@ else
                         <strong>@(_event.IsGiftExchange ? "You're in this gift exchange." : "You're in this event.")</strong>
                         Add a few gift ideas now@(_event.IsGiftExchange ? ", then you can leave the rest to the organizer." : " so friends know what to get.")
                     </div>
-                    <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
+                    @if (MySharedWishlist is { } wishlist)
+                    {
+                        <a class="btn btn-primary" href="/wishlists/@wishlist.PublicId/items/new">Add gift ideas</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
+                    }
                 </div>
             }
         }
 
-        else if (_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedWishlist)
+        else if (_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedGiftIdeas)
         {
             <div class="alert alert-info d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3" role="status" data-testid="participant-add-wishlist-after-draw">
                 <div>
-                    <strong>Your gift giver can't see any ideas from you yet.</strong>
-                    Share a wishlist with this event so they know what you'd love.
+                    <strong>Help your gift giver choose something you'll love.</strong>
+                    Add a few gift ideas so they know what you'd love.
                 </div>
-                <a class="btn btn-primary" href="#event-wishlists">Add my wishlist</a>
+                @if (MySharedWishlist is { } wishlist)
+                {
+                    <a class="btn btn-primary" href="/wishlists/@wishlist.PublicId/items/new">Add gift ideas</a>
+                }
+                else
+                {
+                    <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
+                }
             </div>
         }
 
@@ -193,6 +211,13 @@ else
                                     RevealedOn="@_event.AssignmentsRevealedOn"
                                     OnRevealed="HandleNamesDrawn" />
                 }
+
+                <div class="mb-4" id="event-wishlists">
+                    <EventWishlistManager EventId="@EventId"
+                                           Event="@_event"
+                                           CurrentUserId="@_currentUserId"
+                                           OnWishlistsChanged="HandleWishlistsChanged" />
+                </div>
 
                 <div class="card shadow-sm event-overview-card">
                     <div class="card-body">
@@ -272,13 +297,6 @@ else
                             }
                         </div>
                     </div>
-                </div>
-
-                <div class="mt-4" id="event-wishlists">
-                    <EventWishlistManager EventId="@EventId"
-                                           Event="@_event"
-                                           CurrentUserId="@_currentUserId"
-                                           OnWishlistsChanged="HandleWishlistsChanged" />
                 </div>
 
                 @if (_event.IsGiftExchange && _isOwner)
@@ -472,8 +490,14 @@ else
         await LoadEvent();
     }
 
-    private bool HasSharedWishlist =>
-        _event?.EventWishlists?.Any(wishlist => string.Equals(wishlist.OwnerId, _currentUserId, StringComparison.Ordinal)) == true;
+    private WishlistModel? MySharedWishlist =>
+        _event?.EventWishlists?
+            .Where(wishlist => string.Equals(wishlist.OwnerId, _currentUserId, StringComparison.Ordinal))
+            .OrderByDescending(EventGiftIdeas.Count)
+            .FirstOrDefault();
+
+    private bool HasSharedGiftIdeas =>
+        MySharedWishlist is { } wishlist && EventGiftIdeas.Count(wishlist) > 0;
 
     private string PendingInvitationLink =>
         $"/events/{EventId}/accept-invite?email={Uri.EscapeDataString(PendingInvitationEmail!)}";

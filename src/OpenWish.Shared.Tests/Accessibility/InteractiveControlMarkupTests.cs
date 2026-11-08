@@ -532,7 +532,10 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("for=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"event-wishlist-select\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"remove-wishlist-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"remove-wishlist-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Dialog @ref=\"_removeDialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-dialog-initial-focus", markup, StringComparison.Ordinal);
+        Assert.Contains("if (await HandleDetachWishlistAsync", markup, StringComparison.Ordinal);
         Assert.Contains("!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage)", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load event wishlists. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
@@ -870,7 +873,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("z-index: 1;", styles, StringComparison.Ordinal);
         Assert.Contains(".event-card-actions {", styles, StringComparison.Ordinal);
         Assert.Contains("z-index: 2;", styles, StringComparison.Ordinal);
-        Assert.Contains(".event-card:has(.event-card-link:focus-visible)", styles, StringComparison.Ordinal);
+        Assert.Contains(".event-card:focus-within", styles, StringComparison.Ordinal);
         Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
         Assert.Contains("@media (prefers-reduced-motion: reduce)", styles, StringComparison.Ordinal);
         Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
@@ -1787,7 +1790,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
         Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
-        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("[\"returnUrl\"] = ReturnUrl", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1904,7 +1908,37 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
 
         Assert.Contains("data-testid=\"participant-add-wishlist-after-draw\"", markup, StringComparison.Ordinal);
-        Assert.Contains("_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedWishlist", markup, StringComparison.Ordinal);
+        Assert.Contains("_isAcceptedParticipant && !_isOwner && _event.IsGiftExchange && _wishlistsLoaded && !HasSharedGiftIdeas", markup, StringComparison.Ordinal);
+        Assert.Contains("Help your gift giver choose something you'll love.", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("gift giver can't see any ideas", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventWishlistCreation_OnlyShowsApplicableSharingChoices()
+    {
+        var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistForm.razor");
+        var manager = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+        Assert.Contains("@if (IsEventWishlist)", form, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"event-wishlist-sharing\"", form, StringComparison.Ordinal);
+        Assert.Contains("<fieldset disabled=\"@IsSubmitting\">", form, StringComparison.Ordinal);
+        Assert.Contains("IsEventWishlist=\"true\"", manager, StringComparison.Ordinal);
+        Assert.Contains("AutoFocusName=\"true\"", manager, StringComparison.Ordinal);
+        Assert.Contains("Add my first gift idea", manager, StringComparison.Ordinal);
+        Assert.Contains("Name = \"My gift ideas\"", manager, StringComparison.Ordinal);
+        Assert.Contains("IsFriendsOnly = true", manager, StringComparison.Ordinal);
+        Assert.Contains("IsCollaborative = false", manager, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExchangeReadiness_WaitsForLoadedGiftIdeas()
+    {
+        var setup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "SecretSantaSetup.razor");
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+        Assert.Contains("WishlistsLoaded && Event.EventWishlists.Any", setup, StringComparison.Ordinal);
+        Assert.Contains("Checking shared gift ideas...", setup, StringComparison.Ordinal);
+        Assert.Contains("WishlistsLoaded=\"@_wishlistsLoaded\"", details, StringComparison.Ordinal);
+        Assert.Contains("else if (HasSharedGiftIdeas)", details, StringComparison.Ordinal);
+        Assert.Contains("Add gift ideas</a>", details, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

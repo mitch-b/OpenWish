@@ -12,27 +12,46 @@
 @inject IdentityRedirectManager RedirectManager
 @inject IBaseUriService BaseUriService
 
-<PageTitle>Register confirmation</PageTitle>
+<PageTitle>Check your email</PageTitle>
 
-<h1>Register confirmation</h1>
-
-<StatusMessage Message="@statusMessage" />
-
-@if (emailConfirmationLink is not null)
-{
-    <p>
-        This app does not currently have a real email sender registered, see <a href="https://aka.ms/aspaccountconf">these docs</a> for how to configure a real email sender.
-        Normally this would be emailed: <a href="@emailConfirmationLink">Click here to confirm your account</a>
-    </p>
-}
-else
-{
-    <p role="alert">Please check your email to confirm your account.</p>
-}
+<div class="auth-page">
+    <header class="auth-heading">
+        <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
+        <div>
+            <h1>Check your email</h1>
+            <p>Confirm your address to finish creating your account.</p>
+        </div>
+    </header>
+    <div class="row">
+    <div class="col-md-9 col-lg-8">
+    <section class="auth-card">
+        <StatusMessage Message="@statusMessage" />
+        @if (emailConfirmationLink is not null)
+        {
+            <p>This development server doesn't send email. Use this link to confirm your test account.</p>
+            <a class="btn btn-primary" href="@emailConfirmationLink">Confirm test account</a>
+        }
+        else
+        {
+            <p role="status">Open the confirmation link sent to <strong>@Email</strong>. It will keep your place so you can return to your invitation or wishlist.</p>
+            <p class="text-muted">Can't find it? Check spam or junk, or request a new link. If email still doesn't arrive, ask your OpenWish host to check email delivery.</p>
+        }
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a class="btn btn-outline-primary" href="@ResendUrl">Send a new confirmation link</a>
+            <a class="btn btn-outline-secondary" href="@LoginUrl">Back to log in</a>
+        </div>
+    </section>
+    </div>
+    </div>
+</div>
 
 @code {
     private string? emailConfirmationLink;
     private string? statusMessage;
+    private string ResendUrl => NavigationManager.GetUriWithQueryParameters("Account/ResendEmailConfirmation",
+        new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = Email });
+    private string LoginUrl => NavigationManager.GetUriWithQueryParameters("Account/Login",
+        new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = Email });
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -54,7 +73,7 @@ else
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = "Error finding user for unspecified email";
+            statusMessage = "Error: We couldn't find this registration. Return to sign in or create your account again.";
         }
         else if (EmailSender is IdentityNoOpEmailSender)
         {

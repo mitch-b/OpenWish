@@ -119,11 +119,16 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     {
         _ = userId;
         var request = new ClaimEventInviteRequest { Email = email };
-        var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/invitations/claim", request);
+        using var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/invitations/claim", request);
+
+        if (response.StatusCode == HttpStatusCode.NoContent)
+        {
+            return null;
+        }
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            return null;
+            throw new KeyNotFoundException("This event is no longer available.");
         }
 
         if (response.StatusCode == HttpStatusCode.BadRequest)

@@ -7,14 +7,49 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
+@inject ILogger<ConfirmEmail> Logger
 
 <PageTitle>Confirm email</PageTitle>
 
-<h1>Confirm email</h1>
-<StatusMessage Message="@statusMessage" />
+<div class="auth-page">
+    <header class="auth-heading">
+        <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
+        <div>
+            <h1>@(_confirmed ? "Your email is confirmed" : "Confirm your email")</h1>
+            <p>@(_confirmed ? "One last step: sign in to continue where you left off." : "Use the latest confirmation link from your email.")</p>
+        </div>
+    </header>
+    <div class="row">
+    <div class="col-md-9 col-lg-8">
+    <section class="auth-card">
+        <StatusMessage Message="@statusMessage" />
+        <div class="d-flex flex-wrap gap-2">
+        @if (_confirmed)
+        {
+            <a class="btn btn-primary" href="@LoginUrl" data-enhance-nav="false">Sign in and continue</a>
+        }
+        else
+        {
+            <a class="btn btn-primary" href="@ResendUrl" data-enhance-nav="false">Send a new confirmation link</a>
+            <a class="btn btn-outline-secondary" href="@LoginUrl" data-enhance-nav="false">Back to log in</a>
+        }
+        </div>
+    </section>
+    </div>
+    </div>
+</div>
 
 @code {
     private string? statusMessage;
+    private bool _confirmed;
+    private string? _email;
+
+    private string LoginUrl => NavigationManager.GetUriWithQueryParameters("Account/Login",
+        new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = _email });
+
+    private string ResendUrl => NavigationManager.GetUriWithQueryParameters("Account/ResendEmailConfirmation",
+        new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = _email });
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -24,6 +59,9 @@
 
     [SupplyParameterFromQuery]
     private string? Code { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,13 +74,26 @@
         if (user is null)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            statusMessage = $"Error loading user with ID {UserId}";
+            statusMessage = "Error: This confirmation link is no longer available. Request a new one below.";
         }
         else
         {
-            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+            try
+            {
+                var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+                var result = await UserManager.ConfirmEmailAsync(user, code);
+                _confirmed = result.Succeeded;
+                if (_confirmed)
+                {
+                    _email = user.Email;
+                }
+                statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error: This confirmation link is invalid or has expired. Request a new one below.";
+            }
+            catch (FormatException ex)
+            {
+                Logger.LogWarning(ex, "Invalid email confirmation code received");
+                statusMessage = "Error: This confirmation link isn't valid. Request a new one below.";
+            }
         }
     }
 }

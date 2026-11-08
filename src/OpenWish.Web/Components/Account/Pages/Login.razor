@@ -23,7 +23,7 @@
     <span class="auth-mark"><OpenWishIcon Name="gift" /></span>
     <div>
         <h1>Welcome back</h1>
-        <p>Sign in to your wishlists, events, and gift exchanges.</p>
+        <p>@(string.IsNullOrWhiteSpace(InvitedEmail) ? "Sign in to your wishlists, events, and gift exchanges." : "Sign in with your invited email. We'll bring you back to your invitation.")</p>
     </div>
 </header>
 <div class="row g-4 auth-grid">
@@ -35,12 +35,12 @@
                 <h2>Sign in with email</h2>
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus placeholder="name@example.com" />
+                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus="@string.IsNullOrWhiteSpace(InvitedEmail)" placeholder="name@example.com" />
                     <label for="Input.Email" class="form-label">Email</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" autofocus="@(!string.IsNullOrWhiteSpace(InvitedEmail))" placeholder="password" />
                     <label for="Input.Password" class="form-label">Password</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
@@ -64,17 +64,14 @@
                     <ul class="list-unstyled mb-0">
                         <li class="mb-2"><a href="Account/ForgotPassword">Reset your password</a></li>
                         <li class="mb-2"><a href="Account/ResendEmailConfirmation">Resend your confirmation email</a></li>
-                        <li><a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Create an account</a></li>
+                        <li><a data-enhance-nav="false" href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Create an account</a></li>
                     </ul>
                 </div>
             </EditForm>
         </section>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
-        <section class="auth-card auth-card-secondary">
-            <h2>Single sign-on</h2>
-            <ExternalLoginPicker />
-        </section>
+        <ExternalLoginPicker />
     </div>
 </div>
 
@@ -115,12 +112,19 @@
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
 
+    [SupplyParameterFromQuery(Name = "email")]
+    private string? InvitedEmail { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         Input ??= new();
         
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
+            if (!string.IsNullOrWhiteSpace(InvitedEmail))
+            {
+                Input.Email = InvitedEmail.Trim();
+            }
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         }
@@ -135,7 +139,7 @@
     public async Task LoginUser()
     {
         Input ??= new();
-        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+        var result = await SignInManager.PasswordSignInAsync(Input.Email.Trim(), Input.Password, Input.RememberMe, lockoutOnFailure: true);
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
@@ -154,7 +158,7 @@
         }
         else
         {
-            errorMessage = "Error: Invalid login attempt.";
+            errorMessage = "Error: We couldn't sign you in. Check your email and password, or use the reset password link below.";
         }
     }
 

@@ -10,7 +10,7 @@
 @inject ILogger<AcceptInvite> Logger
 @rendermode InteractiveAuto
 
-<PageTitle>Accept Event Invitation</PageTitle>
+<PageTitle>Event invitation</PageTitle>
 
 <div class="container py-5">
     <div class="row justify-content-center">
@@ -33,6 +33,10 @@
                         {
                             <div class="alert alert-danger" role="alert">
                                 @_errorMessage
+                                @if (_canRetry)
+                                {
+                                    <button class="btn btn-outline-danger d-block mt-2" type="button" disabled="@_isLoading" @onclick="OnParametersSetAsync">Try again</button>
+                                }
                             </div>
                         }
 
@@ -48,12 +52,13 @@
                             <p class="lead">
                                 Sign in or create an account with <strong>@InviteEmail</strong> to accept your invitation.
                             </p>
+                            <p class="text-muted">We'll bring you straight back here. You don't need to add friends or set up an event.</p>
                             <div class="d-flex flex-wrap gap-2">
-                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")">
-                                    Sign in
-                                </a>
-                                <a class="btn btn-outline-primary" href="@BuildIdentityUrl("Account/Register")">
+                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Register")" data-enhance-nav="false">
                                     Create account
+                                </a>
+                                <a class="btn btn-outline-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false">
+                                    Sign in
                                 </a>
                             </div>
                         }
@@ -67,7 +72,7 @@
                                 </div>
                             }
                             <div class="d-flex flex-wrap gap-2" data-testid="invitation-recovery">
-                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")" data-testid="invitation-switch-account">
+                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false" data-testid="invitation-switch-account">
                                     Sign in with a different account
                                 </a>
                                 <a class="btn btn-outline-secondary" href="/events">Back to events</a>
@@ -210,6 +215,7 @@
     private Dialog _rejectDialog = default!;
     private ElementReference _continueLink;
     private bool _focusContinue;
+    private bool _canRetry;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -226,6 +232,8 @@
         _errorMessage = null;
         _successMessage = null;
         _invitation = null;
+        _event = null;
+        _canRetry = false;
 
         var authState = await AuthenticationStateTask;
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
@@ -260,16 +268,31 @@
                 Logger.LogWarning(ex, "Invalid invitation claim for event {EventId}", EventId);
                 _errorMessage = "This invitation link isn't valid. Open the latest link from your invitation email.";
             }
+            catch (KeyNotFoundException ex)
+            {
+                Logger.LogWarning(ex, "Invitation event {EventId} is no longer available", EventId);
+                _errorMessage = "This event is no longer available. Ask the host for a new invitation.";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Unable to load invitation for event {EventId}", EventId);
+                _errorMessage = "We couldn't load your invitation. Check your connection and try again.";
+                _canRetry = true;
+            }
         }
 
         try
         {
-            _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+            if (_invitation is not null)
+            {
+                _event = await EventService.GetEventByPublicIdAsync(EventId, _currentUserId);
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unable to load invitation event details for {EventId}", EventId);
             _errorMessage ??= "We couldn't load the event details. Check your connection and try again.";
+            _canRetry = true;
         }
 
         _isLoading = false;
@@ -286,7 +309,7 @@
 
     private async Task AcceptInviteAsync()
     {
-        if (_invitation == null || string.IsNullOrEmpty(_currentUserId))
+        if (_isProcessing || _invitation == null || string.IsNullOrEmpty(_currentUserId))
         {
             return;
         }
@@ -327,7 +350,7 @@
 
     private async Task RejectInviteAsync()
     {
-        if (_invitation == null || string.IsNullOrEmpty(_currentUserId))
+        if (_isProcessing || _invitation == null || string.IsNullOrEmpty(_currentUserId))
         {
             return;
         }
@@ -394,6 +417,9 @@
             : $"?email={Uri.EscapeDataString(InviteEmail)}";
         var returnUrl = $"/events/{EventId}/accept-invite{emailQuery}";
         var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-        return $"/{basePath}?returnUrl={encodedReturnUrl}";
+        var accountEmailQuery = string.IsNullOrWhiteSpace(InviteEmail)
+            ? string.Empty
+            : $"&email={Uri.EscapeDataString(InviteEmail)}";
+        return $"/{basePath}?returnUrl={encodedReturnUrl}{accountEmailQuery}";
     }
 }

@@ -106,7 +106,7 @@
     z-index: 1;
 }
 
-.event-card:has(.event-card-link:focus-visible) {
+.event-card:focus-within {
     outline: 3px solid var(--color-link-hover);
     outline-offset: 3px;
 }

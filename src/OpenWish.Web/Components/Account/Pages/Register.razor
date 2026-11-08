@@ -27,7 +27,7 @@
     <span class="auth-mark"><OpenWishIcon Name="stars" /></span>
     <div>
         <h1>Create your account</h1>
-        <p>Start sharing better gift ideas and easier celebrations.</p>
+        <p>@(string.IsNullOrWhiteSpace(InvitedEmail) ? "Start sharing better gift ideas and easier celebrations." : "Create an account, then return to your invitation.")</p>
     </div>
 </header>
 <div class="row g-4 auth-grid">
@@ -57,13 +57,17 @@
             else
             {
                 <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus placeholder="name@example.com" />
+                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus="@string.IsNullOrWhiteSpace(InvitedEmail)" placeholder="name@example.com" />
                     <label for="Input.Email">Email</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
+                @if (!string.IsNullOrWhiteSpace(InvitedEmail))
+                {
+                    <p class="form-text">Use the email address that received your invitation so we can find it for you.</p>
+                }
             }
             <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" aria-describedby="password-guidance" autofocus="@_isInvitedRegistration" placeholder="password" />
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" aria-describedby="password-guidance" autofocus="@(_isInvitedRegistration || !string.IsNullOrWhiteSpace(InvitedEmail))" placeholder="password" />
                 <label for="Input.Password">Password</label>
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
@@ -78,16 +82,13 @@
             <button type="submit" class="w-100 btn btn-lg btn-primary">Create account</button>
             <p class="mt-3 mb-0">
                 Already have an account?
-                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Log in</a>.
+                <a data-enhance-nav="false" href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail ?? (_isInvitedRegistration ? Input.Email : null) }))">Log in</a>.
             </p>
           </EditForm>
         </section>
     </div>
     <div class="col-lg-4 col-lg-offset-2">
-        <section class="auth-card auth-card-secondary">
-            <h2>Other sign-up options</h2>
-            <ExternalLoginPicker />
-        </section>
+        <ExternalLoginPicker />
     </div>
 </div>
 </div>
@@ -108,6 +109,12 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery(Name = "email")]
+    private string? InvitedEmail { get; set; }
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
     
     [SupplyParameterFromQuery(Name = "invite")]
     private string? Invite { get; set; }
@@ -116,6 +123,11 @@
 
     protected override void OnInitialized()
     {
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && !string.IsNullOrWhiteSpace(InvitedEmail))
+        {
+            Input.Email = InvitedEmail.Trim();
+        }
+
         // Process invite parameter if present
         if (!string.IsNullOrEmpty(Invite))
         {
@@ -147,6 +159,7 @@
 
     public async Task RegisterUser(EditContext editContext)
     {
+        Input.Email = Input.Email.Trim();
         var user = CreateUser();
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);

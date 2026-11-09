@@ -137,21 +137,46 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         return SendEmailAsync(toEmail, subject, body);
     }
 
-    public async Task SendGuestEventAccessEmailAsync(string toEmail, string eventName, string accessLink, bool matchReady = false)
+    public async Task SendGuestEventAccessEmailAsync(string toEmail, string eventName, string accessLink, bool matchReady = false,
+        string? accountLink = null, string? inviterName = null)
     {
-        var subject = $"{(matchReady ? "Your private match is ready" : "Your private invitation")} - {SanitizeSubject(eventName)}";
+        var offersChoice = !matchReady && accountLink is not null;
+        var subject = matchReady
+            ? $"Your private match is ready - {SanitizeSubject(eventName)}"
+            : inviterName is null
+                ? $"Your private invitation - {SanitizeSubject(eventName)}"
+                : $"{SanitizeSubject(inviterName)} invited you to {SanitizeSubject(eventName)}";
         var introduction = matchReady
             ? Paragraph($"The names have been drawn for <strong>{Encode(eventName)}</strong>. Your own match is ready.")
-            : Paragraph($"You're invited to <strong>{Encode(eventName)}</strong>. No account is needed.");
-        var body = BuildEmail(
-            preheader: matchReady ? $"Your private match for {eventName} is ready." : $"You're invited to {eventName}.",
-            eyebrow: matchReady ? "Names drawn" : "Private invitation",
-            title: Encode(eventName),
-            bodyHtml: introduction,
-            actionText: matchReady ? "View my private match" : "Open my private invitation",
-            actionUrl: accessLink,
-            footnoteHtml: "This link gives access to your invitation and your own match. Keep it private: anyone you forward it to can use it. " +
-                "The link expires in 30 days. Ask the organizer for a fresh email if it expires or stops working.");
+            : offersChoice
+                ? Paragraph(inviterName is null
+                      ? $"You're invited to <strong>{Encode(eventName)}</strong>."
+                      : $"<strong>{Encode(inviterName)}</strong> invited you to <strong>{Encode(eventName)}</strong>.") +
+                  Paragraph("Join with an OpenWish account to share your own wishlist and keep everything in one place, or continue without an account. Either way works.")
+                : Paragraph($"You're invited to <strong>{Encode(eventName)}</strong>. No account is needed.");
+        const string privacyNote = "Keep this email private: anyone you forward it to can use its links. " +
+            "The links expire in 30 days. Ask the organizer for a fresh email if they expire or stop working.";
+        var body = offersChoice
+            ? BuildEmail(
+                preheader: $"You're invited to {eventName}. Join with an account or continue without one.",
+                eyebrow: "Event invitation",
+                title: Encode(eventName),
+                bodyHtml: introduction,
+                actionText: "Join with an OpenWish account",
+                actionUrl: accountLink,
+                secondaryLeadHtml: "Rather not make an account? You can still accept and see your match.",
+                secondaryActionText: "Continue without an account",
+                secondaryActionUrl: accessLink,
+                footnoteHtml: privacyNote)
+            : BuildEmail(
+                preheader: matchReady ? $"Your private match for {eventName} is ready." : $"You're invited to {eventName}.",
+                eyebrow: matchReady ? "Names drawn" : "Private invitation",
+                title: Encode(eventName),
+                bodyHtml: introduction,
+                actionText: matchReady ? "View my private match" : "Open my private invitation",
+                actionUrl: accessLink,
+                footnoteHtml: "This link gives access to your invitation and your own match. Keep it private: anyone you forward it to can use it. " +
+                    "The link expires in 30 days. Ask the organizer for a fresh email if it expires or stops working.");
         try
         {
             if (!await TrySendEmailAsync(toEmail, subject, body))
@@ -245,7 +270,10 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
         string? eyebrow = null,
         string? actionText = null,
         string? actionUrl = null,
-        string? footnoteHtml = null)
+        string? footnoteHtml = null,
+        string? secondaryActionText = null,
+        string? secondaryActionUrl = null,
+        string? secondaryLeadHtml = null)
     {
         var eyebrowHtml = eyebrow is null
             ? string.Empty
@@ -257,6 +285,15 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
               $"<a href=\"{Encode(actionUrl)}\" style=\"display:inline-block;padding:14px 24px;font-family:{FontStack};font-size:16px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:12px;\">{Encode(actionText)}</a>" +
               "</td></tr></table>" +
               $"<p style=\"margin:12px 0 0;font-size:13px;line-height:1.5;color:#778094;word-break:break-all;\">Button not working? Paste this link into your browser:<br><a href=\"{Encode(actionUrl)}\" style=\"color:#5749c5;\">{Encode(actionUrl)}</a></p>";
+        var secondaryHtml = secondaryActionText is null || secondaryActionUrl is null
+            ? string.Empty
+            : (secondaryLeadHtml is null
+                  ? string.Empty
+                  : $"<p style=\"margin:20px 0 8px;font-size:15px;line-height:1.55;color:#5c6475;\">{secondaryLeadHtml}</p>") +
+              "<table role=\"presentation\" class=\"ow-button\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin:4px 0 8px;\"><tr>" +
+              "<td align=\"center\" style=\"border-radius:12px;border:2px solid #5b4dcc;background-color:#ffffff;\">" +
+              $"<a href=\"{Encode(secondaryActionUrl)}\" style=\"display:inline-block;padding:12px 22px;font-family:{FontStack};font-size:16px;font-weight:700;line-height:1.2;color:#4b3fb8;text-decoration:none;border-radius:12px;\">{Encode(secondaryActionText)}</a>" +
+              "</td></tr></table>";
         var footnote = footnoteHtml is null
             ? string.Empty
             : $"<p style=\"margin:20px 0 0;padding-top:16px;border-top:1px solid #e1e3eb;font-size:14px;line-height:1.55;color:#5c6475;\">{footnoteHtml}</p>";
@@ -281,6 +318,7 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             $"<h1 class=\"ow-title\" style=\"margin:0 0 16px;font-size:28px;font-weight:700;line-height:1.2;color:#1c2033;\">{title}</h1>" +
             bodyHtml +
             actionHtml +
+            secondaryHtml +
             footnote +
             "</td></tr>" +
             "<tr><td align=\"center\" style=\"padding:16px 8px 0;font-size:12px;line-height:1.5;color:#778094;\">Sent by OpenWish, your self-hosted wishlist and gift exchange.</td></tr>" +

@@ -15,10 +15,32 @@ else
         <div class="card-body">
             <div class="card-title-row">
                 <span class="event-card-icon"><OpenWishIcon Name="calendar-event" /></span>
-                <div>
-                    <h5 class="card-title">@Event.Name</h5>
+                <div class="event-card-heading">
+                    <h5 class="card-title"><a class="event-card-link" href="/events/@Event.PublicId">@Event.Name</a></h5>
                     <span class="card-owner">Hosted by @Event.CreatedBy?.UserName</span>
                 </div>
+                @if (_currentUserId == Event.CreatedBy?.Id)
+                {
+                    <div class="dropdown d-inline-block event-card-actions">
+                        <button class="btn btn-outline-secondary btn-sm kebab-menu"
+                                type="button"
+                                id="dropdownMenu@(Event.Id)"
+                                data-bs-toggle="dropdown"
+                                aria-label="Actions for @Event.Name"
+                                aria-expanded="false"
+                                @onclick:stopPropagation="true">
+                            <OpenWishIcon Name="three-dots-vertical" />
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
+                            <li>
+                                <button class="dropdown-item text-danger"
+                                        @onclick="ShowDeleteDialog">
+                                    Delete
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                }
             </div>
             <div class="event-meta">
                 <span><OpenWishIcon Name="calendar-event" /> @Event.Date.ToString("MMM d, yyyy")</span>
@@ -46,42 +68,6 @@ else
                     }
                 </div>
             }
-            <div class="card-footer-row">
-                <a class="event-card-link" href="/events/@Event.PublicId">
-                    @if (_currentUserId == Event.CreatedBy?.Id && Event.IsGiftExchange && !Event.NamesDrawnOn.HasValue)
-                    {
-                        <span>Continue setup</span>
-                    }
-                    else
-                    {
-                        <span>Open event</span>
-                    }
-                    <OpenWishIcon Name="arrow-right" />
-                    <span class="visually-hidden">: @Event.Name</span>
-                </a>
-                @if (_currentUserId == Event.CreatedBy?.Id)
-                {
-                    <div class="dropdown d-inline-block event-card-actions">
-                        <button class="btn btn-outline-secondary btn-sm kebab-menu"
-                                type="button"
-                                id="dropdownMenu@(Event.Id)"
-                                data-bs-toggle="dropdown"
-                                aria-label="Actions for @Event.Name"
-                                aria-expanded="false"
-                                @onclick:stopPropagation="true">
-                            <OpenWishIcon Name="three-dots-vertical" />
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
-                            <li>
-                                <button class="dropdown-item text-danger"
-                                        @onclick="ShowDeleteDialog">
-                                    Delete
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                }
-            </div>
         </div>
     </div>
 

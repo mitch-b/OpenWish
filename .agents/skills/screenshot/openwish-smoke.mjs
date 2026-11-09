@@ -590,7 +590,7 @@ async function assertTextContrast(locator, description) {
 
 async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, screenshotPrefix) {
   const route = `/wishlists/${manifest.wishlistPublicId}`;
-  const link = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  const link = page.locator(".wishlist-card-link", { hasText: "Family Gift Ideas" });
   const card = page.locator(".wishlist-card").filter({ has: link });
   const returnToCards = async () => {
     await visit(page, "/wishlists", "Family Gift Ideas", visitedRoutes);
@@ -616,7 +616,7 @@ async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, scree
   await page.waitForURL(`${baseUrl}${route}`);
   await returnToCards();
 
-  for (const selector of [".card-title", ".wishlist-card-icon", ".wishlist-meta", ".card-footer-row"]) {
+  for (const selector of [".wishlist-card-icon", ".wishlist-meta"]) {
     const target = card.locator(selector);
     await target.scrollIntoViewIfNeeded();
     const bounds = await target.boundingBox();
@@ -677,7 +677,7 @@ async function verifyOverflowHover(page, overflow) {
 async function verifyEventCardNavigation(page, eventPublicId, visitedRoutes) {
   const route = `/events/${eventPublicId}`;
   const card = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
-  const link = card.getByRole("link", { name: /Continue setup/ });
+  const link = card.locator(".event-card-link");
   const returnToCards = async () => {
     await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
     await page.waitForLoadState("networkidle");
@@ -695,7 +695,7 @@ async function verifyEventCardNavigation(page, eventPublicId, visitedRoutes) {
     await page.keyboard.press("Enter");
     await page.waitForURL(`${baseUrl}${route}`);
     await returnToCards();
-    for (const selector of [".card-title", ".event-card-icon", ".event-meta", ".card-footer-row"]) {
+    for (const selector of [".card-owner", ".event-card-icon", ".event-meta", ".event-status"]) {
       const target = card.locator(selector);
       await target.scrollIntoViewIfNeeded();
       const bounds = await target.boundingBox();
@@ -1006,7 +1006,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "wishlist-no-matches.png");
   await page.getByRole("button", { name: "Clear search and filters" }).click();
   await assertVisible(page, "Family Gift Ideas");
-  const familyWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  const familyWishlistLink = page.locator(".wishlist-card-link", { hasText: "Family Gift Ideas" });
   await familyWishlistLink.waitFor({ state: "visible" });
   if (await familyWishlistLink.getAttribute("href") !== `/wishlists/${manifest.wishlistPublicId}`) {
     throw new Error("The wishlist card did not expose its stable public route as a named link.");
@@ -1567,7 +1567,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.getByRole("button", { name: "Actions for Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
-  await page.getByRole("link", { name: /Open event.*Holiday Gift Exchange/ })
+  await page.locator(".event-card-link", { hasText: "Holiday Gift Exchange" })
     .waitFor({ state: "visible" });
   await screenshot(page, "events.png");
 
@@ -1799,9 +1799,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await screenshot(page, "invitation-mark-accepted.png", false);
   await acceptName.fill("");
-  if (await acceptDialog.getByRole("button", { name: "Mark as accepted" }).isEnabled()) {
-    throw new Error("Organizer acceptance allowed an empty display name.");
-  }
+  await acceptDialog.locator("button[type=submit][disabled]").waitFor({ state: "attached", timeout: 5000 })
+    .catch(() => { throw new Error("Organizer acceptance allowed an empty display name."); });
   await acceptName.fill("Grandma Jo");
   await acceptDialog.getByRole("button", { name: "Mark as accepted" }).click();
   await page.getByRole("status").filter({ hasText: "Grandma Jo is in." }).waitFor({ state: "visible" });
@@ -2039,7 +2038,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "event-details-dark.png");
 
   await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
-  const darkWishlistLink = page.getByRole("link", { name: /Open wishlist.*Family Gift Ideas/ });
+  const darkWishlistLink = page.locator(".wishlist-card-link", { hasText: "Family Gift Ideas" });
   await darkWishlistLink.waitFor({ state: "visible" });
   await assertTextContrast(darkWishlistLink, "Dark wishlist card navigation link");
   await verifyWishlistCardNavigation(page, manifest, visitedRoutes, "wishlist-cards-dark");
@@ -2628,14 +2627,17 @@ async function verifyAccountFreeGuests(browser, results) {
     return response.status() === 204 ? null : response.json();
   };
   const email = `guest-no-account-${Date.now()}@example.test`;
-  const latestLink = async (recipientEmail = email) => {
+  const latestMessage = async (recipientEmail = email) => {
     const response = await organizer.request.get(`${mailUrl}/api/v1/messages`);
     if (!response.ok()) throw new Error(`Mail capture returned ${response.status()}.`);
     const inbox = await response.json();
     const message = inbox.messages.find(message => message.To.some(to => to.Address === recipientEmail));
     if (!message) throw new Error("Guest access email was not delivered.");
     const detail = await organizer.request.get(`${mailUrl}/api/v1/message/${message.ID}`);
-    const content = await detail.json();
+    return detail.json();
+  };
+  const latestLink = async (recipientEmail = email) => {
+    const content = await latestMessage(recipientEmail);
     if (/your gift recipient/i.test(content.HTML)) throw new Error("The guest email spoiled the match.");
     const token = content.HTML.match(/#access=([A-F0-9]{64})/)?.[1];
     if (!token) throw new Error("The guest email had no private access link.");
@@ -2650,6 +2652,8 @@ async function verifyAccountFreeGuests(browser, results) {
   const page = await guest.newPage();
   const diagnostics = monitorPage(page);
   const connect = async link => {
+    // Email links open a fresh document; a same-path hash change would not reload /guest.
+    await page.goto("about:blank");
     await page.goto(link);
     const button = page.getByRole("button", { name: "Continue with my private invitation" });
     await button.waitFor({ state: "visible" });
@@ -2657,6 +2661,30 @@ async function verifyAccountFreeGuests(browser, results) {
     await button.click();
     await page.waitForURL(`${baseUrl}/guest`);
   };
+  const invitationEmail = await latestMessage();
+  const accountLink = invitationEmail.HTML.match(/href="([^"]*\/accept-invite\?[^"]*#access=[A-F0-9]{64})"/)?.[1]?.replaceAll("&amp;", "&");
+  if (!accountLink || !/Continue without an account/.test(invitationEmail.HTML)) {
+    throw new Error("The invitation email didn't offer both an account and a no-account choice.");
+  }
+  const emailPreview = await guest.newPage();
+  await emailPreview.setContent(invitationEmail.HTML);
+  await emailPreview.screenshot({ path: path.join(walkthroughDirectory, "invitation-email-desktop.png") });
+  await emailPreview.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(emailPreview, "invitation email");
+  await emailPreview.screenshot({ path: path.join(walkthroughDirectory, "invitation-email-mobile.png") });
+  await emailPreview.close();
+  await page.goto(accountLink.replace(/^https?:\/\/[^/]+/, baseUrl));
+  const joinChoice = page.getByTestId("continue-without-account");
+  await joinChoice.waitFor({ state: "visible" });
+  await screenshot(page, "invitation-join-choice.png");
+  await page.getByRole("link", { name: "Create account", exact: true }).click();
+  await page.waitForURL(/\/Account\/Register/);
+  const registerChoice = page.getByTestId("register-without-account");
+  await registerChoice.waitFor({ state: "visible" });
+  await screenshot(page, "register-without-account.png");
+  await registerChoice.getByRole("link", { name: "Continue without an account" }).click();
+  await page.getByRole("button", { name: "Continue with my private invitation" }).waitFor({ state: "visible" });
+  if (new URL(page.url()).pathname !== "/guest") throw new Error("The registration fallback didn't open the private invitation.");
   await connect(await latestLink());
   if (await page.locator("main").count() !== 1) throw new Error("The guest page has nested main landmarks.");
   await page.getByLabel("Your name for the group").fill("Morgan Guest");
@@ -2722,8 +2750,7 @@ async function verifyAccountFreeGuests(browser, results) {
   const organizerPage = await organizer.newPage();
   await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
   await organizerPage.waitForLoadState("networkidle");
-  await organizerPage.locator(".exchange-reveal-choice summary").click();
-  if (!await organizerPage.getByLabel("Allow guests without an account").isChecked()) throw new Error("The saved guest setting was lost.");
+  if (await organizerPage.locator("#allow-guest-participants").count()) throw new Error("The all-or-nothing guest toggle is back.");
   if (!await organizerPage.getByRole("button", { name: "Resend private access", exact: true }).isEnabled()) {
     throw new Error("The event-management invitation panel did not receive the enabled guest setting.");
   }
@@ -3454,6 +3481,10 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("button", { name: "Grid view" }).click();
   const guestGridCard = page.locator(".wishlist-item-card").filter({ hasText: "Cast-Iron Dutch Oven" });
+  const ownerSubtitle = (await page.getByTestId("wishlist-owner").innerText()).trim();
+  if (ownerSubtitle !== "AlexDemo's wishlist") {
+    throw new Error(`A shared wishlist did not name its owner: ${ownerSubtitle}`);
+  }
   await screenshot(page, "wishlist-shopper-grid.png");
   await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Reserve gift" }).click();

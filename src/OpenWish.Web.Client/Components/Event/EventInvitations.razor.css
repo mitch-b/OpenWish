@@ -82,6 +82,7 @@
     color: var(--color-text-muted);
     font-weight: 600;
     font-size: 0.9rem;
+    white-space: nowrap;
 }
 
 .invite-mode-tab:hover:not(:disabled) {
@@ -153,13 +154,15 @@
 }
 
 .invite-progress .progress-bar {
-    background: var(--color-accent);
+    min-width: 0.75rem;
+    background-color: var(--color-accent);
     transition: width 0.25s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .invite-progress .progress-bar {
         transition: none;
+        animation: none;
     }
 }
 
@@ -292,6 +295,7 @@
     .invite-mode-tab {
         flex: 1 1 0;
         justify-content: center;
+        padding-inline: 0.5rem;
     }
 
     .invite-send-button {

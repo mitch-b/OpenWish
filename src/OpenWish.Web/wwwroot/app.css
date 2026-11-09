@@ -969,3 +969,26 @@ legend.form-label {
         max-width: none !important;
     }
 }
+
+.guest-access-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin: 0 auto 1rem;
+    max-width: 46rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.8rem;
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.guest-access-choice[hidden] {
+    display: none;
+}
+
+.guest-access-choice a {
+    font-weight: 700;
+}

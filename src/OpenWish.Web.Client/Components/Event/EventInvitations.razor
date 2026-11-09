@@ -198,7 +198,7 @@
                         </div>
                         <div class="progress" role="progressbar" aria-label="Invitations sent"
                              aria-valuemin="0" aria-valuemax="@_sendTotal" aria-valuenow="@_sendCompleted">
-                            <div class="progress-bar" style="width: @SendProgressPercent%"></div>
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: @SendProgressPercent%"></div>
                         </div>
                     </div>
                 }
@@ -321,10 +321,10 @@
                                     {
                                         @MarkAcceptedButton(invitation)
                                     }
-                                    @if (!HasStatus(invitation, "Rejected"))
+                                    @if (AllowGuests && !HasStatus(invitation, "Rejected"))
                                     {
                                         <button type="button" class="btn btn-outline-secondary btn-sm"
-                                                disabled="@(IsInvitationActionBusy || !AllowGuests)"
+                                                disabled="@IsInvitationActionBusy"
                                                 @onclick="() => HandleGuestAccess(invitation, false)">
                                             @(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")
                                         </button>
@@ -1395,7 +1395,7 @@
     {
         if (!AllowGuests)
         {
-            return invitation.GuestDisplayName is not null ? "Guest access disabled for this event" : "Not registered";
+            return invitation.GuestDisplayName is not null ? "No account; gets their match by email" : "Not registered";
         }
         if (invitation.GuestAccessExpiresOn <= DateTimeOffset.UtcNow)
         {

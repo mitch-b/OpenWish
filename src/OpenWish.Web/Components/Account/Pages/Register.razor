@@ -37,6 +37,10 @@
         <p>@((_isInvitedRegistration || !string.IsNullOrWhiteSpace(InvitedEmail)) ? "Your invitation is waiting. Start here, then join your group." : "Save your gift ideas and plan something thoughtful together.")</p>
     </div>
 </header>
+<p class="guest-access-choice" data-guest-access-choice data-testid="register-without-account" hidden>
+    <OpenWishIcon Name="person-circle" />
+    <span>Rather not make an account? <a href="/guest" data-enhance-nav="false">Continue without an account</a> to accept and see your own match.</span>
+</p>
         <section class="auth-card">
           <StatusMessage Message="@Message" />
           <EditForm Model="Input"

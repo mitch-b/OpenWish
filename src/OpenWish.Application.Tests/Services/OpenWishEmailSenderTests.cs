@@ -24,6 +24,28 @@ public class OpenWishEmailSenderTests
     }
 
     [Fact]
+    public async Task GuestInvitation_LetsTheInviteeChooseAnAccountOrNoAccount()
+    {
+        var capture = new CapturingSender();
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new CapturingEmailFactory(capture));
+        await sender.SendGuestEventAccessEmailAsync("guest@example.test", "Holiday <party>",
+            "https://wish.example.test/guest#access=synthetic-token",
+            accountLink: "https://wish.example.test/events/abc/accept-invite?email=guest%40example.test#access=synthetic-token",
+            inviterName: "Sam <host>");
+        Assert.NotNull(capture.Email);
+        var body = capture.Email.Data.Body;
+        Assert.Equal("Sam <host> invited you to Holiday <party>", capture.Email.Data.Subject);
+        Assert.Contains("<strong>Sam &lt;host&gt;</strong> invited you", body);
+        Assert.Contains(">Join with an OpenWish account</a>", body);
+        Assert.Contains(">Continue without an account</a>", body);
+        Assert.True(body.IndexOf("Join with an OpenWish account", StringComparison.Ordinal)
+            < body.IndexOf(">Continue without an account<", StringComparison.Ordinal));
+        Assert.Contains("href=\"https://wish.example.test/guest#access=synthetic-token\"", body);
+        Assert.Contains("accept-invite?email=guest%40example.test#access=synthetic-token", body);
+        Assert.DoesNotContain("No account is needed", body);
+    }
+
+    [Fact]
     public async Task GuestEmail_ReportsDeliveryFailureInsteadOfClaimingSuccess()
     {
         var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new UnconfiguredEmailFactory());

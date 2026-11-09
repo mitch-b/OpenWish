@@ -241,10 +241,8 @@ public class EventService(
                 ?? throw new KeyNotFoundException($"User with id {creatorId} not found");
 
         eventModel.GiftExchangeStyle = NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
-        if (!eventModel.IsGiftExchange)
-        {
-            eventModel.AllowGuestParticipants = false;
-        }
+        // Gift-exchange invitees choose between an account and private no-account access.
+        eventModel.AllowGuestParticipants = eventModel.IsGiftExchange && eventModel.AllowGuestParticipants != false;
         var eventEntity = _mapper.Map<Event>(eventModel);
         eventEntity.CreatedBy = creator;
         eventEntity.CreatedOn = DateTimeOffset.UtcNow;

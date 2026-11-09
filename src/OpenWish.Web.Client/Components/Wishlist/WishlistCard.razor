@@ -24,34 +24,12 @@ else
                     }
                 </span>
                 <div class="wishlist-card-heading">
-                    <h5 class="card-title">@Wishlist.Name</h5>
+                    <h5 class="card-title"><a class="wishlist-card-link" href="/wishlists/@Wishlist.PublicId">@Wishlist.Name</a></h5>
                     @if (ShowOwner && !string.IsNullOrWhiteSpace(Wishlist.Owner?.UserName))
                     {
                         <span class="card-owner">By @Wishlist.Owner.UserName</span>
                     }
                 </div>
-            </div>
-            <div class="wishlist-meta">
-                <span>@DisplayItemCount @(DisplayItemCount == 1 ? "item" : "items")</span>
-                @if (Wishlist.IsCollaborative)
-                {
-                    <span><OpenWishIcon Name="people" /> Collaborative</span>
-                }
-                @if (Wishlist.IsPrivate)
-                {
-                    <span><OpenWishIcon Name="lock" /> Private</span>
-                }
-                else
-                {
-                    <span><OpenWishIcon Name="eye" /> Shared</span>
-                }
-            </div>
-            <div class="card-footer-row">
-                <a class="wishlist-card-link" href="/wishlists/@Wishlist.PublicId">
-                    <span>Open wishlist</span>
-                    <OpenWishIcon Name="arrow-right" />
-                    <span class="visually-hidden">: @Wishlist.Name</span>
-                </a>
                 @if (isCurrentUserOwner)
                 {
                     <div class="dropdown d-inline-block wishlist-card-actions">
@@ -74,6 +52,21 @@ else
                             </li>
                         </ul>
                     </div>
+                }
+            </div>
+            <div class="wishlist-meta">
+                <span>@DisplayItemCount @(DisplayItemCount == 1 ? "item" : "items")</span>
+                @if (Wishlist.IsCollaborative)
+                {
+                    <span><OpenWishIcon Name="people" /> Collaborative</span>
+                }
+                @if (Wishlist.IsPrivate)
+                {
+                    <span><OpenWishIcon Name="lock" /> Private</span>
+                }
+                else
+                {
+                    <span><OpenWishIcon Name="eye" /> Shared</span>
                 }
             </div>
         </div>

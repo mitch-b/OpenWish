@@ -8,6 +8,7 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject ILogger<AcceptInvite> Logger
+@inject IJSRuntime JS
 @rendermode InteractiveAuto
 
 <PageTitle>Event invitation</PageTitle>
@@ -49,10 +50,20 @@
                         }
                         else if (!_isAuthenticated)
                         {
-                            <p class="lead">
-                                Sign in or create an account with <strong>@InviteEmail</strong> to accept your invitation.
-                            </p>
-                            <p class="text-muted">We'll bring you straight back here. You don't need to add friends or set up an event.</p>
+                            @if (_guestAccessToken is null)
+                            {
+                                <p class="lead">
+                                    Sign in or create an account with <strong>@InviteEmail</strong> to accept your invitation.
+                                </p>
+                                <p class="text-muted">We'll bring you straight back here. You don't need to add friends or set up an event.</p>
+                            }
+                            else
+                            {
+                                <p class="lead">
+                                    Join with an account for <strong>@InviteEmail</strong>, or continue without one.
+                                </p>
+                                <p class="text-muted">An account lets you share your own wishlist and keep your events in one place. We'll bring you straight back here.</p>
+                            }
                             <div class="d-flex flex-wrap gap-2">
                                 <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Register")" data-enhance-nav="false">
                                     Create account
@@ -61,6 +72,15 @@
                                     Sign in
                                 </a>
                             </div>
+                            @if (_guestAccessToken is not null)
+                            {
+                                <div class="mt-4 pt-3 border-top" data-testid="continue-without-account">
+                                    <p class="mb-2 text-muted">Rather not make an account? You can still accept and see your own match.</p>
+                                    <a class="btn btn-outline-secondary" href="/guest#access=@_guestAccessToken" data-enhance-nav="false">
+                                        Continue without an account
+                                    </a>
+                                </div>
+                            }
                         }
                         else if (_invitation == null)
                         {
@@ -216,9 +236,26 @@
     private ElementReference _continueLink;
     private bool _focusContinue;
     private bool _canRetry;
+    private string? _guestAccessToken;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                _guestAccessToken = await JS.InvokeAsync<string?>("openWishGuestAccessToken");
+            }
+            catch (JSException)
+            {
+                _guestAccessToken = null;
+            }
+            if (_guestAccessToken is not null)
+            {
+                StateHasChanged();
+            }
+        }
+
         if (_focusContinue)
         {
             _focusContinue = false;
@@ -420,6 +457,7 @@
         var accountEmailQuery = string.IsNullOrWhiteSpace(InviteEmail)
             ? string.Empty
             : $"&email={Uri.EscapeDataString(InviteEmail)}";
-        return $"/{basePath}?returnUrl={encodedReturnUrl}{accountEmailQuery}";
+        var access = _guestAccessToken is null ? string.Empty : $"#access={_guestAccessToken}";
+        return $"/{basePath}?returnUrl={encodedReturnUrl}{accountEmailQuery}{access}";
     }
 }

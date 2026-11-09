@@ -2039,6 +2039,7 @@ public class InteractiveControlMarkupTests
         var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
 
         Assert.DoesNotContain("allow-guest-participants", form, StringComparison.Ordinal);
+        Assert.Contains("Model.AllowGuestParticipants = true;", form, StringComparison.Ordinal);
         Assert.Contains("JS.InvokeAsync<string?>(\"openWishGuestAccessToken\")", join, StringComparison.Ordinal);
         Assert.Contains("href=\"/guest#access=@_guestAccessToken\" data-enhance-nav=\"false\"", join, StringComparison.Ordinal);
         Assert.Contains("$\"#access={_guestAccessToken}\"", join, StringComparison.Ordinal);
@@ -2046,7 +2047,9 @@ public class InteractiveControlMarkupTests
         {
             Assert.Contains("data-guest-access-choice", page, StringComparison.Ordinal);
             Assert.Contains(">Continue without an account</a>", page, StringComparison.Ordinal);
+            Assert.Contains("data-carry-guest-access href=", page, StringComparison.Ordinal);
         }
+        Assert.Contains("querySelectorAll('a[data-carry-guest-access]')", script, StringComparison.Ordinal);
         Assert.Contains("/^[0-9A-F]{64}$/.test(token) ? token : null", script, StringComparison.Ordinal);
         Assert.Contains("querySelectorAll('[data-guest-access-choice]')", script, StringComparison.Ordinal);
     }

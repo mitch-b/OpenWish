@@ -282,7 +282,13 @@ public sealed partial class GuestEventAccessTests(OpenWishAppFactory factory)
             EventUsers = []
         });
         celebration.EnsureSuccessStatusCode();
-        Assert.False((await celebration.Content.ReadFromJsonAsync<EventModel>())!.AllowGuestParticipants);
+        var savedCelebration = (await celebration.Content.ReadFromJsonAsync<EventModel>())!;
+        Assert.False(savedCelebration.AllowGuestParticipants);
+        savedCelebration.IsGiftExchange = true;
+        savedCelebration.AllowGuestParticipants = null;
+        var converted = await owner.Client.PutAsJsonAsync($"api/events/{savedCelebration.PublicId}", savedCelebration);
+        converted.EnsureSuccessStatusCode();
+        Assert.True((await converted.Content.ReadFromJsonAsync<EventModel>())!.AllowGuestParticipants);
     }
 
     private ApplicationDbContext OpenContext() =>

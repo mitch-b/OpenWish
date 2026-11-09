@@ -415,6 +415,11 @@ globalThis.openWishInitializeGuestAccess = function () {
             if (link) link.href = `/guest#access=${choiceToken}`;
             choice.hidden = false;
         }
+        for (const link of document.querySelectorAll('a[data-carry-guest-access]')) {
+            const url = new URL(link.href, location.href);
+            url.hash = `access=${choiceToken}`;
+            link.href = url.pathname + url.search + url.hash;
+        }
     }
     const form = document.querySelector('form[data-guest-access]');
     const token = new URLSearchParams(location.hash.slice(1)).get('access');

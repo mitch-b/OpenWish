@@ -496,6 +496,11 @@ public class EventService(
             ? existingEvent.GiftExchangeStyle
             : NormalizeGiftExchangeStyle(eventModel.GiftExchangeStyle);
         eventModel.UseGiftBoxReveal ??= existingEvent.UseGiftBoxReveal;
+        if (!existingEvent.IsGiftExchange && eventModel.IsGiftExchange)
+        {
+            // A celebration becoming an exchange gets the same invitee choice as a new exchange.
+            eventModel.AllowGuestParticipants = eventModel.AllowGuestParticipants != false;
+        }
         eventModel.AllowGuestParticipants ??= existingEvent.AllowGuestParticipants;
         if (!eventModel.IsGiftExchange)
         {

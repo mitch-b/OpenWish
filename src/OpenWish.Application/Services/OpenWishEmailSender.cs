@@ -284,7 +284,7 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
               "<td align=\"center\" style=\"border-radius:12px;background-color:#5b4dcc;\">" +
               $"<a href=\"{Encode(actionUrl)}\" style=\"display:inline-block;padding:14px 24px;font-family:{FontStack};font-size:16px;font-weight:700;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:12px;\">{Encode(actionText)}</a>" +
               "</td></tr></table>" +
-              $"<p style=\"margin:12px 0 0;font-size:13px;line-height:1.5;color:#778094;word-break:break-all;\">Button not working? Paste this link into your browser:<br><a href=\"{Encode(actionUrl)}\" style=\"color:#5749c5;\">{Encode(actionUrl)}</a></p>";
+              $"<p style=\"margin:12px 0 0;font-size:13px;line-height:1.5;color:#5c6475;word-break:break-all;\">Button not working? Paste this link into your browser:<br><a href=\"{Encode(actionUrl)}\" style=\"color:#5749c5;\">{Encode(actionUrl)}</a></p>";
         var secondaryHtml = secondaryActionText is null || secondaryActionUrl is null
             ? string.Empty
             : (secondaryLeadHtml is null
@@ -321,7 +321,7 @@ public class OpenWishEmailSender(ILogger<OpenWishEmailSender> logger, IFluentEma
             secondaryHtml +
             footnote +
             "</td></tr>" +
-            "<tr><td align=\"center\" style=\"padding:16px 8px 0;font-size:12px;line-height:1.5;color:#778094;\">Sent by OpenWish, your self-hosted wishlist and gift exchange.</td></tr>" +
+            "<tr><td align=\"center\" style=\"padding:16px 8px 0;font-size:12px;line-height:1.5;color:#5c6475;\">Sent by OpenWish, your self-hosted wishlist and gift exchange.</td></tr>" +
             "</table></td></tr></table></body></html>";
     }
 

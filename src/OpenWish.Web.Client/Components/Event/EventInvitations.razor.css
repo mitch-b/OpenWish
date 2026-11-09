@@ -91,7 +91,7 @@
 }
 
 .invite-mode-tab.active {
-    background: var(--color-accent);
+    background: var(--color-primary-bg);
     color: #ffffff;
 }
 

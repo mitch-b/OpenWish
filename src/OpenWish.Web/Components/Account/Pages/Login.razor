@@ -68,7 +68,7 @@
                     <ul class="list-unstyled mb-0">
                         <li class="mb-2"><a href="Account/ForgotPassword">Reset your password</a></li>
                         <li class="mb-2"><a href="Account/ResendEmailConfirmation">Resend your confirmation email</a></li>
-                        <li><a data-enhance-nav="false" href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Create an account</a></li>
+                        <li><a data-enhance-nav="false" data-carry-guest-access href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Create an account</a></li>
                     </ul>
                 </div>
             </EditForm>

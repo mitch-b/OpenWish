@@ -463,6 +463,12 @@ else
                 return false;
             }
 
+            if (_wishlistsLoaded && loadedEvent is not null && _event?.EventWishlists is { } hydratedWishlists)
+            {
+                // The event payload carries list metadata only; keep the item-loaded lists from EventWishlistManager.
+                loadedEvent.EventWishlists = hydratedWishlists;
+            }
+
             _event = loadedEvent;
             _isOwner = isOwner;
             _isAcceptedParticipant = isAcceptedParticipant;

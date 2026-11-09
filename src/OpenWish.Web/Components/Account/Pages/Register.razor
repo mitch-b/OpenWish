@@ -89,7 +89,7 @@
             <p class="registration-next-step">Next, confirm your email@((_isInvitedRegistration || !string.IsNullOrWhiteSpace(InvitedEmail)) ? " and return to your invitation." : " to start sharing ideas.")</p>
             <p class="mt-3 mb-0">
                 Already have an account?
-                <a data-enhance-nav="false" href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail ?? (_isInvitedRegistration ? Input.Email : null) }))">Log in</a>.
+                <a data-enhance-nav="false" data-carry-guest-access href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail ?? (_isInvitedRegistration ? Input.Email : null) }))">Log in</a>.
             </p>
           </EditForm>
         </section>

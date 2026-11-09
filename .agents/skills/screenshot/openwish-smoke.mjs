@@ -2682,6 +2682,8 @@ async function verifyAccountFreeGuests(browser, results) {
   const registerChoice = page.getByTestId("register-without-account");
   await registerChoice.waitFor({ state: "visible" });
   await screenshot(page, "register-without-account.png");
+  const loginHref = await page.getByRole("link", { name: "Log in", exact: true }).getAttribute("href");
+  if (!/#access=[A-F0-9]{64}$/.test(loginHref ?? "")) throw new Error("The Log in link dropped the no-account choice.");
   await registerChoice.getByRole("link", { name: "Continue without an account" }).click();
   await page.getByRole("button", { name: "Continue with my private invitation" }).waitFor({ state: "visible" });
   if (new URL(page.url()).pathname !== "/guest") throw new Error("The registration fallback didn't open the private invitation.");

@@ -6,7 +6,7 @@
 @inject IGiftPlanService GiftPlanService
 
 <div class="item-reservation" aria-busy="@(_loading || _isUpdating)">
-    @if (_loading)
+    @if (_loading && !_hasLoaded)
     {
         <div class="spinner-border spinner-border-sm" role="status">
             <span class="visually-hidden">Loading reservation...</span>
@@ -118,6 +118,10 @@
     {
         <div class="alert alert-success mt-2" role="status" aria-live="polite">
             @_statusMessage
+            @if (_showGiftPlanLink)
+            {
+                <a class="alert-link ms-1" href="/gift-plan" data-testid="reservation-gift-plan-link">View my gift plan</a>
+            }
         </div>
     }
     
@@ -147,6 +151,8 @@
     public string? ReservationVersion { get; set; }
 
     private bool _loading = true;
+    private bool _hasLoaded;
+    private bool _showGiftPlanLink;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
     private string? _loadErrorMessage;
@@ -180,6 +186,12 @@
             {
                 return;
             }
+        }
+
+        if (key != _loadedKey)
+        {
+            _hasLoaded = false;
+            _showGiftPlanLink = false;
         }
 
         _loadedKey = key;
@@ -269,6 +281,7 @@
         finally
         {
             _loading = false;
+            _hasLoaded = true;
             StateHasChanged();
         }
     }
@@ -309,6 +322,7 @@
             _isUpdating = true;
             _error = false;
             _statusMessage = null;
+            _showGiftPlanLink = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -322,6 +336,7 @@
                     if (refreshed)
                     {
                         _statusMessage = "Item reserved. Other shoppers can see that it is taken.";
+                        _showGiftPlanLink = true;
                     }
                     else
                     {
@@ -379,6 +394,7 @@
             _isUpdating = true;
             _error = false;
             _statusMessage = null;
+            _showGiftPlanLink = false;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)

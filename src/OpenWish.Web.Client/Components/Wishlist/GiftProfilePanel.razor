@@ -34,8 +34,18 @@
     [Parameter, EditorRequired]
     public string ViewerId { get; set; } = string.Empty;
 
+    private string? _loadedKey;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The list re-renders as it changes; load hints once per list and viewer.
+        var key = $"{WishlistPublicId}/{ViewerId}";
+        if (key == _loadedKey)
+        {
+            return;
+        }
+
+        _loadedKey = key;
         try
         {
             _profile = await GiftProfileService.GetProfileForWishlistAsync(WishlistPublicId, ViewerId);

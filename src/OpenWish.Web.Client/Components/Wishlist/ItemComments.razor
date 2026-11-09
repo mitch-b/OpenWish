@@ -9,7 +9,7 @@
 <div class="item-comments" aria-busy="@(_loading || _isAdding || _deletingCommentId.HasValue)">
     <h5 class="mb-3">Comments</h5>
 
-    @if (_loading)
+    @if (_loading && !_hasLoaded)
     {
         <div class="spinner-border spinner-border-sm" role="status">
             <span class="visually-hidden">Loading comments...</span>
@@ -46,7 +46,7 @@
                                         <OpenWishIcon Name="person-circle" /> @(comment.User?.UserName ?? "Unknown User")
                                     </div>
                                     <small class="text-muted">
-                                        @comment.CreatedOn.ToLocalTime().ToString("MM/dd/yyyy hh:mm tt")
+                                        @comment.CreatedOn.ToLocalTime().ToString("MMM d, yyyy h:mm tt")
                                     </small>
                                 </div>
                                 <div class="mt-1">@comment.Text</div>
@@ -102,10 +102,13 @@
                 <textarea class="form-control" placeholder="Add a comment..." id="commentText-@ItemId" rows="2" style="height: 100px"
                           @ref="_commentComposer"
                           disabled="@(_isAdding || _deletingCommentId.HasValue)"
+                          aria-describedby="commentHint-@ItemId"
                           @bind="commentText"
-                          @bind:event="oninput"></textarea>
+                          @bind:event="oninput"
+                          @onkeydown="HandleComposerKeyDown"></textarea>
                 <label for="commentText-@ItemId">Add a comment</label>
             </div>
+            <div id="commentHint-@ItemId" class="form-text mb-2">Press Ctrl+Enter to send.</div>
             <button class="btn btn-primary"
                     type="button"
                     aria-busy="@_isAdding"
@@ -144,6 +147,7 @@
     private List<ItemCommentModel> _comments = [];
     private string commentText = "";
     private bool _loading = true;
+    private bool _hasLoaded;
     private bool _error = false;
     private string _errorMessage = "An error occurred. Please try again.";
     private string? _loadErrorMessage;
@@ -161,8 +165,20 @@
     private bool _focusErrorAlert;
     private string? _restoreDeleteButtonId;
 
+    private string? _loadedKey;
+
     protected override async Task OnParametersSetAsync()
     {
+        // The list re-renders after reservations change; keep the thread, composer, and focus in place.
+        var key = $"{WishlistId}/{ItemId}";
+        if (key == _loadedKey)
+        {
+            return;
+        }
+
+        _loadedKey = key;
+        _hasLoaded = false;
+        _comments = [];
         await LoadComments();
     }
 
@@ -211,6 +227,7 @@
 
             var comments = await WishlistService.GetItemCommentsByPublicIdAsync(WishlistId, ItemId);
             _comments = comments.ToList();
+            _hasLoaded = true;
             return true;
         }
         catch (Exception ex)
@@ -236,9 +253,17 @@
         await LoadComments();
     }
 
+    private async Task HandleComposerKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && (args.CtrlKey || args.MetaKey))
+        {
+            await AddComment();
+        }
+    }
+
     private async Task AddComment()
     {
-        if (string.IsNullOrWhiteSpace(commentText))
+        if (string.IsNullOrWhiteSpace(commentText) || _isAdding || _deletingCommentId.HasValue)
             return;
 
         try
@@ -250,11 +275,12 @@
 
             if (_currentUserId != null)
             {
-                await WishlistService.AddCommentToItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, commentText);
+                await WishlistService.AddCommentToItemByPublicIdAsync(WishlistId, ItemId, _currentUserId, commentText.Trim());
                 commentText = "";
                 if (await LoadComments())
                 {
                     _statusMessage = "Comment added.";
+                    _focusCommentComposer = true;
                 }
             }
             else

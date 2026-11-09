@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.15.0] - 2026-11-09
+
+### Improved
+
+- Reserving or releasing a gift updates its panel in place, without a spinner
+  flash, and offers a "View my gift plan" link after you reserve.
+- Comments no longer reload (losing your cursor) when the list refreshes.
+- Press Ctrl+Enter or Cmd+Enter to send a comment; comments are trimmed, use
+  friendlier dates, and return focus to the comment box after sending.
+- The owner's gift hints load once per list rather than on every refresh.
+
 ## [0.14.0] - 2026-11-08
 
 ### Added

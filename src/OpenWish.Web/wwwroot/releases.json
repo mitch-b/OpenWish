@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.15.0",
+    "date": "2026-11-09",
+    "title": "Shopping for a friend feels steadier",
+    "summary": "Reserving and commenting on a friend's gift ideas no longer flashes or loses your place.",
+    "highlights": [
+      "Reserving or releasing a gift updates in place, then links to your gift plan.",
+      "Comments stay put when the list refreshes.",
+      "Press Ctrl+Enter to send a comment.",
+      "Gift hints load once per list."
+    ]
+  },
+  {
     "version": "0.14.0",
     "date": "2026-11-08",
     "title": "Connecting with friends is quicker",

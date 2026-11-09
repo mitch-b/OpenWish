@@ -12,6 +12,8 @@ public interface IEventService
     Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
     Task<bool> RevokeGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId);
     Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId);
+    /// <summary>Accepts a pending invitation on the invitee's behalf so the organizer can draw names. Organizer only; unavailable after the draw.</summary>
+    Task<bool> AcceptInvitationForParticipantAsync(string eventPublicId, string participantPublicId, OrganizerAcceptInvitationRequest request, string ownerId);
     /// <summary>Creates a new undrawn event from an existing one, copying details, pending invitations, and pairing rules. Organizer only.</summary>
     Task<EventModel> RunEventAgainByPublicIdAsync(string eventPublicId, RunEventAgainRequest request, string ownerId);
 

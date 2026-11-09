@@ -59,6 +59,84 @@ public class EventService(
         return true;
     }
 
+    public async Task<bool> AcceptInvitationForParticipantAsync(string eventPublicId, string participantPublicId, OrganizerAcceptInvitationRequest request, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var eventId = await context.EventUsers
+            .Where(p => p.PublicId == participantPublicId && p.Event!.PublicId == eventPublicId && !p.Deleted && !p.Event.Deleted)
+            .Select(p => (int?)p.EventId)
+            .SingleOrDefaultAsync()
+            ?? throw new KeyNotFoundException("This invitation is no longer available.");
+
+        await using var transaction = await LockEventRowAsync(context, eventId);
+        var participant = await context.EventUsers
+            .Include(p => p.Event!).ThenInclude(e => e.CreatedBy)
+            .Include(p => p.User)
+            .SingleOrDefaultAsync(p => p.PublicId == participantPublicId && p.EventId == eventId && !p.Deleted)
+            ?? throw new KeyNotFoundException("This invitation is no longer available.");
+        var eventEntity = participant.Event!;
+        if (!IsEventOwner(eventEntity, ownerId))
+        {
+            throw new UnauthorizedAccessException("Only the organizer can accept invitations for others.");
+        }
+        if (eventEntity.NamesDrawnOn.HasValue)
+        {
+            throw new InvalidOperationException("Names have already been drawn. Reset the gift exchange before adding people.");
+        }
+        if (IsInvitationInState(participant, "Accepted", isAccepted: true))
+        {
+            return true;
+        }
+        if (!string.Equals(participant.Status, "Pending", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("This person declined the invitation. Send a new invitation if they changed their mind.");
+        }
+
+        if (participant.UserId is null)
+        {
+            var name = request.DisplayName?.Trim();
+            if (string.IsNullOrWhiteSpace(name) || name.Length > 80 || name.Contains('@') || name.Any(char.IsControl))
+            {
+                throw new ArgumentException("Enter a display name of 1 to 80 characters, not an email address.");
+            }
+            participant.GuestDisplayName = name;
+        }
+
+        participant.Status = "Accepted";
+        participant.IsAccepted = true;
+        participant.UpdatedOn = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync();
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
+
+        if (participant.UserId is not null)
+        {
+            try
+            {
+                await _notificationService.CreateNotificationAsync(
+                    ownerId,
+                    participant.UserId,
+                    "Added to event",
+                    $"{eventEntity.CreatedBy?.UserName ?? "The organizer"} added you to {eventEntity.Name}.",
+                    "EventInviteAccept",
+                    new NotificationActionModel
+                    {
+                        Type = "EventInvitationResponse",
+                        NavigateTo = $"/events/{eventEntity.PublicId}"
+                    });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Could not notify participant {ParticipantId} about organizer acceptance.", participant.PublicId);
+            }
+        }
+
+        return true;
+    }
+
     private static bool IsEventOwner(Event eventEntity, string userId) =>
         string.Equals(eventEntity.CreatedBy?.Id, userId, StringComparison.Ordinal);
 

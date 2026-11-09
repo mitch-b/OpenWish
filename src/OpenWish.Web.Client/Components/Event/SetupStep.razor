@@ -19,7 +19,8 @@
     @if (!IsComplete || !string.Equals(ActionLabel, "Go to draw", StringComparison.Ordinal))
     {
         <a class="btn btn-sm @(IsComplete ? "btn-outline-secondary" : "btn-outline-primary")"
-           href="@ActionHref">@ActionLabel</a>
+           href="@ActionHref"
+           @onclick="HandleActionAsync">@ActionLabel</a>
     }
 </div>
 
@@ -30,4 +31,7 @@
     [Parameter] public bool IsComplete { get; set; }
     [Parameter, EditorRequired] public string ActionHref { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string ActionLabel { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnAction { get; set; }
+
+    private Task HandleActionAsync() => OnAction.HasDelegate ? OnAction.InvokeAsync() : Task.CompletedTask;
 }

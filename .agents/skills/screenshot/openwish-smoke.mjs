@@ -1763,15 +1763,58 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.locator("#event-invitations").scrollIntoViewIfNeeded();
   await page.waitForTimeout(500);
   await page.screenshot({ path: path.join(walkthroughDirectory, "event-invite-shortcut-desktop.png") });
-  await page.getByRole("button", { name: "Invite people" }).first().click();
-  await assertVisible(page, "Paste as many addresses as you need");
-  if (await page.getByRole("dialog", { name: "Invite to event" }).getAttribute("aria-busy") !== "false") {
-    throw new Error("The idle invitation dialog remained marked as busy.");
+  await page.waitForFunction(() => document.activeElement?.id === "emailInput");
+  if (await page.getByTestId("run-again").count() !== 0) {
+    throw new Error("A brand-new event offered to run it again.");
   }
-  await page.locator("#emailInput").fill("one@example.com, two@example.com");
-  await assertVisible(page, "Send 2 invitations");
-  await screenshot(page, "invitation-dialog.png", false);
-  await page.getByRole("button", { name: "Cancel" }).click();
+  await assertVisible(page, "Paste as many addresses as you need");
+  const composer = page.locator(".invite-composer");
+  if (await composer.getAttribute("aria-busy") !== "false") {
+    throw new Error("The idle invitation composer remained marked as busy.");
+  }
+  const inviteStamp = Date.now();
+  const inviteAddresses = ["one", "two", "three", "grandma.jo"].map(name => `${name}-${inviteStamp}@example.test`);
+  await page.locator("#emailInput").fill(inviteAddresses.join(", "));
+  await assertVisible(page, "Send 4 invitations");
+  await screenshot(page, "invitation-composer.png", false);
+  await page.getByRole("button", { name: "Send 4 invitations" }).click();
+  const progress = page.getByTestId("invite-progress");
+  if (await progress.isVisible().catch(() => false) ||
+      await progress.waitFor({ state: "visible", timeout: 1500 }).then(() => true).catch(() => false)) {
+    await page.screenshot({ path: path.join(walkthroughDirectory, "invitation-progress.png") });
+  }
+  await page.getByRole("status").filter({ hasText: "4 invitations sent." }).waitFor({ state: "visible" });
+  if (await composer.getAttribute("aria-busy") !== "false") {
+    throw new Error("The invitation composer stayed busy after sending.");
+  }
+  const invitationList = page.locator("#event-invitations-list");
+  await invitationList.getByText(inviteAddresses[3]).first().waitFor({ state: "visible" });
+  await assertVisible(page, "Only accepted people are included in the draw.");
+  await page.getByRole("button", { name: `Mark ${inviteAddresses[3]} as accepted` }).click();
+  const acceptDialog = page.getByRole("dialog", { name: "Mark as accepted" });
+  await acceptDialog.waitFor({ state: "visible" });
+  const acceptName = acceptDialog.getByLabel("Name to show the group");
+  if (await acceptName.inputValue() !== "Grandma Jo") {
+    throw new Error(`The organizer acceptance did not suggest a name: ${await acceptName.inputValue()}`);
+  }
+  await screenshot(page, "invitation-mark-accepted.png", false);
+  await acceptName.fill("");
+  if (await acceptDialog.getByRole("button", { name: "Mark as accepted" }).isEnabled()) {
+    throw new Error("Organizer acceptance allowed an empty display name.");
+  }
+  await acceptName.fill("Grandma Jo");
+  await acceptDialog.getByRole("button", { name: "Mark as accepted" }).click();
+  await page.getByRole("status").filter({ hasText: "Grandma Jo is in." }).waitFor({ state: "visible" });
+  await acceptDialog.waitFor({ state: "hidden" });
+  await invitationList.getByText("Grandma Jo", { exact: true }).waitFor({ state: "visible" });
+  await page.locator(".gift-exchange-setup").getByText(/2 people accepted/).first().waitFor({ state: "visible" });
+  await page.locator("#event-invitations").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "invitation-accepted-by-organizer.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "event invitations");
+  await page.locator("#event-invitations").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(walkthroughDirectory, "invitation-composer-mobile.png") });
+  await page.setViewportSize({ width: 1440, height: 1000 });
 
   const friendsResponse = await context.request.get(`${baseUrl}/api/friends`);
   if (!friendsResponse.ok()) {
@@ -2593,7 +2636,7 @@ async function verifyAccountFreeGuests(browser, results) {
     if (!message) throw new Error("Guest access email was not delivered.");
     const detail = await organizer.request.get(`${mailUrl}/api/v1/message/${message.ID}`);
     const content = await detail.json();
-    if (content.HTML.includes("Your Gift Recipient")) throw new Error("The guest email spoiled the match.");
+    if (/your gift recipient/i.test(content.HTML)) throw new Error("The guest email spoiled the match.");
     const token = content.HTML.match(/#access=([A-F0-9]{64})/)?.[1];
     if (!token) throw new Error("The guest email had no private access link.");
     return `${baseUrl}/guest#access=${token}`;
@@ -4738,6 +4781,9 @@ async function verifyOccasionsJourney(browser, manifest, results) {
       throw new Error("Running the event again reused the original event.");
     }
     await owner.page.getByTestId("rerun-success").waitFor({ state: "visible" });
+    if (await owner.page.getByTestId("run-again").count() !== 0) {
+      throw new Error("A freshly copied event offered to run it again.");
+    }
     const copiedFrom = owner.page.getByTestId("copied-from");
     await copiedFrom.waitFor({ state: "visible" });
     if (await copiedFrom.getByRole("link", { name: "Summer Cookout Swap" }).getAttribute("href") !== `/events/${pastEventId}`) {

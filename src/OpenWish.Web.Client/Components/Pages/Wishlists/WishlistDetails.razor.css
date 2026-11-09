@@ -39,6 +39,26 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.35);
 }
 
+.hero-heading {
+    min-width: 0;
+}
+
+.hero-owner {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.25rem 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.92);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    overflow-wrap: anywhere;
+}
+
+.hero-owner ::deep .ow-icon {
+    flex-shrink: 0;
+}
+
 /* Keeps confirmations in view after actions taken far down a long list. */
 .feedback-banner {
     position: sticky;

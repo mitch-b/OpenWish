@@ -63,6 +63,38 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpPost("{eventPublicId}/invitations/{participantPublicId}/accept")]
+    [EnableRateLimiting("invitations")]
+    public async Task<IActionResult> AcceptInvitationForParticipant(string eventPublicId, string participantPublicId, [FromBody] OrganizerAcceptInvitationRequest request)
+    {
+        var ownerId = await _userContextService.GetUserIdAsync();
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            await _eventService.AcceptInvitationForParticipantAsync(eventPublicId, participantPublicId, request, ownerId);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EventModel>>> GetEvents()
     {

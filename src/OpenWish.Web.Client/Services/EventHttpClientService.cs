@@ -414,6 +414,21 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return true;
     }
 
+    public async Task<bool> AcceptInvitationForParticipantAsync(string eventPublicId, string participantPublicId, OrganizerAcceptInvitationRequest request, string ownerId)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/accept", request);
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(message)
+                ? "Unable to accept this invitation."
+                : message);
+        }
+
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
     public async Task<bool> RemoveGuestParticipantAsync(string eventPublicId, string participantPublicId, string ownerId)
     {
         var response = await httpClient.PostAsync($"api/events/{eventPublicId}/invitations/{participantPublicId}/guest-access/remove", null);

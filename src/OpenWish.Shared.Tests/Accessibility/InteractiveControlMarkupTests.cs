@@ -1999,6 +1999,36 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Add gift ideas</a>", details, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void EventInvitations_AreInlineWithProgressAndOrganizerAcceptance()
+    {
+        var invitations = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.DoesNotContain("_showInviteModal", invitations, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"invite-progress\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("role=\"progressbar\" aria-label=\"Invitations sent\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("aria-valuemax=\"@_sendTotal\" aria-valuenow=\"@_sendCompleted\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("IsOwner && !NamesDrawn && HasStatus(invitation, \"Pending\")", invitations, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Mark as accepted\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("for=\"mark-accepted-name\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("public async Task FocusComposerAsync()", invitations, StringComparison.Ordinal);
+
+        Assert.Contains("@if (_isOwner && !_isPendingInvitee && IsEventPast)", details, StringComparison.Ordinal);
+        Assert.Contains("@if (_isOwner && _event.NamesDrawnOn.HasValue && !IsEventPast)", details, StringComparison.Ordinal);
+        Assert.Contains("OnInviteRequested=\"FocusInvitationComposerAsync\"", details, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SharedWishlist_ShowsItsOwnerWithoutExposingAnEmail()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("data-testid=\"wishlist-owner\"", details, StringComparison.Ordinal);
+        Assert.Contains("_isOwner || _wishlist?.Owner is not { } owner", details, StringComparison.Ordinal);
+        Assert.Contains("PublicDisplayName.ForGiftRecipient(owner.UserName, null)", details, StringComparison.Ordinal);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

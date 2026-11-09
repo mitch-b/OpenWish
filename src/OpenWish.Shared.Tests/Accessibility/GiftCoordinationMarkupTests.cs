@@ -13,6 +13,8 @@ public class GiftCoordinationMarkupTests
         Assert.Contains("if (key == _loadedKey)", markup, StringComparison.Ordinal);
         Assert.Contains("@if (_loading && !_hasLoaded)", markup, StringComparison.Ordinal);
         Assert.Contains("_hasLoaded = true;", markup, StringComparison.Ordinal);
+        Assert.Contains("string.IsNullOrWhiteSpace(commentText) || _loading || _isAdding", markup, StringComparison.Ordinal);
+        Assert.Contains("_pendingDeleteComment is null || _loading", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -38,6 +40,9 @@ public class GiftCoordinationMarkupTests
         Assert.Contains("href=\"/gift-plan\"", markup, StringComparison.Ordinal);
         Assert.Contains("View my gift plan", markup, StringComparison.Ordinal);
         Assert.Contains("_showGiftPlanLink = true;", markup, StringComparison.Ordinal);
+        Assert.Contains("_hasLoaded |= _loadErrorMessage is null;", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("disabled=\"@_isUpdating\"", markup, StringComparison.Ordinal);
+        Assert.Equal(2, markup.Split("if (_loading || _isUpdating)").Length - 1);
     }
 
     [Fact]
@@ -47,6 +52,7 @@ public class GiftCoordinationMarkupTests
 
         Assert.Contains("var key = $\"{WishlistPublicId}/{ViewerId}\";", markup, StringComparison.Ordinal);
         Assert.Contains("if (key == _loadedKey)", markup, StringComparison.Ordinal);
+        Assert.Contains("_loadedKey = null;", markup, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(string fileName)

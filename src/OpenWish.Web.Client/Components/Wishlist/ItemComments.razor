@@ -57,7 +57,7 @@
                                     <button class="btn btn-sm btn-link text-danger"
                                             id="delete-comment-@comment.Id"
                                             type="button"
-                                            disabled="@(_pendingDeleteComment is not null || _deletingCommentId.HasValue)"
+                                            disabled="@(_loading || _pendingDeleteComment is not null || _deletingCommentId.HasValue)"
                                             aria-label="Delete comment by @GetCommentAuthor(comment)"
                                             @onclick="() => ShowDeleteConfirmation(comment)">
                                         <OpenWishIcon Name="trash" />
@@ -79,13 +79,13 @@
                                     <button @ref="_keepCommentButton"
                                             type="button"
                                             class="btn btn-sm btn-secondary"
-                                            disabled="@_deletingCommentId.HasValue"
+                                            disabled="@(_loading || _deletingCommentId.HasValue)"
                                             @onclick="CancelDelete">
                                         Keep comment
                                     </button>
                                     <button type="button"
                                             class="btn btn-sm btn-danger"
-                                            disabled="@_deletingCommentId.HasValue"
+                                            disabled="@(_loading || _deletingCommentId.HasValue)"
                                             @onclick="ConfirmDeleteComment">
                                         @(_deletingCommentId == comment.Id ? "Deleting..." : "Delete comment")
                                     </button>
@@ -101,7 +101,7 @@
             <div class="form-floating mb-2">
                 <textarea class="form-control" placeholder="Add a comment..." id="commentText-@ItemId" rows="2" style="height: 100px"
                           @ref="_commentComposer"
-                          disabled="@(_isAdding || _deletingCommentId.HasValue)"
+                          disabled="@(_loading || _isAdding || _deletingCommentId.HasValue)"
                           aria-describedby="commentHint-@ItemId"
                           @bind="commentText"
                           @bind:event="oninput"
@@ -113,7 +113,7 @@
                     type="button"
                     aria-busy="@_isAdding"
                     @onclick="AddComment"
-                    disabled="@(string.IsNullOrWhiteSpace(commentText) || _isAdding || _deletingCommentId.HasValue)">
+                    disabled="@(string.IsNullOrWhiteSpace(commentText) || _loading || _isAdding || _deletingCommentId.HasValue)">
                 <OpenWishIcon Name="chat" /> @(_isAdding ? "Adding..." : "Add comment")
             </button>
         </div>
@@ -263,7 +263,7 @@
 
     private async Task AddComment()
     {
-        if (string.IsNullOrWhiteSpace(commentText) || _isAdding || _deletingCommentId.HasValue)
+        if (string.IsNullOrWhiteSpace(commentText) || _loading || _isAdding || _deletingCommentId.HasValue)
             return;
 
         try
@@ -317,7 +317,7 @@
 
     private async Task ConfirmDeleteComment()
     {
-        if (_pendingDeleteComment is null)
+        if (_pendingDeleteComment is null || _loading)
         {
             return;
         }

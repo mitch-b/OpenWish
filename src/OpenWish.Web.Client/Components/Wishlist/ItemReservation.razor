@@ -39,7 +39,7 @@
                         <button class="btn btn-sm btn-outline-danger"
                                 @ref="_cancelReservationButton"
                                 type="button"
-                                disabled="@_isUpdating"
+                                disabled="@(_isUpdating || _loading)"
                                 @onclick="ShowCancelConfirmation">
                             <OpenWishIcon Name="x-circle" /> Cancel reservation
                         </button>
@@ -74,13 +74,13 @@
                         <button @ref="_keepReservationButton"
                                 type="button"
                                 class="btn btn-sm btn-secondary"
-                                disabled="@_isUpdating"
+                                disabled="@(_isUpdating || _loading)"
                                 @onclick="KeepReservation">
                             Keep reservation
                         </button>
                         <button type="button"
                                 class="btn btn-sm btn-danger"
-                                disabled="@_isUpdating"
+                                disabled="@(_isUpdating || _loading)"
                                 @onclick="CancelReservation">
                             @(_isUpdating ? "Releasing..." : "Release reservation")
                         </button>
@@ -97,7 +97,7 @@
                 </div>
             }
             <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="anonymousCheckbox-@ItemId" disabled="@_isUpdating" @bind="_anonymous" />
+                <input class="form-check-input" type="checkbox" id="anonymousCheckbox-@ItemId" disabled="@(_isUpdating || _loading)" @bind="_anonymous" />
                 <label class="form-check-label" for="anonymousCheckbox-@ItemId">
                     Reserve anonymously
                 </label>
@@ -106,7 +106,7 @@
             <button class="btn btn-success w-100"
                     @ref="_reserveItemButton"
                     type="button"
-                    disabled="@_isUpdating"
+                    disabled="@(_isUpdating || _loading)"
                     aria-busy="@_isUpdating"
                     @onclick="ReserveItem">
                 <OpenWishIcon Name="gift" /> @(_isUpdating ? "Reserving..." : "Reserve this item")
@@ -281,7 +281,7 @@
         finally
         {
             _loading = false;
-            _hasLoaded = true;
+            _hasLoaded |= _loadErrorMessage is null;
             StateHasChanged();
         }
     }
@@ -317,6 +317,11 @@
 
     private async Task ReserveItem()
     {
+        if (_loading || _isUpdating)
+        {
+            return;
+        }
+
         try
         {
             _isUpdating = true;
@@ -389,6 +394,11 @@
 
     private async Task CancelReservation()
     {
+        if (_loading || _isUpdating)
+        {
+            return;
+        }
+
         try
         {
             _isUpdating = true;

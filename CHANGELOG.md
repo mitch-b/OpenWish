@@ -2,6 +2,29 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.16.0] - 2026-11-10
+
+### Improved
+
+- Invitations are part of the event page: a new event opens with the invitation
+  box at the top, and the "Invite people" step moves you to it.
+- Sending several invitations shows a progress bar and which address is being
+  sent.
+- Invitation, guest-access, name-draw, and reminder emails use a branded,
+  responsive layout that matches the app.
+- A friend's or shared wishlist shows the owner's name under its title.
+- Wishlist and event cards drop the separate "Open" row; the card and its title
+  open it.
+- "Run it again" is offered only for past events or after names are drawn.
+
+### Added
+
+- Organizers can mark a pending invitation as accepted, including email-only
+  invitees, so unresponsive relatives don't block the name draw.
+- Gift-exchange invitees choose to join with an account or continue without
+  one, from the email, the invitation page, or the sign-up and sign-in pages.
+  The organizer's all-or-nothing guest setting is replaced by this choice.
+
 ## [0.15.0] - 2026-11-09
 
 ### Improved

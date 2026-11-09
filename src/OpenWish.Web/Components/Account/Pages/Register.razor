@@ -37,6 +37,10 @@
         <p>@((_isInvitedRegistration || !string.IsNullOrWhiteSpace(InvitedEmail)) ? "Your invitation is waiting. Start here, then join your group." : "Save your gift ideas and plan something thoughtful together.")</p>
     </div>
 </header>
+<p class="guest-access-choice" data-guest-access-choice data-testid="register-without-account" hidden>
+    <OpenWishIcon Name="person-circle" />
+    <span>Rather not make an account? <a href="/guest" data-enhance-nav="false">Continue without an account</a> to accept and see your own match.</span>
+</p>
         <section class="auth-card">
           <StatusMessage Message="@Message" />
           <EditForm Model="Input"
@@ -85,7 +89,7 @@
             <p class="registration-next-step">Next, confirm your email@((_isInvitedRegistration || !string.IsNullOrWhiteSpace(InvitedEmail)) ? " and return to your invitation." : " to start sharing ideas.")</p>
             <p class="mt-3 mb-0">
                 Already have an account?
-                <a data-enhance-nav="false" href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail ?? (_isInvitedRegistration ? Input.Email : null) }))">Log in</a>.
+                <a data-enhance-nav="false" data-carry-guest-access href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail ?? (_isInvitedRegistration ? Input.Email : null) }))">Log in</a>.
             </p>
           </EditForm>
         </section>

@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.16.0",
+    "date": "2026-11-10",
+    "title": "Inviting your group is easier",
+    "summary": "Invite people right on the event page, watch invitations send, let invitees choose whether to make an account, and add people yourself when they don't respond.",
+    "highlights": [
+      "The invitation box sits at the top of a new event, and \"Invite people\" takes you straight to it.",
+      "Sending several invitations shows a progress bar.",
+      "Organizers can mark a waiting invitation as accepted so names can be drawn.",
+      "Invitees choose to join with an account or continue without one, even from the sign-up page.",
+      "Wishlist and event cards are more compact; click the card or its title to open it.",
+      "Invitation and gift-exchange emails match the look of the app on phones and computers.",
+      "A friend's wishlist shows whose list it is under the title.",
+      "\"Run it again\" appears only after an event is over or names are drawn."
+    ]
+  },
+  {
     "version": "0.15.0",
     "date": "2026-11-09",
     "title": "Shopping for a friend feels steadier",

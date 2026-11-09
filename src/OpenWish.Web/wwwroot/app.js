@@ -403,7 +403,24 @@ document.addEventListener("click", event => {
     button.setAttribute("aria-pressed", String(show));
     button.textContent = show ? "Hide passwords" : "Show passwords";
 });
+globalThis.openWishGuestAccessToken = function () {
+    const token = new URLSearchParams(location.hash.slice(1)).get('access');
+    return token && /^[0-9A-F]{64}$/.test(token) ? token : null;
+};
 globalThis.openWishInitializeGuestAccess = function () {
+    const choiceToken = globalThis.openWishGuestAccessToken();
+    if (choiceToken && location.pathname !== '/guest') {
+        for (const choice of document.querySelectorAll('[data-guest-access-choice]')) {
+            const link = choice.querySelector('a');
+            if (link) link.href = `/guest#access=${choiceToken}`;
+            choice.hidden = false;
+        }
+        for (const link of document.querySelectorAll('a[data-carry-guest-access]')) {
+            const url = new URL(link.href, location.href);
+            url.hash = `access=${choiceToken}`;
+            link.href = url.pathname + url.search + url.hash;
+        }
+    }
     const form = document.querySelector('form[data-guest-access]');
     const token = new URLSearchParams(location.hash.slice(1)).get('access');
     if (location.pathname === '/guest' && token) {

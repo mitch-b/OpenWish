@@ -266,13 +266,29 @@ public sealed partial class GuestEventAccessTests(OpenWishAppFactory factory)
         await ConnectAsync(decliningGuest, removedToken, succeeds: false);
         var noGuests = await owner.Client.PostAsJsonAsync("api/events", new EventModel
         {
-            Name = "Account-required event",
+            Name = "Invitees choose their path",
             Date = DateTimeOffset.UtcNow.AddDays(30),
             IsGiftExchange = true,
             EventUsers = []
         });
         noGuests.EnsureSuccessStatusCode();
-        Assert.False((await noGuests.Content.ReadFromJsonAsync<EventModel>())!.AllowGuestParticipants);
+        Assert.True((await noGuests.Content.ReadFromJsonAsync<EventModel>())!.AllowGuestParticipants);
+        var celebration = await owner.Client.PostAsJsonAsync("api/events", new EventModel
+        {
+            Name = "Birthday celebration",
+            Date = DateTimeOffset.UtcNow.AddDays(30),
+            IsGiftExchange = false,
+            AllowGuestParticipants = true,
+            EventUsers = []
+        });
+        celebration.EnsureSuccessStatusCode();
+        var savedCelebration = (await celebration.Content.ReadFromJsonAsync<EventModel>())!;
+        Assert.False(savedCelebration.AllowGuestParticipants);
+        savedCelebration.IsGiftExchange = true;
+        savedCelebration.AllowGuestParticipants = null;
+        var converted = await owner.Client.PutAsJsonAsync($"api/events/{savedCelebration.PublicId}", savedCelebration);
+        converted.EnsureSuccessStatusCode();
+        Assert.True((await converted.Content.ReadFromJsonAsync<EventModel>())!.AllowGuestParticipants);
     }
 
     private ApplicationDbContext OpenContext() =>

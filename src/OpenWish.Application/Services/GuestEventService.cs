@@ -55,9 +55,15 @@ public sealed class GuestEventService(
             await transaction.CommitAsync();
         }
 
+        // The account link carries the token in its fragment so the join page can offer the no-account path too.
+        var accountLink = participant.Status == "Pending"
+            ? $"{baseUri}/events/{participant.Event.PublicId}/accept-invite?email={Uri.EscapeDataString(participant.InviteeEmail)}#access={token}"
+            : null;
         await emailSender.SendGuestEventAccessEmailAsync(participant.InviteeEmail,
             participant.Event.Name, $"{baseUri}/guest#access={token}",
-            matchReady: participant.IsAccepted && participant.Event.NamesDrawnOn.HasValue);
+            matchReady: participant.IsAccepted && participant.Event.NamesDrawnOn.HasValue,
+            accountLink: accountLink,
+            inviterName: participant.Event.CreatedBy?.UserName);
 
         // A concurrent revoke/resend must not be overwritten by a completed mail delivery.
         await using var deliveryContext = await contextFactory.CreateDbContextAsync();

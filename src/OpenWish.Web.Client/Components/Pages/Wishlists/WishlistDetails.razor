@@ -36,7 +36,15 @@ else
                 {
                     <span class="hero-icon">@_wishlist.Icon</span>
                 }
-                <h1>@_wishlist.Name</h1>
+                <div class="hero-heading">
+                    <h1>@_wishlist.Name</h1>
+                    @if (OwnerSubtitle is { } ownerName)
+                    {
+                        <p class="hero-owner" data-testid="wishlist-owner">
+                            <OpenWishIcon Name="person-circle" /> <span>@ownerName's wishlist</span>
+                        </p>
+                    }
+                </div>
             </div>
             <div class="hero-context">
                 @if (_wishlist.IsCollaborative)
@@ -994,6 +1002,11 @@ else
         MinPrice > 0 ||
         MaxPrice < PriceCeiling ||
         BudgetFilterActive;
+    private string? OwnerSubtitle =>
+        _isOwner || _wishlist?.Owner is not { } owner
+            ? null
+            : PublicDisplayName.ForGiftRecipient(owner.UserName, null);
+
     private bool CanReorder => _isOwner && !_isRanking && SortBy == "custom" && !HasActiveFilters;
 
     protected override async Task OnInitializedAsync()

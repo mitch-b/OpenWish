@@ -100,12 +100,9 @@ else
             </div>
         }
 
-        @if (_isOwner && !_isPendingInvitee)
+        @if (_isOwner && !_isPendingInvitee && IsEventPast)
         {
-            <RunEventAgain EventId="@EventId"
-                           EventName="@_event.Name"
-                           EventDate="@_event.Date"
-                           CurrentUserId="@(_currentUserId ?? string.Empty)" />
+            @RunAgainPanel
         }
 
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
@@ -118,7 +115,8 @@ else
                 </p>
             }
             <div id="gift-exchange-setup">
-                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" WishlistsLoaded="@_wishlistsLoaded" />
+                <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" WishlistsLoaded="@_wishlistsLoaded"
+                                  OnInviteRequested="FocusInvitationComposerAsync" />
             </div>
         }
         else if (_isAcceptedParticipant && !_isOwner && !_event.NamesDrawnOn.HasValue)
@@ -192,6 +190,11 @@ else
         {
           <div class="row g-4">
             <div class="col-lg-8">
+                @if (_isOwner && !_event.NamesDrawnOn.HasValue)
+                {
+                    @InvitationsSection
+                }
+
                 @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
                 {
                     <GiftExchangeDisplay @key="_event.NamesDrawnOn" EventId="@EventId"
@@ -309,6 +312,20 @@ else
                     </div>
                 }
 
+                @if (_isOwner && _event.NamesDrawnOn.HasValue)
+                {
+                    <div class="mt-4">
+                        @InvitationsSection
+                    </div>
+                }
+
+                @if (_isOwner && _event.NamesDrawnOn.HasValue && !IsEventPast)
+                {
+                    <div class="mt-4">
+                        @RunAgainPanel
+                    </div>
+                }
+
                 @* @if (_event.EventWishlists.Any())
                 {
                     <div class="card shadow-sm mt-4">
@@ -337,18 +354,7 @@ else
             </div>
 
             <div class="col-lg-4">
-                @if (_isOwner)
-                {
-                    <div id="event-invitations">
-                        <EventInvitations EventId="@EventId"
-                                          IsOwner="true"
-                                          AllowGuests="@(_event.AllowGuestParticipants == true && _event.IsGiftExchange)"
-                                          CurrentUserId="@_currentUserId"
-                                          NamesDrawn="@_event.NamesDrawnOn.HasValue" />
-                    </div>
-                }
-
-                <div class="mt-4">
+                <div>
                     <EventReservedItems EventId="@EventId"
                                          CurrentUserId="@_currentUserId"
                                          Budget="@_matchBudget" />
@@ -455,6 +461,12 @@ else
             if (loadVersion != _loadVersion || !string.Equals(EventId, eventId, StringComparison.Ordinal))
             {
                 return false;
+            }
+
+            if (_wishlistsLoaded && loadedEvent is not null && _event?.EventWishlists is { } hydratedWishlists)
+            {
+                // The event payload carries list metadata only; keep the item-loaded lists from EventWishlistManager.
+                loadedEvent.EventWishlists = hydratedWishlists;
             }
 
             _event = loadedEvent;
@@ -603,5 +615,43 @@ else
     private async Task HandleNamesDrawn()
     {
         await LoadEvent();
+    }
+
+    private EventInvitations? _eventInvitations;
+
+    private bool IsEventPast => _event is not null && EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
+
+    private RenderFragment InvitationsSection => __builder =>
+    {
+        <div class="mb-4" id="event-invitations">
+            <EventInvitations @ref="_eventInvitations"
+                              EventId="@EventId"
+                              IsOwner="true"
+                              AllowGuests="@(_event!.AllowGuestParticipants == true && _event.IsGiftExchange)"
+                              CurrentUserId="@_currentUserId"
+                              NamesDrawn="@_event.NamesDrawnOn.HasValue"
+                              OnInvitationsChanged="HandleInvitationsChanged" />
+        </div>
+    };
+
+    private RenderFragment RunAgainPanel => __builder =>
+    {
+        <RunEventAgain EventId="@EventId"
+                       EventName="@_event!.Name"
+                       EventDate="@_event.Date"
+                       CurrentUserId="@(_currentUserId ?? string.Empty)" />
+    };
+
+    private async Task HandleInvitationsChanged()
+    {
+        await LoadEvent();
+    }
+
+    private async Task FocusInvitationComposerAsync()
+    {
+        if (_eventInvitations is not null)
+        {
+            await _eventInvitations.FocusComposerAsync();
+        }
     }
 }

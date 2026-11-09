@@ -828,8 +828,8 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
 
-        Assert.Contains("class=\"event-card-link\" href=\"/events/@Event.PublicId\"", markup, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"visually-hidden\">: @Event.Name</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h5 class=\"card-title\"><a class=\"event-card-link\" href=\"/events/@Event.PublicId\">@Event.Name</a></h5>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("card-footer-row", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("@onclick=\"NavigateToEvent\"", markup, StringComparison.Ordinal);
     }
 
@@ -839,13 +839,13 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor");
         var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor.css");
 
-        Assert.Contains("class=\"wishlist-card-link\" href=\"/wishlists/@Wishlist.PublicId\"", markup, StringComparison.Ordinal);
-        Assert.Contains("<span class=\"visually-hidden\">: @Wishlist.Name</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h5 class=\"card-title\"><a class=\"wishlist-card-link\" href=\"/wishlists/@Wishlist.PublicId\">@Wishlist.Name</a></h5>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("card-footer-row", markup, StringComparison.Ordinal);
         Assert.Contains("<p role=\"status\">Loading wishlist...</p>", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("@onclick=\"NavigateToWishlist\"", markup, StringComparison.Ordinal);
-        var linkStyles = styles[
-            styles.IndexOf(".wishlist-card-link {", StringComparison.Ordinal)..styles.IndexOf(".wishlist-card-link:hover", StringComparison.Ordinal)];
-        Assert.Contains("color: var(--color-link);", linkStyles, StringComparison.Ordinal);
+        var hoverStyles = styles[
+            styles.IndexOf(".wishlist-card-link:hover", StringComparison.Ordinal)..styles.IndexOf(".wishlist-card-link::after", StringComparison.Ordinal)];
+        Assert.Contains("color: var(--color-link);", hoverStyles, StringComparison.Ordinal);
         Assert.Contains("outline: 3px solid var(--color-link-hover);", styles, StringComparison.Ordinal);
     }
 
@@ -1997,6 +1997,61 @@ public class InteractiveControlMarkupTests
         Assert.Contains("WishlistsLoaded=\"@_wishlistsLoaded\"", details, StringComparison.Ordinal);
         Assert.Contains("else if (HasSharedGiftIdeas)", details, StringComparison.Ordinal);
         Assert.Contains("Add gift ideas</a>", details, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventInvitations_AreInlineWithProgressAndOrganizerAcceptance()
+    {
+        var invitations = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+
+        Assert.DoesNotContain("_showInviteModal", invitations, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"invite-progress\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("role=\"progressbar\" aria-label=\"Invitations sent\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("aria-valuemax=\"@_sendTotal\" aria-valuenow=\"@_sendCompleted\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("IsOwner && !NamesDrawn && HasStatus(invitation, \"Pending\")", invitations, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Mark as accepted\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("for=\"mark-accepted-name\"", invitations, StringComparison.Ordinal);
+        Assert.Contains("public async Task FocusComposerAsync()", invitations, StringComparison.Ordinal);
+
+        Assert.Contains("@if (_isOwner && !_isPendingInvitee && IsEventPast)", details, StringComparison.Ordinal);
+        Assert.Contains("@if (_isOwner && _event.NamesDrawnOn.HasValue && !IsEventPast)", details, StringComparison.Ordinal);
+        Assert.Contains("OnInviteRequested=\"FocusInvitationComposerAsync\"", details, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SharedWishlist_ShowsItsOwnerWithoutExposingAnEmail()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+
+        Assert.Contains("data-testid=\"wishlist-owner\"", details, StringComparison.Ordinal);
+        Assert.Contains("_isOwner || _wishlist?.Owner is not { } owner", details, StringComparison.Ordinal);
+        Assert.Contains("PublicDisplayName.ForGiftRecipient(owner.UserName, null)", details, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Invitees_ChooseBetweenAnAccountAndNoAccount()
+    {
+        var form = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventForm.razor");
+        var join = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "AcceptInvite.razor");
+        var register = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Register.razor");
+        var login = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "Login.razor");
+        var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
+
+        Assert.DoesNotContain("allow-guest-participants", form, StringComparison.Ordinal);
+        Assert.Contains("Model.AllowGuestParticipants = true;", form, StringComparison.Ordinal);
+        Assert.Contains("JS.InvokeAsync<string?>(\"openWishGuestAccessToken\")", join, StringComparison.Ordinal);
+        Assert.Contains("href=\"/guest#access=@_guestAccessToken\" data-enhance-nav=\"false\"", join, StringComparison.Ordinal);
+        Assert.Contains("$\"#access={_guestAccessToken}\"", join, StringComparison.Ordinal);
+        foreach (var page in new[] { register, login })
+        {
+            Assert.Contains("data-guest-access-choice", page, StringComparison.Ordinal);
+            Assert.Contains(">Continue without an account</a>", page, StringComparison.Ordinal);
+            Assert.Contains("data-carry-guest-access href=", page, StringComparison.Ordinal);
+        }
+        Assert.Contains("querySelectorAll('a[data-carry-guest-access]')", script, StringComparison.Ordinal);
+        Assert.Contains("/^[0-9A-F]{64}$/.test(token) ? token : null", script, StringComparison.Ordinal);
+        Assert.Contains("querySelectorAll('[data-guest-access-choice]')", script, StringComparison.Ordinal);
     }
 
     private static string ReadComponent(params string[] pathParts)

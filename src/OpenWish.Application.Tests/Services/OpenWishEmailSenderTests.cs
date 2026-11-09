@@ -20,7 +20,29 @@ public class OpenWishEmailSenderTests
         Assert.Contains("No account is needed", capture.Email.Data.Body);
         Assert.Contains("anyone you forward it to can use it", capture.Email.Data.Body);
         Assert.Contains("expires in 30 days", capture.Email.Data.Body);
-        Assert.DoesNotContain("Your Gift Recipient", capture.Email.Data.Body);
+        Assert.DoesNotContain("Your gift recipient", capture.Email.Data.Body);
+    }
+
+    [Fact]
+    public async Task GuestInvitation_LetsTheInviteeChooseAnAccountOrNoAccount()
+    {
+        var capture = new CapturingSender();
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new CapturingEmailFactory(capture));
+        await sender.SendGuestEventAccessEmailAsync("guest@example.test", "Holiday <party>",
+            "https://wish.example.test/guest#access=synthetic-token",
+            accountLink: "https://wish.example.test/events/abc/accept-invite?email=guest%40example.test#access=synthetic-token",
+            inviterName: "Sam <host>");
+        Assert.NotNull(capture.Email);
+        var body = capture.Email.Data.Body;
+        Assert.Equal("Sam <host> invited you to Holiday <party>", capture.Email.Data.Subject);
+        Assert.Contains("<strong>Sam &lt;host&gt;</strong> invited you", body);
+        Assert.Contains(">Join with an OpenWish account</a>", body);
+        Assert.Contains(">Continue without an account</a>", body);
+        Assert.True(body.IndexOf("Join with an OpenWish account", StringComparison.Ordinal)
+            < body.IndexOf(">Continue without an account<", StringComparison.Ordinal));
+        Assert.Contains("href=\"https://wish.example.test/guest#access=synthetic-token\"", body);
+        Assert.Contains("accept-invite?email=guest%40example.test#access=synthetic-token", body);
+        Assert.DoesNotContain("No account is needed", body);
     }
 
     [Fact]
@@ -53,14 +75,56 @@ public class OpenWishEmailSenderTests
         {
             Assert.Contains("match is ready", capture.Email.Data.Subject);
             Assert.Contains("Open your gift", body);
-            Assert.DoesNotContain("Your Gift Recipient", body);
+            Assert.DoesNotContain("Your gift recipient", body);
         }
         else
         {
-            Assert.Contains("Gift Exchange Names Drawn", capture.Email.Data.Subject);
+            Assert.Contains("Gift exchange names drawn", capture.Email.Data.Subject);
             Assert.Contains("Recipient &lt;name&gt;", body);
-            Assert.Contains("Your Gift Recipient", body);
+            Assert.Contains("Your gift recipient", body);
         }
+    }
+
+    [Fact]
+    public async Task EventInviteEmail_UsesBrandedResponsiveLayout()
+    {
+        var capture = new CapturingSender();
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new CapturingEmailFactory(capture));
+
+        await sender.SendEventInviteEmailAsync(
+            "guest@example.test", "Alex <host>", "Holiday <party>", "https://wish.example.test/events/abc/accept-invite?email=a%40b.test&x=1");
+
+        Assert.NotNull(capture.Email);
+        var body = capture.Email.Data.Body;
+        Assert.Contains("name=\"viewport\"", body);
+        Assert.Contains("max-width:560px", body);
+        Assert.Contains("@media only screen and (max-width:600px)", body);
+        Assert.Contains("background-color:#5b4dcc", body);
+        Assert.Contains(">OpenWish</span>", body);
+        Assert.Contains("View and accept the invitation", body);
+        Assert.Contains("Alex &lt;host&gt;", body);
+        Assert.Contains("Holiday &lt;party&gt;", body);
+        Assert.Contains("href=\"https://wish.example.test/events/abc/accept-invite?email=a%40b.test&amp;x=1\"", body);
+        Assert.DoesNotContain("<host>", body);
+        Assert.DoesNotContain("<party>", body);
+        Assert.DoesNotContain("#28a745", body);
+        Assert.Equal("Alex <host> invited you to Holiday <party>", capture.Email.Data.Subject);
+    }
+
+    [Fact]
+    public async Task ResetEmail_UsesBrandedLayoutWithoutLegacyColors()
+    {
+        var capture = new CapturingSender();
+        var sender = new OpenWishEmailSender(NullLogger<OpenWishEmailSender>.Instance, new CapturingEmailFactory(capture));
+
+        await sender.SendGiftExchangeResetEmailAsync("someone@example.test", "Family", "https://wish.example.test/events/abc");
+
+        Assert.NotNull(capture.Email);
+        var body = capture.Email.Data.Body;
+        Assert.Contains("Gift exchange reset", body);
+        Assert.Contains("View event", body);
+        Assert.DoesNotContain("#dc3545", body);
+        Assert.DoesNotContain("#007bff", body);
     }
 
     [Fact]

@@ -1,3 +1,201 @@
+.invitations-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.invitation-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.invitation-summary-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.invitation-summary-item strong {
+    color: var(--color-text);
+}
+
+.invitation-summary-accepted {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+}
+
+.invitation-summary-accepted,
+.invitation-summary-accepted strong {
+    color: var(--color-success-text);
+}
+
+.invitation-summary-pending {
+    border-color: var(--color-warning-border);
+    background: var(--color-warning-bg);
+}
+
+.invitation-summary-pending,
+.invitation-summary-pending strong {
+    color: var(--color-warning-text);
+}
+
+.invite-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: 1.1rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 0.9rem;
+    background: var(--color-primary-soft);
+}
+
+.invite-mode-tabs {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 999px;
+    background: var(--color-surface);
+}
+
+.invite-mode-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0.35rem 1rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.invite-mode-tab:hover:not(:disabled) {
+    color: var(--color-text);
+    background: var(--color-surface-hover);
+}
+
+.invite-mode-tab.active {
+    background: var(--color-primary-bg);
+    color: #ffffff;
+}
+
+.invite-mode-tab:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.invite-composer .form-control {
+    background: var(--color-surface);
+}
+
+.invite-composer .form-text {
+    margin-top: 0.35rem;
+}
+
+.invite-composer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.invite-send-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    min-width: 12rem;
+}
+
+.invite-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.invite-progress-label {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.invite-progress-current {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.invite-progress .progress {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--color-surface);
+}
+
+.invite-progress .progress-bar {
+    min-width: 0.75rem;
+    background-color: var(--color-accent);
+    transition: width 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .invite-progress .progress-bar {
+        transition: none;
+        animation: none;
+    }
+}
+
+.invite-hint,
+.invite-locked {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+}
+
+.invite-hint {
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-info-border);
+    border-radius: 0.7rem;
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.invite-hint ::deep .ow-icon,
+.invite-locked ::deep .ow-icon {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+
+.invite-empty {
+    padding: 1rem;
+    border: 1px dashed var(--color-border-muted);
+    border-radius: 0.7rem;
+    text-align: center;
+}
+
 .friend-list {
     max-height: 260px;
 }
@@ -84,5 +282,27 @@
 
     .modal-footer .btn {
         flex: 1 1 0;
+    }
+
+    .invite-composer {
+        padding: 0.9rem;
+    }
+
+    .invite-mode-tabs {
+        align-self: stretch;
+    }
+
+    .invite-mode-tab {
+        flex: 1 1 0;
+        justify-content: center;
+        padding-inline: 0.5rem;
+    }
+
+    .invite-send-button {
+        width: 100%;
+    }
+
+    .list-group-item .btn-sm {
+        min-height: 2.75rem;
     }
 }

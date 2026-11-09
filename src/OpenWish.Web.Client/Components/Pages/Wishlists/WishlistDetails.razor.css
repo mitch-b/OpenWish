@@ -1735,3 +1735,22 @@
 .received-copy small {
     color: var(--color-text-muted);
 }
+
+.hero-heading {
+    min-width: 0;
+}
+
+.hero-owner {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.25rem 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.hero-owner ::deep .ow-icon {
+    flex-shrink: 0;
+}

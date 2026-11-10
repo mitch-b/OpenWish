@@ -225,7 +225,7 @@ else
 
                 <div class="card shadow-sm event-overview-card">
                     <div class="card-body">
-                        <h2 class="h4 mb-3">Event overview</h2>
+                        <h2 class="h5 mb-3">Event overview</h2>
                         <div class="event-facts">
                             <div class="event-fact">
                                 <span class="event-fact-label">Date and time</span>
@@ -565,10 +565,15 @@ else
     {
         if (!string.IsNullOrWhiteSpace(eventUser.User?.Email))
         {
-            return eventUser.User.Email!;
+            var email = eventUser.User.Email!;
+            return string.Equals(email, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)
+                ? null
+                : email;
         }
 
-        return eventUser.InviteeEmail;
+        return string.Equals(eventUser.InviteeEmail, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)
+            ? null
+            : eventUser.InviteeEmail;
     }
 
     private string GetOwnerDisplayName()
@@ -586,8 +591,14 @@ else
         return "Event Owner";
     }
 
-    private string? GetOwnerContactDetail() =>
-        string.IsNullOrWhiteSpace(_event?.CreatedBy?.Email) ? null : _event!.CreatedBy!.Email!;
+    private string? GetOwnerContactDetail()
+    {
+        var email = _event?.CreatedBy?.Email;
+        return string.IsNullOrWhiteSpace(email) ||
+               string.Equals(email, GetOwnerDisplayName(), StringComparison.OrdinalIgnoreCase)
+            ? null
+            : email;
+    }
 
     private static string GetNormalizedStatus(EventUserModel eventUser)
     {

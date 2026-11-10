@@ -1809,8 +1809,25 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.locator(".gift-exchange-setup").getByText(/2 people accepted/).first().waitFor({ state: "visible" });
   await page.locator("#event-invitations").scrollIntoViewIfNeeded();
   await page.screenshot({ path: path.join(walkthroughDirectory, "invitation-accepted-by-organizer.png") });
+  const invitationFilters = page.locator(".invitation-filters");
+  await invitationFilters.scrollIntoViewIfNeeded();
+  const desktopFilterColumns = await invitationFilters.evaluate(element =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").length
+  );
+  if (desktopFilterColumns !== 4) {
+    throw new Error(`Invitation filters rendered ${desktopFilterColumns} desktop columns, expected 4.`);
+  }
+  await page.screenshot({ path: path.join(walkthroughDirectory, "event-invitation-filters-desktop.png") });
   await page.setViewportSize({ width: 390, height: 844 });
   await assertNoHorizontalScroll(page, "event invitations");
+  await invitationFilters.scrollIntoViewIfNeeded();
+  const mobileFilterColumns = await invitationFilters.evaluate(element =>
+    getComputedStyle(element).gridTemplateColumns.split(" ").length
+  );
+  if (mobileFilterColumns !== 2) {
+    throw new Error(`Invitation filters rendered ${mobileFilterColumns} mobile columns, expected 2.`);
+  }
+  await page.screenshot({ path: path.join(walkthroughDirectory, "event-invitation-filters-mobile.png") });
   await page.locator("#event-invitations").scrollIntoViewIfNeeded();
   await page.screenshot({ path: path.join(walkthroughDirectory, "invitation-composer-mobile.png") });
   await page.setViewportSize({ width: 1440, height: 1000 });

@@ -261,26 +261,26 @@
         }
         else if (_invitations.Any())
         {
-            <div class="d-flex flex-wrap invitation-filters mb-3" role="group" aria-label="Filter invitations by status">
-                <button type="button" class="btn btn-sm @(_filter == "All" ? "btn-primary" : "btn-outline-primary")"
+            <div class="invitation-filters mb-3" role="group" aria-label="Filter invitations by status">
+                <button type="button" class="invitation-filter @(_filter == "All" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "All")"
                         aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "All")">
                     All (@_invitations.Count())
                 </button>
-                <button type="button" class="btn btn-sm @(_filter == "Pending" ? "btn-warning" : "btn-outline-warning")"
+                <button type="button" class="invitation-filter @(_filter == "Pending" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Pending")"
                         aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Pending")">
                     Pending (@_invitations.Count(i => HasStatus(i, "Pending")))
                 </button>
-                <button type="button" class="btn btn-sm @(_filter == "Accepted" ? "btn-success" : "btn-outline-success")"
+                <button type="button" class="invitation-filter @(_filter == "Accepted" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Accepted")"
                         aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Accepted")">
                     Accepted (@_invitations.Count(IsAccepted))
                 </button>
-                <button type="button" class="btn btn-sm @(_filter == "Rejected" ? "btn-danger" : "btn-outline-danger")"
+                <button type="button" class="invitation-filter @(_filter == "Rejected" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Rejected")"
                         aria-controls="event-invitations-list"
                         @onclick="@(() => _filter = "Rejected")">

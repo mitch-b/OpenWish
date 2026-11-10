@@ -1,6 +1,7 @@
 @using System.Collections.Generic
 @using System.Data.Common
 @using Microsoft.EntityFrameworkCore
+@using OpenWish.Shared.Dashboard
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 @inject INotificationService NotificationService
@@ -88,11 +89,9 @@
                 else if (_notifications?.Any() == true)
                 {
                     <div class="notification-list">
-                        @foreach (var notification in _notifications.Take(20))
+                        @foreach (var notification in _notifications.Take(_visibleCount))
                         {
-                            <div class="notification-item @(notification.IsRead ? "read" : "unread")"
-                                 @onmouseenter="() => MarkAsReadOnHover(notification)"
-                                 @ontouchstart="() => MarkAsReadOnTouch(notification)">
+                            <div class="notification-item @(notification.IsRead ? "read" : "unread")">
                                 <div class="d-flex justify-content-between align-items-start p-3">
                                     <div class="notification-body flex-grow-1">
                                         @if (!string.IsNullOrEmpty(notification.Title))
@@ -100,11 +99,17 @@
                                             <div class="notification-title fw-semibold mb-1">@notification.Title</div>
                                         }
                                         <div class="notification-message small">@notification.Message</div>
-                                        <div class="notification-date text-muted small">@notification.Date.ToString("MMM dd, yyyy HH:mm")</div>
+                                        <time class="notification-date text-muted small"
+                                              datetime="@notification.Date.UtcDateTime.ToString("O")"
+                                              title="@notification.Date.UtcDateTime.ToString("MMM d, yyyy HH:mm") UTC">@NotificationTime.Describe(notification.Date, DateTimeOffset.UtcNow)</time>
                                         @if (notification.Action is { } action && ((action.Options?.Count ?? 0) > 0 || !string.IsNullOrWhiteSpace(action.NavigateTo)))
                                         {
                                             <div class="notification-cta">
-                                                @if ((action.Options?.Count ?? 0) > 0)
+                                                @if (_invitationOutcomes.TryGetValue(notification.PublicId, out var outcome))
+                                                {
+                                                    <span class="notification-outcome" role="status">@outcome</span>
+                                                }
+                                                else if ((action.Options?.Count ?? 0) > 0)
                                                 {
                                                     foreach (var option in action.Options ?? new List<NotificationActionOptionModel>())
                                                     {
@@ -125,7 +130,7 @@
                                                 @if (!string.IsNullOrWhiteSpace(action.NavigateTo))
                                                 {
                                                     <button class="btn btn-sm btn-outline-primary"
-                                                            @onclick="() => NavigateTo(action.NavigateTo!)"
+                                                            @onclick="() => OpenNotification(notification, action.NavigateTo!)"
                                                             @onclick:stopPropagation="true">
                                                         View
                                                     </button>
@@ -136,7 +141,15 @@
                                     <div class="notification-actions">
                                         @if (!notification.IsRead)
                                         {
-                                            <span class="unread-indicator bg-primary rounded-circle"></span>
+                                            <span class="unread-indicator bg-primary rounded-circle" aria-hidden="true"></span>
+                                            <button class="btn btn-sm btn-outline-secondary ms-2 notification-mark-read"
+                                                    aria-label="@($"Mark {GetNotificationName(notification)} as read")"
+                                                    title="Mark as read"
+                                                    disabled="@_isMarkingRead"
+                                                    @onclick="() => MarkNotificationAsRead(notification)"
+                                                    @onclick:stopPropagation="true">
+                                                <OpenWishIcon Name="check-lg" />
+                                            </button>
                                         }
                                         <button class="btn btn-sm btn-outline-danger ms-2"
                                                 aria-label="Delete notification"
@@ -150,10 +163,11 @@
                         }
                     </div>
 
-                    @if (_notifications.Count() > 20)
+                    @if (_notifications.Count() > _visibleCount)
                     {
                         <div class="text-center p-3 border-top">
-                            <small class="text-muted">Showing 20 of @_notifications.Count() notifications</small>
+                            <small class="text-muted d-block mb-2">Showing @_visibleCount of @_notifications.Count() notifications</small>
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ShowMore">Show more</button>
                         </div>
                     }
                 }
@@ -231,6 +245,9 @@
     private bool _activateDeleteDialogAfterRender;
     private bool _focusFlyoutCloseAfterRender;
     private bool _hasRenderedInteractively;
+    private int _visibleCount = PageSize;
+    private readonly Dictionary<string, string> _invitationOutcomes = new();
+    private const int PageSize = 20;
 
     protected override async Task OnInitializedAsync()
     {
@@ -334,21 +351,20 @@
         StateHasChanged();
     }
 
-    private async Task MarkAsReadOnHover(NotificationModel notification)
+    private void ShowMore()
     {
-        if (!notification.IsRead)
-        {
-            await MarkNotificationAsRead(notification);
-        }
+        _visibleCount += PageSize;
+        _statusMessage = $"Showing {Math.Min(_visibleCount, _notifications?.Count() ?? 0)} notifications.";
     }
 
-    private async Task MarkAsReadOnTouch(NotificationModel notification)
+    private async Task OpenNotification(NotificationModel notification, string route)
     {
-        // For mobile devices, mark as read on touch
         if (!notification.IsRead)
         {
             await MarkNotificationAsRead(notification);
         }
+
+        await NavigateTo(route);
     }
 
     private async Task MarkNotificationAsRead(NotificationModel notification)
@@ -364,6 +380,7 @@
             {
                 notification.IsRead = true;
                 await LoadNotificationCount();
+                _statusMessage = "Notification marked as read.";
                 StateHasChanged();
             }
             else
@@ -597,6 +614,7 @@
             }
 
             await LoadNotificationCount();
+            _invitationOutcomes[notification.PublicId] = accept ? "You accepted this invitation" : "You declined this invitation";
             _statusMessage = accept ? "Invitation accepted." : "Invitation declined.";
 
             if (accept && !string.IsNullOrWhiteSpace(notification.Action?.NavigateTo))

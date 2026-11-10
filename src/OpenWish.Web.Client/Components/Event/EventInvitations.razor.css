@@ -359,10 +359,6 @@
 }
 
 @media (max-width: 576px) {
-    .invitation-filters {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .friend-option {
         padding: 0.65rem 0.9rem;
         gap: 0.5rem;

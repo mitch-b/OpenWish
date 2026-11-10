@@ -448,6 +448,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<div class=\"invitation-actions-menu\">", markup, StringComparison.Ordinal);
         Assert.Contains("container-type: inline-size;", styles, StringComparison.Ordinal);
         Assert.Contains("@container (max-width: 520px)", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("@media (max-width: 576px) {\n    .invitation-filters", styles, StringComparison.Ordinal);
     }
 
     [Fact]

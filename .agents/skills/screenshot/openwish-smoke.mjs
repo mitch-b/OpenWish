@@ -678,10 +678,15 @@ async function verifyEventCardNavigation(page, eventPublicId, visitedRoutes) {
   const route = `/events/${eventPublicId}`;
   const card = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
   const link = card.locator(".event-card-link");
+  const waitForEventsLoaded = () =>
+    page.locator('section[aria-labelledby="events-list-title"][aria-busy="false"]')
+      .waitFor({ state: "visible" });
   const returnToCards = async () => {
     await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
     await page.waitForLoadState("networkidle");
+    await waitForEventsLoaded();
   };
+  await waitForEventsLoaded();
   for (const viewport of [
     { width: 1440, height: 1000, name: "desktop" },
     { width: 390, height: 700, name: "mobile" }

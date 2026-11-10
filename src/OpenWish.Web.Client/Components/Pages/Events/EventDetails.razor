@@ -26,7 +26,7 @@
 }
 else if (_event == null)
 {
-    <div class="container page-shell" aria-busy="@_isLoading">
+    <div class="container page-shell" aria-busy="@(_isLoading ? "true" : "false")">
         <PageHeader Title="Event unavailable"
                     Description="We couldn't load this event. It may have been removed, or you may no longer have access." />
         <div class="alert alert-danger" role="alert">@_loadError</div>
@@ -79,7 +79,7 @@ else
         </div>
     </div>
 
-    <div class="container event-page py-4" aria-busy="@_isLoading">
+    <div class="container event-page py-4" aria-busy="@(_isLoading ? "true" : "false")">
         @if (!string.IsNullOrWhiteSpace(_loadError))
         {
             <div class="alert alert-danger" role="alert">

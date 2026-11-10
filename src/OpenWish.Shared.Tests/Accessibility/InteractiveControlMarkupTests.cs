@@ -1099,7 +1099,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Title=\"Event unavailable\"", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load this event. Check your connection and try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-busy=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
         Assert.Contains("@(_isLoading ? \"Retrying...\" : \"Try again\")", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex, \"Failed to load event {EventId}\"", markup, StringComparison.Ordinal);

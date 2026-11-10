@@ -4856,6 +4856,7 @@ async function verifyOccasionsJourney(browser, manifest, results) {
       throw new Error("Running the event again reused the original event.");
     }
     await owner.page.getByTestId("rerun-success").waitFor({ state: "visible" });
+    await owner.page.locator(".event-page[aria-busy='false']").waitFor({ state: "visible" });
     if (await owner.page.getByTestId("run-again").count() !== 0) {
       throw new Error("A freshly copied event offered to run it again.");
     }

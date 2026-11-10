@@ -377,7 +377,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("notification-mark-read", markup, StringComparison.Ordinal);
         Assert.Contains("OpenNotification(notification, action.NavigateTo!)", markup, StringComparison.Ordinal);
         Assert.Contains("NotificationTime.Describe", markup, StringComparison.Ordinal);
-        Assert.Contains("_invitationOutcomes", markup, StringComparison.Ordinal);
+        Assert.Contains("GetInvitationOutcome", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"ShowMore\"", markup, StringComparison.Ordinal);
     }
 

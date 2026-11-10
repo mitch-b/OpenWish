@@ -13,7 +13,7 @@ public class NotificationTimeTests
     [InlineData(5 * 60, "5 min ago")]
     [InlineData(60 * 60, "1 hour ago")]
     [InlineData(3 * 60 * 60, "3 hours ago")]
-    [InlineData(24 * 60 * 60, "Yesterday")]
+    [InlineData(24 * 60 * 60, "1 day ago")]
     [InlineData(3 * 24 * 60 * 60, "3 days ago")]
     public void RecentNotificationsUseRelativeWords(int secondsAgo, string expected)
     {

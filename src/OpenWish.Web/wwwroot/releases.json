@@ -6,7 +6,7 @@
     "summary": "Notifications are marked read when you choose, show friendlier times, remember your invitation answer, and load beyond the first 20.",
     "highlights": [
       "Hovering or touching a notification no longer marks it read; use the check button, \"View\", or \"Mark all as read\".",
-      "Times read \"5 min ago\" or \"Yesterday\", with the exact time on hover.",
+      "Times read \"5 min ago\" or \"1 day ago\", with the exact time on hover.",
       "Accepted or declined invitations show your answer instead of repeating the buttons.",
       "\"Show more\" reveals older notifications.",
       "Larger tap targets on phones and unread status for screen readers."

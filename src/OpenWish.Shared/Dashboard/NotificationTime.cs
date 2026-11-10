@@ -27,7 +27,7 @@ public static class NotificationTime
         if (elapsed < TimeSpan.FromDays(7))
         {
             var days = (int)elapsed.TotalDays;
-            return days == 1 ? "Yesterday" : $"{days} days ago";
+            return days == 1 ? "1 day ago" : $"{days} days ago";
         }
 
         var format = date.Year == now.Year ? "MMM d" : "MMM d, yyyy";

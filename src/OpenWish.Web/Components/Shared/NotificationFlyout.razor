@@ -105,9 +105,9 @@
                                         @if (notification.Action is { } action && ((action.Options?.Count ?? 0) > 0 || !string.IsNullOrWhiteSpace(action.NavigateTo)))
                                         {
                                             <div class="notification-cta">
-                                                @if (_invitationOutcomes.TryGetValue(notification.PublicId, out var outcome))
+                                                @if (GetInvitationOutcome(notification) is { } outcome)
                                                 {
-                                                    <span class="notification-outcome" role="status">@outcome</span>
+                                                    <span class="notification-outcome">@outcome</span>
                                                 }
                                                 else if ((action.Options?.Count ?? 0) > 0)
                                                 {
@@ -146,7 +146,7 @@
                                                     aria-label="@($"Mark {GetNotificationName(notification)} as read")"
                                                     title="Mark as read"
                                                     disabled="@_isMarkingRead"
-                                                    @onclick="() => MarkNotificationAsRead(notification)"
+                                                    @onclick="() => MarkReadFromButton(notification)"
                                                     @onclick:stopPropagation="true">
                                                 <OpenWishIcon Name="check-lg" />
                                             </button>
@@ -246,7 +246,6 @@
     private bool _focusFlyoutCloseAfterRender;
     private bool _hasRenderedInteractively;
     private int _visibleCount = PageSize;
-    private readonly Dictionary<string, string> _invitationOutcomes = new();
     private const int PageSize = 20;
 
     protected override async Task OnInitializedAsync()
@@ -354,8 +353,28 @@
     private void ShowMore()
     {
         _visibleCount += PageSize;
+        if (_notifications is not null && _visibleCount >= _notifications.Count())
+        {
+            _focusFlyoutCloseAfterRender = true;
+        }
         _statusMessage = $"Showing {Math.Min(_visibleCount, _notifications?.Count() ?? 0)} notifications.";
     }
+
+    private async Task MarkReadFromButton(NotificationModel notification)
+    {
+        await MarkNotificationAsRead(notification);
+        if (notification.IsRead)
+        {
+            _focusFlyoutCloseAfterRender = true;
+        }
+    }
+
+    private static string? GetInvitationOutcome(NotificationModel notification) =>
+        notification.Action?.Parameters.TryGetValue("invitationStatus", out var status) == true
+            ? string.Equals(status, "Accepted", StringComparison.OrdinalIgnoreCase)
+                ? "You accepted this invitation"
+                : "You declined this invitation"
+            : null;
 
     private async Task OpenNotification(NotificationModel notification, string route)
     {
@@ -614,7 +633,7 @@
             }
 
             await LoadNotificationCount();
-            _invitationOutcomes[notification.PublicId] = accept ? "You accepted this invitation" : "You declined this invitation";
+            notification.Action!.Parameters["invitationStatus"] = accept ? "Accepted" : "Rejected";
             _statusMessage = accept ? "Invitation accepted." : "Invitation declined.";
 
             if (accept && !string.IsNullOrWhiteSpace(notification.Action?.NavigateTo))

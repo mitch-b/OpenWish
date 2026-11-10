@@ -1954,7 +1954,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(300);
   await assertMinimumTouchTarget(
-    notificationDialog.getByRole("button", { name: /as read$/ }).first(),
+    notificationDialog.locator(".notification-mark-read").first(),
     "Notification mark as read button"
   );
   await assertNoHorizontalScroll(page, "Notification panel on a phone");

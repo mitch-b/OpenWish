@@ -438,6 +438,20 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventInvitationSecondaryActions_StartCollapsedAndFitNarrowPanels()
+    {
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor.css");
+
+        Assert.Contains("<details class=\"invitation-actions-disclosure\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<summary aria-label=\"@($\"More actions for {GetInvitationDisplayName(invitation)}\")\">More actions</summary>", markup, StringComparison.Ordinal);
+        Assert.Contains("<div class=\"invitation-actions-menu\">", markup, StringComparison.Ordinal);
+        Assert.Contains("container-type: inline-size;", styles, StringComparison.Ordinal);
+        Assert.Contains("@container (max-width: 520px)", styles, StringComparison.Ordinal);
+        Assert.DoesNotContain("@media (max-width: 576px) {\n    .invitation-filters", styles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EventInvitationDialogs_ExposeTitlesTabsAndSearchLabels()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventInvitations.razor");
@@ -1085,7 +1099,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Title=\"Event unavailable\"", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't load this event. Check your connection and try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadAsync\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-busy=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
         Assert.Contains("@(_isLoading ? \"Retrying...\" : \"Try again\")", markup, StringComparison.Ordinal);
         Assert.Contains("Logger.LogError(ex, \"Failed to load event {EventId}\"", markup, StringComparison.Ordinal);
@@ -1147,6 +1161,18 @@ public class InteractiveControlMarkupTests
         var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "Dialog.razor");
         Assert.Contains("disabled=\"@(!CanClose)\"", dialogMarkup, StringComparison.Ordinal);
         Assert.Contains("return CanClose ? CloseAsync() : Task.CompletedTask;", dialogMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EventParticipantSummaries_OmitEmailWhenItIsAlreadyTheDisplayName()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+        var management = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
+
+        Assert.Contains("string.Equals(email, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)", details, StringComparison.Ordinal);
+        Assert.Contains("string.Equals(email, GetOwnerDisplayName(), StringComparison.OrdinalIgnoreCase)", details, StringComparison.Ordinal);
+        Assert.Contains("string.Equals(email, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)", management, StringComparison.Ordinal);
+        Assert.Contains("string.Equals(email, GetOwnerDisplayName(), StringComparison.OrdinalIgnoreCase)", management, StringComparison.Ordinal);
     }
 
     [Fact]

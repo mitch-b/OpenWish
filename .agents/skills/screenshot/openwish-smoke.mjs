@@ -678,10 +678,15 @@ async function verifyEventCardNavigation(page, eventPublicId, visitedRoutes) {
   const route = `/events/${eventPublicId}`;
   const card = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
   const link = card.locator(".event-card-link");
+  const waitForEventsLoaded = () =>
+    page.locator('section[aria-labelledby="events-list-title"][aria-busy="false"]')
+      .waitFor({ state: "visible" });
   const returnToCards = async () => {
     await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
     await page.waitForLoadState("networkidle");
+    await waitForEventsLoaded();
   };
+  await waitForEventsLoaded();
   for (const viewport of [
     { width: 1440, height: 1000, name: "desktop" },
     { width: 390, height: 700, name: "mobile" }
@@ -1790,6 +1795,18 @@ async function verifyOwnerJourney(browser, manifest, results) {
   const invitationList = page.locator("#event-invitations-list");
   await invitationList.getByText(inviteAddresses[3]).first().waitFor({ state: "visible" });
   await assertVisible(page, "Only accepted people are included in the draw.");
+  const firstInvitation = invitationList.locator(".list-group-item").filter({ hasText: inviteAddresses[0] });
+  const invitationActions = firstInvitation.locator(".invitation-actions-disclosure");
+  const moreActions = invitationActions.locator("summary");
+  const firstSecondaryAction = invitationActions.locator(".invitation-actions-menu button").first();
+  await assertMinimumTouchTarget(moreActions, "Invitation more actions");
+  if (await firstSecondaryAction.isVisible()) {
+    throw new Error("Secondary invitation actions were visible before opening their disclosure.");
+  }
+  await moreActions.click();
+  await firstSecondaryAction.waitFor({ state: "visible" });
+  await moreActions.click();
+  await firstSecondaryAction.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: `Mark ${inviteAddresses[3]} as accepted` }).click();
   const acceptDialog = page.getByRole("dialog", { name: "Mark as accepted" });
   await acceptDialog.waitFor({ state: "visible" });
@@ -2770,6 +2787,7 @@ async function verifyAccountFreeGuests(browser, results) {
   await organizerPage.goto(`${baseUrl}/events/${evt.publicId}/manage`);
   await organizerPage.waitForLoadState("networkidle");
   if (await organizerPage.locator("#allow-guest-participants").count()) throw new Error("The all-or-nothing guest toggle is back.");
+  await organizerPage.locator("#event-invitations-list .invitation-actions-disclosure summary").first().click();
   if (!await organizerPage.getByRole("button", { name: "Resend private access", exact: true }).isEnabled()) {
     throw new Error("The event-management invitation panel did not receive the enabled guest setting.");
   }
@@ -2777,12 +2795,16 @@ async function verifyAccountFreeGuests(browser, results) {
   await organizerPage.goto(`${baseUrl}/events/${evt.publicId}`);
   await organizerPage.waitForLoadState("networkidle");
   const revoke = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Revoke private access", exact: true });
+  await organizerPage.locator("#event-invitations-list .invitation-actions-disclosure summary").first().click();
   await revoke.click();
   const dialog = organizerPage.getByRole("dialog", { name: "Revoke private guest access?" });
   await dialog.waitFor({ state: "visible" });
   await screenshot(organizerPage, "guest-revoke-confirmation.png");
   await dialog.getByRole("button", { name: "Keep private access" }).click();
   await dialog.waitFor({ state: "hidden" });
+  if (!await revoke.isVisible()) {
+    await organizerPage.locator("#event-invitations-list .invitation-actions-disclosure summary").first().click();
+  }
   await revoke.click();
   await dialog.getByRole("button", { name: "Revoke private access", exact: true }).click();
   await organizerPage.getByRole("status").filter({ hasText: "Private guest access revoked." }).waitFor();
@@ -2800,6 +2822,9 @@ async function verifyAccountFreeGuests(browser, results) {
   await page.getByRole("heading", { name: "Invitation declined" }).waitFor();
   await organizerPage.goto(`${baseUrl}/events/${declineEvent.publicId}`);
   await organizerPage.waitForLoadState("networkidle");
+  const declinedInvitation = organizerPage.locator("#event-invitations-list .list-group-item")
+    .filter({ hasText: declineEmail });
+  await declinedInvitation.locator(".invitation-actions-disclosure summary").click();
   const remove = organizerPage.locator("#event-invitations-list").getByRole("button", { name: "Remove guest", exact: true });
   await remove.waitFor({ state: "visible" });
   await remove.evaluate(element => element.scrollIntoView({ block: "center", behavior: "instant" }));
@@ -4831,6 +4856,7 @@ async function verifyOccasionsJourney(browser, manifest, results) {
       throw new Error("Running the event again reused the original event.");
     }
     await owner.page.getByTestId("rerun-success").waitFor({ state: "visible" });
+    await owner.page.locator(".event-page[aria-busy='false']").waitFor({ state: "visible" });
     if (await owner.page.getByTestId("run-again").count() !== 0) {
       throw new Error("A freshly copied event offered to run it again.");
     }

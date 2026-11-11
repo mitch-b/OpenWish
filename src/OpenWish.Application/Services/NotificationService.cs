@@ -29,7 +29,44 @@ public class NotificationService(IDbContextFactory<ApplicationDbContext> context
             .OrderByDescending(n => n.Date)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<NotificationModel>>(notifications);
+        var models = _mapper.Map<List<NotificationModel>>(notifications);
+        await ApplyInvitationStatusAsync(context, models, userId);
+        return models;
+    }
+
+    // Answered invitations keep no live buttons, even after a reload or in another tab.
+    private static async Task ApplyInvitationStatusAsync(ApplicationDbContext context, List<NotificationModel> models, string userId)
+    {
+        var invitations = new Dictionary<NotificationModel, int>();
+        foreach (var model in models)
+        {
+            if (string.Equals(model.Action?.Type, "EventInvitation", StringComparison.OrdinalIgnoreCase) &&
+                model.Action.Parameters.TryGetValue("eventUserId", out var raw) &&
+                int.TryParse(raw, out var eventUserId))
+            {
+                invitations[model] = eventUserId;
+            }
+        }
+
+        if (invitations.Count == 0)
+        {
+            return;
+        }
+
+        var ids = invitations.Values.Distinct().ToList();
+        var statuses = await context.EventUsers
+            .Where(eu => ids.Contains(eu.Id) && eu.UserId == userId && !eu.Deleted)
+            .ToDictionaryAsync(eu => eu.Id, eu => eu.Status);
+
+        foreach (var (model, eventUserId) in invitations)
+        {
+            if (statuses.TryGetValue(eventUserId, out var status) &&
+                !string.Equals(status, "Pending", StringComparison.Ordinal))
+            {
+                model.Action!.Parameters["invitationStatus"] = status;
+                model.Action.Options = [];
+            }
+        }
     }
 
     public async Task<int> GetUnreadNotificationCountAsync(string userId)

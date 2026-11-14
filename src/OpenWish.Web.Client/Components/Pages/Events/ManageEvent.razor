@@ -120,14 +120,14 @@ else
                         <div class="list-group mt-3">
                             @if (hasOwner)
                             {
-                                <div class="list-group-item d-flex justify-content-between align-items-start">
-                                    <div>
+                                <div class="list-group-item manage-event-participant-row">
+                                    <div class="manage-event-participant-info">
                                         <strong>@GetOwnerDisplayName()</strong>
                                         @if (GetOwnerContactDetail() is { } ownerContact)
                                         {
-                                            <div class="small text-muted">@ownerContact</div>
+                                            <span class="small text-muted">@ownerContact</span>
                                         }
-                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <div class="d-flex flex-wrap gap-2 manage-event-participant-status">
                                             <span class="badge bg-secondary">Owner</span>
                                         </div>
                                     </div>
@@ -136,14 +136,14 @@ else
 
                             @foreach (var participant in participants)
                             {
-                                <div class="list-group-item d-flex justify-content-between align-items-start">
-                                    <div class="me-3">
+                                <div class="list-group-item manage-event-participant-row">
+                                    <div class="manage-event-participant-info">
                                         <strong>@GetParticipantDisplayName(participant)</strong>
                                         @if (GetParticipantContactDetail(participant) is { } contact)
                                         {
-                                            <div class="small text-muted">@contact</div>
+                                            <span class="small text-muted">@contact</span>
                                         }
-                                        <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <div class="d-flex flex-wrap gap-2 manage-event-participant-status">
                                             <span class="badge bg-primary">@participant.Role</span>
                                             <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
                                         </div>
@@ -152,7 +152,7 @@ else
                                          participant.User?.Id is string participantUserId &&
                                          participantUserId != _currentUserId)
                                     {
-                                        <button class="btn btn-outline-danger btn-sm"
+                                        <button class="btn btn-outline-danger btn-sm manage-event-participant-remove"
                                                 id="@GetParticipantRemoveButtonId(participant)"
                                                 aria-label="@($"Remove {GetParticipantDisplayName(participant)} from event")"
                                                 disabled="@_isRemovingParticipant"
@@ -622,10 +622,15 @@ else
     {
         if (!string.IsNullOrWhiteSpace(eventUser.User?.Email))
         {
-            return eventUser.User.Email!;
+            var email = eventUser.User.Email!;
+            return string.Equals(email, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)
+                ? null
+                : email;
         }
 
-        return eventUser.InviteeEmail;
+        return string.Equals(eventUser.InviteeEmail, GetParticipantDisplayName(eventUser), StringComparison.OrdinalIgnoreCase)
+            ? null
+            : eventUser.InviteeEmail;
     }
 
     private string GetOwnerDisplayName()
@@ -643,8 +648,14 @@ else
         return "Event Owner";
     }
 
-    private string? GetOwnerContactDetail() =>
-        string.IsNullOrWhiteSpace(_event?.CreatedBy?.Email) ? null : _event!.CreatedBy!.Email!;
+    private string? GetOwnerContactDetail()
+    {
+        var email = _event?.CreatedBy?.Email;
+        return string.IsNullOrWhiteSpace(email) ||
+               string.Equals(email, GetOwnerDisplayName(), StringComparison.OrdinalIgnoreCase)
+            ? null
+            : email;
+    }
 
     private static string GetNormalizedStatus(EventUserModel eventUser)
     {

@@ -7,6 +7,10 @@
     margin-bottom: 1.25rem;
 }
 
+.event-invitations {
+    container-type: inline-size;
+}
+
 .invitation-summary {
     display: flex;
     flex-wrap: wrap;
@@ -22,7 +26,7 @@
     border-radius: 999px;
     background: var(--color-surface-alt);
     color: var(--color-text-muted);
-    font-size: 0.85rem;
+    font-size: 0.875rem;
 }
 
 .invitation-summary-item strong {
@@ -244,6 +248,58 @@
     background: var(--color-surface-alt);
 }
 
+.invitation-actions-disclosure {
+    min-width: 0;
+}
+
+.invitation-actions-disclosure > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 2.75rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.6rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+    font-weight: 600;
+    list-style: none;
+}
+
+.invitation-actions-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+.invitation-actions-disclosure > summary::after {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    content: "";
+    transform: translateY(-0.1rem) rotate(45deg);
+}
+
+.invitation-actions-disclosure[open] > summary::after {
+    transform: translateY(0.1rem) rotate(225deg);
+}
+
+.invitation-actions-disclosure > summary:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.invitation-actions-disclosure[open] {
+    flex-basis: 100%;
+}
+
+.invitation-actions-menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+}
+
 .invitation-filter {
     min-width: 0;
     min-height: 2.75rem;
@@ -287,14 +343,22 @@
 
 .invitation-identity > span:not(.badge) {
     color: var(--color-text-muted);
-    font-size: 0.8rem;
+    font-size: 0.875rem;
 }
 
-@media (max-width: 576px) {
+@container (max-width: 520px) {
     .invitation-filters {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
+@container (max-width: 250px) {
+    .invitation-filters {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
     .friend-option {
         padding: 0.65rem 0.9rem;
         gap: 0.5rem;
@@ -342,6 +406,11 @@
     }
 
     .list-group-item .btn-sm {
+        min-height: 2.75rem;
+    }
+
+    .invitation-actions-disclosure > summary,
+    .invitation-actions-menu .btn {
         min-height: 2.75rem;
     }
 }

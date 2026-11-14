@@ -6179,7 +6179,11 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
-const browser = await chromium.launch();
+const baseOrigin = new URL(baseUrl).origin;
+const browserArgs = baseOrigin.startsWith("http://")
+  ? [`--unsafely-treat-insecure-origin-as-secure=${baseOrigin}`]
+  : [];
+const browser = await chromium.launch({ args: browserArgs });
 const results = [];
 
 try {

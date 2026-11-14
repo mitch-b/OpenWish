@@ -449,6 +449,49 @@ public class NotificationServiceTests
         Assert.False(result);
     }
 
+    [Fact]
+    public async Task GetUserNotificationsAsync_HidesResponseOptionsForAnsweredInvitations()
+    {
+        var factory = CreateFactory();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(new ApplicationUser { Id = "user1", UserName = "user1" });
+            context.EventUsers.AddRange(
+                new EventUser { Id = 11, EventId = 1, UserId = "user1", Status = "Accepted", IsAccepted = true },
+                new EventUser { Id = 12, EventId = 2, UserId = "user1", Status = "Pending" });
+            context.Notifications.AddRange(
+                InvitationNotification("answered", 11),
+                InvitationNotification("waiting", 12));
+            await context.SaveChangesAsync();
+        }
+
+        var service = new NotificationService(factory, _mapper);
+        var notifications = (await service.GetUserNotificationsAsync("user1", includeRead: true)).ToList();
+
+        var answered = Assert.Single(notifications, n => n.Title == "answered");
+        Assert.Equal("Accepted", answered.Action!.Parameters["invitationStatus"]);
+        Assert.Empty(answered.Action.Options);
+        var waiting = Assert.Single(notifications, n => n.Title == "waiting");
+        Assert.False(waiting.Action!.Parameters.ContainsKey("invitationStatus"));
+        Assert.Equal(2, waiting.Action.Options.Count);
+    }
+
+    private static Notification InvitationNotification(string title, int eventUserId) => new()
+    {
+        UserId = "user1",
+        Title = title,
+        Message = "Invited",
+        Type = "EventInvitation",
+        Date = DateTimeOffset.UtcNow,
+        ActionData = NotificationActionMapper.Serialize(new NotificationActionModel
+        {
+            Type = "EventInvitation",
+            NavigateTo = "/events/abc",
+            Parameters = new Dictionary<string, string> { ["eventUserId"] = eventUserId.ToString() },
+            Options = [new() { Key = "accept", Label = "Accept" }, new() { Key = "decline", Label = "Decline" }]
+        })
+    };
+
     private static TestDbContextFactory CreateFactory() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

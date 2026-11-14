@@ -6183,7 +6183,11 @@ const baseOrigin = new URL(baseUrl).origin;
 const browserArgs = baseOrigin.startsWith("http://")
   ? [`--unsafely-treat-insecure-origin-as-secure=${baseOrigin}`]
   : [];
-const browser = await chromium.launch({ args: browserArgs });
+// Full headless honors secure-origin overrides; Playwright's headless shell does not.
+const browser = await chromium.launch({
+  headless: false,
+  args: [...browserArgs, "--headless=new"]
+});
 const results = [];
 
 try {

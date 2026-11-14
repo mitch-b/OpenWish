@@ -6179,7 +6179,15 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
-const browser = await chromium.launch();
+const baseOrigin = new URL(baseUrl).origin;
+const browserArgs = baseOrigin.startsWith("http://")
+  ? [`--unsafely-treat-insecure-origin-as-secure=${baseOrigin}`]
+  : [];
+// Full headless honors the secure-origin override; Playwright's headless shell does not.
+const browser = await chromium.launch({
+  headless: false,
+  args: [...browserArgs, "--headless=new"]
+});
 const results = [];
 
 try {

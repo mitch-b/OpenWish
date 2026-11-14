@@ -28,7 +28,7 @@ jobs:
         run: node --test scripts/pr-screenshots.test.cjs
       - name: Require hosted desktop and mobile images for UI changes
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { validateScreenshots } = require(`${process.env.GITHUB_WORKSPACE}/scripts/pr-screenshots.cjs`);

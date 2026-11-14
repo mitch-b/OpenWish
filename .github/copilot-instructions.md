@@ -1,6 +1,6 @@
 # Copilot Instructions
 
-OpenWish is a .NET 10, self-hosted wishlist and gift-exchange application. It
+OpenWish is a .NET 11, self-hosted wishlist and gift-exchange application. It
 uses ASP.NET Core Blazor with server rendering plus interactive WebAssembly,
 EF Core with PostgreSQL, and .NET Aspire for local orchestration.
 
@@ -134,7 +134,7 @@ service discovery, resilience, health, logging, and OpenTelemetry defaults.
   scope every query to the connection's allowed lists and the ideas it added,
   and never return reservations, purchases, or comments to an app.
 - Central package versions are in `src/Directory.Packages.props`. All
-  projects target `net10.0` with nullable reference types and preview C#
+  projects target `net11.0` with nullable reference types and C# 15
   enabled by `src/Directory.Build.props`.
 - Follow `src/.editorconfig`: file-scoped namespaces, primary constructors
   where suitable, `var` for obvious types, `I`-prefixed interfaces, and

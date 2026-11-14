@@ -1985,6 +1985,43 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await assertVisible(page, "Event invitation");
   await assertVisible(page, "Wishlist activity");
   await screenshot(page, "notifications.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(300);
+  await assertMinimumTouchTarget(
+    notificationDialog.locator(".notification-mark-read").first(),
+    "Notification mark as read button"
+  );
+  await assertNoHorizontalScroll(page, "Notification panel on a phone");
+  await page.screenshot({ path: path.join(walkthroughDirectory, "notifications-mobile.png") });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.waitForTimeout(300);
+  const unreadItems = page.locator(".notification-item.unread");
+  const unreadBeforeHover = await unreadItems.count();
+  if (unreadBeforeHover < 2) {
+    throw new Error("The seeded notifications should start unread.");
+  }
+  await unreadItems.first().hover();
+  await page.waitForTimeout(500);
+  if (await unreadItems.count() !== unreadBeforeHover) {
+    throw new Error("Hovering over a notification marked it as read.");
+  }
+  const notificationTime = page.locator(".notification-item time").first();
+  const notificationTimeText = (await notificationTime.textContent())?.trim() ?? "";
+  if (!/^(Just now|\d+ min ago|1 hour ago|\d+ hours ago)$/.test(notificationTimeText) ||
+      !(await notificationTime.getAttribute("title"))?.endsWith("UTC")) {
+    throw new Error(`Notification time was '${notificationTimeText}' instead of relative words with an exact title.`);
+  }
+  const markOneRead = unreadItems.first().getByRole("button", { name: /as read$/ });
+  await markOneRead.click();
+  await page.waitForFunction(
+    expectedCount => document.querySelectorAll(".notification-item.unread").length === expectedCount,
+    unreadBeforeHover - 1
+  );
+  const partlyReadResponse = await context.request.get(`${baseUrl}/api/notifications?includeRead=true`);
+  const partlyRead = await partlyReadResponse.json();
+  if (partlyRead.filter(notification => !notification.isRead).length !== unreadBeforeHover - 1) {
+    throw new Error("Marking one notification as read did not persist exactly one change.");
+  }
   await notificationDialog.getByRole("button", { name: "Mark all as read" }).click();
   await page.getByRole("status").filter({ hasText: "All notifications marked as read." })
     .waitFor({ state: "attached" });

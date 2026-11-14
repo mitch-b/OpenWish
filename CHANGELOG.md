@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.17.0] - 2026-11-10
+
+### Improved
+
+- Notifications are marked read only when you choose: use the new check button
+  on a notification, open it with "View", or use "Mark all as read". Hovering
+  or touching a notification while scrolling no longer marks it read.
+- Notification times read "5 min ago" or "1 day ago", with the exact time shown
+  on hover.
+- After you accept or decline an invitation from a notification, it keeps showing what
+  you chose instead of offering the buttons again.
+- "Show more" loads older notifications instead of stopping at 20.
+- Notification buttons are easier to tap on phones, and unread notifications
+  are announced to screen readers.
+
 ## [0.16.0] - 2026-11-10
 
 ### Improved

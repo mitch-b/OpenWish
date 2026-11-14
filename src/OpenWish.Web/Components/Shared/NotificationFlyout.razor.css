@@ -115,6 +115,7 @@
 }
 
 .notification-date {
+    display: block;
     font-size: 0.75rem;
     color: var(--bs-secondary-color);
     opacity: .7;
@@ -132,6 +133,15 @@
     display: flex;
     align-items: center;
     flex-shrink: 0;
+}
+
+.notification-outcome {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
 }
 
 .unread-indicator {
@@ -177,5 +187,13 @@
 
     .notification-content {
         max-height: calc(100vh - 9rem);
+    }
+
+    .notification-flyout .btn-sm {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 }

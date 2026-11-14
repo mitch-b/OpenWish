@@ -368,6 +368,20 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void NotificationFlyout_MarksReadDeliberatelyAndShowsTruthfulState()
+    {
+        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+
+        Assert.DoesNotContain("@onmouseenter", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@ontouchstart", markup, StringComparison.Ordinal);
+        Assert.Contains("notification-mark-read", markup, StringComparison.Ordinal);
+        Assert.Contains("OpenNotification(notification, action.NavigateTo!)", markup, StringComparison.Ordinal);
+        Assert.Contains("NotificationTime.Describe", markup, StringComparison.Ordinal);
+        Assert.Contains("GetInvitationOutcome", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"ShowMore\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NotificationDeletion_ProvidesAFocusSafeDestructiveConfirmation()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");

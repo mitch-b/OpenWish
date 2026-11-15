@@ -4468,6 +4468,53 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       throw new Error("A birthday outside the 30-day window appeared on the dashboard.");
     }
     await screenshot(ownerPage, "dashboard-birthdays.png");
+    // Birthday nudge: it appears only for a gift the viewer reserved and has not bought, and links to the plan.
+    if (await birthdayPanel.getByTestId("birthday-gift-nudge").count() !== 0) {
+      throw new Error("A birthday nudge appeared without a reserved gift.");
+    }
+    const calendarResponse = await ownerContext.request.get(`${baseUrl}/api/birthdays/calendar.ics`);
+    const calendarText = await calendarResponse.text();
+    if (!calendarResponse.ok() || !calendarResponse.headers()["content-type"]?.includes("text/calendar") ||
+        !calendarText.includes("SUMMARY:JordanDemo's birthday") || !calendarText.includes("RRULE:FREQ=YEARLY") ||
+        !calendarText.includes("SUMMARY:CaseyDemo's birthday") || calendarText.includes("playwright-") ||
+        /BDAY|DTSTART;VALUE=DATE:\d{4}0000/.test(calendarText)) {
+      throw new Error("The friends' birthday calendar was missing, unscoped, or leaked private details.");
+    }
+    const anonymousCalendar = await browser.newContext();
+    const anonymousStatus = (await anonymousCalendar.request.get(`${baseUrl}/api/birthdays/calendar.ics`, { maxRedirects: 0 })).status();
+    await anonymousCalendar.close();
+    if (anonymousStatus === 200) {
+      throw new Error("An anonymous visitor downloaded the birthday calendar.");
+    }
+    const downloadPromise = ownerPage.waitForEvent("download");
+    await birthdayPanel.getByTestId("birthday-calendar-download").click();
+    if ((await downloadPromise).suggestedFilename() !== "openwish-birthdays.ics") {
+      throw new Error("The birthday calendar download had an unexpected file name.");
+    }
+    const jordanItems = await (await ownerContext.request.get(`${baseUrl}/api/wishlists/demo-jordan-favorites/items`)).json();
+    const boardGame = jordanItems.find(item => item.name === "Cooperative Board Game");
+    const reserveBoardGame = await ownerContext.request.post(
+      `${baseUrl}/api/wishlists/demo-jordan-favorites/items/${boardGame.id}/reserve`, { data: { isAnonymous: false } });
+    if (!reserveBoardGame.ok()) {
+      throw new Error(`Reserving Jordan's gift returned ${reserveBoardGame.status()}.`);
+    }
+    await ownerPage.reload({ waitUntil: "domcontentloaded" });
+    const nudge = ownerPage.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).getByTestId("birthday-gift-nudge");
+    await nudge.getByText("1 gift still to buy").waitFor({ state: "visible" });
+    if (await nudge.locator("a").getAttribute("href") !== "/gift-plan") {
+      throw new Error("The birthday nudge did not link to the gift plan.");
+    }
+    await screenshot(ownerPage, "dashboard-birthday-gift-nudge.png");
+    const releaseBoardGame = await ownerContext.request.delete(
+      `${baseUrl}/api/gift-plan/demo-jordan-favorites/items/demo-board-game`);
+    if (!releaseBoardGame.ok()) {
+      throw new Error(`Releasing Jordan's gift returned ${releaseBoardGame.status()}.`);
+    }
+    await ownerPage.reload({ waitUntil: "domcontentloaded" });
+    await ownerPage.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).waitFor({ state: "visible" });
+    if (await ownerPage.getByTestId("birthday-gift-nudge").count() !== 0) {
+      throw new Error("The birthday nudge stayed after the gift was released.");
+    }
     const upcoming = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/upcoming`)).json();
     if (upcoming.length !== 1 || upcoming[0].userName !== "JordanDemo" || "year" in upcoming[0] || "email" in upcoming[0]) {
       throw new Error(`Unexpected upcoming birthdays payload: ${JSON.stringify(upcoming)}`);

@@ -61,7 +61,7 @@ public static class EventCalendar
         return builder.ToString();
     }
 
-    private static string Escape(string? value) =>
+    internal static string Escape(string? value) =>
         (value ?? string.Empty)
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace(";", "\\;", StringComparison.Ordinal)
@@ -71,7 +71,7 @@ public static class EventCalendar
             .Replace("\r", "\\n", StringComparison.Ordinal);
 
     // Content lines are limited to 75 octets; continuation lines start with a space.
-    private static string Fold(string line)
+    internal static string Fold(string line)
     {
         if (Encoding.UTF8.GetByteCount(line) <= 75)
         {

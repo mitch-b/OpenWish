@@ -166,6 +166,12 @@
                                 <span class="birthday-copy">
                                     <strong>@birthday.UserName</strong>
                                     <small>@BirthdayCalendar.Format(birthday.Month, birthday.Day) &middot; @BirthdayCountdown(birthday.DaysUntil)</small>
+                                    @if (BirthdayGiftsToBuy is not null && BirthdayGiftsToBuy.TryGetValue(birthday.UserName, out var toBuy))
+                                    {
+                                        <small class="birthday-gift-nudge" data-testid="birthday-gift-nudge">
+                                            <a href="/gift-plan">@BirthdayGiftNudge.Describe(toBuy)</a>
+                                        </small>
+                                    }
                                 </span>
                                 @if (birthday.WishlistPublicId is not null)
                                 {
@@ -176,6 +182,9 @@
                             </li>
                         }
                     </ul>
+                    <a class="btn btn-outline-secondary btn-sm birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
+                        Add friends' birthdays to your calendar
+                    </a>
                 </section>
             }
 
@@ -423,6 +432,11 @@
     [PersistentState]
     public List<UpcomingBirthdayModel>? UpcomingBirthdays { get; set; }
 
+    [PersistentState]
+    public Dictionary<string, int>? BirthdayGiftsToBuy { get; set; }
+
+    private GiftPlanModel? _giftPlan;
+
     private List<FriendRequestModel>? _pendingFriendRequests;
     private List<EventUserModel>? _pendingEventInvitations;
     private List<WishlistModel>? _featuredWishlistsForWelcome;
@@ -503,6 +517,7 @@
         try
         {
             UpcomingBirthdays = _userId is null ? [] : (await BirthdayService.GetUpcomingBirthdaysAsync(_userId)).Take(3).ToList();
+            BirthdayGiftsToBuy = _giftPlan is null ? [] : BirthdayGiftNudge.CountToBuy(_giftPlan, UpcomingBirthdays);
         }
         catch (Exception ex)
         {
@@ -516,7 +531,8 @@
     {
         try
         {
-            GiftsToBuyCount = _userId is null ? 0 : (await GiftPlanService.GetGiftPlanAsync(_userId)).ToBuyCount;
+            _giftPlan = _userId is null ? null : await GiftPlanService.GetGiftPlanAsync(_userId);
+            GiftsToBuyCount = _giftPlan?.ToBuyCount ?? 0;
         }
         catch (Exception ex)
         {

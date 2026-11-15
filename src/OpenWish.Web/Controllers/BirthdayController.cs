@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenWish.Shared.Models;
 using OpenWish.Shared.RequestModels;
 using OpenWish.Shared.Services;
 using OpenWish.Web.Services;
@@ -43,5 +44,21 @@ public class BirthdayController(IBirthdayService birthdayService, ApiUserContext
     {
         var userId = await userContextService.GetUserIdAsync();
         return userId is null ? Unauthorized() : Ok(await birthdayService.GetUpcomingBirthdaysAsync(userId, Math.Clamp(withinDays, 1, 366)));
+    }
+
+    [HttpGet("calendar.ics")]
+    public async Task<IActionResult> GetCalendarFile()
+    {
+        var userId = await userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var birthdays = await birthdayService.GetUpcomingBirthdaysAsync(userId, 366);
+        var appUrl = $"{Request.Scheme}://{Request.Host}";
+        var calendar = BirthdayCalendarFile.BuildIcs(
+            birthdays, appUrl, DateOnly.FromDateTime(DateTime.UtcNow), DateTimeOffset.UtcNow);
+        return File(System.Text.Encoding.UTF8.GetBytes(calendar), "text/calendar; charset=utf-8", BirthdayCalendarFile.FileName);
     }
 }

@@ -26,7 +26,7 @@ public static class BirthdayCalendarFile
                 ? appUrl
                 : $"{appUrl.TrimEnd('/')}/wishlists/{Uri.EscapeDataString(birthday.WishlistPublicId)}";
             lines.Add("BEGIN:VEVENT");
-            lines.Add($"UID:birthday-{birthday.Month:00}{birthday.Day:00}-{Uid(birthday.UserName)}@openwish");
+            lines.Add($"UID:birthday-{Uid(birthday)}@openwish");
             lines.Add($"DTSTAMP:{stamp.UtcDateTime:yyyyMMdd'T'HHmmss'Z'}");
             lines.Add($"DTSTART;VALUE=DATE:{start:yyyyMMdd}");
             lines.Add($"DTEND;VALUE=DATE:{start.AddDays(1):yyyyMMdd}");
@@ -48,9 +48,11 @@ public static class BirthdayCalendarFile
         return builder.ToString();
     }
 
-    private static string Uid(string name)
+    private static string Uid(UpcomingBirthdayModel birthday)
     {
-        var safe = new string(name.Select(c => char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '-').ToArray()).Trim('-');
+        // Older callers without a key fall back to the name and date, which is unique enough for a single friend.
+        var key = birthday.FriendKey.Length > 0 ? birthday.FriendKey : $"{birthday.UserName}-{birthday.Month:00}{birthday.Day:00}";
+        var safe = new string(key.Select(c => char.IsLetterOrDigit(c) ? char.ToLowerInvariant(c) : '-').ToArray()).Trim('-');
         return safe.Length == 0 ? "friend" : safe;
     }
 }

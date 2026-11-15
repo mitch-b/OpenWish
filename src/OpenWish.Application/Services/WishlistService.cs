@@ -669,7 +669,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(w => !w.Deleted)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
+        var sharedModels = _mapper.Map<List<WishlistModel>>(wishlists);
+        foreach (var model in sharedModels)
+        {
+            FilterWishlistItemsForViewer(model, userId);
+        }
+
+        return sharedModels;
     }
 
     public async Task<IEnumerable<WishlistModel>> GetEditableWishlistsAsync(string userId)
@@ -731,7 +737,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(w => w.Items.Where(i => !i.Deleted))
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<WishlistModel>>(wishlists);
+        var friendModels = _mapper.Map<List<WishlistModel>>(wishlists);
+        foreach (var model in friendModels)
+        {
+            FilterWishlistItemsForViewer(model, userId);
+        }
+
+        return friendModels;
     }
 
     public async Task<bool> CanUserAccessWishlistAsync(int wishlistId, string userId)

@@ -4,6 +4,9 @@ namespace OpenWish.Shared.Models;
 public record UpcomingBirthdayModel
 {
     public string UserName { get; init; } = string.Empty;
+
+    /// <summary>Opaque stable identifier for the friend; never their account id.</summary>
+    public string FriendKey { get; init; } = string.Empty;
     public int Month { get; init; }
     public int Day { get; init; }
     public int DaysUntil { get; init; }

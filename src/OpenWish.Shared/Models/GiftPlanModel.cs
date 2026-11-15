@@ -37,6 +37,9 @@ public record GiftPlanItemModel
 public record GiftPlanRecipientModel
 {
     public string RecipientName { get; init; } = string.Empty;
+
+    /// <summary>Opaque stable identifier for the recipient, used to match them across views.</summary>
+    public string RecipientKey { get; init; } = string.Empty;
     public IReadOnlyList<GiftPlanItemModel> Items { get; init; } = [];
 
     /// <summary>

@@ -15,14 +15,16 @@ public class BirthdayGiftNudgeTests
         {
             Recipients =
             [
-                new GiftPlanRecipientModel { RecipientName = "Jordan", Items = [Item("Game", false), Item("Mug", true)] },
-                new GiftPlanRecipientModel { RecipientName = "Casey", Items = [Item("Book", false)] }
+                new GiftPlanRecipientModel { RecipientName = "Jordan", RecipientKey = "k1", Items = [Item("Game", false), Item("Mug", true)] },
+                new GiftPlanRecipientModel { RecipientName = "Casey", RecipientKey = "k2", Items = [Item("Book", false)] }
             ]
         };
 
-        var counts = BirthdayGiftNudge.CountToBuy(plan, [new UpcomingBirthdayModel { UserName = "jordan" }]);
+        var counts = BirthdayGiftNudge.CountToBuy(plan, [new UpcomingBirthdayModel { UserName = "A friend", FriendKey = "k1" }]);
 
-        Assert.Equal(1, Assert.Single(counts).Value);
+        var entry = Assert.Single(counts);
+        Assert.Equal("k1", entry.Key);
+        Assert.Equal(1, entry.Value);
     }
 
     [Fact]
@@ -30,11 +32,11 @@ public class BirthdayGiftNudgeTests
     {
         var plan = new GiftPlanModel
         {
-            Recipients = [new GiftPlanRecipientModel { RecipientName = "Jordan", Items = [Item("Game", true)] }]
+            Recipients = [new GiftPlanRecipientModel { RecipientName = "Jordan", RecipientKey = "k1", Items = [Item("Game", true)] }]
         };
 
-        Assert.Empty(BirthdayGiftNudge.CountToBuy(plan, [new UpcomingBirthdayModel { UserName = "Jordan" }]));
-        Assert.Empty(BirthdayGiftNudge.CountToBuy(new GiftPlanModel(), [new UpcomingBirthdayModel { UserName = "Jordan" }]));
+        Assert.Empty(BirthdayGiftNudge.CountToBuy(plan, [new UpcomingBirthdayModel { UserName = "Jordan", FriendKey = "k1" }]));
+        Assert.Empty(BirthdayGiftNudge.CountToBuy(new GiftPlanModel(), [new UpcomingBirthdayModel { UserName = "Jordan", FriendKey = "k1" }]));
     }
 
     [Theory]

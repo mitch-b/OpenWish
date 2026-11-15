@@ -50,6 +50,21 @@ public class BirthdayCalendarFileTests
     }
 
     [Fact]
+    public void BuildIcs_GivesFriendsWithTheSameNameAndDateDistinctUids()
+    {
+        var ics = BirthdayCalendarFile.BuildIcs(
+            [
+                new UpcomingBirthdayModel { UserName = "A friend", FriendKey = RecipientKey.For("u1"), Month = 3, Day = 9 },
+                new UpcomingBirthdayModel { UserName = "A friend", FriendKey = RecipientKey.For("u2"), Month = 3, Day = 9 }
+            ],
+            "https://wish.example", new DateOnly(2026, 11, 15), _stamp);
+
+        var uids = ics.Split("\r\n").Where(line => line.StartsWith("UID:", StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, uids.Distinct().Count());
+        Assert.DoesNotContain("u1", string.Concat(uids), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildIcs_WithNoFriends_IsAnEmptyValidCalendar()
     {
         var ics = BirthdayCalendarFile.BuildIcs([], "https://wish.example", new DateOnly(2026, 1, 1), _stamp);

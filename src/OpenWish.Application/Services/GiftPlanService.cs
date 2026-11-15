@@ -108,6 +108,7 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
                 .Select(group => new GiftPlanRecipientModel
                 {
                     RecipientName = group.First().RecipientName,
+                    RecipientKey = RecipientKey.For(group.Key),
                     Items = group.Select(entry => entry.Item).ToList()
                 }),
             now);
@@ -116,6 +117,7 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
             .Select(group => new GiftPlanRecipientModel
             {
                 RecipientName = group.First().RecipientName,
+                RecipientKey = RecipientKey.For(group.Key),
                 Items = group.Select(entry => entry.Item).OrderByDescending(item => item.PurchasedOn).ToList()
             })
             .OrderBy(recipient => recipient.RecipientName, StringComparer.CurrentCultureIgnoreCase)

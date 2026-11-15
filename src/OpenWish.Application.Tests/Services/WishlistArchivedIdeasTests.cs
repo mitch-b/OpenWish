@@ -61,6 +61,27 @@ public class WishlistArchivedIdeasTests
     }
 
     [Fact]
+    public async Task ArchivedIdeas_AreHiddenFromFriendAndSharedCollections()
+    {
+        var (factory, list, items) = await SeedAsync();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistPermissions.Add(new WishlistPermission { WishlistId = list.Id, UserId = "shopper", PermissionType = "View" });
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        await service.SetWishlistItemArchivedByPublicIdAsync(list.PublicId, items[0].PublicId, true, "owner");
+
+        var friends = (await service.GetFriendsWishlistsAsync("shopper")).Single();
+        Assert.Equal(["Second"], friends.Items.Select(i => i.Name));
+        Assert.Empty(friends.ArchivedItems);
+        var shared = (await service.GetSharedWithMeWishlistsAsync("shopper")).Single();
+        Assert.Equal(["Second"], shared.Items.Select(i => i.Name));
+        Assert.Empty(shared.ArchivedItems);
+    }
+
+    [Fact]
     public async Task Restore_ReturnsTheIdeaToTheActiveList()
     {
         var (factory, list, items) = await SeedAsync();

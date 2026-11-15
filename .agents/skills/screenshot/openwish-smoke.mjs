@@ -4090,10 +4090,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await archivedSection.getByTestId("restore-archived-idea").click();
     await archivedSection.waitFor({ state: "detached" });
-    await stale.waitFor({ state: "visible" });
-
-    await stale.getByRole("button", { name: "Keep A quiet weekend away" }).click();
+    // Restoring counts as touching the idea, so it is active again and no longer stale.
     await stale.waitFor({ state: "detached" });
+    const keepResponse = await context.request.post(
+      `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}/items/demo-private-item/still-wanted`);
+    if (!keepResponse.ok()) {
+      throw new Error(`Confirming a restored idea returned ${keepResponse.status()}.`);
+    }
     await page.reload({ waitUntil: "domcontentloaded" });
     await assertVisible(page, "A quiet weekend away");
     if (await page.getByTestId("stale-ideas").count() !== 0) {
@@ -4491,14 +4494,14 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if ((await downloadPromise).suggestedFilename() !== "openwish-birthdays.ics") {
       throw new Error("The birthday calendar download had an unexpected file name.");
     }
-    const jordanItems = await (await ownerContext.request.get(`${baseUrl}/api/wishlists/demo-jordan-favorites/items`)).json();
-    const boardGame = jordanItems.find(item => item.name === "Cooperative Board Game");
-    const reserveBoardGame = await ownerContext.request.post(
-      `${baseUrl}/api/wishlists/demo-jordan-favorites/items/${boardGame.id}/reserve`, { data: { isAnonymous: false } });
-    if (!reserveBoardGame.ok()) {
-      throw new Error(`Reserving Jordan's gift returned ${reserveBoardGame.status()}.`);
-    }
-    await ownerPage.reload({ waitUntil: "domcontentloaded" });
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    const boardGameRow = ownerPage.locator("tr").filter({ hasText: "Cooperative Board Game" });
+    await boardGameRow.getByRole("button", { name: "Show gift options for Cooperative Board Game" }).click();
+    const boardGameCoordination = ownerPage.getByRole("region", { name: "Gift coordination for Cooperative Board Game" });
+    await boardGameCoordination.getByRole("button", { name: "Reserve this item" }).click();
+    await boardGameRow.getByText("Reserved by you", { exact: true }).waitFor({ state: "visible" });
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
     const nudge = ownerPage.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).getByTestId("birthday-gift-nudge");
     await nudge.getByText("1 gift still to buy").waitFor({ state: "visible" });
     if (await nudge.locator("a").getAttribute("href") !== "/gift-plan") {

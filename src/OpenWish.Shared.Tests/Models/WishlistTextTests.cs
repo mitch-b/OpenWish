@@ -13,7 +13,8 @@ public class WishlistTextTests
             new WishlistItemModel { Name = "Skillet", Price = 38m, Url = "https://example.com/skillet", Reservations = [new ItemReservationModel()] },
             new WishlistItemModel { Name = "Apron" },
             new WishlistItemModel { Name = "Surprise", IsHiddenFromOwner = true },
-            new WishlistItemModel { Name = "Already got it", ReceivedOn = DateTimeOffset.UtcNow }
+            new WishlistItemModel { Name = "Already got it", ReceivedOn = DateTimeOffset.UtcNow },
+            new WishlistItemModel { Name = "Put away", ArchivedOn = DateTimeOffset.UtcNow }
         };
 
         var text = WishlistText.Build("Kitchen", items, "https://example.test/wishlists/k");

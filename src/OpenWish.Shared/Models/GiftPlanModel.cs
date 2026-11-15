@@ -25,6 +25,11 @@ public record GiftPlanItemModel
 
     public bool IsPurchased => PurchasedOn is not null;
 
+    /// <summary>When the shopper wrapped the gift; only a bought gift can be wrapped.</summary>
+    public DateTimeOffset? WrappedOn { get; init; }
+
+    public bool IsWrapped => IsPurchased && WrappedOn is not null;
+
     public bool IsOverBudget => EventBudget is { } budget && Price is { } price && price > budget;
 }
 
@@ -32,6 +37,9 @@ public record GiftPlanItemModel
 public record GiftPlanRecipientModel
 {
     public string RecipientName { get; init; } = string.Empty;
+
+    /// <summary>Opaque stable identifier for the recipient, used to match them across views.</summary>
+    public string RecipientKey { get; init; } = string.Empty;
     public IReadOnlyList<GiftPlanItemModel> Items { get; init; } = [];
 
     /// <summary>
@@ -56,6 +64,7 @@ public record GiftPlanRecipientModel
     public decimal Total => Items.Sum(item => item.Price ?? 0m);
     public int UnpricedCount => Items.Count(item => item.Price is null);
     public int ToBuyCount => Items.Count(item => !item.IsPurchased);
+    public int ToWrapCount => Items.Count(item => item.IsPurchased && !item.IsWrapped);
     public decimal ToBuyTotal => Items.Where(item => !item.IsPurchased).Sum(item => item.Price ?? 0m);
     public int OverBudgetCount => Items.Count(item => item.IsOverBudget);
 
@@ -92,6 +101,8 @@ public record GiftPlanModel
     public int UnpricedCount => Recipients.Sum(recipient => recipient.UnpricedCount);
     public int ToBuyCount => Recipients.Sum(recipient => recipient.ToBuyCount);
     public int PurchasedCount => ItemCount - ToBuyCount;
+    public int ToWrapCount => Recipients.Sum(recipient => recipient.ToWrapCount);
+    public int WrappedCount => PurchasedCount - ToWrapCount;
     public decimal ToBuyTotal => Recipients.Sum(recipient => recipient.ToBuyTotal);
     public int OverBudgetCount => Recipients.Sum(recipient => recipient.OverBudgetCount);
 

@@ -87,6 +87,7 @@ public class BirthdayService(IDbContextFactory<ApplicationDbContext> contextFact
         return upcoming.Select(entry => new UpcomingBirthdayModel
         {
             UserName = PublicDisplayName.From(entry.Friend.UserName, "A friend"),
+            FriendKey = RecipientKey.For(entry.Friend.Id),
             Month = entry.Friend.Month,
             Day = entry.Friend.Day,
             DaysUntil = entry.DaysUntil,

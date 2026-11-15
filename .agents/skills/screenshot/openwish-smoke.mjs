@@ -918,6 +918,25 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The home page did not include X-Content-Type-Options: nosniff.");
   }
 
+  // B1: the installable app ships a worker that only caches the offline page.
+  const workerResponse = await context.request.get(`${baseUrl}/service-worker.js`);
+  const workerSource = await workerResponse.text();
+  if (!workerResponse.ok() || !workerSource.includes("offline.html") || /\/api\//.test(workerSource)) {
+    throw new Error("The service worker was missing or caches API responses.");
+  }
+  const offlineResponse = await context.request.get(`${baseUrl}/offline.html`);
+  if (!offlineResponse.ok() || !(await offlineResponse.text()).includes("You're offline")) {
+    throw new Error("The offline page was not served.");
+  }
+  // Browsers only register workers on secure origins; the compose stack uses plain http://web.
+  const workerRegistered = await page.evaluate(async () => {
+    if (!window.isSecureContext) return true;
+    return Boolean(await navigator.serviceWorker?.getRegistration());
+  });
+  if (!workerRegistered) {
+    throw new Error("The service worker was not registered on the home page.");
+  }
+
   const notificationsResponse = await context.request.get(`${baseUrl}/api/notifications?includeRead=true`);
   if (!notificationsResponse.ok()) {
     throw new Error(`Owner notifications returned ${notificationsResponse.status()}.`);
@@ -4044,8 +4063,40 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await strangerContext.close();
 
-    await stale.getByRole("button", { name: "Keep A quiet weekend away" }).click();
+    // B5: archive instead of delete; archived ideas leave every shopper's view and the owner can restore them.
+    const archivedForbidden = await (async () => {
+      const outsider = await browser.newContext();
+      await login(outsider, "guest", guestEmail);
+      const response = await outsider.request.put(
+        `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}/items/demo-private-item/archived`,
+        { data: { isArchived: true } });
+      await outsider.close();
+      return response.status();
+    })();
+    if (archivedForbidden !== 403) {
+      throw new Error(`A non-owner archived an idea (${archivedForbidden}).`);
+    }
+    await stale.getByRole("button", { name: "Archive A quiet weekend away" }).click();
     await stale.waitFor({ state: "detached" });
+    const archivedSection = page.getByTestId("archived-section");
+    await archivedSection.waitFor({ state: "visible" });
+    await archivedSection.locator("summary").click();
+    await archivedSection.getByText("A quiet weekend away").waitFor({ state: "visible" });
+    await screenshot(page, "archived-ideas.png");
+    const archivedApi = await (await context.request.get(`${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}`)).json();
+    if (!archivedApi.archivedItems?.some(item => item.name === "A quiet weekend away") ||
+        archivedApi.items.some(item => item.name === "A quiet weekend away")) {
+      throw new Error("Archiving did not move the idea out of the active list.");
+    }
+    await archivedSection.getByTestId("restore-archived-idea").click();
+    await archivedSection.waitFor({ state: "detached" });
+    // Restoring counts as touching the idea, so it is active again and no longer stale.
+    await stale.waitFor({ state: "detached" });
+    const keepResponse = await context.request.post(
+      `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}/items/demo-private-item/still-wanted`);
+    if (!keepResponse.ok()) {
+      throw new Error(`Confirming a restored idea returned ${keepResponse.status()}.`);
+    }
     await page.reload({ waitUntil: "domcontentloaded" });
     await assertVisible(page, "A quiet weekend away");
     if (await page.getByTestId("stale-ideas").count() !== 0) {
@@ -4237,9 +4288,22 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (!afterBuy.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.purchasedOn)) {
       throw new Error("Marking a gift as bought was not saved.");
     }
+    await headphonesRow.getByRole("button", { name: /Mark as wrapped/ }).click();
+    await headphonesRow.getByTestId("gift-plan-wrapped").waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-wrap-summary").filter({ hasText: "1 bought, 1 wrapped" }).waitFor({ state: "visible" });
+    const afterWrap = await (await context.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (!afterWrap.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.wrappedOn)) {
+      throw new Error("Marking a gift as wrapped was not saved.");
+    }
     await screenshot(page, "gift-plan-bought.png");
     const notReserver = await browser.newContext();
     await login(notReserver, "owner", ownerEmail);
+    const forbiddenWrap = await notReserver.request.put(
+      `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/wrapped`,
+      { data: { isWrapped: false } });
+    if (forbiddenWrap.status() !== 404) {
+      throw new Error(`A non-reserver changed a gift's wrapped status (${forbiddenWrap.status()}).`);
+    }
     const forbiddenToggle = await notReserver.request.put(
       `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/purchased`,
       { data: { isPurchased: true } });
@@ -4407,6 +4471,53 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       throw new Error("A birthday outside the 30-day window appeared on the dashboard.");
     }
     await screenshot(ownerPage, "dashboard-birthdays.png");
+    // Birthday nudge: it appears only for a gift the viewer reserved and has not bought, and links to the plan.
+    if (await birthdayPanel.getByTestId("birthday-gift-nudge").count() !== 0) {
+      throw new Error("A birthday nudge appeared without a reserved gift.");
+    }
+    const calendarResponse = await ownerContext.request.get(`${baseUrl}/api/birthdays/calendar.ics`);
+    const calendarText = await calendarResponse.text();
+    if (!calendarResponse.ok() || !calendarResponse.headers()["content-type"]?.includes("text/calendar") ||
+        !calendarText.includes("SUMMARY:JordanDemo's birthday") || !calendarText.includes("RRULE:FREQ=YEARLY") ||
+        !calendarText.includes("SUMMARY:CaseyDemo's birthday") || calendarText.includes("playwright-") ||
+        /BDAY|DTSTART;VALUE=DATE:\d{4}0000/.test(calendarText)) {
+      throw new Error("The friends' birthday calendar was missing, unscoped, or leaked private details.");
+    }
+    const anonymousCalendar = await browser.newContext();
+    const anonymousStatus = (await anonymousCalendar.request.get(`${baseUrl}/api/birthdays/calendar.ics`, { maxRedirects: 0 })).status();
+    await anonymousCalendar.close();
+    if (anonymousStatus === 200) {
+      throw new Error("An anonymous visitor downloaded the birthday calendar.");
+    }
+    const downloadPromise = ownerPage.waitForEvent("download");
+    await birthdayPanel.getByTestId("birthday-calendar-download").click();
+    if ((await downloadPromise).suggestedFilename() !== "openwish-birthdays.ics") {
+      throw new Error("The birthday calendar download had an unexpected file name.");
+    }
+    await ownerPage.setViewportSize({ width: 1280, height: 900 });
+    await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    const boardGameRow = ownerPage.locator("tr").filter({ hasText: "Cooperative Board Game" });
+    await boardGameRow.getByRole("button", { name: "Show gift options for Cooperative Board Game" }).click();
+    const boardGameCoordination = ownerPage.getByRole("region", { name: "Gift coordination for Cooperative Board Game" });
+    await boardGameCoordination.getByRole("button", { name: "Reserve this item" }).click();
+    await boardGameRow.getByText("Reserved by you", { exact: true }).waitFor({ state: "visible" });
+    await ownerPage.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    const nudge = ownerPage.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).getByTestId("birthday-gift-nudge");
+    await nudge.getByText("1 gift still to buy").waitFor({ state: "visible" });
+    if (await nudge.locator("a").getAttribute("href") !== "/gift-plan") {
+      throw new Error("The birthday nudge did not link to the gift plan.");
+    }
+    await screenshot(ownerPage, "dashboard-birthday-gift-nudge.png");
+    const releaseBoardGame = await ownerContext.request.delete(
+      `${baseUrl}/api/gift-plan/demo-jordan-favorites/items/demo-board-game`);
+    if (!releaseBoardGame.ok()) {
+      throw new Error(`Releasing Jordan's gift returned ${releaseBoardGame.status()}.`);
+    }
+    await ownerPage.reload({ waitUntil: "domcontentloaded" });
+    await ownerPage.getByTestId("upcoming-birthday").filter({ hasText: "JordanDemo" }).waitFor({ state: "visible" });
+    if (await ownerPage.getByTestId("birthday-gift-nudge").count() !== 0) {
+      throw new Error("The birthday nudge stayed after the gift was released.");
+    }
     const upcoming = await (await ownerContext.request.get(`${baseUrl}/api/birthdays/upcoming`)).json();
     if (upcoming.length !== 1 || upcoming[0].userName !== "JordanDemo" || "year" in upcoming[0] || "email" in upcoming[0]) {
       throw new Error(`Unexpected upcoming birthdays payload: ${JSON.stringify(upcoming)}`);

@@ -1211,6 +1211,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("WishlistItemId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("WrappedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
@@ -1587,6 +1590,9 @@ namespace OpenWish.Data.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("ArchivedOn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .ValueGeneratedOnAdd()

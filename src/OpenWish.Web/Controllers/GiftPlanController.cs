@@ -43,6 +43,30 @@ public class GiftPlanController(IGiftPlanService giftPlanService, ApiUserContext
         }
     }
 
+    [HttpPut("{wishlistPublicId}/items/{itemPublicId}/wrapped")]
+    public async Task<IActionResult> SetWrapped(string wishlistPublicId, string itemPublicId, [FromBody] UpdateGiftWrappedRequest request)
+    {
+        var userId = await userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            await giftPlanService.SetGiftWrappedAsync(userId, wishlistPublicId, itemPublicId, request.IsWrapped);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException)
+        {
+            return Conflict();
+        }
+    }
+
     [HttpDelete("{wishlistPublicId}/items/{itemPublicId}")]
     public async Task<IActionResult> Release(string wishlistPublicId, string itemPublicId)
     {

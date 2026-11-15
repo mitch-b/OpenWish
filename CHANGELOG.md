@@ -2,6 +2,20 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.18.0] - 2026-11-15
+
+### Added
+
+- Mark bought gifts as wrapped on your gift plan; the summary shows how many
+  are bought and wrapped.
+- Archive an old idea from "Still want these?" instead of deleting it, and
+  restore it later from the "Archived" section of your list.
+- OpenWish shows a friendly offline page when you open it without a connection.
+- Download friends' birthdays as a yearly-repeating calendar file from the
+  dashboard.
+- The birthday card says how many gifts you still need to buy for that friend
+  and links to your gift plan.
+
 ## [0.17.0] - 2026-11-10
 
 ### Improved

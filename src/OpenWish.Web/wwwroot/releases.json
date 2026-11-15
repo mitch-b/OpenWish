@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.18.0",
+    "date": "2026-11-15",
+    "title": "Wrapping, archiving, offline, and birthdays",
+    "summary": "Track wrapped gifts, archive old ideas instead of deleting them, see an offline page, add friends' birthdays to your calendar, and get a nudge for gifts still to buy.",
+    "highlights": [
+      "Mark bought gifts as wrapped on your gift plan.",
+      "Archive stale ideas and restore them later from the Archived section.",
+      "A friendly offline page appears when you have no connection.",
+      "Download friends' birthdays as a yearly calendar file from the dashboard.",
+      "Birthday cards show how many gifts you still need to buy and link to your gift plan."
+    ]
+  },
+  {
     "version": "0.17.0",
     "date": "2026-11-10",
     "title": "Notifications stay under your control",

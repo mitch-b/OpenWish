@@ -69,7 +69,7 @@
                     <div>
                         <dt>Still to buy</dt>
                         <dd data-testid="gift-plan-to-buy">@_plan.ToBuyCount</dd>
-                        <dd class="plan-note">@_plan.PurchasedCount bought</dd>
+                        <dd class="plan-note" data-testid="gift-plan-wrap-summary">@_plan.PurchasedCount bought@(_plan.PurchasedCount > 0 ? $", {_plan.WrappedCount} wrapped" : string.Empty)</dd>
                     </div>
                     <div>
                         <dt>People</dt>
@@ -211,8 +211,25 @@
                                                 <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d, yyyy")
                                             </small>
                                         }
+                                        @if (item.IsWrapped)
+                                        {
+                                            <small class="plan-bought" data-testid="gift-plan-wrapped">
+                                                <OpenWishIcon Name="gift" /> Wrapped @item.WrappedOn!.Value.ToLocalTime().ToString("MMM d, yyyy")
+                                            </small>
+                                        }
                                     </div>
                                     <div class="plan-item-side">
+                                        @if (item.IsPurchased)
+                                        {
+                                            <button class="btn btn-sm @(item.IsWrapped ? "btn-outline-secondary" : "btn-primary")"
+                                                    type="button"
+                                                    data-testid="gift-plan-wrap-toggle"
+                                                    disabled="@(_busyKey is not null)"
+                                                    @onclick="() => ToggleWrappedAsync(item)">
+                                                @(_busyKey == KeyOf(item) ? "Saving..." : item.IsWrapped ? "Not wrapped yet" : "Mark as wrapped")
+                                                <span class="visually-hidden"> for @item.ItemName</span>
+                                            </button>
+                                        }
                                         <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
                                                 type="button"
                                                 data-testid="gift-plan-toggle"
@@ -554,6 +571,34 @@
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Updating a gift's bought status failed.");
+            _actionError = $"We couldn't update {item.ItemName}. Try again.";
+        }
+        finally
+        {
+            _busyKey = null;
+        }
+    }
+
+    private async Task ToggleWrappedAsync(GiftPlanItemModel item)
+    {
+        if (_busyKey is not null || _userId is null)
+        {
+            return;
+        }
+
+        var markWrapped = !item.IsWrapped;
+        _busyKey = KeyOf(item);
+        _actionError = null;
+        _statusMessage = null;
+        try
+        {
+            await GiftPlanService.SetGiftWrappedAsync(_userId, item.WishlistPublicId, item.ItemPublicId, markWrapped);
+            _plan = await GiftPlanService.GetGiftPlanAsync(_userId);
+            _statusMessage = markWrapped ? $"{item.ItemName} marked as wrapped." : $"{item.ItemName} marked as not wrapped yet.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Updating a gift's wrapped status failed.");
             _actionError = $"We couldn't update {item.ItemName}. Try again.";
         }
         finally

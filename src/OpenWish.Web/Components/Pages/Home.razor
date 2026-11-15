@@ -155,6 +155,17 @@
                 </section>
             }
 
+            @if (UpcomingBirthdays is { Count: 0 } && BirthdayCalendarCount > 0)
+            {
+                <section class="birthday-panel" aria-labelledby="birthday-calendar-title" data-testid="birthday-calendar-panel">
+                    <h2 id="birthday-calendar-title">Friends' birthdays</h2>
+                    <p class="mb-0">None in the next 30 days.</p>
+                    <a class="btn btn-outline-secondary btn-sm birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
+                        Add friends' birthdays to your calendar
+                    </a>
+                </section>
+            }
+
             @if (UpcomingBirthdays is { Count: > 0 })
             {
                 <section class="birthday-panel" aria-labelledby="birthday-title" data-testid="upcoming-birthdays">
@@ -166,6 +177,12 @@
                                 <span class="birthday-copy">
                                     <strong>@birthday.UserName</strong>
                                     <small>@BirthdayCalendar.Format(birthday.Month, birthday.Day) &middot; @BirthdayCountdown(birthday.DaysUntil)</small>
+                                    @if (BirthdayGiftsToBuy is not null && BirthdayGiftsToBuy.TryGetValue(birthday.FriendKey, out var toBuy))
+                                    {
+                                        <small class="birthday-gift-nudge" data-testid="birthday-gift-nudge">
+                                            <a href="/gift-plan">@BirthdayGiftNudge.Describe(toBuy)</a>
+                                        </small>
+                                    }
                                 </span>
                                 @if (birthday.WishlistPublicId is not null)
                                 {
@@ -176,6 +193,9 @@
                             </li>
                         }
                     </ul>
+                    <a class="btn btn-outline-secondary btn-sm birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
+                        Add friends' birthdays to your calendar
+                    </a>
                 </section>
             }
 
@@ -423,6 +443,14 @@
     [PersistentState]
     public List<UpcomingBirthdayModel>? UpcomingBirthdays { get; set; }
 
+    [PersistentState]
+    public int? BirthdayCalendarCount { get; set; }
+
+    [PersistentState]
+    public Dictionary<string, int>? BirthdayGiftsToBuy { get; set; }
+
+    private GiftPlanModel? _giftPlan;
+
     private List<FriendRequestModel>? _pendingFriendRequests;
     private List<EventUserModel>? _pendingEventInvitations;
     private List<WishlistModel>? _featuredWishlistsForWelcome;
@@ -442,7 +470,8 @@
         PendingFriendRequestCount is not null &&
         PendingEventInvitationCount is not null &&
         GiftsToBuyCount is not null &&
-        UpcomingBirthdays is not null;
+        UpcomingBirthdays is not null &&
+        BirthdayCalendarCount is not null;
 
     private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;
 
@@ -502,13 +531,17 @@
     {
         try
         {
-            UpcomingBirthdays = _userId is null ? [] : (await BirthdayService.GetUpcomingBirthdaysAsync(_userId)).Take(3).ToList();
+            List<UpcomingBirthdayModel> yearAhead = _userId is null ? [] : (await BirthdayService.GetUpcomingBirthdaysAsync(_userId, 366)).ToList();
+            BirthdayCalendarCount = yearAhead.Count;
+            UpcomingBirthdays = yearAhead.Where(birthday => birthday.DaysUntil <= 30).Take(3).ToList();
+            BirthdayGiftsToBuy = _giftPlan is null ? [] : BirthdayGiftNudge.CountToBuy(_giftPlan, UpcomingBirthdays);
         }
         catch (Exception ex)
         {
             // Birthdays are optional; a failure must not block the dashboard.
             Logger.LogWarning(ex, "Unable to load upcoming birthdays for user {UserId}.", _userId);
             UpcomingBirthdays = [];
+            BirthdayCalendarCount = 0;
         }
     }
 
@@ -516,7 +549,8 @@
     {
         try
         {
-            GiftsToBuyCount = _userId is null ? 0 : (await GiftPlanService.GetGiftPlanAsync(_userId)).ToBuyCount;
+            _giftPlan = _userId is null ? null : await GiftPlanService.GetGiftPlanAsync(_userId);
+            GiftsToBuyCount = _giftPlan?.ToBuyCount ?? 0;
         }
         catch (Exception ex)
         {

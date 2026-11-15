@@ -9,7 +9,7 @@ public static class WishlistText
     public static string Build(string wishlistName, IEnumerable<WishlistItemModel> items, string? wishlistUrl = null)
     {
         var ideas = items
-            .Where(item => !item.IsHiddenFromOwner && item.ReceivedOn is null)
+            .Where(item => !item.IsHiddenFromOwner && item.ReceivedOn is null && item.ArchivedOn is null)
             .ToList();
 
         var builder = new StringBuilder();

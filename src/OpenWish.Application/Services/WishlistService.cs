@@ -972,7 +972,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ? await context.Database.BeginTransactionAsync()
             : null;
         var item = await GetWishlistItemForUpdateAsync(context, wishlistId, itemId);
-        if (item is null || item.Deleted || item.ReceivedOn is not null)
+        if (item is null || item.Deleted || item.ReceivedOn is not null || item.ArchivedOn is not null)
         {
             throw new KeyNotFoundException($"Item {itemId} not found in wishlist {wishlistId}");
         }
@@ -1213,6 +1213,42 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return _mapper.Map<WishlistItemModel>(item);
     }
 
+    public async Task<WishlistItemModel> SetWishlistItemArchivedByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        bool isArchived,
+        string requestingUserId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == wishlistPublicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {wishlistPublicId} not found");
+
+        if (!string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can archive an idea.");
+        }
+
+        var item = await context.WishlistItems
+            .FirstOrDefaultAsync(i =>
+                i.WishlistId == wishlist.Id &&
+                i.PublicId == itemPublicId &&
+                !i.Deleted &&
+                !i.IsHiddenFromOwner &&
+                i.ReceivedOn == null)
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        if (isArchived != (item.ArchivedOn is not null))
+        {
+            var now = DateTimeOffset.UtcNow;
+            item.ArchivedOn = isArchived ? now : null;
+            item.UpdatedOn = now;
+            await context.SaveChangesAsync();
+        }
+
+        return _mapper.Map<WishlistItemModel>(item);
+    }
+
     public async Task<WishlistItemModel> SetWishlistItemReceivedByPublicIdAsync(
         string wishlistPublicId,
         string itemPublicId,
@@ -1264,6 +1300,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         if (item.ReceivedOn is not null)
         {
             return _mapper.Map<WishlistItemModel>(item);
+        }
+
+        if (item.ArchivedOn is not null)
+        {
+            throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
         }
 
         if (wishlist.Event is { Deleted: false } occasion && occasion.Date > now)
@@ -1363,7 +1404,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .ToListAsync();
         var orderedItemPublicIds = request.OrderedItemPublicIds;
         var ownerVisibleItems = activeItems
-            .Where(item => !item.IsHiddenFromOwner && item.ReceivedOn is null)
+            .Where(item => !item.IsHiddenFromOwner && item.ReceivedOn is null && item.ArchivedOn is null)
             .ToList();
 
         if (orderedItemPublicIds.Count != ownerVisibleItems.Count ||
@@ -1383,7 +1424,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var utcNow = DateTimeOffset.UtcNow;
         for (var index = 0; index < existingOrder.Count; index++)
         {
-            var item = existingOrder[index].IsHiddenFromOwner || existingOrder[index].ReceivedOn is not null
+            var item = existingOrder[index].IsHiddenFromOwner || existingOrder[index].ReceivedOn is not null || existingOrder[index].ArchivedOn is not null
                 ? existingOrder[index]
                 : requestedItemQueue.Dequeue();
             item.OrderIndex = index;
@@ -1606,6 +1647,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                         !i.Deleted &&
                         !i.IsHiddenFromOwner &&
                         i.ReceivedOn == null &&
+                        i.ArchivedOn == null &&
                         itemPublicIds.Contains(i.PublicId))
             .ToListAsync();
 
@@ -1916,12 +1958,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     private static void SeparateReceivedItems(WishlistModel wishlist, string? requestingUserId)
     {
         var received = wishlist.Items.Where(item => item.ReceivedOn is not null).ToList();
-        if (received.Count == 0)
+        var archived = wishlist.Items.Where(item => item.ReceivedOn is null && item.ArchivedOn is not null).ToList();
+        if (received.Count == 0 && archived.Count == 0)
         {
             return;
         }
 
-        wishlist.Items = wishlist.Items.Where(item => item.ReceivedOn is null).ToList();
+        wishlist.Items = wishlist.Items.Where(item => item.ReceivedOn is null && item.ArchivedOn is null).ToList();
         var isOwner = !string.IsNullOrEmpty(requestingUserId) &&
                       string.Equals(wishlist.OwnerId, requestingUserId, StringComparison.Ordinal);
         if (isOwner)
@@ -1930,12 +1973,16 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                 .Where(item => !item.IsHiddenFromOwner)
                 .OrderByDescending(item => item.ReceivedOn)
                 .ToList();
+            wishlist.ArchivedItems = archived
+                .Where(item => !item.IsHiddenFromOwner)
+                .OrderByDescending(item => item.ArchivedOn)
+                .ToList();
         }
     }
 
     private static IEnumerable<WishlistItemModel> FilterWishlistItemsForViewer(IEnumerable<WishlistItemModel> items, string? ownerId, string? requestingUserId)
     {
-        items = items.Where(item => item.ReceivedOn is null);
+        items = items.Where(item => item.ReceivedOn is null && item.ArchivedOn is null);
         if (string.IsNullOrEmpty(requestingUserId))
         {
             return items;
@@ -1959,7 +2006,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var isOwner = !string.IsNullOrEmpty(ownerId) &&
                       !string.IsNullOrEmpty(requestingUserId) &&
                       string.Equals(ownerId, requestingUserId, StringComparison.Ordinal);
-        if (item.ReceivedOn is not null && !isOwner)
+        if ((item.ReceivedOn is not null || item.ArchivedOn is not null) && !isOwner)
         {
             return false;
         }

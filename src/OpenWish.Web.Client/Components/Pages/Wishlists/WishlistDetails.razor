@@ -493,7 +493,7 @@ else
         <section class="stale-panel" aria-labelledby="stale-title" data-testid="stale-ideas">
             <h2 id="stale-title" class="h5">Still want these?</h2>
             <p class="stale-intro">
-                @(_staleItems.Count == 1 ? "This idea hasn't" : $"These {_staleItems.Count} ideas haven't") changed in over six months. Keep what you still want and remove the rest so shoppers see current ideas.
+                @(_staleItems.Count == 1 ? "This idea hasn't" : $"These {_staleItems.Count} ideas haven't") changed in over six months. Keep what you still want, archive what you may want later, and remove the rest so shoppers see current ideas.
             </p>
             <ul class="stale-list">
                 @foreach (var staleItem in _staleItems.Take(3))
@@ -510,6 +510,14 @@ else
                                     aria-label="Keep @staleItem.Name"
                                     @onclick="() => ConfirmStillWantedAsync(staleItem)">
                                 @(_confirmingItemId == staleItem.PublicId ? "Keeping..." : "Still want it")
+                            </button>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm"
+                                    data-testid="archive-idea"
+                                    disabled="@(_confirmingItemId is not null)"
+                                    aria-label="Archive @staleItem.Name"
+                                    @onclick="() => ArchiveItemAsync(staleItem)">
+                                @(_confirmingItemId == staleItem.PublicId ? "Saving..." : "Archive")
                             </button>
                             <button type="button"
                                     class="btn btn-outline-danger btn-sm"
@@ -889,6 +897,36 @@ else
         }
     </div>
 
+    @if (_isOwner && _wishlist.ArchivedItems.Count > 0)
+    {
+        <details class="received-section" data-testid="archived-section">
+            <summary>Archived (@_wishlist.ArchivedItems.Count)</summary>
+            <p class="received-hint">Archived ideas are hidden from your list and from everyone you share it with. Only you see this section.</p>
+            <ul class="received-list">
+                @foreach (var archived in _wishlist.ArchivedItems)
+                {
+                    <li class="received-row" data-archived-item="@archived.PublicId">
+                        <span class="received-copy">
+                            <strong>@archived.Name</strong>
+                            @if (archived.ArchivedOn is { } archivedOn)
+                            {
+                                <small>Archived @archivedOn.ToString("MMM d, yyyy")</small>
+                            }
+                        </span>
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                data-testid="restore-archived-idea"
+                                disabled="@(_restoringItemId is not null)"
+                                aria-label="Restore @archived.Name to wishlist"
+                                @onclick="() => RestoreArchivedAsync(archived)">
+                            @(_restoringItemId == archived.PublicId ? "Restoring..." : "Restore")
+                        </button>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+
     @if (_isOwner && _wishlist.ReceivedItems.Count > 0)
     {
         <details class="received-section" data-testid="received-section">
@@ -1208,6 +1246,54 @@ else
         catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
         {
             FeedbackMessage = $"We couldn't move {item.Name} back. Refresh the page and try again.";
+            _feedbackIsError = true;
+        }
+        finally
+        {
+            _restoringItemId = null;
+        }
+    }
+
+    private async Task ArchiveItemAsync(WishlistItemModel item)
+    {
+        if (_confirmingItemId is not null || string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            return;
+        }
+
+        _confirmingItemId = item.PublicId;
+        try
+        {
+            await WishlistService.SetWishlistItemArchivedByPublicIdAsync(WishlistId, item.PublicId, true, _currentUserId);
+            await ReloadAfterReceivedChangeAsync($"{item.Name} was archived. Restore it any time from Archived.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            FeedbackMessage = $"We couldn't archive {item.Name}. Refresh the page and try again.";
+            _feedbackIsError = true;
+        }
+        finally
+        {
+            _confirmingItemId = null;
+        }
+    }
+
+    private async Task RestoreArchivedAsync(WishlistItemModel item)
+    {
+        if (_restoringItemId is not null || string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            return;
+        }
+
+        _restoringItemId = item.PublicId;
+        try
+        {
+            await WishlistService.SetWishlistItemArchivedByPublicIdAsync(WishlistId, item.PublicId, false, _currentUserId);
+            await ReloadAfterReceivedChangeAsync($"{item.Name} is back on your wishlist.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or KeyNotFoundException or UnauthorizedAccessException)
+        {
+            FeedbackMessage = $"We couldn't restore {item.Name}. Refresh the page and try again.";
             _feedbackIsError = true;
         }
         finally

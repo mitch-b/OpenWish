@@ -15,6 +15,7 @@ public class WishlistModel : BaseEntityModel
     public int ItemCount { get; set; }
     public ICollection<WishlistItemModel> Items { get; set; } = [];
     public ICollection<WishlistItemModel> ReceivedItems { get; set; } = []; // Owner-only: ideas marked as received
+    public ICollection<WishlistItemModel> ArchivedItems { get; set; } = []; // Owner-only: ideas archived instead of deleted
     public ICollection<WishlistPermissionModel> Permissions { get; set; } = [];
     public bool IsPrivate { get; set; }
     public bool IsFriendsOnly { get; set; } // When true, only friends with explicit permissions can see (not all friends)

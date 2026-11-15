@@ -244,6 +244,16 @@ public interface IWishlistService
         SetWishlistItemReceivedRequest request,
         string requestingUserId);
 
+    /// <summary>
+    /// Archives an idea (hiding it from the active list and from everyone but the owner) or restores it. Only the
+    /// wishlist owner may do this; ideas already marked as received cannot be archived.
+    /// </summary>
+    Task<WishlistItemModel> SetWishlistItemArchivedByPublicIdAsync(
+        string wishlistPublicId,
+        string itemPublicId,
+        bool isArchived,
+        string requestingUserId);
+
     Task<WishlistItemModel> UpdateWishlistItemPinByPublicIdAsync(string wishlistPublicId, string itemPublicId, bool isPinned);
 
     /// <summary>Persists the complete custom order of all active items in a wishlist.</summary>

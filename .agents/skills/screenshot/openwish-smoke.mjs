@@ -4044,6 +4044,35 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await strangerContext.close();
 
+    // B5: archive instead of delete; archived ideas leave every shopper's view and the owner can restore them.
+    const archivedForbidden = await (async () => {
+      const outsider = await browser.newContext();
+      await login(outsider, "guest", guestEmail);
+      const response = await outsider.request.put(
+        `${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}/items/demo-private-item/archived`,
+        { data: { isArchived: true } });
+      await outsider.close();
+      return response.status();
+    })();
+    if (archivedForbidden !== 403) {
+      throw new Error(`A non-owner archived an idea (${archivedForbidden}).`);
+    }
+    await stale.getByRole("button", { name: "Archive A quiet weekend away" }).click();
+    await stale.waitFor({ state: "detached" });
+    const archivedSection = page.getByTestId("archived-section");
+    await archivedSection.waitFor({ state: "visible" });
+    await archivedSection.locator("summary").click();
+    await archivedSection.getByText("A quiet weekend away").waitFor({ state: "visible" });
+    await screenshot(page, "archived-ideas.png");
+    const archivedApi = await (await context.request.get(`${baseUrl}/api/wishlists/${manifest.privateWishlistPublicId}`)).json();
+    if (!archivedApi.archivedItems?.some(item => item.name === "A quiet weekend away") ||
+        archivedApi.items.some(item => item.name === "A quiet weekend away")) {
+      throw new Error("Archiving did not move the idea out of the active list.");
+    }
+    await archivedSection.getByTestId("restore-archived-idea").click();
+    await archivedSection.waitFor({ state: "detached" });
+    await stale.waitFor({ state: "visible" });
+
     await stale.getByRole("button", { name: "Keep A quiet weekend away" }).click();
     await stale.waitFor({ state: "detached" });
     await page.reload({ waitUntil: "domcontentloaded" });

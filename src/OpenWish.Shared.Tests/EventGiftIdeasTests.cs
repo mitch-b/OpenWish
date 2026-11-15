@@ -18,7 +18,8 @@ public class EventGiftIdeasTests
                 new() { Name = "Surprise", IsHiddenFromOwner = true },
                 new() { Name = "Private", IsPrivate = true },
                 new() { Name = "Deleted", Deleted = true },
-                new() { Name = "Received", ReceivedOn = DateTimeOffset.UtcNow }
+                new() { Name = "Received", ReceivedOn = DateTimeOffset.UtcNow },
+                new() { Name = "Archived", ArchivedOn = DateTimeOffset.UtcNow }
             ]
         };
 

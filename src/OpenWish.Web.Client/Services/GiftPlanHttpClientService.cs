@@ -25,6 +25,24 @@ public class GiftPlanHttpClientService(HttpClient httpClient) : IGiftPlanService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task SetGiftWrappedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isWrapped)
+    {
+        var response = await httpClient.PutAsJsonAsync(
+            $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{Uri.EscapeDataString(itemPublicId)}/wrapped",
+            new UpdateGiftWrappedRequest { IsWrapped = isWrapped });
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            throw new KeyNotFoundException("You have not reserved that gift.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            throw new InvalidOperationException("Mark the gift as bought before wrapping it.");
+        }
+
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task ReleaseGiftAsync(string userId, string wishlistPublicId, string itemPublicId)
     {
         var response = await httpClient.DeleteAsync(

@@ -4237,9 +4237,22 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (!afterBuy.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.purchasedOn)) {
       throw new Error("Marking a gift as bought was not saved.");
     }
+    await headphonesRow.getByRole("button", { name: /Mark as wrapped/ }).click();
+    await headphonesRow.getByTestId("gift-plan-wrapped").waitFor({ state: "visible" });
+    await planPage.getByTestId("gift-plan-wrap-summary").filter({ hasText: "1 bought, 1 wrapped" }).waitFor({ state: "visible" });
+    const afterWrap = await (await context.request.get(`${baseUrl}/api/gift-plan`)).json();
+    if (!afterWrap.recipients.flatMap(recipient => recipient.items).some(item => item.itemName === "Noise-Cancelling Headphones" && item.wrappedOn)) {
+      throw new Error("Marking a gift as wrapped was not saved.");
+    }
     await screenshot(page, "gift-plan-bought.png");
     const notReserver = await browser.newContext();
     await login(notReserver, "owner", ownerEmail);
+    const forbiddenWrap = await notReserver.request.put(
+      `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/wrapped`,
+      { data: { isWrapped: false } });
+    if (forbiddenWrap.status() !== 404) {
+      throw new Error(`A non-reserver changed a gift's wrapped status (${forbiddenWrap.status()}).`);
+    }
     const forbiddenToggle = await notReserver.request.put(
       `${baseUrl}/api/gift-plan/demo-family-gift-ideas/items/demo-noise-cancelling-headphones/purchased`,
       { data: { isPurchased: true } });

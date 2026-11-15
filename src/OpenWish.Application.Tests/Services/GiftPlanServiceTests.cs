@@ -196,6 +196,77 @@ public class GiftPlanServiceTests
     }
 
     [Fact]
+    public async Task SetGiftWrappedAsync_WrapsOnlyBoughtGiftsAndClearsWhenUnbought()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        string itemId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            AddFriends(seed, "other", "jordan");
+            var list = new Wishlist { Name = "List", OwnerId = jordan.Id };
+            var mine = new WishlistItem { Name = "Mine", Wishlist = list };
+            var theirs = new WishlistItem { Name = "Theirs", Wishlist = list };
+            seed.WishlistItems.AddRange(mine, theirs);
+            await seed.SaveChangesAsync();
+            seed.ItemReservations.AddRange(Reserve(mine, me.Id), Reserve(theirs, other.Id));
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+            itemId = mine.PublicId;
+        }
+
+        var service = new GiftPlanService(factory, new RecordingActivityService());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.SetGiftWrappedAsync("me", wishlistId, itemId, true));
+
+        await service.SetGiftPurchasedAsync("me", wishlistId, itemId, true);
+        await service.SetGiftWrappedAsync("me", wishlistId, itemId, true);
+        var wrapped = await service.GetGiftPlanAsync("me");
+        Assert.True(wrapped.Recipients[0].Items[0].IsWrapped);
+        Assert.Equal(1, wrapped.WrappedCount);
+        Assert.Equal(0, wrapped.ToWrapCount);
+
+        await service.SetGiftWrappedAsync("me", wishlistId, itemId, false);
+        Assert.Equal(1, (await service.GetGiftPlanAsync("me")).ToWrapCount);
+
+        await service.SetGiftWrappedAsync("me", wishlistId, itemId, true);
+        await service.SetGiftPurchasedAsync("me", wishlistId, itemId, false);
+        var unbought = (await service.GetGiftPlanAsync("me")).Recipients[0].Items[0];
+        Assert.False(unbought.IsWrapped);
+        Assert.Null(unbought.WrappedOn);
+    }
+
+    [Fact]
+    public async Task SetGiftWrappedAsync_RejectsSomeoneElsesReservationAndLeavesItUntouched()
+    {
+        var factory = CreateFactory();
+        string wishlistId;
+        string theirsId;
+        await using (var seed = factory.CreateDbContext())
+        {
+            var (me, other, jordan, _) = AddUsers(seed);
+            AddFriends(seed, "me", "jordan");
+            AddFriends(seed, "other", "jordan");
+            var list = new Wishlist { Name = "List", OwnerId = jordan.Id };
+            var theirs = new WishlistItem { Name = "Theirs", Wishlist = list };
+            seed.WishlistItems.Add(theirs);
+            await seed.SaveChangesAsync();
+            var reservation = Reserve(theirs, other.Id);
+            reservation.PurchasedOn = DateTimeOffset.UtcNow;
+            seed.ItemReservations.Add(reservation);
+            await seed.SaveChangesAsync();
+            wishlistId = list.PublicId;
+            theirsId = theirs.PublicId;
+        }
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => new GiftPlanService(factory, new RecordingActivityService()).SetGiftWrappedAsync("me", wishlistId, theirsId, true));
+        await using var verify = factory.CreateDbContext();
+        Assert.Null((await verify.ItemReservations.AsNoTracking().SingleAsync()).WrappedOn);
+    }
+
+    [Fact]
     public async Task SetGiftPurchasedAsync_DoesNotTouchSharedReservationTimestamps()
     {
         var factory = CreateFactory();

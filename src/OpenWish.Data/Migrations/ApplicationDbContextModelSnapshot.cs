@@ -1211,6 +1211,9 @@ namespace OpenWish.Data.Migrations
                     b.Property<int>("WishlistItemId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("WrappedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");

@@ -13,4 +13,7 @@ public class ItemReservation : BaseEntity
 
     /// <summary>Set when the reserver has bought the gift. Never shown to the list owner or other shoppers.</summary>
     public DateTimeOffset? PurchasedOn { get; set; }
+
+    /// <summary>Set when the reserver has wrapped a bought gift. Private to the reserver, like <see cref="PurchasedOn"/>.</summary>
+    public DateTimeOffset? WrappedOn { get; set; }
 }

@@ -19,6 +19,13 @@ public interface IGiftPlanService
     Task SetGiftPurchasedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isPurchased);
 
     /// <summary>
+    /// Marks the caller's own bought gift as wrapped, or back to unwrapped. Throws
+    /// <see cref="KeyNotFoundException"/> unless the caller holds an active reservation on a wishlist they can
+    /// still open, and <see cref="InvalidOperationException"/> when wrapping a gift that is not bought yet.
+    /// </summary>
+    Task SetGiftWrappedAsync(string userId, string wishlistPublicId, string itemPublicId, bool isWrapped);
+
+    /// <summary>
     /// Releases the caller's own reservation so someone else can reserve the idea. Throws
     /// <see cref="KeyNotFoundException"/> unless the caller holds an active reservation on that idea.
     /// </summary>

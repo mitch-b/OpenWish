@@ -804,6 +804,7 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("<link rel=\"manifest\" href=\"manifest.webmanifest\" />", app, StringComparison.Ordinal);
         Assert.Contains("<link rel=\"apple-touch-icon\"", app, StringComparison.Ordinal);
+        Assert.Contains("serviceWorker.register(\"service-worker.js\")", script, StringComparison.Ordinal);
         using var manifestJson = System.Text.Json.JsonDocument.Parse(manifest);
         var shareTarget = manifestJson.RootElement.GetProperty("share_target");
         Assert.Equal("./add", shareTarget.GetProperty("action").GetString());

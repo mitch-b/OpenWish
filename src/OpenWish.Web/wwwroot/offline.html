@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>You're offline - OpenWish</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: #f7f7fb;
+            color: #1c2033;
+        }
+        main { max-width: 26rem; text-align: center; }
+        img { width: 4rem; height: 4rem; border-radius: 1rem; }
+        h1 { margin: 1rem 0 0.5rem; font-size: 1.5rem; }
+        p { margin: 0 0 1.5rem; line-height: 1.5; color: #5c6475; }
+        a {
+            display: inline-block;
+            min-height: 2.75rem;
+            padding: 0.7rem 1.25rem;
+            box-sizing: border-box;
+            border-radius: 0.5rem;
+            background: #5b4dcc;
+            color: #fff;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        a:focus-visible { outline: 3px solid #1c2033; outline-offset: 3px; }
+        @media (prefers-color-scheme: dark) {
+            body { background: #0d0f1a; color: #eef0fa; }
+            p { color: #b6bccf; }
+            a:focus-visible { outline-color: #eef0fa; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <img src="icons/app/openwish-192.png" alt="" width="64" height="64" />
+        <h1>You're offline</h1>
+        <p>OpenWish needs a connection to show your wishlists and events. Your gift ideas and plans are safe on the server. Reconnect, then try again.</p>
+        <a href="/">Try again</a>
+    </main>
+</body>
+</html>

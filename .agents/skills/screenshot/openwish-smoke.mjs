@@ -918,6 +918,25 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The home page did not include X-Content-Type-Options: nosniff.");
   }
 
+  // B1: the installable app ships a worker that only caches the offline page.
+  const workerResponse = await context.request.get(`${baseUrl}/service-worker.js`);
+  const workerSource = await workerResponse.text();
+  if (!workerResponse.ok() || !workerSource.includes("offline.html") || /\/api\//.test(workerSource)) {
+    throw new Error("The service worker was missing or caches API responses.");
+  }
+  const offlineResponse = await context.request.get(`${baseUrl}/offline.html`);
+  if (!offlineResponse.ok() || !(await offlineResponse.text()).includes("You're offline")) {
+    throw new Error("The offline page was not served.");
+  }
+  // Browsers only register workers on secure origins; the compose stack uses plain http://web.
+  const workerRegistered = await page.evaluate(async () => {
+    if (!window.isSecureContext) return true;
+    return Boolean(await navigator.serviceWorker?.getRegistration());
+  });
+  if (!workerRegistered) {
+    throw new Error("The service worker was not registered on the home page.");
+  }
+
   const notificationsResponse = await context.request.get(`${baseUrl}/api/notifications?includeRead=true`);
   if (!notificationsResponse.ok()) {
     throw new Error(`Owner notifications returned ${notificationsResponse.status()}.`);

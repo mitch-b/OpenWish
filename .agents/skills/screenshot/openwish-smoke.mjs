@@ -77,7 +77,7 @@ function monitorPage(page) {
 }
 
 async function assertVisible(page, text) {
-  await page.getByText(text, { exact: false }).first().waitFor({ state: "visible" });
+  await page.getByText(text, { exact: false }).filter({ visible: true }).first().waitFor({ state: "visible" });
 }
 
 async function generateTotp(secret) {
@@ -119,7 +119,7 @@ async function enableTwoFactorAuthentication(page, authenticatorKey) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const verificationCode = await generateTotp(authenticatorKey);
     await page.getByLabel("Verification code").fill(verificationCode);
-    await page.getByRole("button", { name: "Verify and enable 2FA" }).click();
+    await page.getByLabel("Verification code").press("Enter");
 
     const verificationResult = await Promise.race([
       recoveryCodesHeading.waitFor({ state: "visible" }).then(() => "enabled"),
@@ -2548,7 +2548,16 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The captured product link was not saved.");
   }
 
-  await assertVisible(capturePage, "Have a product link? Paste it anywhere on this page to add it.");
+  const pasteHint = capturePage.getByText("Have a product link? Paste it anywhere on this page to add it.", { exact: true });
+  if (await pasteHint.count() === 0) {
+    throw new Error("The wishlist did not render paste guidance for editors.");
+  }
+  const hasHoverPointer = await capturePage.evaluate(() => matchMedia("(hover: hover)").matches);
+  if (hasHoverPointer) {
+    await pasteHint.filter({ visible: true }).first().waitFor({ state: "visible" });
+  } else {
+    await pasteHint.first().waitFor({ state: "hidden" });
+  }
   const pastedItemDialog = capturePage.getByRole("dialog", { name: "Add item" });
   for (let attempt = 0; ; attempt++) {
     await pasteText(
@@ -4219,9 +4228,24 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     const page = await context.newPage();
     const diagnostics = monitorPage(page);
     await login(context, "friend", friendEmail);
-    await page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "domcontentloaded" });
-    await assertVisible(page, "Noise-Cancelling Headphones");
-    await page.getByRole("button", { name: "Grid view" }).first().click();
+    let releaseActivation;
+    const activation = new Promise(resolve => { releaseActivation = resolve; });
+    await page.route("**/_framework/blazor.web.js", async route => {
+      await activation;
+      await route.continue();
+    });
+    const gridView = page.getByRole("button", { name: "Grid view" });
+    const listView = page.getByRole("button", { name: "List view" });
+    try {
+      await page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "commit" });
+      await assertVisible(page, "Noise-Cancelling Headphones");
+      if (!await gridView.isDisabled() || !await listView.isDisabled()) {
+        throw new Error("Wishlist view toggles accepted input before interactive activation.");
+      }
+    } finally {
+      releaseActivation();
+    }
+    await gridView.click();
     await page.locator(".wishlist-content.grid-view").waitFor({ state: "visible" });
     const toggle = page.locator(".wishlist-content.grid-view button[aria-controls^='item-coordination-']").first();
     await toggle.click();
@@ -4238,7 +4262,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
       throw new Error(`Grid diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
-    assertions.push("grid cards coordinate gifts inline without leaving grid view");
+    assertions.push("wishlist view toggles wait for activation; grid cards coordinate gifts inline without leaving grid view");
     await context.close();
   }
 
@@ -5421,7 +5445,8 @@ async function verifyOccasionRemindersJourney(browser, manifest, results) {
   const wishlistResponse = await owner.context.request.get(`${baseUrl}/api/wishlists/${manifest.wishlistPublicId}`);
   const wishlistName = (await wishlistResponse.json()).name;
   await owner.page.goto(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`, { waitUntil: "domcontentloaded" });
-  // The verification site is plain HTTP, so capture what the page's copy helper asked to put on the clipboard.
+  await owner.context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(baseUrl).origin });
+  // Capture the plain-HTTP fallback when the browser does not expose a readable clipboard.
   await owner.page.evaluate(() => {
     document.execCommand = command => {
       if (command === "copy") {
@@ -5435,7 +5460,13 @@ async function verifyOccasionRemindersJourney(browser, manifest, results) {
   await owner.page.waitForTimeout(1500);
   await copyText.click();
   await owner.page.getByRole("button", { name: "List copied" }).waitFor({ state: "visible" });
-  const copied = await owner.page.evaluate(() => window.__openWishLastCopy);
+  const copied = await owner.page.evaluate(async () => {
+    try {
+      return await navigator.clipboard.readText();
+    } catch {
+      return window.__openWishLastCopy;
+    }
+  });
   if (!copied.startsWith(`${wishlistName}\n- `) || !copied.includes(`/wishlists/${manifest.wishlistPublicId}`) ||
       /reserved|comment/i.test(copied)) {
     throw new Error(`The copied list text was wrong: ${copied}`);
@@ -6327,7 +6358,15 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
 await fs.mkdir(evidenceDirectory, { recursive: true });
 await fs.mkdir(walkthroughDirectory, { recursive: true });
 
-const browser = await chromium.launch();
+const baseOrigin = new URL(baseUrl).origin;
+const browserArgs = baseOrigin.startsWith("http://")
+  ? [`--unsafely-treat-insecure-origin-as-secure=${baseOrigin}`]
+  : [];
+// Full headless honors the secure-origin override; Playwright's headless shell does not.
+const browser = await chromium.launch({
+  headless: false,
+  args: [...browserArgs, "--headless=new"]
+});
 const results = [];
 
 try {

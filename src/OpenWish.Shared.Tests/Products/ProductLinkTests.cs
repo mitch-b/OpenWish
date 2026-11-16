@@ -182,16 +182,22 @@ public class ProductLinkTests
         Assert.True(result.Length <= ProductLink.MaxDescriptionLength);
     }
 
+    public static TheoryData<string, decimal> CommonPriceFormats =>
+        new()
+        {
+            { "12", 12m },
+            { "34.95", 34.95m },
+            { "$1,299.99", 1299.99m },
+            { "1.299,99 €", 1299.99m },
+            { "€12,50", 12.5m },
+            { "$10 - $20", 10m },
+            { "1 299,00 kr", 1299m },
+            { "34.999", 35m },
+            { "USD 1,000", 1000m },
+        };
+
     [Theory]
-    [InlineData("12", 12)]
-    [InlineData("34.95", 34.95)]
-    [InlineData("$1,299.99", 1299.99)]
-    [InlineData("1.299,99 €", 1299.99)]
-    [InlineData("€12,50", 12.5)]
-    [InlineData("$10 - $20", 10)]
-    [InlineData("1 299,00 kr", 1299)]
-    [InlineData("34.999", 35)]
-    [InlineData("USD 1,000", 1000)]
+    [MemberData(nameof(CommonPriceFormats))]
     public void TryParsePrice_ReadsCommonPriceFormats(string text, decimal expected)
     {
         Assert.True(ProductLink.TryParsePrice(text, out var price));

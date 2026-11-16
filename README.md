@@ -80,7 +80,7 @@ boundaries carry across screen sizes, with light and dark themes available.
 
 ## Built with dependable, portable tools
 
-OpenWish is an ASP.NET Core [.NET 10](https://dot.net/) application with Blazor
+OpenWish is an ASP.NET Core [.NET 11](https://dot.net/) application with Blazor
 server rendering and interactive WebAssembly, PostgreSQL via Entity Framework
 Core, and published Docker images. It is designed to be understandable to the
 person who runs it as well as useful to the people who use it.

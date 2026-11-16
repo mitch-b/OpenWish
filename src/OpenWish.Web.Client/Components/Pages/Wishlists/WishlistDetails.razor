@@ -218,6 +218,7 @@ else
                     aria-label="Grid view"
                     aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
                     aria-controls="wishlist-items"
+                    disabled="@(!RendererInfo.IsInteractive)"
                     @onclick="@(() => SetViewMode("grid"))">
                 <OpenWishIcon Name="grid-3x3-gap" />
             </button>
@@ -226,6 +227,7 @@ else
                     aria-label="List view"
                     aria-pressed="@(ViewMode == "list" ? "true" : "false")"
                     aria-controls="wishlist-items"
+                    disabled="@(!RendererInfo.IsInteractive)"
                     @onclick="@(() => SetViewMode("list"))">
                 <OpenWishIcon Name="list-ul" />
             </button>

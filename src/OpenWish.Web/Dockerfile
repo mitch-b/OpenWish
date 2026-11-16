@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra AS base
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:11.0-resolute-chiseled-extra AS base
 WORKDIR /app
 
 ENV \
@@ -8,7 +8,7 @@ ENV \
 
 EXPOSE 8080 8443
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0-resolute AS build
 
 ARG TARGETPLATFORM
 ARG TARGETARCH

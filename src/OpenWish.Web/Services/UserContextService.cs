@@ -4,6 +4,10 @@ using OpenWish.Shared.Services;
 
 namespace OpenWish.Web.Services;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Blazor",
+    "BL0013",
+    Justification = "This service fetches the current state on each call and does not cache it.")]
 public class UserContextService : IUserContextService
 {
     private readonly AuthenticationStateProvider _authenticationStateProvider;

@@ -19,6 +19,7 @@ public class WishlistItem : BaseEntity
     public bool IsHiddenFromOwner { get; set; } // Indicates if collaborative item is hidden from the wishlist owner
     public string? CreationRequestHash { get; set; }
     public DateTimeOffset? ReceivedOn { get; set; } // Set when the owner marks the idea as received after the occasion
+    public DateTimeOffset? ArchivedOn { get; set; } // Set when the owner archives the idea; hidden from everyone else
 
     // Set when a connected app added the idea; the name is a snapshot so it survives disconnecting.
     public int? SourceConnectionId { get; set; }

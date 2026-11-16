@@ -98,7 +98,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == userId) &&
-                  (a.WishlistItem.ReceivedOn == null || a.Wishlist!.OwnerId == userId) &&
+                  (a.WishlistItem.ReceivedOn == null && a.WishlistItem.ArchivedOn == null || a.Wishlist!.OwnerId == userId) &&
                   (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != userId))) &&
                 ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
                  (a.Wishlist!.OwnerId != userId &&
@@ -135,7 +135,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                 (!a.WishlistItemId.HasValue ||
                  (a.WishlistItem != null &&
                   (!a.WishlistItem.IsPrivate || a.Wishlist!.OwnerId == requestingUserId) &&
-                  (a.WishlistItem.ReceivedOn == null || a.Wishlist!.OwnerId == requestingUserId) &&
+                  (a.WishlistItem.ReceivedOn == null && a.WishlistItem.ArchivedOn == null || a.Wishlist!.OwnerId == requestingUserId) &&
                   (!a.WishlistItem.IsHiddenFromOwner || a.Wishlist!.OwnerId != requestingUserId))) &&
                 ((a.ActivityType != "ItemReserved" && a.ActivityType != "ReservationCanceled") ||
                  (a.Wishlist!.OwnerId != requestingUserId &&

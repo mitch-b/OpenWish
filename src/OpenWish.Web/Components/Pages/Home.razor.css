@@ -333,6 +333,17 @@
     gap: 1rem;
 }
 
+.birthday-gift-nudge a {
+    font-weight: 600;
+}
+
+.birthday-calendar-link {
+    margin-top: 0.75rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+}
+
 .birthday-copy {
     display: grid;
     min-width: 0;

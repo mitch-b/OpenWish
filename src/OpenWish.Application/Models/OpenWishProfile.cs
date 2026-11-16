@@ -30,6 +30,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.CreationRequestHash, opt => opt.Ignore())
             .ForMember(dest => dest.IsPinned, opt => opt.Ignore())
             .ForMember(dest => dest.ReceivedOn, opt => opt.Ignore())
+            .ForMember(dest => dest.ArchivedOn, opt => opt.Ignore())
             .ForMember(dest => dest.OrderIndex, opt => opt.Ignore())
             .ForMember(dest => dest.Deleted, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())

@@ -445,3 +445,10 @@ globalThis.openWishInitializeGuestAccess = function () {
             .format(new Date(eventDate.dateTime));
     }
 };
+
+// Installable app: the service worker only keeps an offline page, never wishlist or account data.
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+        navigator.serviceWorker.register("service-worker.js").catch(function () { /* offline support is optional */ });
+    });
+}

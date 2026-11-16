@@ -318,6 +318,32 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
+    [HttpPut("{wishlistPublicId}/items/{itemPublicId}/archived")]
+    public async Task<IActionResult> SetWishlistItemArchived(
+        string wishlistPublicId,
+        string itemPublicId,
+        [FromBody] SetWishlistItemArchivedRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _wishlistService.SetWishlistItemArchivedByPublicIdAsync(wishlistPublicId, itemPublicId, request.IsArchived, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     [HttpPut("{wishlistPublicId}/items/{itemPublicId}/pin")]
     public async Task<IActionResult> UpdateWishlistItemPin(
         string wishlistPublicId,

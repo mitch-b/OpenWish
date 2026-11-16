@@ -186,6 +186,7 @@
 
     .plan-summary dd {
         font-size: 1.3rem;
+        overflow-wrap: anywhere;
     }
 
     .plan-summary dd.plan-note {

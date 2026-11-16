@@ -1436,6 +1436,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("My wishlists", lists, StringComparison.Ordinal);
         Assert.Contains("Friends' wishlists", lists, StringComparison.Ordinal);
         Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr));", planStyles, StringComparison.Ordinal);
+        Assert.Contains("overflow-wrap: anywhere;", planStyles, StringComparison.Ordinal);
     }
 
     [Fact]

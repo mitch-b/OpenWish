@@ -2,6 +2,15 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.18.1] - 2026-11-16
+
+### Improved
+
+- The gift plan summary uses two columns on phones.
+- Events and exchange matches without a budget say "No budget set".
+- "My reserved items", "My wishlists", and "Friends' wishlists" use sentence case.
+- The wishlist next to "Share wishlist" on an event is labeled "Not shared yet".
+
 ## [0.18.0] - 2026-11-15
 
 ### Added

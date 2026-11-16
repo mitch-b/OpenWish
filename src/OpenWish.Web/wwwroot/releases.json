@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.18.1",
+    "date": "2026-11-16",
+    "title": "Calmer event and shopping screens",
+    "summary": "A more compact gift plan on phones and consistent wording for budgets, headings, and wishlist tabs.",
+    "highlights": [
+      "Gift plan summary uses two columns on phones.",
+      "Events without a budget say \"No budget set\".",
+      "\"My reserved items\", \"My wishlists\", and \"Friends' wishlists\" use sentence case.",
+      "The wishlist next to \"Share wishlist\" on an event is labeled \"Not shared yet\"."
+    ]
+  },
+  {
     "version": "0.18.0",
     "date": "2026-11-15",
     "title": "Wrapping, archiving, offline, and birthdays",
@@ -90,7 +102,8 @@
       "Copy list copies one person's gifts still to buy.",
       "Print gives a clean paper copy of the plan."
     ]
-  }, {
+  },
+  {
     "version": "0.11.0",
     "date": "2026-11-04",
     "title": "A gift plan you can shop from",
@@ -102,7 +115,8 @@
       "Copy shopping list puts what is left to buy, with prices and links, on your clipboard.",
       "Release names the gift, asks you to confirm, then frees the reservation right from the plan."
     ]
-  }, {
+  },
+  {
     "version": "0.10.0",
     "date": "2026-11-03",
     "title": "Occasions you won't forget",
@@ -114,7 +128,8 @@
       "Copy as text puts a wishlist's ideas, prices, and links on your clipboard.",
       "Print gives a clean paper copy of a wishlist."
     ]
-  }, {
+  },
+  {
     "version": "0.9.0",
     "date": "2026-11-02",
     "title": "Capture ideas faster, with clearer feedback",
@@ -126,7 +141,8 @@
       "Copy link shares the plain wishlist address and confirms with Link copied.",
       "Press Escape in the wishlist search to clear it."
     ]
-  }, {
+  },
+  {
     "version": "0.8.0",
     "date": "2026-11-01",
     "title": "From your friends to their wishlists",
@@ -137,7 +153,8 @@
       "Invitations check email addresses first, name any that look wrong, and send with Ctrl+Enter.",
       "Accepting, removing, or requesting friends updates the lists in place without flashing a spinner."
     ]
-  }, {
+  },
+  {
     "version": "0.7.2",
     "date": "2026-10-31",
     "title": "Shop for your match with less friction",
@@ -148,7 +165,8 @@
       "My Reserved Items totals your gifts against the exchange budget.",
       "Reserved item links keep you in the same tab, and an empty list points to the event wishlists."
     ]
-  }, {
+  },
+  {
     "version": "0.7.1",
     "date": "2026-10-30",
     "title": "Smoother event invitations and setup",
@@ -159,7 +177,8 @@
       "Participants see whether their wishlist is already shared with the event.",
       "Invitations without an email on file link to your pending invitations."
     ]
-  }, {
+  },
+  {
     "version": "0.7.0",
     "date": "2026-10-29",
     "title": "Run it again, remember what you gave, connect in person",
@@ -170,7 +189,8 @@
       "Mark ideas as received after the occasion, with an optional thank-you.",
       "Connect in person with a short-lived code or QR code."
     ]
-  }, {
+  },
+  {
     "version": "0.6.0",
     "date": "2026-10-28",
     "title": "Plan your gifts, remember birthdays, share hints",
@@ -182,7 +202,8 @@
       "Optional birthday (month and day only) shared with friends.",
       "Optional gift hints on your wishlists, visible to friends only."
     ]
-  }, {
+  },
+  {
     "version": "0.5.0",
     "date": "2026-10-27",
     "title": "Organize many ideas at once",
@@ -194,7 +215,8 @@
       "Mark or clear most wanted for several ideas at once.",
       "Remove several ideas together after a clear confirmation."
     ]
-  }, {
+  },
+  {
     "version": "0.4.0",
     "date": "2026-10-19",
     "title": "Get started, find friends, and reveal the exchange",
@@ -206,7 +228,8 @@
       "Still want these? Owners can keep or remove ideas that have not changed in six months.",
       "Grid cards now open reservation and comments inline instead of jumping to list view."
     ]
-  }, {
+  },
+  {
     "version": "0.3.2",
     "date": "2026-10-18",
     "title": "See what you have reserved at a glance",

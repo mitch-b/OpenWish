@@ -1053,8 +1053,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  const ownTab = page.getByRole("tab", { name: "My Wishlists" });
-  const friendsTab = page.getByRole("tab", { name: "Friends' Wishlists" });
+  const ownTab = page.getByRole("tab", { name: "My wishlists" });
+  const friendsTab = page.getByRole("tab", { name: "Friends' wishlists" });
   if (await ownTab.getAttribute("tabindex") !== "0" ||
       await friendsTab.getAttribute("tabindex") !== "-1") {
     throw new Error("Only the selected wishlist tab should be in the tab order.");
@@ -1980,7 +1980,7 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await screenshot(page, "friend-lists.png");
   await page.getByRole("link", { name: "Wishlists", exact: true }).first().click();
   await page.waitForURL(/\/wishlists$/);
-  await page.getByRole("tab", { name: "My Wishlists", selected: true }).waitFor({ state: "visible" });
+  await page.getByRole("tab", { name: "My wishlists", selected: true }).waitFor({ state: "visible" });
   await page.getByText("Showing lists from").waitFor({ state: "detached" });
   await visit(page, "/friends", "Connect with friends", visitedRoutes);
 
@@ -3816,7 +3816,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   await friendMatch.getByRole("heading", { name: "AlexDemo" }).waitFor({ state: "visible" });
   await friendMatch.getByRole("link", { name: /Shop within .* budget/ }).waitFor({ state: "visible" });
   await friendMatch.getByText("Your match stays private.").waitFor({ state: "visible" });
-  await assertVisible(page, "My Reserved Items");
+  await assertVisible(page, "My reserved items");
   await assertVisible(page, "Noise-Cancelling Headphones");
   const countdown = (await friendMatch.getByTestId("exchange-countdown").textContent())?.trim() ?? "";
   if (!/^· (today|tomorrow|in \d+ days)$/.test(countdown)) {

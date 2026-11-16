@@ -1422,6 +1422,23 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void EventAndShoppingSurfaces_UseConsistentWordingAndCompactPhoneSummary()
+    {
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
+        var reserved = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventReservedItems.razor");
+        var manager = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventWishlistManager.razor");
+        var lists = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+        var planStyles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "GiftPlan", "Index.razor.css");
+
+        Assert.Contains("?? \"No budget set\"", details, StringComparison.Ordinal);
+        Assert.Contains("My reserved items", reserved, StringComparison.Ordinal);
+        Assert.Contains("Not shared yet: @onlyWishlist.Name", manager, StringComparison.Ordinal);
+        Assert.Contains("My wishlists", lists, StringComparison.Ordinal);
+        Assert.Contains("Friends' wishlists", lists, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: repeat(2, minmax(0, 1fr));", planStyles, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void GiftExchangeDisplay_ShowsTheNextStepAndDistinguishesMissingIdeas()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "GiftExchangeDisplay.razor");
@@ -1431,7 +1448,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("You're shopping for", markup, StringComparison.Ordinal);
         Assert.Contains("<dt>Suggested budget</dt>", markup, StringComparison.Ordinal);
         Assert.Contains("<dt>Exchange date</dt>", markup, StringComparison.Ordinal);
-        Assert.Contains("?? \"Not set\"", markup, StringComparison.Ordinal);
+        Assert.Contains("?? \"No budget set\"", markup, StringComparison.Ordinal);
         Assert.Contains("Checking shared gift ideas...", markup, StringComparison.Ordinal);
         Assert.Contains("!WishlistsLoaded", markup, StringComparison.Ordinal);
         Assert.Contains("_recipientWishlist != null && RecipientItemCount > 0", markup, StringComparison.Ordinal);

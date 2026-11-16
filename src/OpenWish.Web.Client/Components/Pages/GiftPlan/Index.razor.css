@@ -178,6 +178,21 @@
 }
 
 @media (max-width: 575.98px) {
+    .plan-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem 1rem;
+        padding: 0.85rem 1rem;
+    }
+
+    .plan-summary dd {
+        font-size: 1.3rem;
+    }
+
+    .plan-summary dd.plan-note {
+        font-size: 0.82rem;
+        font-weight: 400;
+    }
+
     .plan-item {
         align-items: stretch;
         flex-direction: column;

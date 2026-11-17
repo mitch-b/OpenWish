@@ -4520,6 +4520,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await ownerPage.setViewportSize({ width: 1280, height: 900 });
     await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    await ownerPage.waitForTimeout(2000);
     const boardGameRow = ownerPage.locator("tr").filter({ hasText: "Cooperative Board Game" });
     await boardGameRow.getByRole("button", { name: "Show gift options for Cooperative Board Game" }).click();
     const boardGameCoordination = ownerPage.getByRole("region", { name: "Gift coordination for Cooperative Board Game" });

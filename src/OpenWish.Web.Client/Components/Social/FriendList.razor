@@ -2,6 +2,7 @@
 @using OpenWish.Shared.Services
 
 @inject IFriendService FriendService
+@inject ICircleService CircleService
 @inject IUserContextService UserContextService
 @inject ILogger<FriendList> Logger
 
@@ -37,13 +38,40 @@
     }
     else
     {
+        @if (_circles.Count > 0)
+        {
+            <div class="circle-filter" role="group" aria-label="Filter friends by circle">
+                <button type="button" class="btn btn-sm @(_circleFilter is null ? "btn-primary" : "btn-outline-secondary")"
+                        aria-pressed="@(_circleFilter is null ? "true" : "false")"
+                        @onclick="() => _circleFilter = null">All friends</button>
+                @foreach (var circle in _circles)
+                {
+                    var selected = _circleFilter == circle.PublicId;
+                    <button type="button" class="btn btn-sm @(selected ? "btn-primary" : "btn-outline-secondary")"
+                            aria-pressed="@(selected ? "true" : "false")"
+                            @onclick="() => _circleFilter = circle.PublicId">@circle.Name (@circle.Members.Count)</button>
+                }
+            </div>
+        }
+
+        @if (VisibleFriends.Count == 0)
+        {
+            <p class="text-muted mb-0" role="status">No friends in this circle yet. Add some from the Circles section.</p>
+        }
+
         <div class="list-group">
-            @foreach (var friend in _friends)
+            @foreach (var friend in VisibleFriends)
             {
                 <div class="list-group-item friend-row">
                     <div class="friend-identity">
                         <span class="friend-avatar"><OpenWishIcon Name="person-circle" /></span>
-                        <strong>@friend.UserName</strong>
+                        <div class="friend-name">
+                            <strong>@friend.UserName</strong>
+                            @foreach (var circleName in CircleNamesFor(friend))
+                            {
+                                <span class="badge circle-badge">@circleName</span>
+                            }
+                        </div>
                     </div>
                     <div class="friend-actions">
                         <a class="btn btn-outline-primary btn-sm"
@@ -75,11 +103,16 @@
 
 @code {
     private List<ApplicationUserModel> _friends = [];
+    private List<CircleModel> _circles = [];
+    private string? _circleFilter;
     private bool _loading = true;
     private string? _currentUserId;
     private string? _errorMessage;
     private string? _statusMessage;
     private FriendRemoveConfirmationDialog? _removeConfirmationDialog;
+
+    [Parameter]
+    public EventCallback OnFriendRemoved { get; set; }
     
     protected override async Task OnInitializedAsync()
     {
@@ -111,6 +144,7 @@
             {
                 var friends = await FriendService.GetFriendsAsync(_currentUserId);
                 _friends = FriendWishlistFilter.OrderFriends(friends).ToList();
+                await LoadCirclesAsync();
             }
             else
             {
@@ -129,6 +163,34 @@
         }
     }
     
+    // Circles only decorate the list, so a failure here must not hide the friends themselves.
+    private async Task LoadCirclesAsync()
+    {
+        try
+        {
+            _circles = (await CircleService.GetCirclesAsync(_currentUserId!)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load circles for the friend list.");
+            _circles = [];
+        }
+
+        if (_circleFilter is not null && _circles.All(circle => circle.PublicId != _circleFilter))
+        {
+            _circleFilter = null;
+        }
+    }
+
+    private List<ApplicationUserModel> VisibleFriends =>
+        _circleFilter is null
+            ? _friends
+            : _friends.Where(friend => _circles
+                .Any(circle => circle.PublicId == _circleFilter && circle.Members.Any(member => member.UserId == friend.Id))).ToList();
+
+    private IEnumerable<string> CircleNamesFor(ApplicationUserModel friend) =>
+        _circles.Where(circle => circle.Members.Any(member => member.UserId == friend.Id)).Select(circle => circle.Name);
+
     private void ShowRemoveConfirmation(ApplicationUserModel friend)
     {
         var friendName = GetFriendName(friend);
@@ -153,6 +215,7 @@
                 {
                     _statusMessage = $"{friendName} removed from your friends.";
                     await LoadFriends(silent: true);
+                    await OnFriendRemoved.InvokeAsync();
                 }
                 else
                 {

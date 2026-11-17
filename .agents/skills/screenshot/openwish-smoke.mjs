@@ -4520,6 +4520,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     }
     await ownerPage.setViewportSize({ width: 1280, height: 900 });
     await ownerPage.goto(`${baseUrl}/wishlists/demo-jordan-favorites`, { waitUntil: "domcontentloaded" });
+    await ownerPage.waitForTimeout(2000);
     const boardGameRow = ownerPage.locator("tr").filter({ hasText: "Cooperative Board Game" });
     await boardGameRow.getByRole("button", { name: "Show gift options for Cooperative Board Game" }).click();
     const boardGameCoordination = ownerPage.getByRole("region", { name: "Gift coordination for Cooperative Board Game" });
@@ -5804,6 +5805,154 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
   await context.close();
 }
 
+async function verifyCirclesJourney(browser, manifest, results) {
+  const assertions = [];
+  const circleName = "Book club";
+  const listName = "Book club picks";
+  const owner = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const jordan = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const casey = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await owner.newPage();
+  const jordanPage = await jordan.newPage();
+  const diagnostics = [monitorPage(page), monitorPage(jordanPage)];
+  const loginStatus = await login(owner, "owner", ownerEmail);
+  await login(jordan, "friend", friendEmail);
+  await login(casey, "friend2", "playwright-friend2@openwish.local");
+
+  const json = async (context, method, route, data) => {
+    const response = await context.request.fetch(`${baseUrl}${route}`, { method, data });
+    if (!response.ok()) {
+      throw new Error(`${method} ${route} returned ${response.status()}: ${await response.text()}`);
+    }
+    return response.status() === 204 || (await response.headers())["content-length"] === "0" ? null : response.json().catch(() => null);
+  };
+  const sees = async (context) =>
+    (await json(context, "GET", "/api/wishlists/friends")).some(list => list.name === listName);
+
+  const wishlist = await json(owner, "POST", "/api/wishlists", { name: listName, isFriendsOnly: true });
+  const event = await json(owner, "POST", "/api/events", {
+    name: "Book club night",
+    date: new Date(Date.now() + 14 * 86400000).toISOString(),
+    isGiftExchange: false,
+    eventUsers: []
+  });
+  let circle = null;
+  try {
+    // Create the circle and add Jordan through the Friends page.
+    await page.goto(`${baseUrl}/friends`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    const panel = page.getByTestId("circles-panel");
+    await panel.waitFor({ state: "visible" });
+    await page.getByLabel("New circle name").fill(circleName);
+    await page.getByRole("button", { name: "Create circle" }).click();
+    const card = page.getByTestId("circle-card").filter({ hasText: circleName });
+    await card.waitFor({ state: "visible" });
+    await card.getByLabel(`Add a friend to ${circleName}`).selectOption({ label: "JordanDemo" });
+    await card.getByRole("button", { name: `Add selected friend to ${circleName}` }).click();
+    await card.getByRole("button", { name: `Remove JordanDemo from ${circleName}` }).waitFor({ state: "visible" });
+    circle = (await json(owner, "GET", "/api/circles")).find(candidate => candidate.name === circleName);
+    if (!circle || circle.members.length !== 1 || circle.members[0].userName !== "JordanDemo") {
+      throw new Error(`Unexpected circle state: ${JSON.stringify(circle)}`);
+    }
+    await page.getByRole("group", { name: "Filter friends by circle" }).waitFor({ state: "visible" });
+    assertions.push("a circle is created and a friend added from the Friends page, and its filter appears on the friend list");
+    await screenshot(page, "friend-circles.png", true);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await screenshot(page, "friend-circles-mobile.png", true);
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    // Nobody sees the list before it is shared with the circle.
+    if (await sees(jordan) || await sees(casey)) {
+      throw new Error("A friends-only list was visible before it was shared.");
+    }
+
+    // Share the list with the circle from the list's sharing page.
+    await page.goto(`${baseUrl}/wishlists/${wishlist.publicId}/manage`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    const share = page.getByTestId("circle-share");
+    await share.waitFor({ state: "visible" });
+    await share.getByLabel("Circle to share with").selectOption({ label: `${circleName} (1)` });
+    await share.getByRole("button", { name: "Share with circle" }).click();
+    await share.getByRole("button", { name: `Stop sharing with ${circleName}` }).waitFor({ state: "visible" });
+    await share.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(walkthroughDirectory, "circle-share-wishlist.png") });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await share.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(walkthroughDirectory, "circle-share-wishlist-mobile.png") });
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    if (!await sees(jordan)) {
+      throw new Error("A circle member could not see the list shared with the circle.");
+    }
+    if (await sees(casey)) {
+      throw new Error("A friend outside the circle could see the circle's list.");
+    }
+    assertions.push("sharing a list with a circle grants its members access and nobody else");
+
+    // A friend added later gains access without another step, and loses it when removed.
+    const caseyId = (await json(owner, "GET", "/api/friends")).find(friend => friend.userName === "CaseyDemo").id;
+    await json(owner, "POST", `/api/circles/${circle.publicId}/members`, { userId: caseyId });
+    if (!await sees(casey)) {
+      throw new Error("A friend added to the circle did not gain access.");
+    }
+    await json(owner, "DELETE", `/api/circles/${circle.publicId}/members/${caseyId}`);
+    if (await sees(casey) || !await sees(jordan)) {
+      throw new Error("Removing a member did not revoke only that member's access.");
+    }
+    await json(owner, "POST", `/api/circles/${circle.publicId}/members`, { userId: caseyId });
+    assertions.push("members added later gain access and removed members lose it");
+
+    // Invite the whole circle to an event with one click.
+    await page.goto(`${baseUrl}/events/${event.publicId}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    await page.getByRole("tab", { name: "From friends" }).click();
+    const picker = page.getByTestId("invite-circles");
+    await picker.waitFor({ state: "visible" });
+    await picker.getByRole("button", { name: new RegExp(`^${circleName}`) }).click();
+    await page.getByTestId("invite-circle-status").filter({ hasText: circleName }).waitFor({ state: "visible" });
+    await picker.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(walkthroughDirectory, "circle-event-invite.png") });
+    assertions.push("a whole circle is picked for an event invitation in one step");
+
+    // The member sees the list filtered by the circle.
+    await jordanPage.goto(`${baseUrl}/wishlists?tab=friends&circle=${circle.publicId}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    await jordanPage.getByText(listName).first().waitFor({ state: "visible" });
+    await page.goto(`${baseUrl}/wishlists?tab=friends&circle=${circle.publicId}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    const filter = page.getByTestId("friends-circle-filter");
+    await filter.waitFor({ state: "visible" });
+    await filter.getByRole("button", { name: circleName, pressed: true }).waitFor({ state: "visible" });
+    await screenshot(page, "circle-wishlists-filter.png");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await screenshot(page, "circle-wishlists-filter-mobile.png");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    assertions.push("a circle filters the shared wishlists, and its link works for a member");
+  } finally {
+    if (circle) {
+      await json(owner, "DELETE", `/api/circles/${circle.publicId}`);
+    }
+    await json(owner, "DELETE", `/api/wishlists/${wishlist.publicId}`);
+    await json(owner, "DELETE", `/api/events/${event.publicId}`);
+  }
+
+  if (await sees(jordan)) {
+    throw new Error("Deleting the shared list left it visible.");
+  }
+  for (const { browserErrors, failedResponses } of diagnostics) {
+    if (browserErrors.length > 0 || failedResponses.length > 0) {
+      throw new Error(`Circles journey errors: ${browserErrors.join(" | ")} ${failedResponses.join(" | ")}`);
+    }
+  }
+  await owner.close();
+  await jordan.close();
+  await casey.close();
+  results.push({ scenario: "friend-circles", loginStatus, assertions });
+}
+
 // A real HTTP server on loopback inside the verifier container plays the third-party app.
 const fakeAppPort = 4455;
 const connectedApp = {
@@ -6405,6 +6554,7 @@ try {
     await verifyOccasionsJourney(browser, manifest, results);
     await verifyOccasionRemindersJourney(browser, manifest, results);
     await verifyMobileJourney(browser, manifest, results);
+    await verifyCirclesJourney(browser, manifest, results);
     await verifyUnsharedMatchWishlist(browser, manifest, results);
     await verifyFamilyExchangeJourney(browser, results);
     await verifyFirstMatchOpening(browser, results);

@@ -183,6 +183,20 @@
     border-top: 2px dashed var(--color-border-muted);
 }
 
+.circle-share-list {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.circle-share-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
 .add-friend-header {
     display: flex;
     align-items: center;

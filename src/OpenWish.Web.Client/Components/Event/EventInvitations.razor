@@ -8,6 +8,7 @@
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject IFriendService FriendService
+@inject ICircleService CircleService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 @inject ILogger<EventInvitations> Logger
@@ -105,6 +106,26 @@
                     }
                     else
                     {
+                        @if (_circles.Count > 0)
+                        {
+                            <div class="circle-picker mb-3" data-testid="invite-circles">
+                                <span class="form-label d-block" id="event-invite-circles-label">Invite a whole circle</span>
+                                <div class="d-flex flex-wrap gap-2" role="group" aria-labelledby="event-invite-circles-label">
+                                    @foreach (var circle in _circles)
+                                    {
+                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                                disabled="@_isSending"
+                                                @onclick="() => SelectCircle(circle)">
+                                            <OpenWishIcon Name="people-fill" /> @circle.Name (@circle.Members.Count)
+                                        </button>
+                                    }
+                                </div>
+                                @if (_circleSelectionMessage is not null)
+                                {
+                                    <p class="form-text mb-0" role="status" aria-live="polite" data-testid="invite-circle-status">@_circleSelectionMessage</p>
+                                }
+                            </div>
+                        }
                         <label for="event-invite-friend-search" class="form-label">Select friends or pending invites</label>
                         <input class="form-control form-control-sm mb-2"
                                id="event-invite-friend-search"
@@ -600,6 +621,8 @@
 
     private List<EventUserModel> _invitations = new();
     private List<ApplicationUserModel>? _friends = null;
+    private List<CircleModel> _circles = [];
+    private string? _circleSelectionMessage;
     private List<PendingFriendInviteModel>? _pendingFriendInvites = null;
     private readonly HashSet<string> _selectedFriendIds = new();
     private readonly HashSet<string> _selectedPendingInviteEmails = new();
@@ -1090,6 +1113,17 @@
                 .OrderBy(f => f.UserName ?? f.Email ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            // Circles only speed up picking people, so a failure here leaves the friend list usable.
+            try
+            {
+                _circles = (await CircleService.GetCirclesAsync(userId)).Where(circle => circle.Members.Count > 0).ToList();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to load circles for event invitation {EventPublicId}", EventId);
+                _circles = [];
+            }
+
             // Load pending friend invites (email-based invites to non-registered users)
             var pendingInvites = await FriendService.GetPendingFriendInvitesAsync(userId);
             _pendingFriendInvites = pendingInvites
@@ -1109,6 +1143,26 @@
     {
         _friendsLoadError = null;
         await EnsureFriendsLoadedAsync();
+    }
+
+    private void SelectCircle(CircleModel circle)
+    {
+        var invitable = (_friends ?? [])
+            .Where(friend => circle.Members.Any(member => member.UserId == friend.Id) && !IsAlreadyInvited(friend))
+            .ToList();
+        foreach (var friend in invitable)
+        {
+            _selectedFriendIds.Add(friend.Id);
+        }
+
+        _friendSearchTerm = string.Empty;
+        var alreadyInvited = circle.Members.Count - invitable.Count;
+        _circleSelectionMessage = invitable.Count switch
+        {
+            0 => $"Everyone in {circle.Name} is already invited.",
+            _ when alreadyInvited > 0 => $"Selected {invitable.Count} from {circle.Name}; {alreadyInvited} already invited.",
+            _ => $"Selected all {invitable.Count} from {circle.Name}."
+        };
     }
 
     private void ToggleFriendSelection(string friendId, bool isSelected)

@@ -73,6 +73,7 @@ public static class ServiceCollectionExtensions
 
         // Social features
         services.AddScoped<IFriendService, FriendService>();
+        services.AddScoped<ICircleService, CircleService>();
         services.AddScoped<IFriendJoinService, FriendJoinService>();
         services.AddScoped<INotificationService, NotificationService>();
 

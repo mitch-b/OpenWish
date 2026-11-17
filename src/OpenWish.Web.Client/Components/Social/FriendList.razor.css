@@ -45,6 +45,28 @@
     min-width: 0;
 }
 
+.circle-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
+}
+
+.friend-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem 0.5rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.circle-badge {
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-weight: 600;
+}
+
 .friend-actions {
     display: flex;
     flex-wrap: wrap;

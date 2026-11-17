@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.19.0] - 2026-11-17
+
+### Added
+
+- Circles: group friends (for example Family or Book club) on the Friends page.
+- Filter the friend list by circle and see circle badges on each friend.
+- Share a friends-only wishlist with a whole circle, including people who join
+  later; access is withdrawn when they leave or sharing stops.
+- Invite a whole circle to an event in one step.
+- Open a circle's lists from Friends' wishlists with a circle filter.
+
 ## [0.18.1] - 2026-11-16
 
 ### Improved

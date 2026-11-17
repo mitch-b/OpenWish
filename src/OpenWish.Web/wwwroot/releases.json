@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.19.0",
+    "date": "2026-11-17",
+    "title": "Friend circles",
+    "summary": "Group friends into circles to share a wishlist, invite to an event, or browse their lists in one step.",
+    "highlights": [
+      "Create circles like Family or Book club on the Friends page.",
+      "Filter your friend list by circle.",
+      "Share a friends-only wishlist with a whole circle, including people who join later.",
+      "Invite a whole circle to an event in one step.",
+      "Filter Friends' wishlists by circle."
+    ]
+  },
+  {
     "version": "0.18.1",
     "date": "2026-11-16",
     "title": "Calmer event and shopping screens",

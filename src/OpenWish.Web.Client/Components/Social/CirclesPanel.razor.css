@@ -1,0 +1,120 @@
+.social-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.social-heading-icon {
+    display: grid;
+    width: 2.7rem;
+    height: 2.7rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.8rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.15rem;
+}
+
+.social-heading h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.social-heading p {
+    margin: 0.2rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.circle-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.circle-card {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+}
+
+.circle-card__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+}
+
+.circle-card__header h3 {
+    margin: 0;
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+}
+
+.circle-card__count {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.circle-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-left: auto;
+}
+
+.circle-card__note {
+    margin: 0.6rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.circle-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.75rem 0 0.4rem;
+}
+
+.circle-member {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1rem 0.2rem 0.1rem 0.7rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    font-size: 0.88rem;
+}
+
+.circle-member__remove {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+}
+
+.circle-member__remove:hover:not(:disabled) {
+    background: rgb(0 0 0 / 0.08);
+}
+
+.circle-add {
+    margin-top: 0.75rem;
+}
+
+@media (max-width: 767.98px) {
+    .circles-panel .btn,
+    .circles-panel .form-control,
+    .circles-panel .form-select {
+        min-height: 2.75rem;
+    }
+
+    .circle-member__remove {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+}

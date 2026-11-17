@@ -63,7 +63,7 @@
 
 .circle-badge {
     background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
+    color: var(--color-link);
     font-weight: 600;
 }
 

@@ -1,4 +1,7 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using OpenWish.Application.Models;
 using OpenWish.Application.Services;
 using OpenWish.Data;
 using OpenWish.Data.Entities;
@@ -126,10 +129,52 @@ public class CircleServiceTests
         await using (var context = factory.CreateDbContext())
         {
             await CircleService.RemoveFromOwnerCirclesAsync(context, "owner", "ann");
+            await context.SaveChangesAsync();
         }
 
         Assert.False(await HasAccessAsync(factory, "list-1", "ann"));
         Assert.Empty((await service.GetCirclesAsync("owner"))[0].Members);
+    }
+
+    [Fact]
+    public async Task ListMadePrivateAfterSharing_IsNotGrantedToNewMembers()
+    {
+        var factory = await SeedAsync();
+        var service = new CircleService(factory);
+        var circle = await service.CreateCircleAsync("owner", "Family");
+        await service.ShareWishlistAsync("owner", circle.PublicId, "list-1");
+        await using (var context = factory.CreateDbContext())
+        {
+            (await context.Wishlists.SingleAsync(w => w.PublicId == "list-1")).IsPrivate = true;
+            await context.SaveChangesAsync();
+        }
+
+        await service.AddMemberAsync("owner", circle.PublicId, "ann");
+
+        Assert.False(await HasAccessAsync(factory, "list-1", "ann"));
+    }
+
+    [Fact]
+    public async Task CircleAccessAndManualAccessAreIndependent()
+    {
+        var factory = await SeedAsync();
+        var service = new CircleService(factory);
+        var wishlists = new WishlistService(
+            factory,
+            new MapperConfiguration(c => c.AddProfile<OpenWishProfile>(), NullLoggerFactory.Instance).CreateMapper(),
+            new WishlistAuthorizationTests.NoOpActivityService(),
+            NullLogger<WishlistService>.Instance);
+        var circle = await service.CreateCircleAsync("owner", "Family");
+        await service.AddMemberAsync("owner", circle.PublicId, "ann");
+        await service.ShareWishlistAsync("owner", circle.PublicId, "list-1");
+
+        await wishlists.ShareWishlistAsync(1, "ann", "Edit");
+        await wishlists.RemoveWishlistPermissionAsync(1, "ann");
+        Assert.True(await HasAccessAsync(factory, "list-1", "ann"));
+
+        await wishlists.ShareWishlistAsync(1, "ann", "Edit");
+        await service.RemoveMemberAsync("owner", circle.PublicId, "ann");
+        Assert.True(await HasAccessAsync(factory, "list-1", "ann"));
     }
 
     private static async Task<bool> HasAccessAsync(TestFactory factory, string wishlistPublicId, string userId)

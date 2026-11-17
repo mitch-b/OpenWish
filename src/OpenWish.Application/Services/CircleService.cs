@@ -78,6 +78,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
 
         circle.Deleted = true;
         circle.UpdatedOn = now;
+        await WithdrawAccessAsync(context, circle.Id, wishlistId: null, memberUserId: null);
         foreach (var member in await context.CircleMembers.Where(m => m.CircleId == circle.Id && !m.Deleted).ToListAsync())
         {
             member.Deleted = true;
@@ -90,8 +91,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
             share.UpdatedOn = now;
         }
 
-        await context.SaveChangesAsync();
-        await WithdrawAccessAsync(context, circle.Id, userId, wishlistId: null, memberUserId: null);
+        await SaveCircleChangesAsync(context);
     }
 
     public async Task<CircleModel> AddMemberAsync(string userId, string circlePublicId, string memberUserId)
@@ -111,7 +111,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
         {
             context.CircleMembers.Add(new CircleMember { CircleId = circle.Id, UserId = memberUserId });
             var sharedWishlistIds = await context.CircleWishlists
-                .Where(w => w.CircleId == circle.Id && !w.Deleted)
+                .Where(w => w.CircleId == circle.Id && !w.Deleted && !w.Wishlist!.Deleted && !w.Wishlist.IsPrivate)
                 .Select(w => w.WishlistId)
                 .ToListAsync();
             foreach (var wishlistId in sharedWishlistIds)
@@ -119,7 +119,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
                 await GrantAccessAsync(context, circle.Id, wishlistId, userId, memberUserId);
             }
 
-            await context.SaveChangesAsync();
+            await SaveCircleChangesAsync(context, circle);
         }
 
         return (await BuildModelsAsync(context, [circle]))[0];
@@ -130,6 +130,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
         await using var context = await _contextFactory.CreateDbContextAsync();
         var circle = await FindOwnedCircleAsync(context, userId, circlePublicId);
         await RemoveMemberCoreAsync(context, circle, memberUserId);
+        await SaveCircleChangesAsync(context, circle);
         return (await BuildModelsAsync(context, [circle]))[0];
     }
 
@@ -159,7 +160,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
                 await GrantAccessAsync(context, circle.Id, wishlist.Id, userId, memberId);
             }
 
-            await context.SaveChangesAsync();
+            await SaveCircleChangesAsync(context, circle);
         }
 
         return (await BuildModelsAsync(context, [circle]))[0];
@@ -182,14 +183,14 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
             share.UpdatedOn = DateTimeOffset.UtcNow;
         }
 
-        await context.SaveChangesAsync();
-        await WithdrawAccessAsync(context, circle.Id, userId, wishlist.Id, memberUserId: null);
+        await WithdrawAccessAsync(context, circle.Id, wishlist.Id, memberUserId: null);
+        await SaveCircleChangesAsync(context, circle);
         return (await BuildModelsAsync(context, [circle]))[0];
     }
 
     /// <summary>
     /// Takes someone out of all of an owner's circles, for example when they stop being friends, and withdraws the
-    /// wishlist access those circles gave them.
+    /// wishlist access those circles gave them. It only stages changes so the caller can save them together with its own.
     /// </summary>
     internal static async Task RemoveFromOwnerCirclesAsync(ApplicationDbContext context, string ownerId, string memberUserId)
     {
@@ -219,57 +220,47 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
             membership.UpdatedOn = DateTimeOffset.UtcNow;
         }
 
-        await context.SaveChangesAsync();
-        await WithdrawAccessAsync(context, circle.Id, circle.OwnerId, wishlistId: null, memberUserId);
+        circle.UpdatedOn = DateTimeOffset.UtcNow;
+        await WithdrawAccessAsync(context, circle.Id, wishlistId: null, memberUserId);
     }
 
     /// <summary>
-    /// Withdraws access a circle granted. Access that another of the owner's circles still justifies is kept and
-    /// handed to that circle instead.
+    /// Stages removal of the access this circle granted. Each circle owns its own permission rows, so access a
+    /// person was given by hand or through another circle is unaffected.
     /// </summary>
-    private static async Task WithdrawAccessAsync(ApplicationDbContext context, int circleId, string ownerId, int? wishlistId, string? memberUserId)
+    private static async Task WithdrawAccessAsync(ApplicationDbContext context, int circleId, int? wishlistId, string? memberUserId)
     {
         var grants = await context.WishlistPermissions
             .Where(p => p.CircleId == circleId && !p.Deleted &&
                 (wishlistId == null || p.WishlistId == wishlistId) &&
                 (memberUserId == null || p.UserId == memberUserId))
             .ToListAsync();
-        if (grants.Count == 0)
-        {
-            return;
-        }
-
-        var otherShares = await (
-            from share in context.CircleWishlists
-            join circle in context.Circles on share.CircleId equals circle.Id
-            where !share.Deleted && !circle.Deleted && circle.OwnerId == ownerId && share.CircleId != circleId
-            select new { share.CircleId, share.WishlistId }).ToListAsync();
-        var otherMemberships = await (
-            from member in context.CircleMembers
-            join circle in context.Circles on member.CircleId equals circle.Id
-            where !member.Deleted && !circle.Deleted && circle.OwnerId == ownerId && member.CircleId != circleId
-            select new { member.CircleId, member.UserId }).ToListAsync();
-
         foreach (var grant in grants)
         {
-            var replacement = otherShares
-                .Where(share => share.WishlistId == grant.WishlistId)
-                .Select(share => (int?)share.CircleId)
-                .FirstOrDefault(otherCircleId =>
-                    otherMemberships.Any(member => member.CircleId == otherCircleId && member.UserId == grant.UserId));
-            if (replacement is { } circleToKeep)
-            {
-                grant.CircleId = circleToKeep;
-            }
-            else
-            {
-                grant.Deleted = true;
-            }
-
+            grant.Deleted = true;
             grant.UpdatedOn = DateTimeOffset.UtcNow;
         }
+    }
 
-        await context.SaveChangesAsync();
+    /// <summary>
+    /// Saves everything staged by one operation atomically. Touching the circle row makes two overlapping
+    /// operations on the same circle conflict instead of silently missing each other's grants.
+    /// </summary>
+    private static async Task SaveCircleChangesAsync(ApplicationDbContext context, Circle? circle = null)
+    {
+        if (circle is not null)
+        {
+            circle.UpdatedOn = DateTimeOffset.UtcNow;
+        }
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new InvalidOperationException("This circle changed at the same time. Try again.");
+        }
     }
 
     private static async Task GrantAccessAsync(ApplicationDbContext context, int circleId, int wishlistId, string ownerId, string memberUserId)
@@ -280,7 +271,7 @@ public class CircleService(IDbContextFactory<ApplicationDbContext> contextFactor
         }
 
         var existing = await context.WishlistPermissions
-            .AnyAsync(p => p.WishlistId == wishlistId && p.UserId == memberUserId && !p.Deleted);
+            .AnyAsync(p => p.WishlistId == wishlistId && p.UserId == memberUserId && p.CircleId == circleId && !p.Deleted);
         if (existing)
         {
             return;

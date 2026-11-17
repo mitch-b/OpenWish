@@ -180,6 +180,10 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         }
 
         await context.SaveChangesAsync();
+
+        // Circle membership, and the wishlist access it gave, ends with the friendship in both directions.
+        await CircleService.RemoveFromOwnerCirclesAsync(context, userId, friendId);
+        await CircleService.RemoveFromOwnerCirclesAsync(context, friendId, userId);
         return true;
     }
 

@@ -8,6 +8,7 @@
 
 @inject IWishlistService WishlistService
 @inject IFriendService FriendService
+@inject ICircleService CircleService
 @inject NavigationManager NavigationManager
 @inject IUserContextService UserContextService
 @inject ILogger<ManageWishlist> Logger
@@ -223,6 +224,67 @@ else
                 </div>
             }
 
+            @if (_friendsLoadErrorMessage is null && _wishlist.IsFriendsOnly)
+            {
+                <div class="add-friend-section circle-share-section" data-testid="circle-share">
+                    <div class="add-friend-header">
+                        <OpenWishIcon Name="people-fill" />
+                        <span>Share with a circle</span>
+                    </div>
+                    @if (_circles.Count == 0)
+                    {
+                        <p class="text-muted mb-0">Group friends into a circle, like Family, to share this list with all of them at once.
+                            <a href="/friends">Create a circle</a></p>
+                    }
+                    else
+                    {
+                        @if (SharingCircles.Count > 0)
+                        {
+                            <ul class="list-unstyled circle-share-list">
+                                @foreach (var circle in SharingCircles)
+                                {
+                                    <li>
+                                        <span><strong>@circle.Name</strong> (@circle.Members.Count) can see this list, including friends who join later.</span>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@_circleBusy"
+                                                aria-label="Stop sharing with @circle.Name"
+                                                @onclick="() => UnshareWithCircleAsync(circle)">Stop sharing</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+
+                        @if (AvailableCircles.Count > 0)
+                        {
+                            <div class="add-friend-form">
+                                <label class="form-label" for="circle-share-select">Circle to share with</label>
+                                <select id="circle-share-select" class="form-select friend-select"
+                                        @bind="_selectedCircleId" disabled="@_circleBusy">
+                                    <option value="">Choose a circle...</option>
+                                    @foreach (var circle in AvailableCircles)
+                                    {
+                                        <option value="@circle.PublicId">@circle.Name (@circle.Members.Count)</option>
+                                    }
+                                </select>
+                                <button class="btn btn-primary btn-add" type="button"
+                                        disabled="@(string.IsNullOrEmpty(_selectedCircleId) || _circleBusy)"
+                                        @onclick="ShareWithCircleAsync">
+                                    @if (_circleBusy)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                        <span>Sharing...</span>
+                                    }
+                                    else
+                                    {
+                                        <OpenWishIcon Name="share" />
+                                        <span>Share with circle</span>
+                                    }
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
             @if (!string.IsNullOrEmpty(_sharingStatusMessage))
             {
                 <div class="alert alert-success success-toast mt-3" role="status" aria-live="polite">
@@ -357,6 +419,17 @@ else
     private string? _sharingStatusMessage;
     private string? _sharingErrorMessage;
 
+    // Circles
+    private List<CircleModel> _circles = [];
+    private string _selectedCircleId = "";
+    private bool _circleBusy;
+
+    private List<CircleModel> SharingCircles =>
+        _circles.Where(circle => circle.Wishlists.Any(list => list.PublicId == WishlistId)).ToList();
+
+    private List<CircleModel> AvailableCircles =>
+        _circles.Where(circle => circle.Wishlists.All(list => list.PublicId != WishlistId)).ToList();
+
     protected override Task OnInitializedAsync() => LoadWishlistAsync();
 
     private async Task LoadWishlistAsync()
@@ -372,7 +445,7 @@ else
 
             if (_isOwner)
             {
-                await Task.WhenAll(RefreshEventsAsync(), RefreshFriendsWithAccessAsync());
+                await Task.WhenAll(RefreshEventsAsync(), RefreshFriendsWithAccessAsync(), RefreshCirclesAsync());
             }
         }
         catch (UnauthorizedAccessException)
@@ -401,6 +474,64 @@ else
 
         _isOwner = _wishlist.OwnerId == _currentUserId;
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshCirclesAsync()
+    {
+        try
+        {
+            _circles = (await CircleService.GetCirclesAsync(_currentUserId!)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load circles for wishlist {WishlistId}", WishlistId);
+            _circles = [];
+        }
+    }
+
+    private Task ShareWithCircleAsync() =>
+        ChangeCircleSharingAsync(
+            _selectedCircleId,
+            circle => CircleService.ShareWishlistAsync(_currentUserId!, circle, WishlistId),
+            circle => $"Shared with {circle.Name}. Friends who join it later will see this list too.");
+
+    private Task UnshareWithCircleAsync(CircleModel circle) =>
+        ChangeCircleSharingAsync(
+            circle.PublicId,
+            id => CircleService.UnshareWishlistAsync(_currentUserId!, id, WishlistId),
+            updated => $"Stopped sharing with {updated.Name}.");
+
+    private async Task ChangeCircleSharingAsync(string circlePublicId, Func<string, Task<CircleModel>> action, Func<CircleModel, string> message)
+    {
+        if (_circleBusy || string.IsNullOrEmpty(circlePublicId))
+        {
+            return;
+        }
+
+        _circleBusy = true;
+        _sharingStatusMessage = null;
+        _sharingErrorMessage = null;
+        try
+        {
+            var updated = await action(circlePublicId);
+            _selectedCircleId = "";
+            await RefreshCirclesAsync();
+            await RefreshFriendsWithAccessAsync();
+            _sharingStatusMessage = message(updated);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
+        {
+            _sharingErrorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to change circle sharing for wishlist {WishlistId}", WishlistId);
+            _sharingErrorMessage = "We couldn't change sharing for that circle. Try again.";
+        }
+        finally
+        {
+            _circleBusy = false;
+        }
     }
 
     private async Task RefreshFriendsWithAccessAsync()

@@ -35,9 +35,15 @@
         </div>
         
         <div>
+            <div class="card friends-panel mb-4">
+                <div class="card-body">
+                    <FriendList @ref="_friendList" OnFriendRemoved="HandleFriendRemoved" />
+                </div>
+            </div>
+
             <div class="card friends-panel">
                 <div class="card-body">
-                    <FriendList @ref="_friendList" />
+                    <CirclesPanel @ref="_circlesPanel" OnCirclesChanged="HandleCirclesChanged" />
                 </div>
             </div>
         </div>
@@ -47,8 +53,17 @@
 @code {
     private FriendList? _friendList;
     private FriendRequestList? _requestList;
+    private CirclesPanel? _circlesPanel;
 
     private Task HandleRequestSent() => _requestList?.ReloadAsync() ?? Task.CompletedTask;
 
-    private Task HandleFriendshipsChanged() => _friendList?.ReloadAsync() ?? Task.CompletedTask;
+    private async Task HandleFriendshipsChanged()
+    {
+        await (_friendList?.ReloadAsync() ?? Task.CompletedTask);
+        await (_circlesPanel?.ReloadAsync() ?? Task.CompletedTask);
+    }
+
+    private Task HandleFriendRemoved() => _circlesPanel?.ReloadAsync() ?? Task.CompletedTask;
+
+    private Task HandleCirclesChanged() => _friendList?.ReloadAsync() ?? Task.CompletedTask;
 }

@@ -2,6 +2,19 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.20.0] - 2026-11-18
+
+### Added
+
+- "Add and add another" on the full-page Add an item form, with a confirmation.
+- A note when a new idea has the same name or link as one already on the list.
+
+### Improved
+
+- A product link fills an empty "Where to buy" with the store name.
+- The wishlist confirms an idea added from the add page.
+- The Friends' wishlists search clear button says "Clear".
+
 ## [0.19.0] - 2026-11-17
 
 ### Added

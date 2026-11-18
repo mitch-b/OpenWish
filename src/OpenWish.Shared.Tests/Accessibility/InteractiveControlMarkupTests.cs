@@ -5,6 +5,34 @@ namespace OpenWish.Shared.Tests.Accessibility;
 public class InteractiveControlMarkupTests
 {
     [Fact]
+    public void IdeaCapture_SuggestsStoresWarnsAboutDuplicatesAndConfirmsAdditions()
+    {
+        var modal = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");
+        var form = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemForm.razor");
+        var page = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
+        var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var notice = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "DuplicateIdeaNotice.razor");
+        var lists = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "Index.razor");
+
+        foreach (var markup in new[] { modal, form })
+        {
+            Assert.Contains("@onblur=\"SuggestStore\"", markup, StringComparison.Ordinal);
+            Assert.Contains("<DuplicateIdeaNotice Model=\"@Model\" ExistingItems=\"@ExistingItems\" />", markup, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("role=\"status\"", notice, StringComparison.Ordinal);
+        Assert.Contains("You can still add this one.", notice, StringComparison.Ordinal);
+        Assert.Contains("ExistingItems=\"@_items\"", details, StringComparison.Ordinal);
+        Assert.Contains("OnSubmitAndAddAnother=\"@HandleAddAnother\"", page, StringComparison.Ordinal);
+        Assert.Contains("data-testid=\"added-another-note\"", page, StringComparison.Ordinal);
+        Assert.Contains("added={Uri.EscapeDataString(item.PublicId)}", page, StringComparison.Ordinal);
+        Assert.Contains("item.PublicId == AddedItemId", details, StringComparison.Ordinal);
+        Assert.DoesNotContain("added={Uri.EscapeDataString(item.Name)}", page, StringComparison.Ordinal);
+        Assert.Contains("Clear shared wishlist search", lists, StringComparison.Ordinal);
+        Assert.Contains("<OpenWishIcon Name=\"x-lg\" /> Clear", lists, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ConnectedItemSyncNote_DoesNotRequireAnInternalIdAfterWebAssemblyHydration()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");

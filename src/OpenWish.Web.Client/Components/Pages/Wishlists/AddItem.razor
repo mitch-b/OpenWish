@@ -5,6 +5,7 @@
 @using OpenWish.Web.Client.Components.Wishlist
 
 @inject IWishlistService WishlistService
+@inject IUserContextService UserContextService
 @inject NavigationManager NavigationManager
 @inject ILogger<AddItem> Logger
 
@@ -29,12 +30,21 @@
                 Your wishlist is ready. Add an idea to get it started.
             </div>
         }
+        @if (_lastAddedName is not null)
+        {
+            <div class="alert alert-success" role="status" data-testid="added-another-note">
+                <OpenWishIcon Name="check-circle" /> @_lastAddedName was added. Add the next idea whenever you're ready.
+            </div>
+        }
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger" role="alert">@_errorMessage</div>
         }
-        <WishlistItemForm Model="@_item"
+        <WishlistItemForm @key="_formVersion"
+                          Model="@_item"
+                          ExistingItems="@_existingItems"
                           OnSubmit="@HandleSubmit"
+                          OnSubmitAndAddAnother="@HandleAddAnother"
                           OnCancel="@HandleCancel"
                           AutoFocusImport="true"
                           InitialImportLink="@_initialImportLink"
@@ -46,7 +56,10 @@
 
 @code {
     [Parameter] public string WishlistId { get; set; } = string.Empty;
-    private readonly WishlistItemModel _item = new() { PublicId = Guid.NewGuid().ToString() };
+    private WishlistItemModel _item = new() { PublicId = Guid.NewGuid().ToString() };
+    private List<WishlistItemModel> _existingItems = [];
+    private string? _lastAddedName;
+    private int _formVersion;
     private bool _isSubmitting;
     private string? _errorMessage;
     private string? _initialImportLink;
@@ -60,6 +73,20 @@
     [SupplyParameterFromQuery(Name = "price")] public string? SharedPrice { get; set; }
     [SupplyParameterFromQuery(Name = "image")] public string? SharedImage { get; set; }
     [SupplyParameterFromQuery(Name = "firstIdea")] public bool FirstIdea { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Only used for a duplicate heads-up, so a failed lookup should never block adding an idea.
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync();
+            _existingItems = (await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId, userId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Unable to load existing ideas for wishlist {WishlistPublicId}", WishlistId);
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -76,9 +103,31 @@
 
     private async Task HandleSubmit(WishlistItemModel item)
     {
-        if (_isSubmitting)
+        if (await SaveAsync(item))
+        {
+            NavigationManager.NavigateTo($"/wishlists/{WishlistId}?added={Uri.EscapeDataString(item.PublicId)}");
+        }
+    }
+
+    private async Task HandleAddAnother(WishlistItemModel item)
+    {
+        if (!await SaveAsync(item))
         {
             return;
+        }
+
+        _existingItems.Add(item);
+        _lastAddedName = item.Name;
+        _item = new WishlistItemModel { PublicId = Guid.NewGuid().ToString() };
+        _initialImportLink = null;
+        _formVersion++;
+    }
+
+    private async Task<bool> SaveAsync(WishlistItemModel item)
+    {
+        if (_isSubmitting)
+        {
+            return false;
         }
 
         _isSubmitting = true;
@@ -89,12 +138,13 @@
         try
         {
             await WishlistService.AddItemToWishlistByPublicIdAsync(WishlistId, item);
-            NavigationManager.NavigateTo($"/wishlists/{WishlistId}");
+            return true;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to add an item to wishlist {WishlistPublicId}", WishlistId);
             _errorMessage = "We couldn't add this item. Review the details and try again.";
+            return false;
         }
         finally
         {

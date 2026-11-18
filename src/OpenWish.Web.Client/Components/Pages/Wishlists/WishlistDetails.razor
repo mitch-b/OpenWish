@@ -959,7 +959,7 @@ else
     }
 }
 
-<WishlistItemModal @ref="_itemModal" Model="@_modalItem" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
+<WishlistItemModal @ref="_itemModal" Model="@_modalItem" ExistingItems="@_items" OnSubmit="@HandleModalSubmit" OnCancel="@HandleModalCancel" />
 <WishlistDeleteDialog @ref="_deleteDialog"
                       OnConfirm="@ConfirmItemDeleteAsync"
                       IsBusy="@_isDeletingItem"
@@ -975,6 +975,10 @@ else
 
     [SupplyParameterFromQuery(Name = "budget")]
     public string? BudgetQuery { get; set; }
+
+    // The public ID of an idea that was just added on the add page; the name comes from the list, never the link.
+    [SupplyParameterFromQuery(Name = "added")]
+    public string? AddedItemId { get; set; }
 
     private WishlistModel? _wishlist;
     private List<WishlistItemModel> _items = new();
@@ -1057,6 +1061,7 @@ else
             _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
             await SetupSecurity();
             await LoadItems();
+            AnnounceAddedItem();
         }
         catch (UnauthorizedAccessException)
         {
@@ -1079,6 +1084,20 @@ else
 
         _appliedBudgetQuery = BudgetQuery;
         ApplyBudgetQuery();
+    }
+
+    private void AnnounceAddedItem()
+    {
+        if (string.IsNullOrWhiteSpace(AddedItemId))
+        {
+            return;
+        }
+
+        var added = _items.FirstOrDefault(item => item.PublicId == AddedItemId);
+        if (added is not null)
+        {
+            FeedbackMessage = $"{added.Name} was added to your list.";
+        }
     }
 
     private async Task LoadItems()

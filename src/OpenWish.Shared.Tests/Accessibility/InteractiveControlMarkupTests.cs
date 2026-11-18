@@ -27,6 +27,9 @@ public class InteractiveControlMarkupTests
         Assert.Contains("data-testid=\"added-another-note\"", page, StringComparison.Ordinal);
         Assert.Contains("added={Uri.EscapeDataString(item.PublicId)}", page, StringComparison.Ordinal);
         Assert.Contains("item.PublicId == AddedItemId", details, StringComparison.Ordinal);
+        Assert.Contains("CanUserEditWishlistByPublicIdAsync(WishlistId, userId)", page, StringComparison.Ordinal);
+        Assert.Contains("protected override void OnInitialized()", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnParametersSet", page, StringComparison.Ordinal);
         Assert.DoesNotContain("added={Uri.EscapeDataString(item.Name)}", page, StringComparison.Ordinal);
         Assert.Contains("Clear shared wishlist search", lists, StringComparison.Ordinal);
         Assert.Contains("<OpenWishIcon Name=\"x-lg\" /> Clear", lists, StringComparison.Ordinal);

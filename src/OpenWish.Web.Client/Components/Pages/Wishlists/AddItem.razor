@@ -63,7 +63,6 @@
     private bool _isSubmitting;
     private string? _errorMessage;
     private string? _initialImportLink;
-    private bool _captureApplied;
 
     // Filled by the share page, the "Add to OpenWish" bookmarklet, or the installed app's share target.
     [SupplyParameterFromQuery(Name = "url")] public string? SharedUrl { get; set; }
@@ -74,31 +73,32 @@
     [SupplyParameterFromQuery(Name = "image")] public string? SharedImage { get; set; }
     [SupplyParameterFromQuery(Name = "firstIdea")] public bool FirstIdea { get; set; }
 
+    // Runs before the lookup below can yield, so the importer sees the shared link on its first render.
+    protected override void OnInitialized()
+    {
+        var capture = ProductCapture.FromQuery(SharedUrl, SharedText, SharedTitle, SharedDescription, SharedPrice, SharedImage);
+        capture.ApplyTo(_item);
+        _initialImportLink = capture.Link?.AbsoluteUri;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         // Only used for a duplicate heads-up, so a failed lookup should never block adding an idea.
         try
         {
             var userId = await UserContextService.GetUserIdAsync();
+            if (string.IsNullOrWhiteSpace(userId) ||
+                !await WishlistService.CanUserEditWishlistByPublicIdAsync(WishlistId, userId))
+            {
+                return;
+            }
+
             _existingItems = (await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId, userId)).ToList();
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Unable to load existing ideas for wishlist {WishlistPublicId}", WishlistId);
         }
-    }
-
-    protected override void OnParametersSet()
-    {
-        if (_captureApplied)
-        {
-            return;
-        }
-
-        _captureApplied = true;
-        var capture = ProductCapture.FromQuery(SharedUrl, SharedText, SharedTitle, SharedDescription, SharedPrice, SharedImage);
-        capture.ApplyTo(_item);
-        _initialImportLink = capture.Link?.AbsoluteUri;
     }
 
     private async Task HandleSubmit(WishlistItemModel item)

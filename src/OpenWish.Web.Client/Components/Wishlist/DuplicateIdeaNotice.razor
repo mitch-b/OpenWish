@@ -1,0 +1,18 @@
+@using OpenWish.Shared.Products
+
+@if (DuplicateName is { } name)
+{
+    <div class="form-text duplicate-idea-note" role="status" data-testid="duplicate-idea-note">
+        <OpenWishIcon Name="info-circle" />
+        <span>This list already has "@name". You can still add this one.</span>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public WishlistItemModel Model { get; set; } = new();
+    [Parameter] public IEnumerable<WishlistItemModel>? ExistingItems { get; set; }
+
+    private string? DuplicateName => ExistingItems is null
+        ? null
+        : ItemCaptureHints.FindDuplicateName(ExistingItems, Model.Name, Model.Url, Model.PublicId);
+}

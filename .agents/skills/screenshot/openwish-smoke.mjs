@@ -1578,10 +1578,40 @@ async function verifyOwnerJourney(browser, manifest, results) {
   }
   await productUrl.fill("https://example.com/gift");
   await page.getByRole("button", { name: "Import" }).click({ trial: true });
+  await productUrl.fill("");
+  await page.getByLabel("Name").fill("Page capture idea one");
+  await page.getByRole("button", { name: "Add and add another" }).click();
+  await page.getByTestId("added-another-note")
+    .filter({ hasText: "Page capture idea one was added." })
+    .waitFor({ state: "visible" });
+  if (await page.getByLabel("Name").inputValue() !== "") {
+    throw new Error("Add and add another on the add page did not clear the form.");
+  }
+  await page.getByLabel("Name").fill("page capture IDEA one");
+  await page.locator("#description").focus();
+  await page.getByTestId("duplicate-idea-note")
+    .filter({ hasText: 'This list already has "Page capture idea one".' })
+    .waitFor({ state: "visible" });
+  await screenshot(page, "add-item-duplicate-hint.png", false, true, '[data-testid="duplicate-idea-note"]');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await assertNoHorizontalScroll(page, "mobile add page duplicate hint");
+  await screenshot(page, "add-item-duplicate-hint-mobile.png", false, true, '[data-testid="duplicate-idea-note"]');
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByLabel("Name").fill("Travel Mug");
+  await page.locator("#url").fill("https://www.target.com/p/travel-mug/-/A-1");
+  await page.locator("#description").focus();
+  await page.waitForFunction(
+    () => document.getElementById("whereToBuy")?.value === "Target",
+    null,
+    { timeout: 5000 }
+  ).catch(() => {
+    throw new Error("The add page did not suggest the store from the product link.");
+  });
   await page.getByRole("button", { name: "Add item", exact: true }).click();
-  await page.waitForURL(`${baseUrl}/wishlists/${manifest.wishlistPublicId}`);
+  await page.waitForURL(url => url.pathname === `/wishlists/${manifest.wishlistPublicId}`);
   await assertVisible(page, "Travel Mug");
+  await assertVisible(page, "Page capture idea one");
+  await page.getByRole("alert").filter({ hasText: "Travel Mug was added to your list." }).waitFor({ state: "visible" });
   await screenshot(page, "added-wishlist-item.png");
 
   await visit(page, "/events", "Plan an exchange or a shared occasion.", visitedRoutes);

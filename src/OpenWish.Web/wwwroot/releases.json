@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.20.0",
+    "date": "2026-11-18",
+    "title": "Quicker idea capture",
+    "summary": "Add several ideas in a row, get a store from a link, and hear about repeats before saving.",
+    "highlights": [
+      "Add and add another on the Add an item page.",
+      "A note when an idea repeats a name or link already on the list.",
+      "A product link fills in Where to buy.",
+      "The wishlist confirms an idea you just added."
+    ]
+  },
+  {
     "version": "0.19.0",
     "date": "2026-11-17",
     "title": "Friend circles",

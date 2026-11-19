@@ -119,6 +119,8 @@
 
 .friend-chip {
     display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
     align-items: center;
     gap: 0.625rem;
     padding: 0.5rem 0.75rem;
@@ -149,6 +151,14 @@
 .friend-name {
     font-weight: 500;
     color: var(--color-text);
+}
+
+.circle-badge {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-weight: 600;
 }
 
 .remove-btn {

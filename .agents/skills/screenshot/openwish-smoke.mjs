@@ -5867,6 +5867,7 @@ async function verifyCirclesJourney(browser, manifest, results) {
     eventUsers: []
   });
   let circle = null;
+  let emptyCircle = null;
   try {
     // Create the circle and add Jordan through the Friends page.
     await page.goto(`${baseUrl}/friends`, { waitUntil: "domcontentloaded" });
@@ -5921,6 +5922,42 @@ async function verifyCirclesJourney(browser, manifest, results) {
     }
     assertions.push("sharing a list with a circle grants its members access and nobody else");
 
+    // The sharing page says who has access through the circle and never claims a removal that did nothing.
+    await page.getByTestId("friend-via-circle").filter({ hasText: `via ${circleName}` }).first().waitFor({ state: "visible" });
+    await page.getByRole("button", { name: "Remove access for JordanDemo" }).click();
+    await page.getByRole("alert").filter({ hasText: `JordanDemo sees this list through ${circleName}` }).waitFor({ state: "visible" });
+    if (await page.getByText("Access removed for JordanDemo").count() > 0 || !await sees(jordan)) {
+      throw new Error("Removing circle-only access reported success or changed access.");
+    }
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: path.join(walkthroughDirectory, "circle-access-via-circle.png") });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId("friend-via-circle").first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(walkthroughDirectory, "circle-access-via-circle-mobile.png") });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    assertions.push("circle access is labelled 'via circle' and a no-op removal explains itself instead of claiming success");
+
+    // The circles panel links to the shared list, and the circle filter offers its lists.
+    await page.goto(`${baseUrl}/friends`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    const sharedLink = page.getByTestId("circle-shared-lists").getByRole("link", { name: `Manage sharing for ${listName}` });
+    await sharedLink.waitFor({ state: "visible" });
+    if (!(await sharedLink.getAttribute("href")).endsWith(`/wishlists/${wishlist.publicId}/manage`)) {
+      throw new Error("The circle's shared list did not link to its sharing page.");
+    }
+    await page.getByRole("group", { name: "Filter friends by circle" }).getByRole("button", { name: new RegExp(`^${circleName}`) }).click();
+    await page.getByTestId("circle-filter-lists").getByRole("link", { name: `View lists from ${circleName}` }).waitFor({ state: "visible" });
+    assertions.push("shared lists link to their sharing page and a circle filter links to the circle's lists");
+
+    // An empty circle explains itself on Friends' wishlists.
+    emptyCircle = await json(owner, "POST", "/api/circles", { name: "Empty crew" });
+    await page.goto(`${baseUrl}/wishlists?tab=friends&circle=${emptyCircle.publicId}`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2000);
+    await page.getByTestId("circle-empty-members").filter({ hasText: "Nobody is in Empty crew yet" }).waitFor({ state: "visible" });
+    await screenshot(page, "circle-empty-wishlists.png");
+    assertions.push("an empty circle explains why no lists appear and links to Friends");
+
     // A friend added later gains access without another step, and loses it when removed.
     const caseyId = (await json(owner, "GET", "/api/friends")).find(friend => friend.userName === "CaseyDemo").id;
     await json(owner, "POST", `/api/circles/${circle.publicId}/members`, { userId: caseyId });
@@ -5940,7 +5977,9 @@ async function verifyCirclesJourney(browser, manifest, results) {
     await page.getByRole("tab", { name: "From friends" }).click();
     const picker = page.getByTestId("invite-circles");
     await picker.waitFor({ state: "visible" });
-    await picker.getByRole("button", { name: new RegExp(`^${circleName}`) }).click();
+    const circleButton = picker.getByRole("button", { name: `${circleName} (2)` });
+    await circleButton.waitFor({ state: "visible" });
+    await circleButton.click();
     await page.getByTestId("invite-circle-status").filter({ hasText: circleName }).waitFor({ state: "visible" });
     await picker.scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
@@ -5964,6 +6003,9 @@ async function verifyCirclesJourney(browser, manifest, results) {
   } finally {
     if (circle) {
       await json(owner, "DELETE", `/api/circles/${circle.publicId}`);
+    }
+    if (emptyCircle) {
+      await json(owner, "DELETE", `/api/circles/${emptyCircle.publicId}`);
     }
     await json(owner, "DELETE", `/api/wishlists/${wishlist.publicId}`);
     await json(owner, "DELETE", `/api/events/${event.publicId}`);

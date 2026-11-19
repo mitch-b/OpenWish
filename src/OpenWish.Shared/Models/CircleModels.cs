@@ -66,6 +66,29 @@ public static class CircleRules
         return normalized;
     }
 
+    /// <summary>Names of the circles that share the wishlist and include the person, in the order given.</summary>
+    public static IReadOnlyList<string> GetSharingCircleNames(IEnumerable<CircleModel> circles, string wishlistPublicId, string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return [];
+        }
+
+        return circles
+            .Where(circle => circle.Wishlists.Any(list => list.PublicId == wishlistPublicId) &&
+                             circle.Members.Any(member => member.UserId == userId))
+            .Select(circle => circle.Name)
+            .ToList();
+    }
+
+    /// <summary>Joins names for a sentence: "A", "A and B", "A, B and C".</summary>
+    public static string JoinNames(IReadOnlyList<string> names) => names.Count switch
+    {
+        0 => string.Empty,
+        1 => names[0],
+        _ => $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}"
+    };
+
     /// <summary>The user names of everyone in the chosen circle, or null when no circle is chosen or it no longer exists.</summary>
     public static IReadOnlySet<string>? GetMemberNames(IEnumerable<CircleModel> circles, string? circlePublicId)
     {

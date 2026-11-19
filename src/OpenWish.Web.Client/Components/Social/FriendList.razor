@@ -52,6 +52,12 @@
                             @onclick="() => _circleFilter = circle.PublicId">@circle.Name (@circle.Members.Count)</button>
                 }
             </div>
+            @if (_circles.FirstOrDefault(circle => circle.PublicId == _circleFilter) is { Members.Count: > 0 } activeCircle)
+            {
+                <p class="mt-2 mb-0" data-testid="circle-filter-lists">
+                    <a href="/wishlists?tab=friends&circle=@Uri.EscapeDataString(activeCircle.PublicId)">View lists from @activeCircle.Name</a>
+                </p>
+            }
         }
 
         @if (VisibleFriends.Count == 0)

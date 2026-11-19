@@ -150,6 +150,10 @@ else
                                 @((friend.UserName ?? friend.Email ?? "?")[0].ToString().ToUpper())
                             </div>
                             <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
+                            @if (CircleNamesFor(friend) is { Count: > 0 } viaCircles)
+                            {
+                                <span class="badge circle-badge" data-testid="friend-via-circle">via @CircleRules.JoinNames(viaCircles)</span>
+                            }
                             @if (_wishlist.IsFriendsOnly || _wishlist.IsPrivate)
                             {
                                 var friendName = GetFriendName(friend);
@@ -427,6 +431,9 @@ else
     private List<CircleModel> SharingCircles =>
         _circles.Where(circle => circle.Wishlists.Any(list => list.PublicId == WishlistId)).ToList();
 
+    private IReadOnlyList<string> CircleNamesFor(ApplicationUserModel friend) =>
+        CircleRules.GetSharingCircleNames(_circles, WishlistId, friend.Id);
+
     private List<CircleModel> AvailableCircles =>
         _circles.Where(circle => circle.Wishlists.All(list => list.PublicId != WishlistId)).ToList();
 
@@ -654,12 +661,46 @@ else
             _sharingErrorMessage = null;
             _sharingStatusMessage = null;
 
-            await WishlistService.RemoveWishlistPermissionByPublicIdAsync(WishlistId, friendId);
+            var removed = await WishlistService.RemoveWishlistPermissionByPublicIdAsync(WishlistId, friendId);
 
             var friendName = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId)?.UserName ?? "Friend";
-            _sharingStatusMessage = $"Access removed for {friendName}.";
-
             await RefreshFriendsWithAccessAsync();
+
+            if (_friendsLoadErrorMessage is not null)
+            {
+                return;
+            }
+
+            // Judge what is left from the refreshed access list, not circle membership alone.
+            var stillSees = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId);
+            var viaCircles = stillSees is null ? [] : CircleNamesFor(stillSees);
+            if (stillSees is null)
+            {
+                if (removed)
+                {
+                    _sharingStatusMessage = $"Access removed for {friendName}.";
+                }
+                else
+                {
+                    _sharingErrorMessage = $"{friendName} no longer has direct access to this list.";
+                }
+            }
+            else if (viaCircles.Count > 0)
+            {
+                var circleNames = CircleRules.JoinNames(viaCircles);
+                if (removed)
+                {
+                    _sharingStatusMessage = $"Direct access removed for {friendName}, who still sees this list through {circleNames}.";
+                }
+                else
+                {
+                    _sharingErrorMessage = $"{friendName} sees this list through {circleNames}. Stop sharing with the circle or remove {friendName} from it to end their access.";
+                }
+            }
+            else
+            {
+                _sharingErrorMessage = $"{friendName} still has access to this list. Try again.";
+            }
         }
         catch (Exception ex)
         {

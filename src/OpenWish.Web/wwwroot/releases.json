@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.20.1",
+    "date": "2026-11-19",
+    "title": "Circles, made clearer",
+    "summary": "Circle sharing now says who sees what and why, and circles lead to their lists in one tap.",
+    "highlights": [
+      "Friends who see a list through a circle are labelled on the sharing page.",
+      "Removing circle-only access explains itself instead of claiming success.",
+      "Event invitations show how many circle members are still to invite.",
+      "Circles link to their shared lists and explain when they have none."
+    ]
+  },
+  {
     "version": "0.20.0",
     "date": "2026-11-18",
     "title": "Quicker idea capture",

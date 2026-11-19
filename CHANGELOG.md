@@ -2,6 +2,21 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.20.1] - 2026-11-19
+
+### Improved
+
+- The sharing page labels friends who see a list through a circle ("via Book club").
+- Event invitations show how many circle members are still to invite.
+- A circle's shared lists link to their sharing page.
+- Choosing a circle on Friends offers a link to its lists.
+- An empty circle on Friends' wishlists explains why nothing appears.
+
+### Fixed
+
+- Removing a friend who only sees a list through a circle no longer says access
+  was removed; it explains how to end their access.
+
 ## [0.20.0] - 2026-11-18
 
 ### Added

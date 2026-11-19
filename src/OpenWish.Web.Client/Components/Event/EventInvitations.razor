@@ -113,10 +113,11 @@
                                 <div class="d-flex flex-wrap gap-2" role="group" aria-labelledby="event-invite-circles-label">
                                     @foreach (var circle in _circles)
                                     {
+                                        var invitable = InvitableCircleMembers(circle).Count;
                                         <button type="button" class="btn btn-outline-primary btn-sm"
-                                                disabled="@_isSending"
+                                                disabled="@(_isSending || invitable == 0)"
                                                 @onclick="() => SelectCircle(circle)">
-                                            <OpenWishIcon Name="people-fill" /> @circle.Name (@circle.Members.Count)
+                                            <OpenWishIcon Name="people-fill" /> @circle.Name (@(invitable == 0 ? "all invited" : invitable == circle.Members.Count ? invitable.ToString() : $"{invitable} of {circle.Members.Count} not invited"))
                                         </button>
                                     }
                                 </div>
@@ -1145,11 +1146,14 @@
         await EnsureFriendsLoadedAsync();
     }
 
-    private void SelectCircle(CircleModel circle)
-    {
-        var invitable = (_friends ?? [])
+    private List<ApplicationUserModel> InvitableCircleMembers(CircleModel circle) =>
+        (_friends ?? [])
             .Where(friend => circle.Members.Any(member => member.UserId == friend.Id) && !IsAlreadyInvited(friend))
             .ToList();
+
+    private void SelectCircle(CircleModel circle)
+    {
+        var invitable = InvitableCircleMembers(circle);
         foreach (var friend in invitable)
         {
             _selectedFriendIds.Add(friend.Id);

@@ -240,7 +240,19 @@
                         @if (VisibleFriendsWishlists.Count == 0)
                         {
                             <div class="alert alert-info" role="status">
-                                No shared wishlists match@(string.IsNullOrWhiteSpace(_ownerFilter) ? (ActiveCircleName is null ? "" : $" {ActiveCircleName}") : $" {_ownerFilter}").
+                                @if (ActiveCircle is { Members.Count: 0 } && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
+                                {
+                                    <span data-testid="circle-empty-members">Nobody is in @ActiveCircle.Name yet. <a href="/friends">Add friends to it</a>.</span>
+                                }
+                                else if (ActiveCircle is not null && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
+                                {
+                                    <span data-testid="circle-empty-lists">Nobody in @ActiveCircle.Name has shared a wishlist with you yet. Ask them to share one.</span>
+                                }
+                                else
+                                {
+                                    <span>No shared wishlists match@(string.IsNullOrWhiteSpace(_ownerFilter) ? (ActiveCircleName is null ? "" : $" {ActiveCircleName}") : $" {_ownerFilter}").</span>
+                                }
+                                @(" ")
                                 <button class="btn btn-link p-0 align-baseline" type="button" @onclick="ClearFriendFilters">Clear filters</button>
                             </div>
                         }
@@ -288,6 +300,8 @@
     private string? _ownerFilter;
     private string? _circleFilter;
     private List<CircleModel> _circles = [];
+
+    private CircleModel? ActiveCircle => _circles.FirstOrDefault(circle => circle.PublicId == _circleFilter);
 
     private string? ActiveCircleName => _circles.FirstOrDefault(circle => circle.PublicId == _circleFilter)?.Name;
 

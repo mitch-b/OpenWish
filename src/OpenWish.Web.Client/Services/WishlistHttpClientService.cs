@@ -261,7 +261,8 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
     public async Task<bool> RemoveWishlistPermissionByPublicIdAsync(string wishlistPublicId, string userId)
     {
         var response = await _httpClient.DeleteAsync($"{BaseUrl}/{wishlistPublicId}/permissions/{userId}");
-        return response.IsSuccessStatusCode;
+        // The API answers 200 with false when there was no direct grant to remove (for example, circle-only access).
+        return response.IsSuccessStatusCode && await response.Content.ReadFromJsonAsync<bool>();
     }
 
     public async Task<bool> CanUserAccessWishlistByPublicIdAsync(string wishlistPublicId, string userId)

@@ -151,6 +151,12 @@
     color: var(--color-text);
 }
 
+.circle-badge {
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-weight: 600;
+}
+
 .remove-btn {
     width: 44px;
     height: 44px;

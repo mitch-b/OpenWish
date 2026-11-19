@@ -156,7 +156,12 @@
                     @if (circle.Wishlists.Count > 0)
                     {
                         <p class="circle-card__note" data-testid="circle-shared-lists">
-                            Shared with this circle: @string.Join(", ", circle.Wishlists.Select(list => list.Name))
+                            Shared with this circle:
+                            @for (var index = 0; index < circle.Wishlists.Count; index++)
+                            {
+                                var list = circle.Wishlists[index];
+                                <a href="/wishlists/@Uri.EscapeDataString(list.PublicId)/manage" aria-label="Manage sharing for @list.Name">@list.Name</a>@(index < circle.Wishlists.Count - 1 ? ", " : "")
+                            }
                         </p>
                     }
                 </li>

@@ -20,7 +20,8 @@ public class CircleFollowUpMarkupTests
     {
         var source = Read("Services", "WishlistHttpClientService.cs");
 
-        Assert.Contains("response.IsSuccessStatusCode && await response.Content.ReadFromJsonAsync<bool>()", source, StringComparison.Ordinal);
+        Assert.Contains("response.EnsureSuccessStatusCode();", source, StringComparison.Ordinal);
+        Assert.Contains("await response.Content.ReadFromJsonAsync<bool>()", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -46,6 +47,7 @@ public class CircleFollowUpMarkupTests
     {
         var markup = Read("Pages", "Wishlists", "Index.razor");
 
+        Assert.Contains("friendsWishlists?.Any() == true || ActiveCircle is not null", markup, StringComparison.Ordinal);
         Assert.Contains("data-testid=\"circle-empty-members\"", markup, StringComparison.Ordinal);
         Assert.Contains("data-testid=\"circle-empty-lists\"", markup, StringComparison.Ordinal);
     }

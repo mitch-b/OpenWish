@@ -663,28 +663,44 @@ else
 
             var removed = await WishlistService.RemoveWishlistPermissionByPublicIdAsync(WishlistId, friendId);
 
-            var friend = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId);
-            var friendName = friend?.UserName ?? "Friend";
-            var viaCircles = friend is null ? [] : CircleNamesFor(friend);
-            var circleNames = CircleRules.JoinNames(viaCircles);
-            if (removed && viaCircles.Count == 0)
+            var friendName = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId)?.UserName ?? "Friend";
+            await RefreshFriendsWithAccessAsync();
+
+            if (_friendsLoadErrorMessage is not null)
             {
-                _sharingStatusMessage = $"Access removed for {friendName}.";
+                return;
             }
-            else if (removed)
+
+            // Judge what is left from the refreshed access list, not circle membership alone.
+            var stillSees = _friendsWithAccess.FirstOrDefault(f => f.Id == friendId);
+            var viaCircles = stillSees is null ? [] : CircleNamesFor(stillSees);
+            if (stillSees is null)
             {
-                _sharingStatusMessage = $"Direct access removed for {friendName}, who still sees this list through {circleNames}.";
+                if (removed)
+                {
+                    _sharingStatusMessage = $"Access removed for {friendName}.";
+                }
+                else
+                {
+                    _sharingErrorMessage = $"{friendName} no longer has direct access to this list.";
+                }
             }
             else if (viaCircles.Count > 0)
             {
-                _sharingErrorMessage = $"{friendName} sees this list through {circleNames}. Stop sharing with the circle or remove {friendName} from it to end their access.";
+                var circleNames = CircleRules.JoinNames(viaCircles);
+                if (removed)
+                {
+                    _sharingStatusMessage = $"Direct access removed for {friendName}, who still sees this list through {circleNames}.";
+                }
+                else
+                {
+                    _sharingErrorMessage = $"{friendName} sees this list through {circleNames}. Stop sharing with the circle or remove {friendName} from it to end their access.";
+                }
             }
             else
             {
-                _sharingErrorMessage = $"{friendName} no longer has direct access to this list.";
+                _sharingErrorMessage = $"{friendName} still has access to this list. Try again.";
             }
-
-            await RefreshFriendsWithAccessAsync();
         }
         catch (Exception ex)
         {

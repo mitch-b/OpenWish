@@ -15,11 +15,19 @@
         </div>
     </div>
     
+    @if (_statusMessage is not null)
+    {
+        <div class="alert alert-success" role="status" aria-live="polite">
+            @_statusMessage
+        </div>
+    }
+
     @if (_loading)
     {
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading friends...</span>
-        </div>
+        <p class="loading-note" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Loading friends...
+        </p>
     }
     else if (_errorMessage is not null)
     {
@@ -94,13 +102,6 @@
                     </div>
                 </div>
             }
-        </div>
-    }
-    
-    @if (_statusMessage is not null)
-    {
-        <div class="alert alert-success mt-3" role="status" aria-live="polite">
-            @_statusMessage
         </div>
     }
 </div>

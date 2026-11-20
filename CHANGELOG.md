@@ -2,6 +2,17 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.20.2] - 2026-11-20
+
+### Improved
+
+- Sent friend requests and invitations wrap long emails and have full-size
+  buttons on phones.
+- Friends and friend requests show readable loading text without the page jumping.
+- "Friend removed" appears above the friend list, where you are looking.
+- Sending invitations or a request to a suggested person says where to follow it
+  (Sent requests).
+
 ## [0.20.1] - 2026-11-19
 
 ### Improved

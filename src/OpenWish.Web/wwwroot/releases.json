@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.20.2",
+    "date": "2026-11-20",
+    "title": "Calmer Friends page",
+    "summary": "The Friends page fits phones better and says what happens after you invite someone.",
+    "highlights": [
+      "Sent requests wrap long emails and have full-size buttons on phones.",
+      "Loading states say what is loading without the page jumping.",
+      "Friend removal confirmations appear above the list.",
+      "Invitations and suggestions point to Sent requests."
+    ]
+  },
+  {
     "version": "0.20.1",
     "date": "2026-11-19",
     "title": "Circles, made clearer",

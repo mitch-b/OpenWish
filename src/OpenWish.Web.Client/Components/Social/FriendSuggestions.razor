@@ -96,7 +96,7 @@
         {
             await FriendService.SendFriendRequestAsync(_userId, suggestion.UserId);
             _suggestions.Remove(suggestion);
-            _statusMessage = $"Friend request sent to {suggestion.UserName}.";
+            _statusMessage = $"Friend request sent to {suggestion.UserName}. Follow it under Sent requests.";
             await OnRequestSent.InvokeAsync();
         }
         catch (Exception ex)

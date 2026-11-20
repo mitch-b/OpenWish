@@ -16,9 +16,10 @@
 
     @if (_loading)
     {
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading friend requests...</span>
-        </div>
+        <p class="loading-note" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            Loading friend requests...
+        </p>
     }
     else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
     {
@@ -76,12 +77,12 @@
         <div class="list-group">
             @foreach (var invite in _pendingInvites)
             {
-                <div class="list-group-item d-flex justify-content-between align-items-center" data-testid="pending-invite">
+                <div class="list-group-item sent-row" data-testid="pending-invite">
                     <div class="text-break">
                         <OpenWishIcon Name="envelope" Class="me-2" />
                         @invite.Email
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
+                    <div class="sent-actions">
                         <span class="badge bg-secondary">Invited</span>
                         <div class="btn-group btn-group-sm" role="group" aria-label="Email invitation actions">
                             <button class="btn btn-outline-secondary d-flex align-items-center gap-1"
@@ -106,12 +107,12 @@
             }
             @foreach (var request in _sentRequests)
             {
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
+                <div class="list-group-item sent-row">
+                    <div class="text-break">
                         <OpenWishIcon Name="person-circle" Class="me-2" />
                         @request.Receiver?.UserName
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
+                    <div class="sent-actions">
                         <span class="badge bg-secondary">Pending</span>
                         <div class="btn-group btn-group-sm" role="group" aria-label="Sent request actions">
                             <button class="btn btn-outline-secondary d-flex align-items-center gap-1"

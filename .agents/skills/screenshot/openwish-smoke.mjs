@@ -3981,7 +3981,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await panel.getByText("CaseyDemo").waitFor({ state: "visible" });
     await screenshot(page, "friend-suggestions.png");
     await panel.getByRole("button", { name: "Send friend request to CaseyDemo" }).click();
-    await panel.getByText("Friend request sent to CaseyDemo.").waitFor({ state: "visible" });
+    await panel.getByText("Friend request sent to CaseyDemo. Follow it under Sent requests.").waitFor({ state: "visible" });
     if (await panel.getByRole("button", { name: "Send friend request to CaseyDemo" }).count() !== 0) {
       throw new Error("A suggestion stayed actionable after its request was sent.");
     }

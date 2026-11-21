@@ -6852,6 +6852,35 @@ async function verifyPageSections(browser, manifest, results) {
       throw new Error("An upcoming exchange offered to run again after its draw.");
     }
     await screenshot(page, "exchange-sections-desktop.png");
+    await page.waitForFunction(() => !document.querySelector('[aria-label="Event sections"]')?.hasAttribute("data-enhance-nav"));
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 390, height: 844 },
+      { width: 768, height: 900 },
+      { width: 900, height: 900 },
+      { width: 1024, height: 768 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await assertNoHorizontalScroll(page, `exchange sections at ${viewport.width}px`);
+      const brokenWords = await exchangeMenu.locator("a > span").evaluateAll(labels =>
+        labels.flatMap(label => [...label.childNodes].flatMap(node => {
+          if (node.nodeType !== Node.TEXT_NODE) return [];
+          const text = node.textContent ?? "";
+          return [...text.matchAll(/\S+/g)].flatMap(match => {
+            const range = document.createRange();
+            range.setStart(node, match.index);
+            range.setEnd(node, match.index + match[0].length);
+            return range.getClientRects().length > 1 ? [`${text.trim()}: ${match[0]}`] : [];
+          });
+        }))
+      );
+      if (brokenWords.length) {
+        throw new Error(`Exchange section labels broke words at ${viewport.width}px: ${brokenWords.join(", ")}.`);
+      }
+      if (viewport.width === 320 || viewport.width === 900) {
+        await screenshot(page, `exchange-sections-${viewport.width}.png`, false, false, '[aria-label="Event sections"]');
+      }
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     await assertNoHorizontalScroll(page, "exchange sections");
     await screenshot(page, "exchange-sections-mobile.png");
@@ -6901,7 +6930,7 @@ async function verifyPageSections(browser, manifest, results) {
   results.push({ scenario: "section-navigation", loginStatus, assertions: [
     "keyboard navigation, browser history and reload select the requested panel",
     "hidden forms stay out of view and unsent drafts survive section switches",
-    "Friends and exchanges fit desktop, tablet and mobile",
+    "Friends and exchanges fit desktop, tablet and mobile without breaking section labels mid-word",
     "Run again is hidden for future and today events, even after a draw or through a direct link"
   ] });
 }

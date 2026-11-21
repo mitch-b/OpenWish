@@ -73,6 +73,13 @@
     }
 
     .page-sections-menu ul {
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .page-sections-menu li {
+        flex: 1 1 max-content;
+        min-width: 0;
+        max-width: 100%;
     }
 }

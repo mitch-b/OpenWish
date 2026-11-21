@@ -21,7 +21,8 @@
         <Actions>
             @if (_events is { Count: > 0 })
             {
-                <button type="button" class="btn btn-outline-light btn-lg" data-testid="events-download" @onclick="DownloadEventsAsync">
+                <button type="button" class="btn btn-outline-light btn-lg" data-testid="events-download"
+                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadEventsAsync">
                     <OpenWishIcon Name="download" Class="me-2" /> Download CSV
                 </button>
             }

@@ -36,6 +36,18 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
+    public void CsvDownloadButtons_StayDisabledUntilTheirClickHandlersAreInteractive()
+    {
+        var wishlist = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
+        var events = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "Index.razor");
+        var giftPlan = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "GiftPlan", "Index.razor");
+
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive)\" @onclick=\"DownloadWishlistCsv\"", wishlist, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive)\" @onclick=\"DownloadEventsAsync\"", events, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_plan.ItemCount == 0 || !RendererInfo.IsInteractive)\" @onclick=\"DownloadPlanAsync\"", giftPlan, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ConnectedItemSyncNote_DoesNotRequireAnInternalIdAfterWebAssemblyHydration()
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemModal.razor");

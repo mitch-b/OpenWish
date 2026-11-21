@@ -13,7 +13,7 @@ namespace OpenWish.Web.Controllers;
 [Authorize]
 public class PortabilityController(IWishlistPortabilityService portabilityService, ApiUserContextService userContextService) : ControllerBase
 {
-    private const string PersonalDataPath = "/Account/Manage/PersonalData";
+    private const string PersonalDataPath = "/Account/Manage/PersonalData?section=wishlists";
 
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 

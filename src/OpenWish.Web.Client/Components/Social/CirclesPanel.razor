@@ -160,7 +160,7 @@
                             @for (var index = 0; index < circle.Wishlists.Count; index++)
                             {
                                 var list = circle.Wishlists[index];
-                                <a href="/wishlists/@Uri.EscapeDataString(list.PublicId)/manage" aria-label="Manage sharing for @list.Name">@list.Name</a>@(index < circle.Wishlists.Count - 1 ? ", " : "")
+                                <a href="@($"/wishlists/{Uri.EscapeDataString(list.PublicId)}/manage?section=sharing")" aria-label="Manage sharing for @list.Name">@list.Name</a>@(index < circle.Wishlists.Count - 1 ? ", " : "")
                             }
                         </p>
                     }

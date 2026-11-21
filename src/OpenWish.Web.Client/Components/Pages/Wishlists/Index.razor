@@ -242,7 +242,7 @@
                             <div class="alert alert-info" role="status">
                                 @if (ActiveCircle is { Members.Count: 0 } && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
                                 {
-                                    <span data-testid="circle-empty-members">Nobody is in @ActiveCircle.Name yet. <a href="/friends">Add friends to it</a>.</span>
+                                    <span data-testid="circle-empty-members">Nobody is in @ActiveCircle.Name yet. <a href="/friends?section=circles">Add friends to it</a>.</span>
                                 }
                                 else if (ActiveCircle is not null && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
                                 {
@@ -275,7 +275,7 @@
                         <span class="friends-wishlists-empty-icon" aria-hidden="true"><OpenWishIcon Name="people" /></span>
                         <h2>Nothing shared with you yet</h2>
                         <p>Add people you trust, then their shared wishlists will appear here when they are ready.</p>
-                        <a href="/friends" class="btn btn-primary">Find friends</a>
+                        <a href="/friends?section=invite" class="btn btn-primary">Find friends</a>
                     </div>
                 }
             </div>

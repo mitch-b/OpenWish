@@ -88,7 +88,7 @@
                 @if (!WishlistsLoaded)
                 {
                     <p role="status">Checking shared gift ideas...</p>
-                    <a class="btn btn-outline-primary gift-match-action" href="@($"/events/{EventId}#event-wishlists")">See event wishlists</a>
+                    <a class="btn btn-outline-primary gift-match-action" href="@($"/events/{EventId}?section=event-wishlists")">See event wishlists</a>
                 }
                 else if (_recipientWishlist != null && RecipientItemCount > 0)
                 {
@@ -148,7 +148,7 @@
     private int RecipientItemCount => _recipientWishlist is null ? 0 : GetItemCount(_recipientWishlist);
 
     private string RecipientWishlistUrl => _recipientWishlist is null
-        ? "#event-wishlists"
+        ? $"/events/{EventId}?section=event-wishlists"
         : _giftExchange?.Budget is { } budget && GiftBudget.IsValid(budget)
             ? $"/wishlists/{_recipientWishlist.PublicId}?budget={budget.ToString(CultureInfo.InvariantCulture)}"
             : $"/wishlists/{_recipientWishlist.PublicId}";

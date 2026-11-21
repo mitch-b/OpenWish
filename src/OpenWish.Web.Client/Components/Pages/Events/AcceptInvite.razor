@@ -131,7 +131,7 @@
                                         <div class="alert alert-success" role="status" data-testid="invitation-outcome">
                                             @(_successMessage ?? AcceptedMessage)
                                         </div>
-                                        <a class="btn btn-success" href="/events/@EventId" @ref="_continueLink">
+                                        <a class="btn btn-success" href="@($"/events/{EventId}?section=event-wishlists")" @ref="_continueLink">
                                             Continue and add my wishlist
                                         </a>
                                         break;

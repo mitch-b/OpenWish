@@ -79,7 +79,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<span>Integrations</span>", navMenu, StringComparison.Ordinal);
         Assert.Contains("Match=\"@(IsIntegrationsPage ? NavLinkMatch.All : NavLinkMatch.Prefix)\"", navMenu, StringComparison.Ordinal);
         Assert.Contains("\"Account/Manage/ConnectedApps\"", navMenu, StringComparison.Ordinal);
-        Assert.Contains("href=\"Account/Manage/ConnectedApps\">Integrations</NavLink>", accountMenu, StringComparison.Ordinal);
+        Assert.Contains("\"Integrations\", \"link-45deg\", \"/Account/Manage/ConnectedApps\"", accountMenu, StringComparison.Ordinal);
         Assert.Contains("Read the app developer guide", page, StringComparison.Ordinal);
         Assert.Contains("href=\"/llms.txt\"", page, StringComparison.Ordinal);
         Assert.Contains("OpenWishSettings__Integrations__Mcp__Enabled", page, StringComparison.Ordinal);
@@ -962,22 +962,22 @@ public class InteractiveControlMarkupTests
     }
 
     [Fact]
-    public void EventSectionLinks_IncludeTheEventRouteBeforeTheFragment()
+    public void EventSectionLinks_SelectTheDestinationPanel()
     {
         var setup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "SecretSantaSetup.razor");
         foreach (var section in new[] { "event-invitations", "event-wishlists", "gift-exchange" })
         {
-            Assert.Contains($"ActionHref=\"@($\"/events/{{Event.PublicId}}#{section}\")\"", setup, StringComparison.Ordinal);
+            Assert.Contains($"ActionHref=\"@($\"/events/{{Event.PublicId}}?section={section}\")\"", setup, StringComparison.Ordinal);
         }
 
         foreach (var component in new[] { "GiftExchangeDisplay", "EventReservedItems" })
         {
             var markup = ReadComponent("OpenWish.Web.Client", "Components", "Event", $"{component}.razor");
-            Assert.Contains("href=\"@($\"/events/{EventId}#event-wishlists\")\"", markup, StringComparison.Ordinal);
+            Assert.Contains("href=\"@($\"/events/{EventId}?section=event-wishlists\")\"", markup, StringComparison.Ordinal);
         }
 
         var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "EventDetails.razor");
-        Assert.Contains("href=\"@($\"/events/{EventId}#event-wishlists\")\"", details, StringComparison.Ordinal);
+        Assert.Contains("id=\"event-wishlists\" hidden=\"@(ActiveSection != \"event-wishlists\")\"", details, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1500,7 +1500,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("min-height: 44px;", styles, StringComparison.Ordinal);
         Assert.Contains("ExchangeDate=\"@_event.Date\"", page, StringComparison.Ordinal);
         Assert.Contains("WishlistsLoaded=\"@_wishlistsLoaded\"", page, StringComparison.Ordinal);
-        Assert.Contains("event-header-match", page, StringComparison.Ordinal);
+        Assert.Contains("hidden=\"@(ActiveSection != \"match\")\"", page, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1690,12 +1690,14 @@ public class InteractiveControlMarkupTests
     public void AccountNavigation_IsLabelledAndResponsive()
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageNavMenu.razor");
-        var styles = ReadComponent("OpenWish.Web", "Components", "Account", "Shared", "ManageLayout.razor.css");
+        var navigation = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "PageSections.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "PageSections.razor.css");
 
-        Assert.Contains("<nav aria-label=\"Account settings\">", markup, StringComparison.Ordinal);
-        Assert.Contains("overflow-x: auto;", styles, StringComparison.Ordinal);
-        Assert.Contains("flex-flow: row nowrap !important;", styles, StringComparison.Ordinal);
-        Assert.Contains("min-height: 2.75rem;", styles, StringComparison.Ordinal);
+        Assert.Contains("<PageSections Label=\"Account settings\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<nav aria-label=\"@Label\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-current=", navigation, StringComparison.Ordinal);
+        Assert.Contains("min-height: 44px;", styles, StringComparison.Ordinal);
+        Assert.Contains("repeat(auto-fit,", styles, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2104,9 +2106,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("for=\"mark-accepted-name\"", invitations, StringComparison.Ordinal);
         Assert.Contains("public async Task FocusComposerAsync()", invitations, StringComparison.Ordinal);
 
-        Assert.Contains("@if (_isOwner && !_isPendingInvitee && IsEventPast)", details, StringComparison.Ordinal);
-        Assert.Contains("@if (_isOwner && _event.NamesDrawnOn.HasValue && !IsEventPast)", details, StringComparison.Ordinal);
-        Assert.Contains("OnInviteRequested=\"FocusInvitationComposerAsync\"", details, StringComparison.Ordinal);
+        Assert.Contains("@if (_isOwner && (IsEventPast || _event.NamesDrawnOn.HasValue))", details, StringComparison.Ordinal);
+        Assert.Contains("OnInviteRequested=\"FocusInvitationComposer\"", details, StringComparison.Ordinal);
     }
 
     [Fact]

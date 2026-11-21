@@ -2,24 +2,13 @@
 
 @inject IdentityUserAccessor UserAccessor
 
-<PageTitle>Personal data</PageTitle>
+<PageTitle>@(ShowWishlistTransfer ? "Wishlist import and export" : "Personal data")</PageTitle>
 
 <StatusMessage />
-<h3>Personal data</h3>
 
-<div class="row">
-    <div class="col-xl-7">
-        <h4 class="h5">Download your data</h4>
-        <p>Get a JSON copy of the personal data stored with your OpenWish account.</p>
-        <form action="Account/Manage/DownloadPersonalData" method="post">
-            <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">
-                <OpenWishIcon Name="download" />
-                Download personal data
-            </button>
-        </form>
-        <hr class="my-4" />
-        <h4 class="h5">Your wishlists</h4>
+@if (ShowWishlistTransfer)
+{
+        <h2>Wishlist import and export</h2>
         <p>
             Download every wishlist you own as a JSON file you can keep or import into another OpenWish.
             Reservations, comments, and ideas hidden from you as a surprise are never included.
@@ -42,6 +31,19 @@
                 </button>
             </div>
         </form>
+}
+else
+{
+        <h2>Personal data</h2>
+        <h4 class="h5">Download your data</h4>
+        <p>Get a JSON copy of the personal data stored with your OpenWish account.</p>
+        <form action="Account/Manage/DownloadPersonalData" method="post">
+            <AntiforgeryToken />
+            <button class="btn btn-primary" type="submit">
+                <OpenWishIcon Name="download" />
+                Download personal data
+            </button>
+        </form>
         <hr class="my-4" />
         <h4 class="h5 text-danger">Delete your account</h4>
         <p>Deleting your account permanently removes your personal data and cannot be undone.</p>
@@ -49,10 +51,12 @@
             <OpenWishIcon Name="trash3" />
             Review account deletion
         </a>
-    </div>
-</div>
+}
 
 @code {
+    [SupplyParameterFromQuery(Name = "section")] private string? Section { get; set; }
+    private bool ShowWishlistTransfer => Section == "wishlists";
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 

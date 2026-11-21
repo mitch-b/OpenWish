@@ -210,6 +210,12 @@ Server=db.example.com;Port=5432;Database=OpenWish;User Id=openwish;Password=Your
 
 ### Backup Strategy
 
+> Members can also copy their own lists out of OpenWish without operator help:
+> **Account > Personal data > Download my wishlists** saves a JSON file that the
+> same page can import as new private lists. This is a convenience for people,
+> not a replacement for database backups; it excludes friends, events,
+> reservations, and comments.
+
 #### Regular Backups with pg_dump
 
 1. **Create a backup script** (`backup-openwish.sh`):

@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.21.0",
+    "date": "2026-11-21",
+    "title": "Take your lists with you",
+    "summary": "Download lists, your gift plan, and events as spreadsheets, and move your wishlists in and out of OpenWish.",
+    "highlights": [
+      "Download a wishlist as a CSV from its page.",
+      "Download your gift plan as a CSV to track budgets.",
+      "Download your events as a CSV.",
+      "Download every list you own as a JSON file from Personal data.",
+      "Import an exported file as new, private lists."
+    ]
+  },
+  {
     "version": "0.20.2",
     "date": "2026-11-20",
     "title": "Calmer Friends page",

@@ -19,6 +19,30 @@
             </button>
         </form>
         <hr class="my-4" />
+        <h4 class="h5">Your wishlists</h4>
+        <p>
+            Download every wishlist you own as a JSON file you can keep or import into another OpenWish.
+            Reservations, comments, and ideas hidden from you as a surprise are never included.
+        </p>
+        <a href="/api/portability/wishlists.json" class="btn btn-outline-primary" download data-testid="export-wishlists">
+            <OpenWishIcon Name="download" />
+            Download my wishlists
+        </a>
+        <form action="/api/portability/wishlists/import" method="post" enctype="multipart/form-data" class="mt-4" data-testid="import-wishlists-form">
+            <AntiforgeryToken />
+            <label for="wishlist-import-file" class="form-label fw-semibold">Import wishlists</label>
+            <p id="wishlist-import-hint" class="form-text mt-0">
+                Choose a file downloaded from OpenWish. Lists are added as new, private lists, so nothing you have is replaced.
+            </p>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+                <input id="wishlist-import-file" name="file" type="file" accept=".json,application/json" required
+                       class="form-control mw-100" style="width: 22rem" aria-describedby="wishlist-import-hint" />
+                <button class="btn btn-outline-primary" type="submit">
+                    Import
+                </button>
+            </div>
+        </form>
+        <hr class="my-4" />
         <h4 class="h5 text-danger">Delete your account</h4>
         <p>Deleting your account permanently removes your personal data and cannot be undone.</p>
         <a href="Account/Manage/DeletePersonalData" class="btn btn-outline-danger">

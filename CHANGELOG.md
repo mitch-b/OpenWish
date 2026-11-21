@@ -2,6 +2,18 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [0.21.0] - 2026-11-21
+
+### Added
+
+- Download a wishlist as a CSV from its page. It lists the ideas the viewer can
+  see and never includes reservations or comments.
+- Download your gift plan as a CSV, with each gift's price, budget, and status.
+- Download your events as a CSV, without emails or draw results.
+- Download every list you own as a JSON file from Account > Personal data.
+- Import an exported JSON file as new, private lists. Existing lists are never
+  replaced, and only web links are kept.
+
 ## [0.20.2] - 2026-11-20
 
 ### Improved

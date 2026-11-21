@@ -53,9 +53,6 @@ else
                     <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">
                         <OpenWishIcon Name="arrow-left" /> Back to event
                     </button>
-                    <button class="btn btn-danger" type="button" @onclick="ShowDeleteConfirmation">
-                        <OpenWishIcon Name="trash" /> Delete event
-                    </button>
                 </div>
             </Actions>
         </PageHeader>
@@ -81,38 +78,31 @@ else
             </div>
         }
 
-        <div class="row g-4">
-            <div class="col-md-8">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        @* <FormMappingScope Name="edit-event"> *@
+        <PageSections Label="Event settings sections" Items="Sections" Active="@ActiveSection">
+            <div class="page-section-panel" hidden="@(ActiveSection != "details")">
+                <h2 class="h4">Event details</h2>
                             <EventForm Model="@_event"
                                      OnSubmit="@HandleSubmit"
                                      ShowValidationSummary="true"
                                      LockEventType="@_event.NamesDrawnOn.HasValue"
                                      IsSubmitting="@_isSaving" />
-                        @* </FormMappingScope> *@
-                    </div>
-                </div>
-
-                <div class="mt-4">
+            </div>
+            <div class="page-section-panel" hidden="@(ActiveSection != "wishlists")">
                     <EventWishlistManager EventId="@EventId"
                                            Event="@_event"
                                            CurrentUserId="@_currentUserId"
                                            OnWishlistsChanged="HandleWishlistsChanged" />
-                </div>
             </div>
-            <div class="col-md-4">
+            <div class="page-section-panel" hidden="@(ActiveSection != "invitations")">
                 <EventInvitations @key="_invitationsVersion"
                                   EventId="@EventId"
                                   IsOwner="true"
                                   AllowGuests="@(_event.AllowGuestParticipants == true && _event.IsGiftExchange)"
                                   CurrentUserId="@_currentUserId"
                                   NamesDrawn="@_event.NamesDrawnOn.HasValue" />
-
-                <div class="card shadow-sm mt-4">
-                    <div class="card-body">
-                        <h3 class="h5">Participants</h3>
+            </div>
+            <div class="page-section-panel" hidden="@(ActiveSection != "participants")">
+                        <h2 class="h4">Participants</h2>
                         @{
                             var participants = GetParticipantList().ToList();
                             var hasOwner = _event?.CreatedBy != null;
@@ -168,10 +158,15 @@ else
                                 <div class="list-group-item text-muted">No participants yet.</div>
                             }
                         </div>
-                    </div>
                 </div>
-            </div>
-        </div>
+                <div class="page-section-panel" hidden="@(ActiveSection != "delete")">
+                    <h2 class="h4">Delete event</h2>
+                    <p>Remove this event and its invitations. This cannot be undone.</p>
+                    <button class="btn btn-outline-danger" type="button" @onclick="ShowDeleteConfirmation">
+                        <OpenWishIcon Name="trash" /> Delete event
+                    </button>
+                </div>
+            </PageSections>
     </div>
 }
 
@@ -297,6 +292,18 @@ else
 
 
 @code {
+    private static readonly PageSection[] Sections =
+    [
+        new("details", "Event details", "gear"),
+        new("invitations", "Invitations", "envelope"),
+        new("participants", "Participants", "people"),
+        new("wishlists", "Wishlists", "list-ul"),
+        new("delete", "Delete event", "trash"),
+    ];
+
+    [SupplyParameterFromQuery(Name = "section")] public string? Section { get; set; }
+    private string ActiveSection => Sections.FirstOrDefault(item => item.Id == Section)?.Id ?? "details";
+
     [Parameter] public string EventId { get; set; } = string.Empty;
     private EventModel? _event;
     private string? _currentUserId;

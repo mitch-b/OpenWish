@@ -27,6 +27,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PendingFriendInvite> PendingFriendInvites { get; set; }
     public DbSet<FriendJoinCode> FriendJoinCodes { get; set; }
     public DbSet<WishlistPermission> WishlistPermissions { get; set; }
+    public DbSet<Circle> Circles { get; set; }
+    public DbSet<CircleMember> CircleMembers { get; set; }
+    public DbSet<CircleWishlist> CircleWishlists { get; set; }
     public DbSet<ItemComment> ItemComments { get; set; }
     public DbSet<ItemReservation> ItemReservations { get; set; }
     public DbSet<ActivityLog> ActivityLogs { get; set; }
@@ -378,6 +381,50 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasOne(wp => wp.Wishlist)
             .WithMany(w => w.Permissions)
             .HasForeignKey(wp => wp.WishlistId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // Circles
+        modelBuilder.Entity<Circle>()
+            .HasIndex(c => c.PublicId)
+            .IsUnique();
+
+        modelBuilder.Entity<Circle>()
+            .HasIndex(c => c.OwnerId);
+
+        modelBuilder.Entity<Circle>()
+            .HasOne(c => c.Owner)
+            .WithMany()
+            .HasForeignKey(c => c.OwnerId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CircleMember>()
+            .HasIndex(m => new { m.CircleId, m.UserId });
+
+        modelBuilder.Entity<CircleMember>()
+            .HasOne(m => m.Circle)
+            .WithMany(c => c.Members)
+            .HasForeignKey(m => m.CircleId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CircleMember>()
+            .HasOne(m => m.User)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CircleWishlist>()
+            .HasIndex(w => new { w.CircleId, w.WishlistId });
+
+        modelBuilder.Entity<CircleWishlist>()
+            .HasOne(w => w.Circle)
+            .WithMany(c => c.Wishlists)
+            .HasForeignKey(w => w.CircleId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<CircleWishlist>()
+            .HasOne(w => w.Wishlist)
+            .WithMany()
+            .HasForeignKey(w => w.WishlistId)
             .OnDelete(DeleteBehavior.NoAction);
 
         // Item comments

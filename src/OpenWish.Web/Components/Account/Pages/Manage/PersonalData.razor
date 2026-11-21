@@ -2,13 +2,39 @@
 
 @inject IdentityUserAccessor UserAccessor
 
-<PageTitle>Personal data</PageTitle>
+<PageTitle>@(ShowWishlistTransfer ? "Wishlist import and export" : "Personal data")</PageTitle>
 
 <StatusMessage />
-<h3>Personal data</h3>
 
-<div class="row">
-    <div class="col-xl-7">
+@if (ShowWishlistTransfer)
+{
+        <h2>Wishlist import and export</h2>
+        <p>
+            Download every wishlist you own as a JSON file you can keep or import into another OpenWish.
+            Reservations, comments, and ideas hidden from you as a surprise are never included.
+        </p>
+        <a href="/api/portability/wishlists.json" class="btn btn-outline-primary" download data-testid="export-wishlists">
+            <OpenWishIcon Name="download" />
+            Download my wishlists
+        </a>
+        <form action="/api/portability/wishlists/import" method="post" enctype="multipart/form-data" class="mt-4" data-testid="import-wishlists-form">
+            <AntiforgeryToken />
+            <label for="wishlist-import-file" class="form-label fw-semibold">Import wishlists</label>
+            <p id="wishlist-import-hint" class="form-text mt-0">
+                Choose a file downloaded from OpenWish. Lists are added as new, private lists, so nothing you have is replaced.
+            </p>
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+                <input id="wishlist-import-file" name="file" type="file" accept=".json,application/json" required
+                       class="form-control mw-100" style="width: 22rem" aria-describedby="wishlist-import-hint" />
+                <button class="btn btn-outline-primary" type="submit">
+                    Import
+                </button>
+            </div>
+        </form>
+}
+else
+{
+        <h2>Personal data</h2>
         <h4 class="h5">Download your data</h4>
         <p>Get a JSON copy of the personal data stored with your OpenWish account.</p>
         <form action="Account/Manage/DownloadPersonalData" method="post">
@@ -25,10 +51,12 @@
             <OpenWishIcon Name="trash3" />
             Review account deletion
         </a>
-    </div>
-</div>
+}
 
 @code {
+    [SupplyParameterFromQuery(Name = "section")] private string? Section { get; set; }
+    private bool ShowWishlistTransfer => Section == "wishlists";
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 

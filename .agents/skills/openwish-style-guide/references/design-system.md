@@ -78,6 +78,12 @@ illustration or must contrast against a known branded background.
 - Every destination has a consistent line icon and visible text.
 - Account and utility actions are visually separated from primary navigation.
 - Mobile uses one header row; never stack separate navigation and utility bars.
+- Use `PageSections` for independent tasks on the same page, such as inviting
+  friends, drawing names, and editing sharing. Put the user's next task first.
+  Show one panel at a time, with a left menu on wide screens and wrapping
+  links above the content on narrow screens. Give each section a URL and mark
+  the active link. Keep fields in the same form together and leave single-task
+  pages alone. Put destructive controls in their own section with confirmation.
 
 ### Status and feedback
 

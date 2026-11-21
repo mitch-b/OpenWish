@@ -2,6 +2,77 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [Unreleased]
+
+### Improved
+
+- Friends, gift exchanges, event and wishlist settings, and account settings
+  now use the same section menu. Each task opens separately, and the menu
+  moves above the content on smaller screens. Running an event again is
+  offered only after its event day has passed.
+
+## [0.21.0] - 2026-11-21
+
+### Added
+
+- Download a wishlist as a CSV from its page. It lists the ideas the viewer can
+  see and never includes reservations or comments.
+- Download your gift plan as a CSV, with each gift's price, budget, and status.
+- Download your events as a CSV, without emails or draw results.
+- Download every list you own as a JSON file from Account > Personal data.
+- Import an exported JSON file as new, private lists. Existing lists are never
+  replaced, and only web links are kept.
+
+## [0.20.2] - 2026-11-20
+
+### Improved
+
+- Sent friend requests and invitations wrap long emails and have full-size
+  buttons on phones.
+- Friends and friend requests show readable loading text without the page jumping.
+- "Friend removed" appears above the friend list, where you are looking.
+- Sending invitations or a request to a suggested person says where to follow it
+  (Sent requests).
+
+## [0.20.1] - 2026-11-19
+
+### Improved
+
+- The sharing page labels friends who see a list through a circle ("via Book club").
+- Event invitations show how many circle members are still to invite.
+- A circle's shared lists link to their sharing page.
+- Choosing a circle on Friends offers a link to its lists.
+- An empty circle on Friends' wishlists explains why nothing appears.
+
+### Fixed
+
+- Removing a friend who only sees a list through a circle no longer says access
+  was removed; it explains how to end their access.
+
+## [0.20.0] - 2026-11-18
+
+### Added
+
+- "Add and add another" on the full-page Add an item form, with a confirmation.
+- A note when a new idea has the same name or link as one already on the list.
+
+### Improved
+
+- A product link fills an empty "Where to buy" with the store name.
+- The wishlist confirms an idea added from the add page.
+- The Friends' wishlists search clear button says "Clear".
+
+## [0.19.0] - 2026-11-17
+
+### Added
+
+- Circles: group friends (for example Family or Book club) on the Friends page.
+- Filter the friend list by circle and see circle badges on each friend.
+- Share a friends-only wishlist with a whole circle, including people who join
+  later; access is withdrawn when they leave or sharing stops.
+- Invite a whole circle to an event in one step.
+- Open a circle's lists from Friends' wishlists with a circle filter.
+
 ## [0.18.1] - 2026-11-16
 
 ### Improved

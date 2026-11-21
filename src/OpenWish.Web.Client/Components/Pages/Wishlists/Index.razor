@@ -10,6 +10,7 @@
 @inject ILogger<Index> Logger
 @inject IUserContextService UserContextService
 @inject IWishlistService WishlistService
+@inject ICircleService CircleService
 
 @rendermode InteractiveAuto
 
@@ -187,7 +188,7 @@
                         @_friendsWishlistLoadError
                     </div>
                 }
-                else if (friendsWishlists?.Any() == true)
+                else if (friendsWishlists?.Any() == true || ActiveCircle is not null)
                 {
                     <div class="friends-wishlists-intro">
                         <div>
@@ -208,11 +209,26 @@
                                 <button class="btn btn-outline-secondary" type="button"
                                         aria-label="Clear shared wishlist search"
                                         @onclick="() => _friendsSearchTerm = string.Empty">
-                                    <OpenWishIcon Name="x" />
+                                    <OpenWishIcon Name="x-lg" /> Clear
                                 </button>
                             }
                         </div>
                     </div>
+                    @if (_circles.Count > 0)
+                    {
+                        <div class="circle-filter mb-3" role="group" aria-label="Show lists from a circle" data-testid="friends-circle-filter">
+                            <button type="button" class="btn btn-sm @(_circleFilter is null ? "btn-primary" : "btn-outline-secondary")"
+                                    aria-pressed="@(_circleFilter is null ? "true" : "false")"
+                                    @onclick="() => _circleFilter = null">Everyone</button>
+                            @foreach (var circle in _circles)
+                            {
+                                var selected = _circleFilter == circle.PublicId;
+                                <button type="button" class="btn btn-sm @(selected ? "btn-primary" : "btn-outline-secondary")"
+                                        aria-pressed="@(selected ? "true" : "false")"
+                                        @onclick="() => _circleFilter = circle.PublicId">@circle.Name</button>
+                            }
+                        </div>
+                    }
                     @if (!string.IsNullOrWhiteSpace(_ownerFilter))
                     {
                         <p class="mb-3" id="friends-owner-filter">
@@ -224,7 +240,19 @@
                         @if (VisibleFriendsWishlists.Count == 0)
                         {
                             <div class="alert alert-info" role="status">
-                                No shared wishlists match@(string.IsNullOrWhiteSpace(_ownerFilter) ? "" : $" {_ownerFilter}").
+                                @if (ActiveCircle is { Members.Count: 0 } && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
+                                {
+                                    <span data-testid="circle-empty-members">Nobody is in @ActiveCircle.Name yet. <a href="/friends?section=circles">Add friends to it</a>.</span>
+                                }
+                                else if (ActiveCircle is not null && string.IsNullOrWhiteSpace(_ownerFilter) && string.IsNullOrWhiteSpace(_friendsSearchTerm))
+                                {
+                                    <span data-testid="circle-empty-lists">Nobody in @ActiveCircle.Name has shared a wishlist with you yet. Ask them to share one.</span>
+                                }
+                                else
+                                {
+                                    <span>No shared wishlists match@(string.IsNullOrWhiteSpace(_ownerFilter) ? (ActiveCircleName is null ? "" : $" {ActiveCircleName}") : $" {_ownerFilter}").</span>
+                                }
+                                @(" ")
                                 <button class="btn btn-link p-0 align-baseline" type="button" @onclick="ClearFriendFilters">Clear filters</button>
                             </div>
                         }
@@ -247,7 +275,7 @@
                         <span class="friends-wishlists-empty-icon" aria-hidden="true"><OpenWishIcon Name="people" /></span>
                         <h2>Nothing shared with you yet</h2>
                         <p>Add people you trust, then their shared wishlists will appear here when they are ready.</p>
-                        <a href="/friends" class="btn btn-primary">Find friends</a>
+                        <a href="/friends?section=invite" class="btn btn-primary">Find friends</a>
                     </div>
                 }
             </div>
@@ -270,6 +298,12 @@
     private string? _pendingTabFocus;
     private string _friendsSearchTerm = "";
     private string? _ownerFilter;
+    private string? _circleFilter;
+    private List<CircleModel> _circles = [];
+
+    private CircleModel? ActiveCircle => _circles.FirstOrDefault(circle => circle.PublicId == _circleFilter);
+
+    private string? ActiveCircleName => _circles.FirstOrDefault(circle => circle.PublicId == _circleFilter)?.Name;
 
     [SupplyParameterFromQuery(Name = "tab")]
     public string? Tab { get; set; }
@@ -277,11 +311,15 @@
     [SupplyParameterFromQuery(Name = "owner")]
     public string? Owner { get; set; }
 
+    [SupplyParameterFromQuery(Name = "circle")]
+    public string? CircleId { get; set; }
+
     private IReadOnlyList<WishlistModel> VisibleFriendsWishlists =>
-        FriendWishlistFilter.Apply(friendsWishlists ?? [], _friendsSearchTerm, _ownerFilter);
+        FriendWishlistFilter.Apply(friendsWishlists ?? [], _friendsSearchTerm, _ownerFilter, CircleRules.GetMemberNames(_circles, _circleFilter));
 
     private string? _appliedTab;
     private string? _appliedOwner;
+    private string? _appliedCircle;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -293,16 +331,18 @@
 
     private bool ApplyQueryParameters()
     {
-        if (Tab == _appliedTab && Owner == _appliedOwner)
+        if (Tab == _appliedTab && Owner == _appliedOwner && CircleId == _appliedCircle)
         {
             return false;
         }
 
         _appliedTab = Tab;
         _appliedOwner = Owner;
+        _appliedCircle = CircleId;
         var showFriends = string.Equals(Tab, "friends", StringComparison.OrdinalIgnoreCase);
         activeTab = showFriends ? "friends-wishlists" : "my-wishlists";
         _ownerFilter = showFriends && !string.IsNullOrWhiteSpace(Owner) ? Owner.Trim() : null;
+        _circleFilter = showFriends && !string.IsNullOrWhiteSpace(CircleId) ? CircleId.Trim() : null;
         _friendsSearchTerm = string.Empty;
         return true;
     }
@@ -312,6 +352,7 @@
     private void ClearFriendFilters()
     {
         _ownerFilter = null;
+        _circleFilter = null;
         _friendsSearchTerm = string.Empty;
     }
     
@@ -438,6 +479,20 @@
         }
     }
 
+    // Circles only narrow the list, so a failure here must not hide the shared wishlists.
+    private async Task LoadCirclesAsync()
+    {
+        try
+        {
+            _circles = (await CircleService.GetCirclesAsync(_userId!)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load circles for the shared wishlists filter.");
+            _circles = [];
+        }
+    }
+
     private async Task LoadFriendsWishlists()
     {
         Logger.LogInformation("Loading friends' wishlists.");
@@ -462,6 +517,11 @@
                     _friendsWishlistLoadError = "Sign in again to load friends' wishlists.";
                     friendsWishlists = new List<WishlistModel>();
                 }
+            }
+
+            if (_userId != null)
+            {
+                await LoadCirclesAsync();
             }
         }
         catch (Exception ex)

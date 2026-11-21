@@ -40,7 +40,7 @@ else if (_event == null)
 }
 else
 {
-    <div class="@(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "event-header event-header-match" : "event-header")">
+    <div class="event-header">
         <div class="container">
             <div class="event-header-content">
                 <div class="event-header-copy">
@@ -64,13 +64,13 @@ else
                 <div class="event-header-actions">
                     @if (!_isPendingInvitee && !EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow))
                     {
-                        <a href="/api/events/@EventId/calendar.ics" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-outline-light") event-manage-action" data-testid="add-to-calendar" download>
+                        <a href="/api/events/@EventId/calendar.ics" class="btn btn-outline-secondary event-manage-action" data-testid="add-to-calendar" download>
                             <OpenWishIcon Name="download" Class="me-2" /> Add to calendar
                         </a>
                     }
                     @if (_isOwner)
                     {
-                        <a href="/events/@EventId/manage" class="btn @(_event.IsGiftExchange && _event.NamesDrawnOn.HasValue ? "btn-outline-secondary" : "btn-light") event-manage-action">
+                        <a href="/events/@EventId/manage" class="btn btn-outline-secondary event-manage-action">
                             <OpenWishIcon Name="gear" Class="me-2" /> Manage event
                         </a>
                     }
@@ -100,13 +100,12 @@ else
             </div>
         }
 
-        @if (_isOwner && !_isPendingInvitee && IsEventPast)
+        @if (!_isPendingInvitee)
         {
-            @RunAgainPanel
-        }
-
+        <PageSections Label="Event sections" Items="Sections" Active="@ActiveSection">
         @if (_event.IsGiftExchange && _isOwner && !_event.NamesDrawnOn.HasValue)
         {
+        <div class="page-section-panel" hidden="@(ActiveSection != "setup")">
             @if (_event.AvoidsPreviousPairings)
             {
                 <p class="alert alert-info" role="status" data-testid="avoid-last-year">
@@ -116,10 +115,13 @@ else
             }
             <div id="gift-exchange-setup">
                 <SecretSantaSetup Event="@_event" CurrentUserId="@(_currentUserId ?? string.Empty)" WishlistsLoaded="@_wishlistsLoaded"
-                                  OnInviteRequested="FocusInvitationComposerAsync" />
+                                  OnInviteRequested="FocusInvitationComposer" />
             </div>
+        </div>
         }
-        else if (_isAcceptedParticipant && !_isOwner && !_event.NamesDrawnOn.HasValue)
+
+        <div class="page-section-panel" id="event-wishlists" hidden="@(ActiveSection != "event-wishlists")">
+        @if (_isAcceptedParticipant && !_isOwner && !_event.NamesDrawnOn.HasValue)
         {
             @if (!_wishlistsLoaded)
             {
@@ -145,7 +147,7 @@ else
                     }
                     else
                     {
-                        <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
+                        <a class="btn btn-primary" href="@WishlistFormLink">Add my wishlist</a>
                     }
                 </div>
             }
@@ -164,39 +166,22 @@ else
                 }
                 else
                 {
-                    <a class="btn btn-primary" href="@($"/events/{EventId}#event-wishlists")">Add my wishlist</a>
+                    <a class="btn btn-primary" href="@WishlistFormLink">Add my wishlist</a>
                 }
             </div>
         }
 
-        @if (_isPendingInvitee)
-        {
-            <div class="alert alert-info shadow-sm" role="status">
-                <h2 class="h4">Accept your invitation to join</h2>
-                <p>
-                    Accept before the organizer draws names so you can be included and add gift ideas for your match.
-                </p>
-                @if (!string.IsNullOrWhiteSpace(PendingInvitationEmail))
-                {
-                    <a class="btn btn-success" href="@PendingInvitationLink">Review invitation</a>
-                }
-                else
-                {
-                    <a class="btn btn-success" href="/events">Open my invitations</a>
-                }
+            <div id="event-wishlists-form">
+            <EventWishlistManager EventId="@EventId"
+                                   Event="@_event"
+                                   CurrentUserId="@_currentUserId"
+                                   OnWishlistsChanged="HandleWishlistsChanged" />
             </div>
-        }
-        else
-        {
-          <div class="row g-4">
-            <div class="col-lg-8">
-                @if (_isOwner && !_event.NamesDrawnOn.HasValue)
-                {
-                    @InvitationsSection
-                }
+        </div>
 
-                @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
-                {
+        @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
+        {
+            <div class="page-section-panel" hidden="@(ActiveSection != "match")">
                     <GiftExchangeDisplay @key="_event.NamesDrawnOn" EventId="@EventId"
                                          UseGiftBoxReveal="@(_event.UseGiftBoxReveal == true)"
                                          CurrentUserId="@_currentUserId"
@@ -204,27 +189,16 @@ else
                                          WishlistsLoaded="@_wishlistsLoaded"
                                          OnMatchBudgetResolved="HandleMatchBudgetResolved"
                                          EventWishlists="@_event.EventWishlists" />
-                }
-
-                @if (_event.IsGiftExchange && _event.NamesDrawnOn.HasValue)
-                {
                     <ExchangeReveal EventId="@EventId"
                                     CurrentUserId="@(_currentUserId ?? string.Empty)"
                                     EventDate="@_event.Date"
                                     IsOwner="@_isOwner"
                                     RevealedOn="@_event.AssignmentsRevealedOn"
                                     OnRevealed="HandleNamesDrawn" />
-                }
+            </div>
+        }
 
-                <div class="mb-4" id="event-wishlists">
-                    <EventWishlistManager EventId="@EventId"
-                                           Event="@_event"
-                                           CurrentUserId="@_currentUserId"
-                                           OnWishlistsChanged="HandleWishlistsChanged" />
-                </div>
-
-                <div class="card shadow-sm event-overview-card">
-                    <div class="card-body">
+                <div class="page-section-panel" hidden="@(ActiveSection != "overview")">
                         <h2 class="h5 mb-3">Event overview</h2>
                         <div class="event-facts">
                             <div class="event-fact">
@@ -300,86 +274,51 @@ else
                                 </div>
                             }
                         </div>
-                    </div>
                 </div>
 
                 @if (_event.IsGiftExchange && _isOwner)
                 {
-                    <div class="mt-4" id="gift-exchange">
+                    <div class="page-section-panel" id="gift-exchange" hidden="@(ActiveSection != "gift-exchange")">
                         <GiftExchangeManager Event="@_event"
                                              CurrentUserId="@_currentUserId"
                                              OnNamesDrawn="HandleNamesDrawn" />
                     </div>
                 }
 
-                @if (_isOwner && _event.NamesDrawnOn.HasValue)
+                @if (_isOwner)
                 {
-                    <div class="mt-4">
-                        @InvitationsSection
-                    </div>
+                    @InvitationsSection
                 }
 
-                @if (_isOwner && _event.NamesDrawnOn.HasValue && !IsEventPast)
+                @if (_isOwner && HasEventElapsed)
                 {
-                    <div class="mt-4">
+                    <div class="page-section-panel" hidden="@(ActiveSection != "run-again")">
                         @RunAgainPanel
                     </div>
                 }
 
-                @* @if (_event.EventWishlists.Any())
-                {
-                    <div class="card shadow-sm mt-4">
-                        <div class="card-body">
-                            <h3>Event Wishlists</h3>
-                            <div class="row g-3 mt-2">
-                                @foreach (var wishlist in _event.EventWishlists)
-                                {
-                                    <div class="col-md-6">
-                                        <div class="card h-100">
-                                            <div class="card-body">
-                                                <h5 class="card-title">@wishlist.Name</h5>
-                                                <p class="card-text">Created by @wishlist.Owner.UserName</p>
-                                                <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">
-                                                    View Wishlist
-                                                </a>
-                                            </div>
-                                          </div>
-                                        }
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
-                } *@
-            </div>
-
-            <div class="col-lg-4">
-                <div>
+                <div class="page-section-panel" hidden="@(ActiveSection != "reserved")">
                     <EventReservedItems EventId="@EventId"
                                          CurrentUserId="@_currentUserId"
                                          Budget="@_matchBudget" />
                 </div>
 
-                @* @if (_event.IsGiftExchange && _event.GiftExchanges.Any())
+        </PageSections>
+        }
+        else
+        {
+            <div class="alert alert-info" role="status">
+                <h2 class="h4">Accept your invitation to join</h2>
+                <p>Accept before the organizer draws names so you can be included and add gift ideas for your match.</p>
+                @if (!string.IsNullOrWhiteSpace(PendingInvitationEmail))
                 {
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <h3>Gift Exchange</h3>
-                            <p>You are gifting to:</p>
-                            @{
-                                var myExchange = _event.GiftExchanges.FirstOrDefault(ge => ge.GiverId == _currentUserId);
-                                if (myExchange != null)
-                                {
-                                    <div class="alert alert-info">
-                                        <strong>@myExchange.Receiver.UserName</strong>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                } *@
+                    <a class="btn btn-success" href="@PendingInvitationLink">Review invitation</a>
+                }
+                else
+                {
+                    <a class="btn btn-success" href="/events">Open my invitations</a>
+                }
             </div>
-        </div>
         }
     </div>
 }
@@ -387,6 +326,29 @@ else
 @code {
     [Parameter] public string EventId { get; set; } = string.Empty;
     [SupplyParameterFromQuery(Name = "rerun")] public int? Rerun { get; set; }
+    [SupplyParameterFromQuery(Name = "section")] public string? Section { get; set; }
+    private string WishlistFormLink =>
+        $"{NavigationManager.GetUriWithQueryParameters(NavigationManager.Uri.Split('#')[0],
+            new Dictionary<string, object?> { ["section"] = "event-wishlists" })}#event-wishlists-form";
+
+    private string? RequestedSection => Section ?? new Uri(NavigationManager.Uri).Fragment.TrimStart('#');
+    private string ActiveSection => Sections.FirstOrDefault(item => item.Id == RequestedSection)?.Id ?? Sections[0].Id;
+
+    private IReadOnlyList<PageSection> Sections =>
+    [
+        .. (_event?.IsGiftExchange == true && _event.NamesDrawnOn.HasValue
+            ? new PageSection[] { new("match", "My match", "gift") } : []),
+        .. (_event?.IsGiftExchange == true && _isOwner && !_event.NamesDrawnOn.HasValue
+            ? new PageSection[] { new("setup", "Exchange setup", "clipboard") } : []),
+        .. (_isOwner ? new PageSection[] { new("event-invitations", "Invitations", "envelope") } : []),
+        new("event-wishlists", "Wishlists", "list-ul"),
+        new("overview", "Event details", "calendar-event"),
+        new("reserved", "My reservations", "box-seam"),
+        .. (_event?.IsGiftExchange == true && _isOwner
+            ? new PageSection[] { new("gift-exchange", "Manage draw", "gear") } : []),
+        .. (_isOwner && HasEventElapsed
+            ? new PageSection[] { new("run-again", "Run again", "arrow-clockwise") } : []),
+    ];
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
@@ -630,11 +592,11 @@ else
 
     private EventInvitations? _eventInvitations;
 
-    private bool IsEventPast => _event is not null && EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
+    private bool HasEventElapsed => _event is not null && EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
 
     private RenderFragment InvitationsSection => __builder =>
     {
-        <div class="mb-4" id="event-invitations">
+        <div class="page-section-panel" id="event-invitations" hidden="@(ActiveSection != "event-invitations")">
             <EventInvitations @ref="_eventInvitations"
                               EventId="@EventId"
                               IsOwner="true"
@@ -658,10 +620,19 @@ else
         await LoadEvent();
     }
 
-    private async Task FocusInvitationComposerAsync()
+    private bool _focusInvitationComposer;
+
+    private void FocusInvitationComposer()
     {
-        if (_eventInvitations is not null)
+        _focusInvitationComposer = true;
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("section", "event-invitations"));
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusInvitationComposer && ActiveSection == "event-invitations" && _eventInvitations is not null)
         {
+            _focusInvitationComposer = false;
             await _eventInvitations.FocusComposerAsync();
         }
     }

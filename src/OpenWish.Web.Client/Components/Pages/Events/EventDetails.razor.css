@@ -1,47 +1,30 @@
 .event-header {
-    position: relative;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 88% 8%, rgba(255,255,255,.12), transparent 13rem),
-        linear-gradient(135deg, #232447 0%, #3b2752 100%);
-    color: #ffffff;
-    padding: clamp(1.75rem, 4vw, 3rem);
-    border-radius: 1.25rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow-md);
-}
-
-.event-header-match {
     background: var(--color-surface);
     color: var(--color-text);
     border: 1px solid var(--color-border-muted);
-    padding: 1.5rem 2rem;
-    box-shadow: none;
+    border-radius: 1rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    overflow-wrap: anywhere;
 }
 
-.event-header.event-header-match h1 {
-    color: var(--color-text);
+.event-header h1 {
+    margin-bottom: 0.5rem;
     font-size: clamp(1.8rem, 3vw, 2.5rem);
 }
 
-.event-header.event-header-match p,
-.event-header.event-header-match .lead {
+.event-header p {
     color: var(--color-text-muted);
 }
 
-.event-header.event-header-match .event-tag {
+.event-header .event-tag {
     background: var(--color-surface-alt);
-    border-color: var(--color-border-muted);
+    border: 1px solid var(--color-border-muted);
     color: var(--color-text);
+    white-space: normal;
 }
 
 .event-page {
     max-width: 1240px;
-}
-
-.event-header p,
-.event-header .lead {
-    color: rgba(255,255,255,0.92);
 }
 
 .event-header-content {
@@ -57,7 +40,7 @@
 
 .event-header-actions {
     display: flex;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     flex-wrap: wrap;
     gap: 0.5rem;
 }
@@ -78,22 +61,9 @@
 
 #gift-exchange-setup,
 #event-invitations,
-#event-wishlists,
+#event-wishlists-form,
 #gift-exchange {
     scroll-margin-top: 5.5rem;
-}
-
-.event-header .badge {
-    background-color: rgba(255,255,255,0.18);
-    color: #ffffff;
-    border: 1px solid rgba(255,255,255,0.25);
-}
-
-.event-header h1 {
-    margin-bottom: 0.5rem;
-    color: #fff;
-    font-size: clamp(2rem, 4vw, 3.1rem);
-    text-shadow: none;
 }
 
 .card {
@@ -249,17 +219,8 @@
 
 /* Mobile responsive improvements */
 @media (max-width: 767.98px) {
-    .event-header {
-        padding: 1.5rem 1rem;
-        margin-bottom: 1.5rem;
-    }
-
     .event-header h1 {
         font-size: 1.75rem;
-    }
-
-    .event-header-match {
-        padding: 1.25rem 1rem;
     }
 
     .event-header-content {

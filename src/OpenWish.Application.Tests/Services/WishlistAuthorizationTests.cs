@@ -622,7 +622,7 @@ public class WishlistAuthorizationTests
         public ApplicationDbContext CreateDbContext() => new(options);
     }
 
-    private sealed class NoOpActivityService : IActivityService
+    internal sealed class NoOpActivityService : IActivityService
     {
         public Task<ActivityLogModel> LogActivityAsync(
             string userId,

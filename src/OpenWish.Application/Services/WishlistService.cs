@@ -525,7 +525,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         // Check if permission already exists
         var existingPermission = await context.WishlistPermissions
-            .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
+            .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && wp.CircleId == null && !wp.Deleted);
 
         if (existingPermission != null)
         {
@@ -635,14 +635,19 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(wp => wp.WishlistId == wishlistId && wp.UserId != null && !wp.Deleted)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<WishlistPermissionModel>>(permissions);
+        // A person can hold a manual grant and circle grants; list each person once, preferring the manual one.
+        var onePerPerson = permissions
+            .GroupBy(wp => wp.UserId)
+            .Select(group => group.OrderBy(wp => wp.CircleId.HasValue).First())
+            .ToList();
+        return _mapper.Map<IEnumerable<WishlistPermissionModel>>(onePerPerson);
     }
 
     public async Task<bool> RemoveWishlistPermissionAsync(int wishlistId, string userId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var permission = await context.WishlistPermissions
-            .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && !wp.Deleted);
+            .FirstOrDefaultAsync(wp => wp.WishlistId == wishlistId && wp.UserId == userId && wp.CircleId == null && !wp.Deleted);
 
         if (permission == null)
         {

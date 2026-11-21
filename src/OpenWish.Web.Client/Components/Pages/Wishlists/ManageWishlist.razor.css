@@ -119,6 +119,8 @@
 
 .friend-chip {
     display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
     align-items: center;
     gap: 0.625rem;
     padding: 0.5rem 0.75rem;
@@ -151,6 +153,14 @@
     color: var(--color-text);
 }
 
+.circle-badge {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-weight: 600;
+}
+
 .remove-btn {
     width: 44px;
     height: 44px;
@@ -181,6 +191,20 @@
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 2px dashed var(--color-border-muted);
+}
+
+.circle-share-list {
+    display: grid;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.circle-share-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
 }
 
 .add-friend-header {

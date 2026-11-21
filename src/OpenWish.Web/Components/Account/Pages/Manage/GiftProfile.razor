@@ -11,20 +11,18 @@
 @inject IGiftProfileService GiftProfileService
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Gift profile</PageTitle>
+<PageTitle>@(ShowBirthday ? "Birthday" : "Gift hints")</PageTitle>
 
-<h3>Gift profile</h3>
+<h2>@(ShowBirthday ? "Birthday" : "Gift hints")</h2>
 <StatusMessage Message="@_message" />
-<p class="text-muted">Help friends choose well. Everything here is optional and shown only to your friends.</p>
 
 @if (Input is not null && Hints is not null)
 {
-<div class="row">
-    <div class="col-xl-6">
+    @if (ShowBirthday)
+    {
         <EditForm Model="Input" FormName="birthday" OnValidSubmit="SaveBirthdayAsync" method="post">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
-            <h4 class="h5">Birthday</h4>
             <p id="birthday-help" class="form-text">Share just the month and day, never the year. Friends see it on their dashboard shortly before.</p>
             <div class="row g-2 mb-3">
                 <div class="col-8 form-floating">
@@ -50,13 +48,13 @@
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-birthday">Save birthday</button>
         </EditForm>
-    </div>
-    <div class="col-xl-6">
+    }
+    else
+    {
         <EditForm Model="Hints" FormName="gift-hints" OnValidSubmit="SaveHintsAsync" method="post">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
-            <h4 class="h5">Gift hints</h4>
-            <p id="hints-help" class="form-text">Shown on your lists to friends only.</p>
+            <p id="hints-help" class="form-text">Optional. Only friends can see these hints on your wishlists.</p>
             <div class="form-floating mb-3">
                 <InputTextArea @bind-Value="Hints.Sizes" id="gift-sizes" class="form-control" style="height: 6rem" placeholder="Sizes" aria-describedby="hints-help" />
                 <label for="gift-sizes">Sizes (clothing, shoes, rings)</label>
@@ -74,11 +72,13 @@
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-gift-hints">Save gift hints</button>
         </EditForm>
-    </div>
-</div>
+    }
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "section")] private string? Section { get; set; }
+    private bool ShowBirthday => Section == "birthday";
+
     private string? _message;
     private ApplicationUser _user = default!;
 
@@ -120,7 +120,7 @@
             return;
         }
 
-        RedirectManager.RedirectToCurrentPageWithStatus(
+        RedirectManager.RedirectToWithStatus("Account/Manage/GiftProfile?section=birthday",
             month is null ? "Your birthday is no longer shared." : "Your birthday has been saved.",
             HttpContext);
     }

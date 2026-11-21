@@ -212,7 +212,7 @@ public sealed record DashboardWelcome
                 Icon = "person-plus",
                 Headline = $"You have {requests.Count} friend requests.",
                 Message = "Accept them to share wishlists with each other.",
-                PrimaryAction = new DashboardAction("Review requests", "/friends", "person-plus")
+                PrimaryAction = new DashboardAction("Review requests", "/friends?section=requests", "person-plus")
             };
         }
 
@@ -225,7 +225,7 @@ public sealed record DashboardWelcome
                 ? "You have a new friend request."
                 : $"{requester} sent you a friend request.",
             Message = "Accept it to share wishlists with each other.",
-            PrimaryAction = new DashboardAction("Review request", "/friends", "person-plus")
+            PrimaryAction = new DashboardAction("Review request", "/friends?section=requests", "person-plus")
         };
     }
 

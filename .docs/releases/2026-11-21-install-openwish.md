@@ -5,5 +5,8 @@
   steps instead.
 - Choose **Not now** to stop seeing the reminder in that browser. You can still
   install at any time from **Account settings > Install as app**.
+- If your browser saves a shortcut instead of installing the app, add it from
+  the OpenWish homepage to get the OpenWish name and ribbon icon. Firefox on
+  Android may add a Firefox badge to the shortcut.
 - Installation does not store private wishlists, gift exchanges, or other
   account data for offline use.

@@ -1,14 +1,14 @@
 .top-row {
     min-height: 4.5rem;
     padding: 0 1rem;
-    border-bottom: 1px solid rgba(255,255,255,.1);
+    border-bottom: 1px solid var(--color-nav-header-border);
 }
 
 .navbar-brand {
     display: inline-flex;
     align-items: center;
     gap: 0.7rem;
-    color: #fff;
+    color: var(--color-nav-text);
     font-size: 1.05rem;
     font-weight: 750;
     letter-spacing: -0.03em;
@@ -20,10 +20,10 @@
     width: 2.25rem;
     height: 2.25rem;
     place-items: center;
-    border: 1px solid rgba(255,255,255,.14);
+    border: 1px solid var(--color-nav-brand-mark-border);
     border-radius: 0.72rem;
-    background: rgba(255,255,255,.08);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+    background: var(--color-nav-brand-mark-bg);
+    box-shadow: inset 0 1px 0 var(--color-nav-header-border);
 }
 
 .openwishsvg {
@@ -74,6 +74,7 @@
 }
 
 .nav-item ::deep .nav-link,
+.nav-footer ::deep a.nav-link,
 .nav-footer .nav-link {
     display: flex;
     width: 100%;
@@ -92,27 +93,37 @@
 }
 
 .nav-item ::deep .nav-link .ow-icon,
-.nav-footer ::deep .ow-icon {
+.nav-footer ::deep a.nav-link .ow-icon {
+    color: var(--color-nav-item-icon);
     width: 1.1rem;
     height: 1.1rem;
     opacity: .82;
 }
 
-.nav-item ::deep a.active {
-    background: linear-gradient(90deg, rgba(123,107,231,.32), rgba(123,107,231,.14));
-    box-shadow: inset 2px 0 0 #b4abff;
-    color: #fff;
+.nav-item ::deep a.active,
+.nav-footer ::deep a.active {
+    background: var(--color-nav-active-bg);
+    box-shadow: inset 2px 0 0 var(--color-nav-active-indicator);
+    color: var(--color-nav-active-text);
     font-weight: 700;
 }
 
-.nav-item ::deep a.active .ow-icon {
+.nav-item ::deep a.active .ow-icon,
+.nav-footer ::deep a.active .ow-icon {
+    color: var(--color-nav-active-text);
     opacity: 1;
 }
 
 .nav-item ::deep .nav-link:hover,
+.nav-footer ::deep a.nav-link:hover,
 .nav-footer .nav-link:hover {
     background: var(--color-nav-hover-bg);
-    color: #fff;
+    color: var(--color-nav-active-text);
+}
+
+.nav-item ::deep .nav-link:hover .ow-icon,
+.nav-footer ::deep a.nav-link:hover .ow-icon {
+    color: var(--color-nav-active-text);
 }
 
 .nav-item form {
@@ -122,7 +133,7 @@
 .account-nav-item {
     margin-top: 0.9rem;
     padding-top: 0.9rem;
-    border-top: 1px solid rgba(255,255,255,.1);
+    border-top: 1px solid var(--color-nav-divider);
 }
 
 .nav-footer {
@@ -145,7 +156,7 @@
     padding: 0.45rem 0.8rem;
     color: var(--color-nav-text);
     font-size: 0.72rem;
-    opacity: .58;
+    opacity: var(--nav-version-opacity);
 }
 
 @media (min-width: 641px) {
@@ -179,7 +190,7 @@
     .nav-scrollable {
         position: relative;
         z-index: 1040;
-        border-top: 1px solid rgba(255,255,255,.1);
+        border-top: 1px solid var(--color-nav-divider);
         background: linear-gradient(155deg, var(--color-sidebar-gradient-start), var(--color-sidebar-gradient-end));
         box-shadow: var(--shadow-lg);
     }

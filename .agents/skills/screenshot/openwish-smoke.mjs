@@ -5728,8 +5728,13 @@ async function verifyMobileJourney(browser, manifest, results) {
   await screenshot(page, "quick-add-capture-mobile.png");
 
   await visit(page, `/wishlists/${manifest.wishlistPublicId}/manage?section=event`, "Manage wishlist", visitedRoutes);
+  // Measure the active panel after interactive activation replaces prerendered content.
+  await page.locator('nav[aria-label="Wishlist settings sections"]:not([data-enhance-nav])')
+    .locator('[aria-current="page"]').filter({ hasText: "Event connection" }).waitFor({ state: "visible" });
+  const mobileEventConnection = page.getByRole("link", { name: "View event", exact: true });
+  await mobileEventConnection.waitFor({ state: "visible" });
   await assertMinimumTouchTarget(
-    page.getByRole("link", { name: "View event" }),
+    mobileEventConnection,
     "Mobile event connection link"
   );
   await screenshot(page, "wishlist-management-mobile.png");

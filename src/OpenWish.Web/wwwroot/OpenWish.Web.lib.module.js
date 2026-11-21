@@ -1,12 +1,12 @@
 ﻿export function afterWebStarted(blazor) {
-    blazor.addEventListener('enhancedload', () => {
+    function initializePage() {
         globalThis.openWishInitializeIntegrationPickers();
         globalThis.openWishInitializePasswordToggles();
         globalThis.openWishInitializeGuestAccess();
-    });
-    globalThis.openWishInitializeIntegrationPickers();
-    globalThis.openWishInitializePasswordToggles();
-    globalThis.openWishInitializeGuestAccess();
+        globalThis.openWishInitializeAppInstall();
+    }
+    blazor.addEventListener('enhancedload', initializePage);
+    initializePage();
 
     if (globalThis.openWishPasteRegistered) {
         return;

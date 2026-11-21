@@ -1,0 +1,31 @@
+<section class="app-install @(Banner ? "app-install-banner" : null)"
+         data-app-install="@(Banner ? "banner" : "account")"
+         aria-labelledby="@HeadingId" hidden="@Banner">
+    <img src="@Assets["icons/app/apple-touch-icon.png"]" width="48" height="48" alt="" class="app-install-icon" />
+    <div class="app-install-content">
+        <h2 id="@HeadingId">@(Banner ? "Install OpenWish" : "Install as app")</h2>
+        <p data-install-copy>Open your wishlists and gift exchanges straight from your Home Screen.</p>
+        <p data-install-installed role="status" hidden>OpenWish is installed.</p>
+        <button type="button" class="btn btn-primary" data-install-native hidden>Install as app</button>
+        <details data-install-manual open="@(!Banner)">
+            <summary>Install as app</summary>
+            <ol data-install-ios hidden>
+                <li>In Safari, open the <strong>Share</strong> menu. If you don't see Share, tap <strong>More</strong> first.</li>
+                <li>Choose <strong>Add to Home Screen</strong>.</li>
+                <li>Turn on <strong>Open as Web App</strong> if shown, then tap <strong>Add</strong>.</li>
+            </ol>
+            <p data-install-browser>Open your browser's menu and look for <strong>Install app</strong> or <strong>Add to Home screen</strong>. If neither option appears, try a browser that supports installing web apps, such as Chrome or Edge.</p>
+        </details>
+        <p data-install-error role="status" hidden>The install prompt didn't open. Use the browser steps instead.</p>
+        @if (Banner)
+        {
+            <button type="button" class="btn btn-outline-secondary" data-install-dismiss>Not now</button>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public bool Banner { get; set; }
+
+    private string HeadingId => Banner ? "app-install-banner-heading" : "app-install-account-heading";
+}

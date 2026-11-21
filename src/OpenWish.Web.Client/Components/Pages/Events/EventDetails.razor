@@ -327,7 +327,9 @@ else
     [Parameter] public string EventId { get; set; } = string.Empty;
     [SupplyParameterFromQuery(Name = "rerun")] public int? Rerun { get; set; }
     [SupplyParameterFromQuery(Name = "section")] public string? Section { get; set; }
-    private string WishlistFormLink => $"{NavigationManager.Uri.Split('#')[0]}#event-wishlists-form";
+    private string WishlistFormLink =>
+        $"{NavigationManager.GetUriWithQueryParameters(NavigationManager.Uri.Split('#')[0],
+            new Dictionary<string, object?> { ["section"] = "event-wishlists" })}#event-wishlists-form";
 
     private string? RequestedSection => Section ?? new Uri(NavigationManager.Uri).Fragment.TrimStart('#');
     private string ActiveSection => Sections.FirstOrDefault(item => item.Id == RequestedSection)?.Id ?? Sections[0].Id;

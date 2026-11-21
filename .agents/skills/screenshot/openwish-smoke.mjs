@@ -3952,6 +3952,16 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
       throw new Error("The checklist did not render its four steps.");
     }
     await screenshot(page, "first-run-checklist.png");
+    const friendStep = checklist.steps.find(step => step.key === "friend");
+    if (!friendStep) {
+      throw new Error("The first-run checklist did not include a friend invitation step.");
+    }
+    await page.goto(new URL(friendStep.href, baseUrl).href, { waitUntil: "domcontentloaded" });
+    await page.getByLabel("Email addresses").waitFor({ state: "visible" });
+    await page.getByRole("navigation", { name: "Friends sections" })
+      .locator('[aria-current="page"]').filter({ hasText: "Invite friends" }).waitFor();
+    await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded" });
+    await panel.waitFor({ state: "visible" });
     await panel.getByRole("button", { name: "Dismiss the get started checklist" }).click();
     await panel.waitFor({ state: "detached" });
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -3967,7 +3977,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     if (diagnostics.browserErrors.length > 0 || diagnostics.failedResponses.length > 0) {
       throw new Error(`Checklist diagnostics: ${[...diagnostics.browserErrors, ...diagnostics.failedResponses].join(" | ")}`);
     }
-    assertions.push("new-account checklist renders, dismisses, and stays dismissed");
+    assertions.push("new-account checklist links to friend invitations, dismisses, and stays dismissed");
     await context.close();
   }
 
@@ -5842,6 +5852,20 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
   await screenshot(friendPage, "event-wishlist-reminder-after-draw.png");
   await friendPage.setViewportSize({ width: 390, height: 844 });
   await screenshot(friendPage, "event-wishlist-reminder-after-draw-mobile.png");
+  await friendPage.goto(`${baseUrl}/events/${manifest.eventPublicId}#event-wishlists`, { waitUntil: "domcontentloaded" });
+  await postDrawWishlistReminder.waitFor({ state: "visible" });
+  const addWishlist = postDrawWishlistReminder.getByRole("link", { name: "Add my wishlist", exact: true });
+  const wishlistFormUrl = new URL(await addWishlist.getAttribute("href"), baseUrl);
+  if (wishlistFormUrl.searchParams.get("section") !== "event-wishlists" ||
+      wishlistFormUrl.hash !== "#event-wishlists-form") {
+    throw new Error("The legacy wishlist fragment did not preserve the wishlist section in the form link.");
+  }
+  await addWishlist.click();
+  await friendPage.waitForURL(wishlistFormUrl.href);
+  await friendPage.reload();
+  await friendPage.locator(".event-wishlist-manager").waitFor({ state: "visible" });
+  await friendPage.getByRole("navigation", { name: "Event sections" })
+    .locator('[aria-current="page"]').filter({ hasText: "Wishlists" }).waitFor();
   await friendContext.close();
 
   results.push({
@@ -5849,7 +5873,8 @@ async function verifyUnsharedMatchWishlist(browser, manifest, results) {
     loginStatus,
     assertions: [
       "recipient without an attached wishlist has no dead-end shopping action",
-      "a participant without a shared wishlist gets the post-draw reminder on desktop and mobile"
+      "a participant without a shared wishlist gets the post-draw reminder on desktop and mobile",
+      "the wishlist form remains visible after following a legacy fragment and reloading"
     ]
   });
   await context.close();

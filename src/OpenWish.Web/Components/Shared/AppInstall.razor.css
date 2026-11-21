@@ -1,0 +1,57 @@
+.app-install {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.app-install[hidden] {
+    display: none;
+}
+
+.app-install-banner {
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-surface-alt);
+}
+
+.app-install-icon {
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.app-install-content {
+    min-width: 0;
+    max-width: 64ch;
+}
+
+.app-install h2 {
+    font-size: 1.2rem;
+    margin: 0 0 4px;
+}
+
+.app-install p,
+.app-install ol {
+    margin: 0 0 8px;
+    color: var(--color-text-muted);
+}
+
+.app-install button,
+.app-install summary {
+    min-height: 44px;
+}
+
+.app-install summary {
+    line-height: 44px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.app-install [data-install-error] {
+    margin-top: 8px;
+}
+
+.app-install [data-install-dismiss] {
+    margin-top: 8px;
+}

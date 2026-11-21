@@ -8,13 +8,14 @@
     <!-- Load theme management script early so Blazor components can invoke it on first render -->
     <script src="theme.js"></script>
     <script src="app.js"></script>
+    <script src="@Assets["app-install.js"]"></script>
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
     <link rel="stylesheet" href="@Assets["theme.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["OpenWish.Web.styles.css"]" />
     <link rel="icon" type="image/svg+xml" href="images/openwish-color.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="icons/app/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="@Assets["icons/app/apple-touch-icon.png"]" />
     <meta name="theme-color" content="#f7f7fb" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0d0f1a" media="(prefers-color-scheme: dark)" />
     <HeadOutlet />

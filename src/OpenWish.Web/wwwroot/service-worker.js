@@ -1,6 +1,7 @@
 // Makes OpenWish installable and shows a friendly page when the device is offline.
 // Only the offline page is stored: wishlists, events, and every API response always come from the server.
-const OFFLINE_CACHE = "openwish-offline-v1";
+const OFFLINE_CACHE_PREFIX = "openwish-offline-";
+const OFFLINE_CACHE = `${OFFLINE_CACHE_PREFIX}v2`;
 const OFFLINE_URL = "offline.html";
 const OFFLINE_ASSETS = [OFFLINE_URL, "icons/app/openwish-192.png"];
 
@@ -12,7 +13,9 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
     event.waitUntil(
         caches.keys()
-            .then(keys => Promise.all(keys.filter(key => key !== OFFLINE_CACHE).map(key => caches.delete(key))))
+            .then(keys => Promise.all(keys
+                .filter(key => key.startsWith(OFFLINE_CACHE_PREFIX) && key !== OFFLINE_CACHE)
+                .map(key => caches.delete(key))))
             .then(() => self.clients.claim()));
 });
 

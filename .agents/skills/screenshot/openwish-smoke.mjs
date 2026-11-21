@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { chromium, devices } from "playwright";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -6810,6 +6810,106 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   results.push({ scenario: "connected-app", loginStatus, assertions });
 }
 
+async function verifyAppInstall(browser, results) {
+  const installPath = "/Account/Manage/InstallApp";
+  const bannerSelector = '[data-app-install="banner"]';
+  const accountSelector = '[data-app-install="account"]';
+  const manualInstall = () => window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  });
+  const iphone = await browser.newContext({ ...devices["iPhone 13"], colorScheme: "dark" });
+  try {
+    await iphone.addInitScript(manualInstall);
+    await login(iphone, "owner", ownerEmail);
+    const page = await iphone.newPage();
+    await page.goto(`${baseUrl}/Account/Manage`);
+    const banner = page.locator(bannerSelector);
+    await banner.locator("summary").click();
+    await banner.getByText("Open as Web App", { exact: true }).waitFor();
+    await screenshot(page, "app-install-mobile.png");
+    await banner.getByRole("button", { name: "Not now" }).click();
+    await banner.waitFor({ state: "hidden" });
+    await page.reload();
+    await banner.waitFor({ state: "hidden" });
+
+    const menu = page.getByRole("navigation", { name: "Account settings" });
+    await menu.getByRole("link", { name: "Install as app" }).click();
+    await page.waitForURL(`**${installPath}`);
+    await menu.getByRole("link", { name: "Install as app" }).and(menu.locator('[aria-current="page"]')).waitFor();
+    await page.locator(accountSelector).getByText("Add to Home Screen", { exact: true }).waitFor();
+    await assertResponsiveWidths(page, [{ width: 320, height: 680 }, { width: 390, height: 844 }]);
+
+    await page.addInitScript(() => Object.defineProperty(navigator, "standalone", { value: true }));
+    await page.reload();
+    await page.locator(accountSelector).getByText("OpenWish is installed.").waitFor();
+    await page.locator(accountSelector).getByText("Add to Home Screen", { exact: true }).waitFor({ state: "hidden" });
+  } finally {
+    await iphone.close();
+  }
+
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
+  try {
+    await desktop.addInitScript(manualInstall);
+    await login(desktop, "owner", ownerEmail);
+    const page = await desktop.newPage();
+    await page.goto(`${baseUrl}/Account/Manage`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator(bannerSelector).waitFor({ state: "hidden" });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.getByRole("navigation", { name: "Account settings" }).getByRole("link", { name: "Install as app" }).click();
+    await page.waitForURL(`**${installPath}`);
+    await page.locator(accountSelector).getByText("Open your browser's menu", { exact: false }).waitFor();
+    await screenshot(page, "app-install-desktop.png");
+    await assertResponsiveWidths(page, [{ width: 768, height: 900 }]);
+  } finally {
+    await desktop.close();
+  }
+
+  const android = await browser.newContext({ ...devices["Pixel 7"] });
+  try {
+    await login(android, "owner", ownerEmail);
+    const page = await android.newPage();
+    await page.goto(`${baseUrl}/Account/Manage`);
+    await page.addInitScript(() => window.addEventListener("beforeinstallprompt", event => {
+      if (event.isTrusted) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }));
+    await page.reload();
+    const offerInstall = () => page.evaluate(() => {
+      const event = new Event("beforeinstallprompt", { cancelable: true });
+      event.prompt = () => {
+        window.installPromptCalls = (window.installPromptCalls ?? 0) + 1;
+      };
+      event.userChoice = Promise.resolve({ outcome: "dismissed" });
+      window.dispatchEvent(event);
+      if (!event.defaultPrevented) throw new Error("The install offer wasn't captured.");
+    });
+    await offerInstall();
+    const banner = page.locator(bannerSelector);
+    await banner.getByRole("button", { name: "Install as app" }).click();
+    await banner.waitFor({ state: "hidden" });
+    await page.reload();
+    await offerInstall();
+    await banner.waitFor({ state: "hidden" });
+    await page.getByRole("navigation", { name: "Account settings" }).getByRole("link", { name: "Install as app" }).click();
+    await page.waitForURL(`**${installPath}`);
+    await offerInstall();
+    const account = page.locator(accountSelector);
+    await account.getByRole("button", { name: "Install as app" }).click();
+    await page.waitForFunction(() => window.installPromptCalls === 1);
+  } finally {
+    await android.close();
+  }
+  results.push({ scenario: "app-install", assertions: [
+    "iPhone Home Screen instructions, persistent dismissal, and standalone mode",
+    "Account install tab remains available after dismissal; narrow desktop windows are not prompted",
+    "the native install offer is invoked from both the Android banner and Account settings"
+  ] });
+}
+
 async function verifyPageSections(browser, manifest, results) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
@@ -6998,6 +7098,7 @@ try {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
+    await verifyAppInstall(browser, results);
     await verifyPageSections(browser, manifest, results);
     await verifyDevelopmentLoginJourney(browser, results);
     await verifyExternalLogin(browser, results);

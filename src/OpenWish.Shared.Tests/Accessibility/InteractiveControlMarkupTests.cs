@@ -2106,7 +2106,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("for=\"mark-accepted-name\"", invitations, StringComparison.Ordinal);
         Assert.Contains("public async Task FocusComposerAsync()", invitations, StringComparison.Ordinal);
 
-        Assert.Contains("@if (_isOwner && (IsEventPast || _event.NamesDrawnOn.HasValue))", details, StringComparison.Ordinal);
+        Assert.Contains("@if (_isOwner && HasEventElapsed)", details, StringComparison.Ordinal);
         Assert.Contains("OnInviteRequested=\"FocusInvitationComposer\"", details, StringComparison.Ordinal);
     }
 

@@ -290,7 +290,7 @@ else
                     @InvitationsSection
                 }
 
-                @if (_isOwner && (IsEventPast || _event.NamesDrawnOn.HasValue))
+                @if (_isOwner && HasEventElapsed)
                 {
                     <div class="page-section-panel" hidden="@(ActiveSection != "run-again")">
                         @RunAgainPanel
@@ -346,7 +346,7 @@ else
         new("reserved", "My reservations", "box-seam"),
         .. (_event?.IsGiftExchange == true && _isOwner
             ? new PageSection[] { new("gift-exchange", "Manage draw", "gear") } : []),
-        .. (_isOwner && (IsEventPast || _event?.NamesDrawnOn.HasValue == true)
+        .. (_isOwner && HasEventElapsed
             ? new PageSection[] { new("run-again", "Run again", "arrow-clockwise") } : []),
     ];
     private EventModel? _event;
@@ -592,7 +592,7 @@ else
 
     private EventInvitations? _eventInvitations;
 
-    private bool IsEventPast => _event is not null && EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
+    private bool HasEventElapsed => _event is not null && _event.Date <= DateTimeOffset.UtcNow;
 
     private RenderFragment InvitationsSection => __builder =>
     {

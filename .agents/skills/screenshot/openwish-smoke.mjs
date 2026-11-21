@@ -6842,6 +6842,10 @@ async function verifyPageSections(browser, manifest, results) {
     await exchangeMenu.locator('[aria-current="page"]').filter({ hasText: "My match" }).waitFor();
     await page.locator(".gift-match-name").waitFor({ state: "visible" });
     await page.locator(".event-wishlist-manager").waitFor({ state: "hidden" });
+    if (await exchangeMenu.getByRole("link", { name: "Run again", exact: true }).count() ||
+        await page.getByTestId("run-again").count()) {
+      throw new Error("An upcoming exchange offered to run again after its draw.");
+    }
     await screenshot(page, "exchange-sections-desktop.png");
     await page.setViewportSize({ width: 390, height: 844 });
     await assertNoHorizontalScroll(page, "exchange sections");
@@ -6852,13 +6856,39 @@ async function verifyPageSections(browser, manifest, results) {
     await page.reload();
     await exchangeMenu.locator('[aria-current="page"]').filter({ hasText: "Wishlists" }).waitFor();
     await page.locator(".event-wishlist-manager").waitFor({ state: "visible" });
+
+    await page.goto(`${baseUrl}/events/${manifest.eventPublicId}?section=run-again`, { waitUntil: "domcontentloaded" });
+    await exchangeMenu.locator('[aria-current="page"]').filter({ hasText: "My match" }).waitFor();
+    if (await page.getByTestId("run-again").count()) {
+      throw new Error("A direct link exposed Run again before the event elapsed.");
+    }
+
+    const now = new Date();
+    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const elapsedToday = new Date(Math.max(now.getTime() - 60_000, utcMidnight));
+    const createdResponse = await context.request.post(`${baseUrl}/api/events`, {
+      data: { name: "Elapsed section test", date: elapsedToday.toISOString(), isGiftExchange: false, eventUsers: [] }
+    });
+    if (!createdResponse.ok()) {
+      throw new Error(`Creating the elapsed event returned ${createdResponse.status()}.`);
+    }
+    const elapsedEvent = await createdResponse.json();
+    await page.goto(`${baseUrl}/events/${elapsedEvent.publicId}`, { waitUntil: "domcontentloaded" });
+    const elapsedMenu = page.getByRole("navigation", { name: "Event sections" });
+    await elapsedMenu.getByRole("link", { name: "Run again", exact: true }).click();
+    await page.getByTestId("run-again").waitFor({ state: "visible" });
+    const deleteResponse = await context.request.delete(`${baseUrl}/api/events/${elapsedEvent.publicId}`);
+    if (!deleteResponse.ok()) {
+      throw new Error(`Deleting the elapsed test event returned ${deleteResponse.status()}.`);
+    }
   } finally {
     await context.close();
   }
   results.push({ scenario: "section-navigation", loginStatus, assertions: [
     "keyboard navigation, browser history and reload select the requested panel",
     "hidden forms stay out of view and unsent drafts survive section switches",
-    "Friends and exchanges fit desktop, tablet and mobile"
+    "Friends and exchanges fit desktop, tablet and mobile",
+    "only elapsed events offer Run again, including earlier today"
   ] });
 }
 

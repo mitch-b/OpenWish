@@ -6886,6 +6886,18 @@ async function verifyPageSections(browser, manifest, results) {
       if (brokenWords.length) {
         throw new Error(`Exchange section labels broke words at ${viewport.width}px: ${brokenWords.join(", ")}.`);
       }
+      if (viewport.width === 320 || viewport.width === 390) {
+        const rowCount = await exchangeMenu.locator("a").evaluateAll(links =>
+          new Set(links.map(link => Math.round(link.getBoundingClientRect().top))).size
+        );
+        const maximumRows = viewport.width === 320 ? 4 : 3;
+        if (rowCount > maximumRows) {
+          throw new Error(`Exchange sections used ${rowCount} rows at ${viewport.width}px; expected at most ${maximumRows}.`);
+        }
+        for (const link of await exchangeMenu.getByRole("link").all()) {
+          await assertMinimumTouchTarget(link, "Mobile exchange section link");
+        }
+      }
       if (viewport.width === 320 || viewport.width === 900) {
         await screenshot(page, `exchange-sections-${viewport.width}.png`, false, false, '[aria-label="Event sections"]');
       }
@@ -6939,7 +6951,7 @@ async function verifyPageSections(browser, manifest, results) {
   results.push({ scenario: "section-navigation", loginStatus, assertions: [
     "keyboard navigation, browser history and reload select the requested panel",
     "hidden forms stay out of view and unsent drafts survive section switches",
-    "Friends and exchanges fit desktop, tablet and mobile without breaking section labels mid-word",
+    "Friends and exchanges fit desktop, tablet and mobile with compact, word-safe navigation and touch targets",
     "Run again is hidden for future and today events, even after a draw or through a direct link"
   ] });
 }

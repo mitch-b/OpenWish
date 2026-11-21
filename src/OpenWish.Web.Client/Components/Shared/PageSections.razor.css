@@ -83,3 +83,10 @@
         max-width: 100%;
     }
 }
+
+@media (max-width: 640px) {
+    .page-sections-menu a {
+        gap: .375rem;
+        padding-inline: .375rem;
+    }
+}

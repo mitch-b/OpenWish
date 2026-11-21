@@ -1697,7 +1697,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<nav aria-label=\"@Label\"", navigation, StringComparison.Ordinal);
         Assert.Contains("aria-current=", navigation, StringComparison.Ordinal);
         Assert.Contains("min-height: 44px;", styles, StringComparison.Ordinal);
-        Assert.Contains("repeat(auto-fit,", styles, StringComparison.Ordinal);
+        Assert.Contains("flex-wrap: wrap;", styles, StringComparison.Ordinal);
     }
 
     [Fact]

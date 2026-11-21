@@ -117,7 +117,7 @@
                             <OpenWishIcon Name="list-check" /> Print
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-download"
-                                disabled="@(_plan.ItemCount == 0)" @onclick="DownloadPlanAsync">
+                                disabled="@(_plan.ItemCount == 0 || !RendererInfo.IsInteractive)" @onclick="DownloadPlanAsync">
                             <OpenWishIcon Name="download" /> Download CSV
                         </button>
                     </div>

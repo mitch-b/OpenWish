@@ -592,7 +592,7 @@ else
 
     private EventInvitations? _eventInvitations;
 
-    private bool HasEventElapsed => _event is not null && _event.Date <= DateTimeOffset.UtcNow;
+    private bool HasEventElapsed => _event is not null && EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
 
     private RenderFragment InvitationsSection => __builder =>
     {

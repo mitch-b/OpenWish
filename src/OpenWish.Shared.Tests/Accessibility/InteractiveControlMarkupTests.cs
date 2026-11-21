@@ -2107,6 +2107,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("public async Task FocusComposerAsync()", invitations, StringComparison.Ordinal);
 
         Assert.Contains("@if (_isOwner && HasEventElapsed)", details, StringComparison.Ordinal);
+        Assert.Contains("EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow)", details, StringComparison.Ordinal);
         Assert.Contains("OnInviteRequested=\"FocusInvitationComposer\"", details, StringComparison.Ordinal);
     }
 

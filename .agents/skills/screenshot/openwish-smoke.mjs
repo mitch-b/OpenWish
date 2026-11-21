@@ -6868,23 +6868,32 @@ async function verifyPageSections(browser, manifest, results) {
       throw new Error("A direct link exposed Run again before the event elapsed.");
     }
 
-    const now = new Date();
-    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    const elapsedToday = new Date(Math.max(now.getTime() - 60_000, utcMidnight));
+    let now = new Date();
+    let utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const untilNextDay = utcMidnight + 86_400_000 - now.getTime();
+    if (untilNextDay < 60_000) {
+      await page.waitForTimeout(untilNextDay + 1_000);
+      now = new Date();
+      utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    }
+    const eventToday = new Date(utcMidnight);
     const createdResponse = await context.request.post(`${baseUrl}/api/events`, {
-      data: { name: "Elapsed section test", date: elapsedToday.toISOString(), isGiftExchange: false, eventUsers: [] }
+      data: { name: "Today section test", date: eventToday.toISOString(), isGiftExchange: false, eventUsers: [] }
     });
     if (!createdResponse.ok()) {
-      throw new Error(`Creating the elapsed event returned ${createdResponse.status()}.`);
+      throw new Error(`Creating today's event returned ${createdResponse.status()}.`);
     }
-    const elapsedEvent = await createdResponse.json();
-    await page.goto(`${baseUrl}/events/${elapsedEvent.publicId}`, { waitUntil: "domcontentloaded" });
-    const elapsedMenu = page.getByRole("navigation", { name: "Event sections" });
-    await elapsedMenu.getByRole("link", { name: "Run again", exact: true }).click();
-    await page.getByTestId("run-again").waitFor({ state: "visible" });
-    const deleteResponse = await context.request.delete(`${baseUrl}/api/events/${elapsedEvent.publicId}`);
+    const todayEvent = await createdResponse.json();
+    await page.goto(`${baseUrl}/events/${todayEvent.publicId}?section=run-again`, { waitUntil: "domcontentloaded" });
+    const todayMenu = page.getByRole("navigation", { name: "Event sections" });
+    await todayMenu.locator('[aria-current="page"]').filter({ hasText: "Invitations" }).waitFor();
+    if (await todayMenu.getByRole("link", { name: "Run again", exact: true }).count() ||
+        await page.getByTestId("run-again").count()) {
+      throw new Error("Run again appeared before the event day had passed.");
+    }
+    const deleteResponse = await context.request.delete(`${baseUrl}/api/events/${todayEvent.publicId}`);
     if (!deleteResponse.ok()) {
-      throw new Error(`Deleting the elapsed test event returned ${deleteResponse.status()}.`);
+      throw new Error(`Deleting today's test event returned ${deleteResponse.status()}.`);
     }
   } finally {
     await context.close();
@@ -6893,7 +6902,7 @@ async function verifyPageSections(browser, manifest, results) {
     "keyboard navigation, browser history and reload select the requested panel",
     "hidden forms stay out of view and unsent drafts survive section switches",
     "Friends and exchanges fit desktop, tablet and mobile",
-    "only elapsed events offer Run again, including earlier today"
+    "Run again is hidden for future and today events, even after a draw or through a direct link"
   ] });
 }
 

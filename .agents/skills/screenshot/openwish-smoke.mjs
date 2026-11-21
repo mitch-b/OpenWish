@@ -6998,7 +6998,8 @@ async function verifyPageSections(browser, manifest, results) {
     const menu = page.getByRole("navigation", { name: "Friends sections" });
     const invitations = menu.getByRole("link", { name: "Invite friends" });
     const email = page.getByLabel("Email addresses");
-    await menu.locator('[aria-current="page"]').filter({ hasText: "My friends" }).waitFor();
+    await page.locator('nav[aria-label="Friends sections"]:not([data-enhance-nav])')
+      .locator('[aria-current="page"]').filter({ hasText: "My friends" }).waitFor({ state: "visible" });
     await email.waitFor({ state: "hidden" });
     await invitations.focus();
     await page.keyboard.press("Enter");

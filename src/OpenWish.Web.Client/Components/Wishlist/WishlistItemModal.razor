@@ -71,6 +71,7 @@
                                            aria-describedby="modal-item-name-help" placeholder="e.g., A travel mug" />
                                 <div id="modal-item-name-help" class="form-text">A name is enough to save an idea.</div>
                                 <ValidationMessage For="@(() => Model.Name)" />
+                                <DuplicateIdeaNotice Model="@Model" ExistingItems="@ExistingItems" />
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -114,7 +115,7 @@
 
                     <div class="mb-3">
                         <label for="url" class="form-label">Product Link</label>
-                        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" placeholder="https://..." />
+                        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" placeholder="https://..." @onblur="SuggestStore" />
                         <ValidationMessage For="@(() => Model.Url)" />
                     </div>
 
@@ -165,6 +166,7 @@
     [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
     [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public IEnumerable<WishlistItemModel>? ExistingItems { get; set; }
 
     private bool _isImporting;
     private bool _isEditing;
@@ -225,6 +227,8 @@
         _initialImportText = null;
         StateHasChanged();
     }
+
+    private void SuggestStore() => ItemCaptureHints.SuggestStore(Model);
 
     private void HandleProductImported(ProductImportResult result)
     {

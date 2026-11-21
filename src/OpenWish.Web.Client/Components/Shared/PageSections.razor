@@ -1,0 +1,35 @@
+@inject NavigationManager Navigation
+
+<div class="page-sections">
+    <nav aria-label="@Label" class="page-sections-menu" data-enhance-nav="@EnhanceNavigation">
+        <ul>
+            @foreach (var item in Items)
+            {
+                <li>
+                    <a href="@(item.Href ?? SectionHref(item.Id))"
+                       aria-current="@(item.Id == Active ? "page" : null)">
+                        <OpenWishIcon Name="@item.Icon" />
+                        <span>@item.Label</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+    <div class="page-sections-content">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<PageSection> Items { get; set; } = [];
+    [Parameter] public string? Active { get; set; }
+    [Parameter, EditorRequired] public RenderFragment? ChildContent { get; set; }
+
+    // A query-only enhanced navigation during prerender can be replaced by the original page as it activates.
+    private string? EnhanceNavigation => !RendererInfo.IsInteractive && Items.Any(item => item.Href is null) ? "false" : null;
+
+    private string SectionHref(string id) =>
+        Navigation.GetUriWithQueryParameters(Navigation.Uri.Split('#')[0],
+            new Dictionary<string, object?> { ["section"] = id });
+}

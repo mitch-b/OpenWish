@@ -12,7 +12,7 @@
                          InitialLink="@InitialImportLink" />
 </div>
 
-<EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
+<EditForm @ref="_form" Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
@@ -23,6 +23,7 @@
                        aria-describedby="item-name-help" placeholder="e.g., A travel mug" />
             <div id="item-name-help" class="form-text">A name is enough to save an idea. Add other details whenever you like.</div>
             <ValidationMessage For="@(() => Model.Name)" />
+            <DuplicateIdeaNotice Model="@Model" ExistingItems="@ExistingItems" />
         </div>
 
         <div class="item-field-wide">
@@ -40,7 +41,7 @@
 
         <div>
             <label for="url" class="form-label">Product link <span class="text-muted fw-normal">(optional)</span></label>
-            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" />
+            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" @onblur="SuggestStore" />
             <ValidationMessage For="@(() => Model.Url)" />
         </div>
 
@@ -80,6 +81,13 @@
                 <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
             }
         </button>
+        @if (OnSubmitAndAddAnother.HasDelegate)
+        {
+            <button type="button" class="btn btn-outline-primary" data-testid="add-another-item" disabled="@IsBusy" @onclick="HandleAddAnother">
+                <OpenWishIcon Name="plus-lg" />
+                <span>Add and add another</span>
+            </button>
+        }
         @if (OnCancel.HasDelegate)
         {
             <button type="button" class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="HandleCancel">Cancel</button>
@@ -90,15 +98,20 @@
 @code {
     [Parameter] public WishlistItemModel Model { get; set; } = new();
     [Parameter] public EventCallback<WishlistItemModel> OnSubmit { get; set; }
+    [Parameter] public EventCallback<WishlistItemModel> OnSubmitAndAddAnother { get; set; }
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
     [Parameter] public bool AutoFocusImport { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
+    [Parameter] public IEnumerable<WishlistItemModel>? ExistingItems { get; set; }
 
     /// <summary>A product link, or text containing one, to import once the form is interactive.</summary>
     [Parameter] public string? InitialImportLink { get; set; }
 
+    private EditForm? _form;
     private bool _isImporting;
     private bool IsBusy => IsSubmitting || _isImporting;
+
+    private void SuggestStore() => ItemCaptureHints.SuggestStore(Model);
 
     private async Task HandleSubmit()
     {
@@ -111,6 +124,16 @@
         {
             await OnSubmit.InvokeAsync(Model);
         }
+    }
+
+    private async Task HandleAddAnother()
+    {
+        if (IsBusy || _form?.EditContext is not { } editContext || !editContext.Validate())
+        {
+            return;
+        }
+
+        await OnSubmitAndAddAnother.InvokeAsync(Model);
     }
 
     private async Task HandleCancel()

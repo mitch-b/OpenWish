@@ -116,6 +116,10 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-print" @onclick="PrintPlanAsync">
                             <OpenWishIcon Name="list-check" /> Print
                         </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-download"
+                                disabled="@(_plan.ItemCount == 0)" @onclick="DownloadPlanAsync">
+                            <OpenWishIcon Name="download" /> Download CSV
+                        </button>
                     </div>
                 </div>
 
@@ -418,6 +422,26 @@
     {
         Search = string.Empty;
         _pendingFocusId = "gift-plan-search";
+    }
+
+    private async Task DownloadPlanAsync()
+    {
+        if (_plan is null)
+        {
+            return;
+        }
+
+        _actionError = null;
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDownloadText", "gift-plan.csv", GiftPlanCsv.Build(_plan, DateTimeOffset.UtcNow), "text/csv");
+            _statusMessage = "Gift plan downloaded as a spreadsheet.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Downloading the gift plan failed.");
+            _actionError = "We couldn't download the gift plan. Try again.";
+        }
     }
 
     private async Task PrintPlanAsync()

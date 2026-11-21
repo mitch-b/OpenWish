@@ -402,7 +402,7 @@ async function assertMinimumTouchTarget(locator, description) {
 
 async function verifyCompactFilters(page) {
   const panel = page.locator("#wishlist-filters");
-  const toggle = page.getByRole("button", { name: "Filters", exact: true });
+  const toggle = page.getByRole("button", { name: /^Filters(?:\s+\d+)?$/ });
   const measurements = [];
   for (const [name, viewport, maximumHeight] of [
     ["desktop", { width: 1440, height: 1000 }, 420],
@@ -430,6 +430,7 @@ async function verifyCompactFilters(page) {
   await page.evaluate(() => document.documentElement.setAttribute("data-theme", "light"));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await panel.getByRole("button", { name: "High", exact: true }).click();
+  await panel.getByRole("button", { name: "High", pressed: true }).waitFor();
   await toggle.focus();
   await page.keyboard.press("Enter");
   await panel.waitFor({ state: "detached" });

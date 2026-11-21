@@ -6861,7 +6861,16 @@ async function verifyPageSections(browser, manifest, results) {
       { width: 1024, height: 768 }
     ]) {
       await page.setViewportSize(viewport);
-      await assertNoHorizontalScroll(page, `exchange sections at ${viewport.width}px`);
+      const dimensions = await page.evaluate(() => ({
+        viewport: document.documentElement.clientWidth,
+        content: document.documentElement.scrollWidth
+      }));
+      if (dimensions.content > dimensions.viewport) {
+        throw new Error(
+          `Exchange sections overflowed at ${viewport.width}px: ` +
+          `${dimensions.content}px content in a ${dimensions.viewport}px viewport.`
+        );
+      }
       const brokenWords = await exchangeMenu.locator("a > span").evaluateAll(labels =>
         labels.flatMap(label => [...label.childNodes].flatMap(node => {
           if (node.nodeType !== Node.TEXT_NODE) return [];

@@ -84,6 +84,10 @@ else
                     <OpenWishIcon Name="list-check" />
                     <span class="btn-text">Print</span>
                 </button>
+                <button id="download-wishlist-csv" class="btn btn-outline-secondary" type="button" @onclick="DownloadWishlistCsv">
+                    <OpenWishIcon Name="download" />
+                    <span class="btn-text">Download CSV</span>
+                </button>
             }
             @if (_isOwner)
             {
@@ -1985,6 +1989,30 @@ else
 
         _textCopied = false;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DownloadWishlistCsv()
+    {
+        if (_wishlist is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync(
+                "openWishDownloadText", $"{CsvFile.FileName(_wishlist.Name, "wishlist")}.csv", WishlistCsv.Build(_items), "text/csv");
+            FeedbackMessage = "Wishlist downloaded as a spreadsheet.";
+            _feedbackIsError = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not download wishlist {WishlistId} as CSV", WishlistId);
+            FeedbackMessage = "Unable to download the list. Please try again.";
+            _feedbackIsError = true;
+        }
+
+        StateHasChanged();
     }
 
     private async Task PrintWishlist()

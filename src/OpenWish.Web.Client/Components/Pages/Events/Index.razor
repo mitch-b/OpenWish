@@ -3,11 +3,13 @@
 
 @using OpenWish.Web.Client.Components.Event
 @using OpenWish.Web.Client.Components.Shared
+@using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
 @inject ILogger<Index> Logger
+@inject IJSRuntime JSRuntime
 
 @rendermode InteractiveAuto
 
@@ -17,6 +19,12 @@
     <PageHeader Title="Events"
                 Description="Plan an exchange or a shared occasion.">
         <Actions>
+            @if (_events is { Count: > 0 })
+            {
+                <button type="button" class="btn btn-outline-light btn-lg" data-testid="events-download" @onclick="DownloadEventsAsync">
+                    <OpenWishIcon Name="download" Class="me-2" /> Download CSV
+                </button>
+            }
             <a href="/events/new" class="btn btn-light btn-lg">
                 <OpenWishIcon Name="gift" Class="me-2" /> Start a gift exchange
             </a>
@@ -36,6 +44,16 @@
                         type="button"
                         disabled="@_isLoading"
                         @onclick="RetryLoadAsync">
+                    Try again
+                </button>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_downloadError))
+        {
+            <div class="alert alert-danger" role="alert">
+                <p class="mb-2">@_downloadError</p>
+                <button class="btn btn-outline-danger btn-sm" type="button" @onclick="DownloadEventsAsync">
                     Try again
                 </button>
             </div>
@@ -90,6 +108,28 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadEventsAsync();
+    }
+
+    private string? _downloadError;
+
+    private async Task DownloadEventsAsync()
+    {
+        if (_events is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishDownloadText", "events.csv", EventsCsv.Build(_events), "text/csv");
+            _downloadError = null;
+            _statusMessage = "Events downloaded as a spreadsheet.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not download events as CSV.");
+            _downloadError = "Your events could not be downloaded.";
+        }
     }
 
     private async Task LoadEventsAsync(bool announceRefresh = false)

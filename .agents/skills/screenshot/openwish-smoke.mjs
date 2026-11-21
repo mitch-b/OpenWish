@@ -6025,6 +6025,183 @@ async function verifyCirclesJourney(browser, manifest, results) {
   results.push({ scenario: "friend-circles", loginStatus, assertions });
 }
 
+async function verifyDataPortabilityJourney(browser, results) {
+  const assertions = [];
+  const listName = "Portability picks";
+  const importedName = `${listName} (imported)`;
+  const owner = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+  const jordan = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
+  const anonymous = await browser.newContext();
+  const page = await owner.newPage();
+  const jordanPage = await jordan.newPage();
+  const diagnostics = [monitorPage(page), monitorPage(jordanPage)];
+  const loginStatus = await login(owner, "owner", ownerEmail);
+  await login(jordan, "friend", friendEmail);
+
+  const json = async (context, method, route, data) => {
+    const response = await context.request.fetch(`${baseUrl}${route}`, { method, data });
+    if (!response.ok()) {
+      throw new Error(`${method} ${route} returned ${response.status()}: ${await response.text()}`);
+    }
+    return response.status() === 204 || (await response.headers())["content-length"] === "0" ? null : response.json().catch(() => null);
+  };
+  const download = async (target, trigger) => {
+    const [file] = await Promise.all([target.waitForEvent("download"), trigger()]);
+    return { name: file.suggestedFilename(), text: await fs.readFile(await file.path(), "utf8") };
+  };
+  const createdLists = [];
+  try {
+    const wishlist = await json(owner, "POST", "/api/wishlists", { name: listName });
+    createdLists.push(wishlist.publicId);
+    const skillet = await owner.request.post(`${baseUrl}/api/wishlists/${wishlist.publicId}/items`, {
+      data: { name: "Cast iron skillet, 12 inch", price: 38, url: "https://example.com/skillet", whereToBuy: "Hardware store", priority: 1 }
+    });
+    const skilletId = Number(skillet.headers().location?.split("/").filter(Boolean).at(-1));
+    if (!skillet.ok() || !Number.isInteger(skilletId)) {
+      throw new Error(`Creating the first idea failed: ${skillet.status()}`);
+    }
+    await json(owner, "POST", `/api/wishlists/${wishlist.publicId}/items`, { name: "=HYPERLINK(\"http://evil.example\",\"Click\")", price: 5 });
+    await json(jordan, "POST", `/api/wishlists/${wishlist.publicId}/items/${skilletId}/reserve`, { isAnonymous: false });
+
+    // The owner downloads one list as a spreadsheet; nothing about the reservation comes along.
+    await page.goto(`${baseUrl}/wishlists/${wishlist.publicId}`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: listName }).waitFor({ state: "visible" });
+    await page.getByText("Cast iron skillet, 12 inch").first().waitFor({ state: "visible" });
+    const csvButton = page.locator("#download-wishlist-csv");
+    await csvButton.waitFor({ state: "visible" });
+    const listCsv = await download(page, () => csvButton.click());
+    if (listCsv.name !== "Portability-picks.csv") {
+      throw new Error(`The list download was named ${listCsv.name}.`);
+    }
+    const listLines = listCsv.text.replace(/^\uFEFF/, "").split("\r\n");
+    if (listLines[0] !== "Idea,Price,Where to buy,Link,Priority,Most wanted,Notes" ||
+        !listLines.includes("\"Cast iron skillet, 12 inch\",38.00,Hardware store,https://example.com/skillet,High,,") ||
+        !listCsv.text.includes("'=HYPERLINK(")) {
+      throw new Error(`The list CSV is wrong: ${listCsv.text}`);
+    }
+    if (/reserv|JordanDemo|purchas/i.test(listCsv.text)) {
+      throw new Error("The list CSV exposed reservation details to the owner.");
+    }
+    await page.getByText("Wishlist downloaded as a spreadsheet.").waitFor({ state: "visible" });
+    assertions.push("the owner downloads a list as a CSV that keeps commas intact, neutralizes spreadsheet formulas, and carries no reservation details");
+    await screenshot(page, "wishlist-download-csv.png");
+
+    // A shopper downloads their private gift plan.
+    await jordanPage.goto(`${baseUrl}/gift-plan`, { waitUntil: "domcontentloaded" });
+    const planPage = jordanPage.getByTestId("gift-plan");
+    await planPage.getByText("Cast iron skillet, 12 inch").first().waitFor({ state: "visible" });
+    const planCsv = await download(jordanPage, () => planPage.getByTestId("gift-plan-download").click());
+    if (planCsv.name !== "gift-plan.csv" ||
+        !planCsv.text.includes("Cast iron skillet, 12 inch") ||
+        !planCsv.text.includes(",To buy,") ||
+        !planCsv.text.startsWith("\uFEFFRecipient,Gift,Price,Budget,Status,Occasion,Occasion date,Wishlist,Link\r\n")) {
+      throw new Error(`The gift plan CSV is wrong: ${planCsv.text}`);
+    }
+    await screenshot(jordanPage, "gift-plan-download-csv.png");
+    assertions.push("a shopper downloads their own gift plan as a CSV with each gift's status");
+
+    // Events download without people's emails or draw results.
+    await page.goto(`${baseUrl}/events`, { waitUntil: "domcontentloaded" });
+    const eventsButton = page.getByTestId("events-download");
+    await eventsButton.waitFor({ state: "visible" });
+    const eventsCsv = await download(page, () => eventsButton.click());
+    if (eventsCsv.name !== "events.csv" ||
+        !eventsCsv.text.includes("Event,Date,Budget,Gift exchange,Names drawn,Organizer,Description") ||
+        eventsCsv.text.includes("@")) {
+      throw new Error(`The events CSV is wrong: ${eventsCsv.text}`);
+    }
+    await screenshot(page, "events-download-csv.png");
+    assertions.push("the events page downloads a CSV of event details without email addresses");
+
+    // Export every list as JSON from the personal data page.
+    await page.goto(`${baseUrl}/Account/Manage/PersonalData`, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("export-wishlists").waitFor({ state: "visible" });
+    await screenshot(page, "personal-data-portability.png");
+    const exported = await download(page, () => page.getByTestId("export-wishlists").click());
+    if (!/^openwish-wishlists-\d{4}-\d{2}-\d{2}\.json$/.test(exported.name)) {
+      throw new Error(`The export was named ${exported.name}.`);
+    }
+    const exportFile = JSON.parse(exported.text.replace(/^\uFEFF/, ""));
+    const exportedList = exportFile.lists.find(list => list.name === listName);
+    if (exportFile.format !== "openwish-wishlists" || !exportedList || exportedList.items.length !== 2 ||
+        exportedList.items[0].name !== "Cast iron skillet, 12 inch" || exportedList.items[0].price !== 38) {
+      throw new Error(`The JSON export is wrong: ${exported.text}`);
+    }
+    if (/reserv|JordanDemo/i.test(exported.text)) {
+      throw new Error("The JSON export exposed reservation details.");
+    }
+    const jordanExport = await json(jordan, "GET", "/api/portability/wishlists.json");
+    if (jordanExport.lists.some(list => list.name === listName)) {
+      throw new Error("A friend's export contained the owner's list.");
+    }
+    const anonymousExport = await anonymous.request.get(`${baseUrl}/api/portability/wishlists.json`, { maxRedirects: 0 });
+    if (anonymousExport.status() === 200) {
+      throw new Error("A signed-out visitor downloaded an export.");
+    }
+    const forgedImport = await owner.request.post(`${baseUrl}/api/portability/wishlists/import`, {
+      multipart: { file: { name: "x.json", mimeType: "application/json", buffer: Buffer.from(exported.text) } },
+      maxRedirects: 0
+    });
+    if (forgedImport.status() !== 400) {
+      throw new Error(`An import without an antiforgery token returned ${forgedImport.status()}.`);
+    }
+    assertions.push("the JSON export holds only the caller's lists, and signed-out or forged requests are refused");
+
+    // Import the file back, with an unsafe link slipped in.
+    exportedList.items.push({ name: "Sneaky link", url: "javascript:alert(1)", status: "active" });
+    const importForm = page.getByTestId("import-wishlists-form");
+    await importForm.locator("input[type=file]").setInputFiles({
+      name: "openwish-wishlists.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({ ...exportFile, lists: [exportedList] }))
+    });
+    await importForm.getByRole("button", { name: "Import", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "Imported 1 list with 3 ideas." }).waitFor({ state: "visible" });
+    const imported = (await json(owner, "GET", "/api/wishlists")).find(list => list.name === importedName);
+    if (!imported || !imported.isPrivate) {
+      throw new Error(`The imported list is missing or not private: ${JSON.stringify(imported)}`);
+    }
+    createdLists.push(imported.publicId);
+    const importedItems = await json(owner, "GET", `/api/wishlists/${imported.publicId}/items`);
+    if (importedItems.length !== 3 || importedItems.some(item => item.url?.startsWith("javascript:"))) {
+      throw new Error(`The imported ideas are wrong: ${JSON.stringify(importedItems)}`);
+    }
+    if ((await json(jordan, "GET", "/api/wishlists/friends")).some(list => list.name === importedName)) {
+      throw new Error("An imported list was visible to a friend.");
+    }
+    await screenshot(page, "personal-data-import.png");
+    assertions.push("an exported file imports as a new private list with unsafe links dropped, invisible to friends");
+
+    await importForm.locator("input[type=file]").setInputFiles({
+      name: "notes.json", mimeType: "application/json", buffer: Buffer.from("{\"hello\":1}")
+    });
+    await importForm.getByRole("button", { name: "Import", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "That file is not an OpenWish wishlist export." }).waitFor({ state: "visible" });
+    assertions.push("a file that is not an OpenWish export is rejected with a clear message");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${baseUrl}/Account/Manage/PersonalData`, { waitUntil: "domcontentloaded" });
+    await page.getByTestId("export-wishlists").waitFor({ state: "visible" });
+    await assertNoHorizontalScroll(page, "Personal data portability");
+    await assertMinimumTouchTarget(page.getByTestId("export-wishlists"), "Mobile export action");
+    await screenshot(page, "personal-data-portability-mobile.png");
+  } finally {
+    for (const publicId of createdLists) {
+      await owner.request.delete(`${baseUrl}/api/wishlists/${publicId}`);
+    }
+  }
+
+  for (const { browserErrors, failedResponses } of diagnostics) {
+    if (browserErrors.length > 0 || failedResponses.length > 0) {
+      throw new Error(`Data portability journey errors: ${browserErrors.join(" | ")} ${failedResponses.join(" | ")}`);
+    }
+  }
+  await owner.close();
+  await jordan.close();
+  await anonymous.close();
+  results.push({ scenario: "data-portability", loginStatus, assertions });
+}
+
 // A real HTTP server on loopback inside the verifier container plays the third-party app.
 const fakeAppPort = 4455;
 const connectedApp = {
@@ -6627,6 +6804,7 @@ try {
     await verifyOccasionRemindersJourney(browser, manifest, results);
     await verifyMobileJourney(browser, manifest, results);
     await verifyCirclesJourney(browser, manifest, results);
+    await verifyDataPortabilityJourney(browser, results);
     await verifyUnsharedMatchWishlist(browser, manifest, results);
     await verifyFamilyExchangeJourney(browser, results);
     await verifyFirstMatchOpening(browser, results);

@@ -101,6 +101,20 @@ window.openWishCopyText = async function (text) {
     }
 };
 
+window.openWishDownloadText = function (fileName, text, mimeType) {
+    // The byte order mark lets spreadsheets read non-ASCII names as UTF-8.
+    const blob = new Blob(["\uFEFF", text], { type: `${mimeType};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 window.openWishScrollToElement = function (id) {
     const element = document.getElementById(id);
     if (!element) {

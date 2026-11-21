@@ -68,6 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IGiftPlanService, GiftPlanService>();
+        services.AddScoped<IWishlistPortabilityService, WishlistPortabilityService>();
         services.AddScoped<IBirthdayService, BirthdayService>();
         services.AddScoped<IGiftProfileService, GiftProfileService>();
 

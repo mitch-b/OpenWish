@@ -9,48 +9,41 @@
 
 <div class="container page-shell">
     <PageHeader Title="Friends"
-                Description="Connect with friends and manage trusted sharing relationships." />
+                Description="Connect with friends and choose who you share wishlists with." />
 
-    <div class="friends-layout">
-        <div>
-            <div class="card friends-panel mb-4" data-testid="friend-requests-panel">
-                <div class="card-body">
-                    <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
-                </div>
-            </div>
-
-            <div class="card friends-panel mb-4">
-                <div class="card-body">
-                    <FriendSearch OnInvitesSent="HandleRequestSent" />
-                </div>
-            </div>
-            
-            <div class="card friends-panel mb-4">
-                <div class="card-body">
-                    <ConnectInPerson />
-                </div>
-            </div>
-
+    <PageSections Label="Friends sections" Items="Sections" Active="@ActiveSection">
+        <div class="page-section-panel" hidden="@(ActiveSection != "friends")">
+            <FriendList @ref="_friendList" OnFriendRemoved="HandleFriendRemoved" />
+        </div>
+        <div class="page-section-panel" hidden="@(ActiveSection != "requests")" data-testid="friend-requests-panel">
+            <FriendRequestList @ref="_requestList" OnFriendshipsChanged="HandleFriendshipsChanged" />
+        </div>
+        <div class="page-section-panel" hidden="@(ActiveSection != "invite")">
+            <FriendSearch OnInvitesSent="HandleRequestSent" />
             <FriendSuggestions OnRequestSent="HandleRequestSent" />
         </div>
-        
-        <div>
-            <div class="card friends-panel mb-4">
-                <div class="card-body">
-                    <FriendList @ref="_friendList" OnFriendRemoved="HandleFriendRemoved" />
-                </div>
-            </div>
-
-            <div class="card friends-panel">
-                <div class="card-body">
-                    <CirclesPanel @ref="_circlesPanel" OnCirclesChanged="HandleCirclesChanged" />
-                </div>
-            </div>
+        <div class="page-section-panel" hidden="@(ActiveSection != "in-person")">
+            <ConnectInPerson />
         </div>
-    </div>
+        <div class="page-section-panel" hidden="@(ActiveSection != "circles")">
+            <CirclesPanel @ref="_circlesPanel" OnCirclesChanged="HandleCirclesChanged" />
+        </div>
+    </PageSections>
 </div>
 
 @code {
+    private static readonly PageSection[] Sections =
+    [
+        new("friends", "My friends", "people"),
+        new("requests", "Requests", "envelope"),
+        new("invite", "Invite friends", "person-plus"),
+        new("in-person", "Connect in person", "link-45deg"),
+        new("circles", "Circles", "people"),
+    ];
+
+    [SupplyParameterFromQuery(Name = "section")] public string? Section { get; set; }
+    private string ActiveSection => Sections.FirstOrDefault(item => item.Id == Section)?.Id ?? "friends";
+
     private FriendList? _friendList;
     private FriendRequestList? _requestList;
     private CirclesPanel? _circlesPanel;

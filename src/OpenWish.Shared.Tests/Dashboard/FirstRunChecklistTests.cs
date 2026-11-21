@@ -38,4 +38,13 @@ public class FirstRunChecklistTests
 
         Assert.All(hrefs, href => Assert.StartsWith("/", href));
     }
+
+    [Fact]
+    public void FindFriends_OpensTheInvitationSection()
+    {
+        var checklist = new FirstRunChecklist(false, false, false, false, false);
+        var friendStep = Assert.Single(checklist.Steps, step => step.Key == "friend");
+
+        Assert.Equal("/friends?section=invite", friendStep.Href);
+    }
 }

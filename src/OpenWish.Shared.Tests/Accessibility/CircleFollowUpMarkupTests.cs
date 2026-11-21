@@ -39,7 +39,7 @@ public class CircleFollowUpMarkupTests
     {
         var markup = Read("Social", "CirclesPanel.razor");
 
-        Assert.Contains("/wishlists/@Uri.EscapeDataString(list.PublicId)/manage", markup, StringComparison.Ordinal);
+        Assert.Contains("/wishlists/{Uri.EscapeDataString(list.PublicId)}/manage?section=sharing", markup, StringComparison.Ordinal);
     }
 
     [Fact]

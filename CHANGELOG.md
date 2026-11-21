@@ -2,6 +2,15 @@
 
 All notable user-facing changes to OpenWish are documented here.
 
+## [Unreleased]
+
+### Improved
+
+- Friends, gift exchanges, event and wishlist settings, and account settings
+  now use the same section menu. Each task opens separately, and the menu
+  moves above the content on smaller screens. Running an event again is
+  offered only after its event day has passed.
+
 ## [0.21.0] - 2026-11-21
 
 ### Added

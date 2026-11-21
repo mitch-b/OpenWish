@@ -252,7 +252,7 @@ public class DashboardWelcomeTests
 
         Assert.Equal(DashboardWelcomeKind.FriendRequest, welcome.Kind);
         Assert.Equal("TaylorDemo sent you a friend request.", welcome.Headline);
-        Assert.Equal(new DashboardAction("Review request", "/friends", "person-plus"), welcome.PrimaryAction);
+        Assert.Equal(new DashboardAction("Review request", "/friends?section=requests", "person-plus"), welcome.PrimaryAction);
     }
 
     [Fact]

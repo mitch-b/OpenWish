@@ -11,7 +11,7 @@ public sealed record FirstRunChecklist(bool HasWishlist, bool HasIdea, bool HasF
     [
         new("wishlist", "Create a wishlist", "A home for the gifts you'd love to get.", "/wishlists/new", "Create wishlist", HasWishlist),
         new("idea", "Add your first idea", "Paste a store link or type a note.", "/add", "Add idea", HasIdea),
-        new("friend", "Add a friend", "Invite someone you already know.", "/friends", "Find friends", HasFriend),
+        new("friend", "Add a friend", "Invite someone you already know.", "/friends?section=invite", "Find friends", HasFriend),
         new("event", "Join or create an event", "Plan a gift exchange or an occasion.", "/events/new", "Create event", HasEvent)
     ];
 

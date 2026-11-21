@@ -18,20 +18,14 @@
 
 <PageTitle>@(_wishlist is null ? "Manage wishlist" : $"Manage {_wishlist.Name}")</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3">Manage wishlist</h1>
-    <div class="btn-group">
+<div class="container page-shell">
+<PageHeader Title="Manage wishlist" Description="@_wishlist?.Name">
+    <Actions>
         <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
             <OpenWishIcon Name="arrow-left" /> Back to wishlist
         </a>
-        @if (_isOwner)
-        {
-            <button class="btn btn-danger" type="button" @onclick="ShowDeleteDialog">
-                <OpenWishIcon Name="trash" /> Delete wishlist
-            </button>
-        }
-    </div>
-</div>
+    </Actions>
+</PageHeader>
 
 @if (_loadingWishlist)
 {
@@ -63,13 +57,13 @@ else if (!_isOwner)
 }
 else
 {
-    <div class="card">
-        <div class="card-body">
+    <PageSections Label="Wishlist settings sections" Items="Sections" Active="@ActiveSection">
+        <div class="page-section-panel" hidden="@(ActiveSection != "details")">
+            <h2 class="h4">Wishlist details</h2>
             <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
         </div>
-    </div>
 
-    <div class="card mt-4 friends-access-card"
+    <div class="page-section-panel friends-access-card" hidden="@(ActiveSection != "sharing")"
          aria-busy="@(_loadingFriendsWithAccess || _loadingAvailableFriends || _sharingBusy ? "true" : "false")">
         <div class="card-body">
             <div class="section-header">
@@ -118,7 +112,7 @@ else
                         <div class="empty-icon"><OpenWishIcon Name="people" /></div>
                         <h3 class="h5">Build your circle</h3>
                         <p>Add friends to start sharing this wishlist.</p>
-                        <a href="/friends" class="btn btn-primary btn-fun">
+                        <a href="/friends?section=invite" class="btn btn-primary btn-fun">
                             <OpenWishIcon Name="person-plus" /> Find friends
                         </a>
                     }
@@ -238,7 +232,7 @@ else
                     @if (_circles.Count == 0)
                     {
                         <p class="text-muted mb-0">Group friends into a circle, like Family, to share this list with all of them at once.
-                            <a href="/friends">Create a circle</a></p>
+                            <a href="/friends?section=circles">Create a circle</a></p>
                     }
                     else
                     {
@@ -305,7 +299,7 @@ else
         </div>
     </div>
 
-    <div class="card mt-4" aria-busy="@(_loadingEvents || _eventBusy ? "true" : "false")">
+    <div class="page-section-panel" hidden="@(ActiveSection != "event")" aria-busy="@(_loadingEvents || _eventBusy ? "true" : "false")">
         <div class="card-body">
             <h2 class="h5">Event connection</h2>
 
@@ -386,12 +380,32 @@ else
             }
         </div>
     </div>
+        <div class="page-section-panel" hidden="@(ActiveSection != "delete")">
+            <h2 class="h4">Delete wishlist</h2>
+            <p>Remove this wishlist and its gift ideas. This cannot be undone.</p>
+            <button class="btn btn-outline-danger" type="button" @onclick="ShowDeleteDialog">
+                <OpenWishIcon Name="trash" /> Delete wishlist
+            </button>
+        </div>
+    </PageSections>
 }
+</div>
 
 <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDeleteWishlist" />
 
 
 @code {
+    private static readonly PageSection[] Sections =
+    [
+        new("details", "Wishlist details", "gear"),
+        new("sharing", "Sharing", "people"),
+        new("event", "Event connection", "calendar-event"),
+        new("delete", "Delete wishlist", "trash"),
+    ];
+
+    [SupplyParameterFromQuery(Name = "section")] public string? Section { get; set; }
+    private string ActiveSection => Sections.FirstOrDefault(item => item.Id == Section)?.Id ?? "details";
+
     [Parameter]
     public string WishlistId { get; set; } = string.Empty;
 

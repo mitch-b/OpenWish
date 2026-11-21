@@ -569,7 +569,7 @@ html {
 }
 
 body {
-    min-width: 320px;
+    min-width: min(320px, 100%);
     letter-spacing: -0.01em;
     background:
         radial-gradient(circle at 82% -10%, color-mix(in srgb, var(--color-primary-bg) 8%, transparent), transparent 28rem),

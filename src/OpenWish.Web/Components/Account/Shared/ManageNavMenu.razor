@@ -1,45 +1,55 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @using OpenWish.Data.Entities
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
 
-<nav aria-label="Account settings">
-<ul class="nav nav-pills flex-column">
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage" Match="NavLinkMatch.All">Profile</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/GiftProfile">Gift profile</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/Email">Email</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/ChangePassword">Password</NavLink>
-    </li>
-    @if (hasExternalLogins)
-    {
-        <li class="nav-item">
-            <NavLink class="nav-link" href="Account/Manage/ExternalLogins">External logins</NavLink>
-        </li>
-    }
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/TwoFactorAuthentication">Two-factor authentication</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/ConnectedApps">Integrations</NavLink>
-    </li>
-    <li class="nav-item">
-        <NavLink class="nav-link" href="Account/Manage/PersonalData">Personal data</NavLink>
-    </li>
-</ul>
-</nav>
+<PageSections Label="Account settings" Items="Sections" Active="@ActiveSection">
+    @ChildContent
+</PageSections>
 
 @code {
-    private bool hasExternalLogins;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _hasExternalLogins;
+    private IReadOnlyList<PageSection> Sections =>
+    [
+        new("", "Profile", "person-circle", "/Account/Manage"),
+        new("GiftProfile", "Gift hints", "gift", "/Account/Manage/GiftProfile"),
+        new("Birthday", "Birthday", "calendar-event", "/Account/Manage/GiftProfile?section=birthday"),
+        new("Email", "Email", "envelope", "/Account/Manage/Email"),
+        new("ChangePassword", "Password", "lock", "/Account/Manage/ChangePassword"),
+        .. (_hasExternalLogins ? new PageSection[] { new("ExternalLogins", "External logins", "link-45deg", "/Account/Manage/ExternalLogins") } : []),
+        new("TwoFactorAuthentication", "Two-factor authentication", "shield-check", "/Account/Manage/TwoFactorAuthentication"),
+        new("ConnectedApps", "Integrations", "link-45deg", "/Account/Manage/ConnectedApps"),
+        new("PersonalData", "Personal data", "clipboard", "/Account/Manage/PersonalData"),
+        new("WishlistTransfer", "Wishlist import and export", "download", "/Account/Manage/PersonalData?section=wishlists"),
+    ];
+
+    private string ActiveSection
+    {
+        get
+        {
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+            var path = Navigation.ToBaseRelativePath(uri.GetLeftPart(UriPartial.Path)).TrimEnd('/');
+            var page = path.Length > "Account/Manage".Length ? path[("Account/Manage".Length + 1)..] : "";
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("section", out var section);
+            if (page.Equals("GiftProfile", StringComparison.OrdinalIgnoreCase) && section == "birthday")
+            {
+                return "Birthday";
+            }
+
+            if (page.Equals("PersonalData", StringComparison.OrdinalIgnoreCase) && section == "wishlists")
+            {
+                return "WishlistTransfer";
+            }
+
+            return Sections.FirstOrDefault(item => item.Id.Equals(page, StringComparison.OrdinalIgnoreCase))?.Id ?? page;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+        _hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
     }
 }

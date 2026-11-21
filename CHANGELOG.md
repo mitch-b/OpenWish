@@ -11,6 +11,11 @@ All notable user-facing changes to OpenWish are documented here.
   moves above the content on smaller screens. Running an event again is
   offered only after its event day has passed.
 
+### Fixed
+
+- Download CSV buttons for wishlists, the gift plan, and events stay disabled
+  until the page is ready, so an early click is no longer silently ignored.
+
 ## [0.21.0] - 2026-11-21
 
 ### Added

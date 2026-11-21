@@ -84,7 +84,8 @@ else
                     <OpenWishIcon Name="list-check" />
                     <span class="btn-text">Print</span>
                 </button>
-                <button id="download-wishlist-csv" class="btn btn-outline-secondary" type="button" @onclick="DownloadWishlistCsv">
+                <button id="download-wishlist-csv" class="btn btn-outline-secondary" type="button"
+                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadWishlistCsv">
                     <OpenWishIcon Name="download" />
                     <span class="btn-text">Download CSV</span>
                 </button>

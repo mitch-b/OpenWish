@@ -5624,20 +5624,23 @@ async function verifyMobileJourney(browser, manifest, results) {
   const mobileViewToggle = page.getByRole("group", { name: "Wishlist view" });
   const [addItemPosition, controlsOverlap] = await Promise.all([
     mobileAddItem.evaluate(element => getComputedStyle(element).position),
-    page.evaluate(() => {
+    // Hydration can briefly replace the prerendered actions, so wait until both are present.
+    page.waitForFunction(() => {
       const addItem = document.querySelector("#add-wishlist-item")?.getBoundingClientRect();
       const viewToggle = document.querySelector(".view-toggle")?.getBoundingClientRect();
       if (!addItem || !viewToggle) {
-        throw new Error("Mobile wishlist actions were not rendered.");
+        return null;
       }
 
-      return !(
-        addItem.right <= viewToggle.left ||
-        addItem.left >= viewToggle.right ||
-        addItem.bottom <= viewToggle.top ||
-        addItem.top >= viewToggle.bottom
-      );
-    })
+      return {
+        overlap: !(
+          addItem.right <= viewToggle.left ||
+          addItem.left >= viewToggle.right ||
+          addItem.bottom <= viewToggle.top ||
+          addItem.top >= viewToggle.bottom
+        )
+      };
+    }).then(handle => handle.jsonValue()).then(result => result.overlap)
   ]);
   if (addItemPosition === "fixed" || controlsOverlap) {
     throw new Error("The mobile add-item action obscured the wishlist view controls.");

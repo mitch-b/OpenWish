@@ -6851,8 +6851,28 @@ async function verifyAppInstall(browser, results) {
   const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, colorScheme: "light" });
   try {
     await desktop.addInitScript(manualInstall);
-    await login(desktop, "owner", ownerEmail);
     const page = await desktop.newPage();
+    await page.goto(`${baseUrl}/`);
+    if (await page.title() !== "OpenWish") {
+      throw new Error("The homepage title should name a saved shortcut OpenWish.");
+    }
+    const manifestUrl = new URL(await page.locator('link[rel="manifest"]').getAttribute("href"), page.url());
+    const manifestResponse = await desktop.request.get(manifestUrl.href);
+    const manifest = await manifestResponse.json();
+    const iconUrl = new URL(await page.locator('link[rel="icon"]').getAttribute("href"), page.url());
+    const icon = manifest.icons.find(icon => icon.purpose === "any" && icon.sizes === "192x192");
+    if (manifest.name !== "OpenWish" || manifest.short_name !== await page.title() || !icon) {
+      throw new Error("The installed app and homepage shortcut should share the OpenWish name.");
+    }
+    const [shortcutIcon, appIcon] = await Promise.all([
+      desktop.request.get(iconUrl.href),
+      desktop.request.get(new URL(icon.src, manifestUrl).href)
+    ]);
+    if (!shortcutIcon.ok() || !appIcon.ok() || shortcutIcon.headers()["content-type"] !== "image/png" ||
+        !(await shortcutIcon.body()).equals(await appIcon.body())) {
+      throw new Error("The homepage favicon should serve the same PNG artwork as the app icon.");
+    }
+    await login(desktop, "owner", ownerEmail);
     await page.goto(`${baseUrl}/Account/Manage`);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator(bannerSelector).waitFor({ state: "hidden" });
@@ -6904,6 +6924,7 @@ async function verifyAppInstall(browser, results) {
     await android.close();
   }
   results.push({ scenario: "app-install", assertions: [
+    "installed apps and homepage shortcuts share the OpenWish name and icon",
     "iPhone Home Screen instructions, persistent dismissal, and standalone mode",
     "Account install tab remains available after dismissal; narrow desktop windows are not prompted",
     "the native install offer is invoked from both the Android banner and Account settings"

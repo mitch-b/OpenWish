@@ -589,6 +589,49 @@ async function assertTextContrast(locator, description) {
   }
 }
 
+async function assertNavigationTheme(page, theme) {
+  const navigation = page.locator("#primary-navigation");
+  const link = navigation.getByRole("link", { name: "Wishlists", exact: true });
+  const footerLink = navigation.getByRole("link", { name: "What's new", exact: true });
+  await link.waitFor({ state: "visible" });
+  await Promise.all([link, footerLink].map(target => target.evaluate(async element => {
+    getComputedStyle(element).color;
+    await Promise.all(element.getAnimations().map(animation => animation.finished));
+  })));
+  const { foreground, backgrounds, footerColor } = await navigation.evaluate(panel => {
+    const surface = matchMedia("(min-width: 641px)").matches ? panel.closest(".sidebar") : panel;
+    const parse = color => color.match(/[\d.]+/g).slice(0, 3).map(Number);
+    const gradientColors = getComputedStyle(surface).backgroundImage.match(/rgba?\([^)]+\)/g) ?? [];
+    return {
+      foreground: parse(getComputedStyle(panel.querySelector('a[href="wishlists"]')).color),
+      backgrounds: gradientColors.slice(-2).map(parse),
+      footerColor: parse(getComputedStyle(panel.querySelector('a[href="whats-new"]')).color)
+    };
+  });
+  const luminance = color => {
+    const channels = color.map(value => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  };
+  if (backgrounds.length !== 2 ||
+      backgrounds.some(color => theme === "light" ? luminance(color) < 0.7 : luminance(color) > 0.1)) {
+    throw new Error(`${theme} navigation did not use a matching surface.`);
+  }
+  for (const background of backgrounds) {
+    const levels = [luminance(foreground), luminance(background)];
+    const contrast = (Math.max(...levels) + 0.05) / (Math.min(...levels) + 0.05);
+    if (contrast < 4.5) {
+      throw new Error(`${theme} navigation contrast was ${contrast.toFixed(2)}:1.`);
+    }
+  }
+  if (foreground.join() !== footerColor.join()) {
+    throw new Error(`${theme} navigation footer did not use the same text color as its links.`);
+  }
+  await assertMinimumTouchTarget(footerLink, `${theme} navigation footer link`);
+}
+
 async function verifyWishlistCardNavigation(page, manifest, visitedRoutes, screenshotPrefix) {
   const route = `/wishlists/${manifest.wishlistPublicId}`;
   const link = page.locator(".wishlist-card-link", { hasText: "Family Gift Ideas" });
@@ -998,8 +1041,14 @@ async function verifyOwnerJourney(browser, manifest, results) {
     throw new Error("The dashboard welcome did not link to the upcoming event.");
   }
   await assertMinimumTouchTarget(openEventAction, "Dashboard welcome action");
+  await page.evaluate(() => window.theme.apply("light"));
+  await assertNavigationTheme(page, "light");
   await screenshot(page, "home-dashboard.png");
   await screenshot(page, "readme-home.png", false);
+  await page.evaluate(() => window.theme.apply("dark"));
+  await assertNavigationTheme(page, "dark");
+  await screenshot(page, "navigation-desktop-dark.png");
+  await page.evaluate(() => window.theme.apply("light"));
 
   await visit(page, "/wishlists", "Keep your ideas handy and browse lists friends shared.", visitedRoutes);
   const ownedWishlistsResponse = await context.request.get(`${baseUrl}/api/wishlists`);
@@ -2188,6 +2237,10 @@ async function verifyOwnerJourney(browser, manifest, results) {
   );
 
   await visit(page, "/whats-new", "What's new", visitedRoutes);
+  const whatsNewLink = page.locator("#primary-navigation").getByRole("link", { name: "What's new", exact: true });
+  if (await whatsNewLink.evaluate(link => getComputedStyle(link).boxShadow === "none")) {
+    throw new Error("The current footer destination did not show an active navigation indicator.");
+  }
   if (!releaseVersion) {
     throw new Error("OPENWISH_RELEASE_VERSION must be set for release verification.");
   }
@@ -5607,12 +5660,17 @@ async function verifyMobileJourney(browser, manifest, results) {
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("The closed mobile navigation did not expose its collapsed state.");
   }
+  await page.evaluate(() => window.theme.apply("light"));
   await navigationToggle.check({ force: true });
   if (await navigationToggle.getAttribute("aria-expanded") !== "true") {
     throw new Error("Opening mobile navigation did not expose its expanded state.");
   }
-  await page.getByRole("link", { name: "Wishlists", exact: true }).waitFor({ state: "visible" });
+  await assertNavigationTheme(page, "light");
   await screenshot(page, "navigation-mobile.png");
+  await page.evaluate(() => window.theme.apply("dark"));
+  await assertNavigationTheme(page, "dark");
+  await screenshot(page, "navigation-mobile-dark.png");
+  await page.evaluate(() => window.theme.apply("light"));
   await navigationToggle.uncheck({ force: true });
   if (await navigationToggle.getAttribute("aria-expanded") !== "false") {
     throw new Error("Closing mobile navigation did not expose its collapsed state.");

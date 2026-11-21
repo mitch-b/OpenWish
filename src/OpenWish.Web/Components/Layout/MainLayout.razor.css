@@ -15,7 +15,7 @@
     position: relative;
     z-index: 1020;
     background:
-        radial-gradient(circle at 20% 8%, rgba(113,96,220,.24), transparent 15rem),
+        radial-gradient(circle at 20% 8%, var(--color-sidebar-glow), transparent 15rem),
         linear-gradient(165deg, var(--color-sidebar-gradient-start), var(--color-sidebar-gradient-end));
 }
 

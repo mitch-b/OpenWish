@@ -14,8 +14,9 @@
     --color-accent-soft: #fff0f2;
     --color-top-row-bg: rgba(247,247,251,0.88);
     --color-top-row-border: #e4e5ed;
-    --color-sidebar-gradient-start: #191a33;
-    --color-sidebar-gradient-end: #241532;
+    --color-sidebar-gradient-start: #fbfaff;
+    --color-sidebar-gradient-end: #f0eef8;
+    --color-sidebar-glow: rgba(91,77,204,.07);
     --color-error-bg: #b32121;
     --color-error-text: #ffffff;
     --color-border: #d9dce7;
@@ -28,12 +29,17 @@
     --shadow-md: 0 12px 32px rgba(28,32,51,.10);
     --shadow-lg: 0 24px 64px rgba(28,32,51,.16);
     /* Navigation */
-    /* Navigation text on dark gradient sidebar needs light contrast */
-    --color-nav-text: #f8f9fa;
+    --color-nav-text: #38354d;
     --color-nav-icon: #ffffff;
-    --color-nav-active-bg: rgba(255,255,255,0.16);
-    --color-nav-hover-bg: rgba(255,255,255,0.1);
-    --color-nav-divider: rgba(255,255,255,0.2);
+    --color-nav-item-icon: #655f7d;
+    --color-nav-active-bg: #e9e6fb;
+    --color-nav-active-text: #41368c;
+    --color-nav-active-indicator: #5b4dcc;
+    --color-nav-hover-bg: rgba(72,59,137,.08);
+    --color-nav-divider: #dedce8;
+    --color-nav-brand-mark-bg: #eeecff;
+    --color-nav-brand-mark-border: #ded9fa;
+    --color-nav-header-border: rgba(56,53,77,.12);
     --color-nav-toggle-border: rgba(27,31,35,0.35);
     --color-nav-toggle-bg: rgba(27,31,35,0.08);
     --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='%231b1f23' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
@@ -115,6 +121,7 @@
     --color-top-row-border: #292d40;
     --color-sidebar-gradient-start: #15172d;
     --color-sidebar-gradient-end: #24152f;
+    --color-sidebar-glow: rgba(113,96,220,.24);
     --color-error-bg: #b32121;
     --color-error-text: #ffffff;
     --color-border: #34384d;
@@ -129,9 +136,15 @@
     /* Navigation */
     --color-nav-text: #d7d7d7;
     --color-nav-icon: #ffffff;
-    --color-nav-active-bg: rgba(255,255,255,0.25);
+    --color-nav-item-icon: #ffffff;
+    --color-nav-active-bg: linear-gradient(90deg, rgba(123,107,231,.32), rgba(123,107,231,.14));
+    --color-nav-active-text: #ffffff;
+    --color-nav-active-indicator: #b4abff;
     --color-nav-hover-bg: rgba(255,255,255,0.12);
     --color-nav-divider: rgba(255,255,255,0.2);
+    --color-nav-brand-mark-bg: rgba(255,255,255,.08);
+    --color-nav-brand-mark-border: rgba(255,255,255,.14);
+    --color-nav-header-border: rgba(255,255,255,.1);
     --color-nav-toggle-border: rgba(255,255,255,0.2);
     --color-nav-toggle-bg: rgba(255,255,255,0.08);
     --nav-toggle-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(255,255,255,0.85)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");

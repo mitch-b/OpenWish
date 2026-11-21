@@ -156,7 +156,7 @@
     padding: 0.45rem 0.8rem;
     color: var(--color-nav-text);
     font-size: 0.72rem;
-    opacity: .58;
+    opacity: var(--nav-version-opacity);
 }
 
 @media (min-width: 641px) {

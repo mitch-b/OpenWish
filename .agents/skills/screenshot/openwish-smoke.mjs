@@ -598,14 +598,18 @@ async function assertNavigationTheme(page, theme) {
     getComputedStyle(element).color;
     await Promise.all(element.getAnimations().map(animation => animation.finished));
   })));
-  const { foreground, backgrounds, footerColor } = await navigation.evaluate(panel => {
+  const { foreground, backgrounds, footerColor, versionColor, versionOpacity } = await navigation.evaluate(panel => {
     const surface = matchMedia("(min-width: 641px)").matches ? panel.closest(".sidebar") : panel;
     const parse = color => color.match(/[\d.]+/g).slice(0, 3).map(Number);
     const gradientColors = getComputedStyle(surface).backgroundImage.match(/rgba?\([^)]+\)/g) ?? [];
+    const versionStyle = getComputedStyle(panel.querySelector(".nav-footer .version"));
+    const versionChannels = versionStyle.color.match(/[\d.]+/g).map(Number);
     return {
       foreground: parse(getComputedStyle(panel.querySelector('a[href="wishlists"]')).color),
       backgrounds: gradientColors.slice(-2).map(parse),
-      footerColor: parse(getComputedStyle(panel.querySelector('a[href="whats-new"]')).color)
+      footerColor: parse(getComputedStyle(panel.querySelector('a[href="whats-new"]')).color),
+      versionColor: versionChannels.slice(0, 3),
+      versionOpacity: (versionChannels[3] ?? 1) * Number(versionStyle.opacity)
     };
   });
   const luminance = color => {
@@ -620,10 +624,14 @@ async function assertNavigationTheme(page, theme) {
     throw new Error(`${theme} navigation did not use a matching surface.`);
   }
   for (const background of backgrounds) {
-    const levels = [luminance(foreground), luminance(background)];
-    const contrast = (Math.max(...levels) + 0.05) / (Math.min(...levels) + 0.05);
-    if (contrast < 4.5) {
-      throw new Error(`${theme} navigation contrast was ${contrast.toFixed(2)}:1.`);
+    const versionComposite = versionColor.map((channel, index) =>
+      channel * versionOpacity + background[index] * (1 - versionOpacity));
+    for (const [description, color] of [["navigation", foreground], ["navigation version", versionComposite]]) {
+      const levels = [luminance(color), luminance(background)];
+      const contrast = (Math.max(...levels) + 0.05) / (Math.min(...levels) + 0.05);
+      if (contrast < 4.5) {
+        throw new Error(`${theme} ${description} contrast was ${contrast.toFixed(2)}:1.`);
+      }
     }
   }
   if (foreground.join() !== footerColor.join()) {
@@ -5667,6 +5675,8 @@ async function verifyMobileJourney(browser, manifest, results) {
   }
   await assertNavigationTheme(page, "light");
   await screenshot(page, "navigation-mobile.png");
+  await page.locator("#primary-navigation .version").scrollIntoViewIfNeeded();
+  await screenshot(page, "navigation-footer-mobile.png", false, true);
   await page.evaluate(() => window.theme.apply("dark"));
   await assertNavigationTheme(page, "dark");
   await screenshot(page, "navigation-mobile-dark.png");

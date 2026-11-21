@@ -30,6 +30,7 @@
     --shadow-lg: 0 24px 64px rgba(28,32,51,.16);
     /* Navigation */
     --color-nav-text: #38354d;
+    --nav-version-opacity: .8;
     --color-nav-icon: #ffffff;
     --color-nav-item-icon: #655f7d;
     --color-nav-active-bg: #e9e6fb;
@@ -135,6 +136,7 @@
     --shadow-lg: 0 28px 72px rgba(0,0,0,.44);
     /* Navigation */
     --color-nav-text: #d7d7d7;
+    --nav-version-opacity: .58;
     --color-nav-icon: #ffffff;
     --color-nav-item-icon: #ffffff;
     --color-nav-active-bg: linear-gradient(90deg, rgba(123,107,231,.32), rgba(123,107,231,.14));

@@ -52,7 +52,7 @@ public class PortabilityController(IWishlistPortabilityService portabilityServic
 
         if (file.Length > WishlistPortabilityService.MaxFileBytes)
         {
-            return Redirect("Error: That file is too large to import (2 MB at most).");
+            return Redirect("Error: That file is too large to import (25 MB at most).");
         }
 
         try

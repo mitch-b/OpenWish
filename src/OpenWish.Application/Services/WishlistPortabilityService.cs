@@ -19,12 +19,8 @@ public interface IWishlistPortabilityService
 
 public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> contextFactory) : IWishlistPortabilityService
 {
-    public const int MaxFileBytes = 2 * 1024 * 1024;
-    public const int MaxLists = 100;
-    public const int MaxItemsPerList = 1000;
-    private const int MaxNameLength = 200;
-    private const int MaxTextLength = 2000;
-    private const int MaxUrlLength = 2048;
+    // The file size is the only bound, so anything an export writes can be imported again and no value is shortened.
+    public const int MaxFileBytes = 25 * 1024 * 1024;
     private const string ImportedSuffix = " (imported)";
 
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true, MaxDepth = 8 };
@@ -119,9 +115,9 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
             throw new InvalidDataException("That export was made by a newer version of OpenWish and cannot be imported here.");
         }
 
-        if (file.Lists is null || file.Lists.Count > MaxLists || file.Lists.Any(list => list?.Items is { Count: > MaxItemsPerList }))
+        if (file.Lists is null)
         {
-            throw new InvalidDataException($"An import can hold up to {MaxLists} lists with {MaxItemsPerList} ideas each.");
+            throw new InvalidDataException("That file is not an OpenWish wishlist export.");
         }
 
         return file;
@@ -145,7 +141,7 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
         var now = DateTimeOffset.UtcNow;
         foreach (var source in file.Lists.Where(list => list is not null))
         {
-            var name = Clean(source.Name, MaxNameLength);
+            var name = Clean(source.Name);
             var sourceItems = (source.Items ?? []).Where(item => item is not null).ToList();
             if (name is null)
             {
@@ -154,7 +150,7 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
             }
 
             var listName = existingNames.Contains(name)
-                ? Clean(name, MaxNameLength - ImportedSuffix.Length)! + ImportedSuffix
+                ? name + ImportedSuffix
                 : name;
             existingNames.Add(listName);
 
@@ -162,7 +158,7 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
             var wishlist = new Wishlist
             {
                 Name = listName,
-                Icon = Clean(source.Icon, 16),
+                Icon = Clean(source.Icon),
                 OwnerId = userId,
                 IsPrivate = true,
                 Items = []
@@ -193,7 +189,7 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
 
     private static WishlistItem? ToEntity(WishlistExportItem item, int order, DateTimeOffset now)
     {
-        var name = Clean(item.Name, MaxNameLength);
+        var name = Clean(item.Name);
         if (name is null)
         {
             return null;
@@ -205,9 +201,9 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
             Name = name,
             Url = SafeUrl(item.Url),
             Image = SafeUrl(item.Image),
-            Description = Clean(item.Description, MaxTextLength),
+            Description = Clean(item.Description),
             Price = price,
-            WhereToBuy = Clean(item.WhereToBuy, MaxNameLength),
+            WhereToBuy = Clean(item.WhereToBuy),
             Priority = item.Priority is >= 1 and <= 3 ? item.Priority : null,
             IsPrivate = item.IsPrivate,
             IsPinned = item.IsPinned,
@@ -217,21 +213,16 @@ public class WishlistPortabilityService(IDbContextFactory<ApplicationDbContext> 
         };
     }
 
-    private static string? Clean(string? value, int maxLength)
+    private static string? Clean(string? value)
     {
         var trimmed = value?.Trim();
-        if (string.IsNullOrEmpty(trimmed))
-        {
-            return null;
-        }
-
-        return trimmed.Length > maxLength ? trimmed[..maxLength] : trimmed;
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     // Links come from an uploaded file, so only plain web addresses are kept.
     private static string? SafeUrl(string? value)
     {
-        var trimmed = Clean(value, MaxUrlLength);
+        var trimmed = Clean(value);
         return trimmed is not null &&
                Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)

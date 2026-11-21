@@ -106,7 +106,7 @@ public class WishlistPortabilityServiceTests
     }
 
     [Fact]
-    public async Task Import_DropsUnsafeLinksAndClampsValues()
+    public async Task Import_DropsUnsafeLinksAndInvalidNumbers()
     {
         var factory = new TestFactory();
         var file = new WishlistExportFile
@@ -137,7 +137,6 @@ public class WishlistPortabilityServiceTests
         await using var context = factory.CreateDbContext();
         var items = await context.WishlistItems.OrderBy(i => i.OrderIndex).ToListAsync();
         Assert.All(items, item => Assert.Equal((null, null, null, null), (item.Url, item.Image, item.Price, item.Priority)));
-        Assert.Equal(200, (await context.Wishlists.SingleAsync()).Name.Length);
     }
 
     [Fact]
@@ -162,13 +161,34 @@ public class WishlistPortabilityServiceTests
             new WishlistPortabilityService(new TestFactory()).ReadAsync(new MemoryStream(Encoding.UTF8.GetBytes(json))));
 
     [Fact]
-    public async Task Read_RejectsTooManyIdeasInOneList()
+    public async Task Import_KeepsLongValuesIntact()
     {
-        var items = string.Join(',', Enumerable.Repeat("""{"name":"x"}""", WishlistPortabilityService.MaxItemsPerList + 1));
-        var json = $$"""{"format":"openwish-wishlists","version":1,"lists":[{"name":"A","items":[{{items}}]}]}""";
+        var factory = new TestFactory();
+        var description = new string('d', 3000);
+        var url = "https://example.com/p?" + new string('q', 3000);
+        var file = new WishlistExportFile
+        {
+            Lists = [new WishlistExportList { Name = new string('n', 500), Items = [new WishlistExportItem { Name = "Thing", Description = description, Url = url }] }]
+        };
 
-        await Assert.ThrowsAsync<InvalidDataException>(() =>
-            new WishlistPortabilityService(new TestFactory()).ReadAsync(new MemoryStream(Encoding.UTF8.GetBytes(json))));
+        await new WishlistPortabilityService(factory).ImportAsync("me", file);
+
+        await using var context = factory.CreateDbContext();
+        var item = await context.WishlistItems.SingleAsync();
+        Assert.Equal((description, url), (item.Description, item.Url));
+        Assert.Equal(500, (await context.Wishlists.SingleAsync()).Name.Length);
+    }
+
+    [Fact]
+    public async Task Read_AcceptsAnExportWithManyListsAndIdeas()
+    {
+        var items = string.Join(',', Enumerable.Repeat("""{"name":"x"}""", 1500));
+        var lists = string.Join(',', Enumerable.Repeat($$"""{"name":"A","items":[{{items}}]}""", 150));
+        var json = $$"""{"format":"openwish-wishlists","version":1,"lists":[{{lists}}]}""";
+
+        var file = await new WishlistPortabilityService(new TestFactory()).ReadAsync(new MemoryStream(Encoding.UTF8.GetBytes(json)));
+
+        Assert.Equal(150, file.Lists.Count);
     }
 
     private sealed class TestFactory : IDbContextFactory<ApplicationDbContext>

@@ -17,7 +17,7 @@ Roadmap E2, "Export your data": your lists are yours to keep, analyze, and move.
 - **Import.** Choose an exported file on the same page to add its lists as new
   lists. They start private, a list that shares a name with one of yours gets
   " (imported)" added instead of replacing it, and only http and https links are
-  kept. Files up to 2 MB, 100 lists, and 1,000 ideas per list are accepted.
+  kept. Files up to 25 MB are accepted, and nothing in them is shortened.
 
 Spreadsheet cells that begin with `=`, `+`, `-`, or `@` are prefixed with an
 apostrophe so a shared list cannot run a formula on your computer.

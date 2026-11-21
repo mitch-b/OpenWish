@@ -6116,7 +6116,7 @@ async function verifyDataPortabilityJourney(browser, results) {
     // Export every list as JSON from the personal data page.
     await page.goto(`${baseUrl}/Account/Manage/PersonalData`, { waitUntil: "domcontentloaded" });
     await page.getByTestId("export-wishlists").waitFor({ state: "visible" });
-    await screenshot(page, "personal-data-portability.png", true);
+    await screenshot(page, "personal-data-portability.png");
     const exported = await download(page, () => page.getByTestId("export-wishlists").click());
     if (!/^openwish-wishlists-\d{4}-\d{2}-\d{2}\.json$/.test(exported.name)) {
       throw new Error(`The export was named ${exported.name}.`);
@@ -6169,7 +6169,7 @@ async function verifyDataPortabilityJourney(browser, results) {
     if ((await json(jordan, "GET", "/api/wishlists/friends")).some(list => list.name === importedName)) {
       throw new Error("An imported list was visible to a friend.");
     }
-    await screenshot(page, "personal-data-import.png", true);
+    await screenshot(page, "personal-data-import.png");
     assertions.push("an exported file imports as a new private list with unsafe links dropped, invisible to friends");
 
     await importForm.locator("input[type=file]").setInputFiles({
@@ -6184,7 +6184,7 @@ async function verifyDataPortabilityJourney(browser, results) {
     await page.getByTestId("export-wishlists").waitFor({ state: "visible" });
     await assertNoHorizontalScroll(page, "Personal data portability");
     await assertMinimumTouchTarget(page.getByTestId("export-wishlists"), "Mobile export action");
-    await screenshot(page, "personal-data-portability-mobile.png", true);
+    await screenshot(page, "personal-data-portability-mobile.png");
   } finally {
     for (const publicId of createdLists) {
       await owner.request.delete(`${baseUrl}/api/wishlists/${publicId}`);

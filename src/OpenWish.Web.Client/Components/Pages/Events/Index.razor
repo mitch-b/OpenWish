@@ -49,6 +49,16 @@
             </div>
         }
 
+        @if (!string.IsNullOrWhiteSpace(_downloadError))
+        {
+            <div class="alert alert-danger" role="alert">
+                <p class="mb-2">@_downloadError</p>
+                <button class="btn btn-outline-danger btn-sm" type="button" @onclick="DownloadEventsAsync">
+                    Try again
+                </button>
+            </div>
+        }
+
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
             <p class="visually-hidden" role="status" aria-live="polite">@_statusMessage</p>
@@ -100,6 +110,8 @@
         await LoadEventsAsync();
     }
 
+    private string? _downloadError;
+
     private async Task DownloadEventsAsync()
     {
         if (_events is null)
@@ -110,12 +122,13 @@
         try
         {
             await JSRuntime.InvokeVoidAsync("openWishDownloadText", "events.csv", EventsCsv.Build(_events), "text/csv");
+            _downloadError = null;
             _statusMessage = "Events downloaded as a spreadsheet.";
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Could not download events as CSV.");
-            _loadError = "Your events could not be downloaded. Try again.";
+            _downloadError = "Your events could not be downloaded.";
         }
     }
 

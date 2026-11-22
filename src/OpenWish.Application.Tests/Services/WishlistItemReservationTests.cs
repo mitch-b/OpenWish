@@ -291,7 +291,7 @@ public class WishlistItemReservationTests
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ReserveItemByPublicIdAsync(wishlistPublicId, otherItemPublicId, "owner"));
         await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => service.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, otherItemPublicId));
+            () => service.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, otherItemPublicId, "owner"));
     }
 
     private static TestDbContextFactory CreateFactory() =>

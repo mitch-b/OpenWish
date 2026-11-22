@@ -690,6 +690,36 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task RemoveItemFromWishlistByPublicIdAsync_RechecksEditAccess()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var item = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist };
+        var permission = new WishlistPermission { Wishlist = wishlist, UserId = "editor", PermissionType = "Edit" };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            context.WishlistPermissions.Add(permission);
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = factory.CreateDbContext())
+        {
+            (await context.WishlistPermissions.SingleAsync()).Deleted = true;
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.RemoveItemFromWishlistByPublicIdAsync(wishlist.PublicId, item.PublicId, "editor"));
+        await using (var verificationContext = factory.CreateDbContext())
+        {
+            Assert.False((await verificationContext.WishlistItems.SingleAsync()).Deleted);
+        }
+
+    }
+
+    [Fact]
     public async Task RemoveItemFromWishlistAsync_ReconcilesAlreadyDeletedItem()
     {
         var factory = CreateFactory();

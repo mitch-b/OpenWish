@@ -1802,9 +1802,15 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await GetItemReservationAsync(wishlist.Id, itemId, requestingUserId);
     }
 
-    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
     {
         var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        // Interactive Server pages call this directly, so recheck edit access in case it was revoked.
+        if (!await CanUserEditWishlistAsync(wishlistId, userId))
+        {
+            throw new UnauthorizedAccessException("You no longer have permission to edit this wishlist.");
+        }
+
         return await RemoveItemFromWishlistAsync(wishlistId, itemId);
     }
 

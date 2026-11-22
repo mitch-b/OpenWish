@@ -531,7 +531,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
                 return Forbid();
             }
 
-            var result = await _wishlistService.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, itemPublicId);
+            var result = await _wishlistService.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, itemPublicId, userId);
             if (!result)
             {
                 return NotFound();
@@ -541,6 +541,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
     }
 

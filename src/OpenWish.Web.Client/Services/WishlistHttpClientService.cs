@@ -310,8 +310,9 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         return true;
     }
 
-    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
     {
+        _ = userId;
         var response = await _httpClient.DeleteAsync(ItemByPublicIdUrl(wishlistPublicId, itemPublicId));
         response.EnsureSuccessStatusCode();
         return true;

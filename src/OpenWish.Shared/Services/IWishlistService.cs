@@ -359,8 +359,8 @@ public interface IWishlistService
     // Item operations addressed entirely by public identifiers. Interactive WebAssembly
     // components never receive internal integer keys, so they must use these overloads.
 
-    /// <summary>Removes an item from a wishlist by public wishlist and item IDs.</summary>
-    Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId);
+    /// <summary>Removes an item from a wishlist by public wishlist and item IDs after checking the caller can still edit it.</summary>
+    Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId);
 
     /// <summary>Adds a comment to a wishlist item by public wishlist and item IDs.</summary>
     Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId, string text);

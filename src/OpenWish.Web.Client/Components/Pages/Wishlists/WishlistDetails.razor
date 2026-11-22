@@ -1921,7 +1921,7 @@ else
         _deleteItemError = null;
         try
         {
-            var deleted = await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.PublicId);
+            var deleted = await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.PublicId, _currentUserId ?? string.Empty);
             if (!deleted)
             {
                 throw new InvalidOperationException("The delete request was not completed.");
@@ -1937,6 +1937,11 @@ else
             _feedbackIsError = false;
             _itemPendingDeletion = null;
             await _deleteDialog.Close();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _canEdit = false;
+            _deleteItemError = $"{itemName} could not be deleted because you can no longer edit this wishlist.";
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {

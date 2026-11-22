@@ -10,8 +10,8 @@
     </span>
     <h1 id="error-title" tabindex="-1">Something went wrong</h1>
     <p class="status-page-lead">
-        OpenWish couldn't finish that request. Your wishlists, reservations, and events are unchanged.
-        Try again in a moment, or head back to your dashboard.
+        OpenWish couldn't finish that request. Part of it may already have saved, so check the page
+        before you try again, or head back to your dashboard.
     </p>
     <div class="status-page-actions">
         @if (RetryPath is not null)
@@ -56,9 +56,12 @@
         if (failure is not null &&
             HttpMethods.IsGet(HttpContext!.Request.Method) &&
             failure.Path.StartsWith('/') &&
+            !failure.Path.StartsWith("//", StringComparison.Ordinal) &&
+            !failure.Path.StartsWith("/\\", StringComparison.Ordinal) &&
             !failure.Path.Equals("/Error", StringComparison.OrdinalIgnoreCase))
         {
-            RetryPath = failure.Path;
+            // The exception handler rewrites only the path, so the original query string is still here.
+            RetryPath = failure.Path + HttpContext.Request.QueryString;
         }
     }
 }

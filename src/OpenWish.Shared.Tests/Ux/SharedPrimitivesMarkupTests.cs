@@ -54,6 +54,9 @@ public class SharedPrimitivesMarkupTests
         Assert.DoesNotContain("ASPNETCORE_ENVIRONMENT", error, StringComparison.Ordinal);
         Assert.Contains("Try again", error, StringComparison.Ordinal);
         Assert.Contains("Go to dashboard", error, StringComparison.Ordinal);
+        Assert.DoesNotContain("are unchanged", error, StringComparison.Ordinal);
+        Assert.Contains("RetryPath = failure.Path + HttpContext.Request.QueryString;", error, StringComparison.Ordinal);
+        Assert.Contains("!failure.Path.StartsWith(\"//\", StringComparison.Ordinal)", error, StringComparison.Ordinal);
     }
 
     [Fact]

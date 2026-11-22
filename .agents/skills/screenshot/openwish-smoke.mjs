@@ -1,4 +1,4 @@
-import { chromium, devices } from "playwright";
+import { chromium, devices, firefox } from "playwright";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -6927,7 +6927,7 @@ async function verifyAppInstall(browser, results) {
     const manifestUrl = new URL(await page.locator('link[rel="manifest"]').getAttribute("href"), page.url());
     const manifestResponse = await desktop.request.get(manifestUrl.href);
     const manifest = await manifestResponse.json();
-    const iconUrl = new URL(await page.locator('link[rel="icon"]').getAttribute("href"), page.url());
+    const iconUrl = new URL(await page.locator('link[rel="icon"][type="image/png"]').getAttribute("href"), page.url());
     const icon = manifest.icons.find(icon => icon.purpose === "any" && icon.sizes === "192x192");
     if (manifest.name !== "OpenWish" || manifest.short_name !== await page.title() || !icon) {
       throw new Error("The installed app and homepage shortcut should share the OpenWish name.");
@@ -6991,8 +6991,42 @@ async function verifyAppInstall(browser, results) {
   } finally {
     await android.close();
   }
+  const gecko = await firefox.launch();
+  try {
+    const page = await gecko.newPage();
+    await page.goto(`${baseUrl}/`);
+    const fallback = page.locator('link[rel="icon"][type="image/x-icon"]');
+    if (await page.title() !== "OpenWish" || await fallback.getAttribute("href") !== "/favicon.ico") {
+      throw new Error("Firefox did not receive the OpenWish title and root favicon link.");
+    }
+    const response = await page.request.get(`${baseUrl}/favicon.ico`);
+    if (!response.ok() || !/^image\/(?:x-icon|vnd\.microsoft\.icon)(?:;|$)/.test(response.headers()["content-type"] ?? "")) {
+      throw new Error("The root favicon did not serve an ICO image.");
+    }
+    const ico = await response.body();
+    const entries = ico.readUInt16LE(4);
+    const sizes = Array.from({ length: entries }, (_, index) => {
+      const offset = 6 + index * 16;
+      return `${ico[offset] || 256}x${ico[offset + 1] || 256}`;
+    });
+    const declaredSizes = (await fallback.getAttribute("sizes")).split(/\s+/);
+    if (ico.readUInt32LE(0) !== 0x00010000 || sizes.length !== declaredSizes.length ||
+        !declaredSizes.every(size => sizes.includes(size))) {
+      throw new Error("The root favicon does not contain its declared icon sizes.");
+    }
+    const width = await page.evaluate(async () => {
+      const icon = new Image();
+      icon.src = "/favicon.ico";
+      await icon.decode();
+      return icon.naturalWidth;
+    });
+    if (width !== 192) throw new Error(`Firefox decoded an unexpected favicon width: ${width}.`);
+  } finally {
+    await gecko.close();
+  }
   results.push({ scenario: "app-install", assertions: [
     "installed apps and homepage shortcuts share the OpenWish name and icon",
+    "Firefox can decode the multi-size root favicon advertised for browser shortcuts",
     "iPhone Home Screen instructions, persistent dismissal, and standalone mode",
     "Account install tab remains available after dismissal; narrow desktop windows are not prompted",
     "the native install offer is invoked from both the Android banner and Account settings"

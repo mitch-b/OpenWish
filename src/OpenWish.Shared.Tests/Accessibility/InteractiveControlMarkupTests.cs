@@ -1032,8 +1032,8 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("aria-label=\"Remove access for @friendName\"", markup, StringComparison.Ordinal);
         Assert.Contains("<label class=\"form-label\" for=\"friend-access-select\">Friend to share with</label>", markup, StringComparison.Ordinal);
-        Assert.Contains("<h2 class=\"h5 mb-0\">Who can see this?</h2>", markup, StringComparison.Ordinal);
-        Assert.Contains("<h2 class=\"h5\">Event connection</h2>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h4\">Who can see this?</h2>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h4\">Event connection</h2>", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(friendId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Sharing...</span>", markup, StringComparison.Ordinal);

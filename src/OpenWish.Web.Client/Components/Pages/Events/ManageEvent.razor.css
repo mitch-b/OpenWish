@@ -47,8 +47,41 @@
     margin-bottom: 1rem;
 }
 
+.manage-event-participants-locked {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.manage-event-participants-locked ::deep svg {
+    flex: 0 0 auto;
+    margin-top: 0.2rem;
+}
+
+.manage-event-danger-zone {
+    max-width: 40rem;
+    padding: 1rem;
+    border: 1px solid var(--bs-danger-border-subtle);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.manage-event-danger-zone .btn {
+    min-height: 2.75rem;
+}
+
 @media (max-width: 767.98px) {
     .card {
         margin-bottom: 1rem;
+    }
+
+    .page-section-panel ::deep .event-form-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--color-border-muted);
+        background: var(--color-bg);
     }
 }

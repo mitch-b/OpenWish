@@ -8,12 +8,13 @@
         <ValidationSummary class="alert alert-danger" />
     }
 
-    <fieldset class="mb-3" disabled="@LockEventType">
+    <fieldset class="mb-3 event-type-fieldset" disabled="@LockEventType" aria-describedby="@(LockEventType ? "event-type-locked-help" : null)">
         <legend class="form-label fw-bold">What are you planning?</legend>
         <div class="event-type-options">
             <button type="button"
                     class="event-type-option @(Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
                     aria-pressed="@Model.IsGiftExchange"
+                    disabled="@(!RendererInfo.IsInteractive)"
                     @onclick="SelectGiftExchange">
                 <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
                 <span class="event-type-copy">
@@ -24,6 +25,7 @@
             <button type="button"
                     class="event-type-option @(!Model!.IsGiftExchange ? "event-type-option-selected" : string.Empty)"
                     aria-pressed="@(!Model.IsGiftExchange)"
+                    disabled="@(!RendererInfo.IsInteractive)"
                     @onclick="SelectCelebration">
                 <span class="event-type-icon" aria-hidden="true"><OpenWishIcon Name="stars" /></span>
                 <span class="event-type-copy">
@@ -34,7 +36,10 @@
         </div>
         @if (LockEventType)
         {
-            <div class="form-text mt-2">Reset the current assignments before changing the event type.</div>
+            <p id="event-type-locked-help" class="form-text event-type-locked-help mb-0">
+                <OpenWishIcon Name="lock" />
+                <span>Names have been drawn. Reset the draw before changing the event type.</span>
+            </p>
         }
     </fieldset>
 
@@ -47,6 +52,7 @@
                 <button type="button"
                         class="exchange-style-option @(IsSecretSantaStyle ? "exchange-style-option-selected" : string.Empty)"
                         aria-pressed="@IsSecretSantaStyle"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="SelectSecretSantaStyle">
                     <OpenWishIcon Name="stars" />
                     <span><strong>Secret Santa</strong><small>A private holiday name draw.</small></span>
@@ -54,12 +60,51 @@
                 <button type="button"
                         class="exchange-style-option @(!IsSecretSantaStyle ? "exchange-style-option-selected" : string.Empty)"
                         aria-pressed="@(!IsSecretSantaStyle)"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="SelectGiftExchangeStyle">
                     <OpenWishIcon Name="gift" />
                     <span><strong>Gift exchange</strong><small>Flexible for any occasion.</small></span>
                 </button>
             </div>
         </fieldset>
+    }
+
+    <div class="mb-3">
+        <label for="name" class="form-label fw-bold">Event name</label>
+        <InputText id="name" class="form-control form-control-lg"
+                   autofocus="@AutoFocusName"
+                   autocomplete="off"
+                   placeholder="@EventNamePlaceholder" @bind-Value="@Model!.Name" />
+        <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label for="date" class="form-label fw-bold">@DateLabel</label>
+            <InputDate id="date" class="form-control event-date-input" aria-describedby="date-help" @bind-Value="@Model!.Date" />
+            <div id="date-help" class="form-text">@DateHelpText</div>
+            <ValidationMessage For="@(() => Model.Date)" class="text-danger" />
+        </div>
+        <div class="col-md-6">
+            <label for="budget" class="form-label fw-bold">@BudgetLabel <span class="text-muted fw-normal">(optional)</span></label>
+            <div class="input-group event-budget-input">
+                <span class="input-group-text" aria-hidden="true">$</span>
+                <InputNumber id="budget" class="form-control" inputmode="decimal"
+                             placeholder="50" @bind-Value="@Model!.Budget" />
+            </div>
+            <ValidationMessage For="@(() => Model.Budget)" class="text-danger" />
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label fw-bold">Note for your group <span class="text-muted fw-normal">(optional)</span></label>
+        <InputTextArea id="description" class="form-control" rows="3"
+            placeholder="@DescriptionPlaceholder" @bind-Value="@Model!.Description" />
+        <ValidationMessage For="@(() => Model.Description)" class="text-danger" />
+    </div>
+
+    @if (Model!.IsGiftExchange)
+    {
         <details class="exchange-reveal-choice mb-3">
             <summary>
                 <span>Match reveal <small class="text-muted">(optional)</small></span>
@@ -73,37 +118,8 @@
         </details>
     }
 
-    <div class="mb-3">
-        <label for="name" class="form-label fw-bold">Event Name</label>
-        <InputText id="name" class="form-control form-control-lg"
-                   autofocus="@AutoFocusName"
-                   placeholder="@EventNamePlaceholder" @bind-Value="@Model!.Name" />
-        <ValidationMessage For="@(() => Model.Name)" class="text-danger" />
-    </div>
-
-    <div class="mb-3">
-        <label for="description" class="form-label fw-bold">Note for your group <span class="text-muted fw-normal">(optional)</span></label>
-        <InputTextArea id="description" class="form-control" rows="3" 
-            placeholder="@DescriptionPlaceholder" @bind-Value="@Model!.Description" />
-        <ValidationMessage For="@(() => Model.Description)" class="text-danger" />
-    </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-md-6">
-            <label for="date" class="form-label fw-bold">@DateLabel</label>
-            <InputDate id="date" class="form-control" @bind-Value="@Model!.Date" />
-            <div class="form-text">@DateHelpText</div>
-            <ValidationMessage For="@(() => Model.Date)" class="text-danger" />
-        </div>
-        <div class="col-md-6">
-            <label for="budget" class="form-label fw-bold">@BudgetLabel <span class="text-muted fw-normal">(optional)</span></label>
-            <InputNumber id="budget" class="form-control" placeholder="$0.00" @bind-Value="@Model!.Budget" />
-            <ValidationMessage For="@(() => Model.Budget)" class="text-danger" />
-        </div>
-    </div>
-
-    <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary btn-lg" disabled="@IsSubmitting">
+    <div class="event-form-actions">
+        <button type="submit" class="btn btn-primary btn-lg" disabled="@(IsSubmitting || !RendererInfo.IsInteractive)">
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>

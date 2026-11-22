@@ -6,61 +6,89 @@
 
 @if (RevealedOn.HasValue || IsOwner)
 {
-    <section class="exchange-reveal card shadow-sm mb-4" aria-labelledby="exchange-reveal-title" aria-busy="@(_busy ? "true" : "false")" data-testid="exchange-reveal">
-        <div class="card-body">
-            <h2 id="exchange-reveal-title" class="h4">
-                <OpenWishIcon Name="gift" /> Who drew whom
-            </h2>
+    <section class="exchange-reveal" aria-labelledby="exchange-reveal-title" aria-busy="@(_busy || _loading ? "true" : "false")" data-testid="exchange-reveal">
+        <h2 id="exchange-reveal-title" class="exchange-reveal-title">
+            <OpenWishIcon Name="gift" />
+            <span>Who drew whom</span>
+        </h2>
 
-            @if (RevealedOn.HasValue)
+        @if (RevealedOn.HasValue)
+        {
+            <p class="exchange-reveal-lead">The organizer revealed every match on @RevealedOn.Value.ToLocalTime().ToString("MMMM d, yyyy").</p>
+            @if (_loading)
             {
-                <p class="text-muted">The organizer revealed the assignments on @RevealedOn.Value.ToLocalTime().ToString("MMMM d, yyyy").</p>
-                @if (_loading)
-                {
-                    <div role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Loading assignments...</div>
-                }
-                else if (_errorMessage is not null)
-                {
-                    <div class="alert alert-danger" role="alert">
-                        <p class="mb-2">@_errorMessage</p>
-                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="LoadPairings">Try again</button>
-                    </div>
-                }
-                else
-                {
-                    <ul class="reveal-list">
-                        @foreach (var pairing in _pairings)
-                        {
-                            <li><strong>@pairing.GiverName</strong> <span class="reveal-arrow" aria-label="drew">&rarr;</span> <strong>@pairing.ReceiverName</strong></li>
-                        }
-                    </ul>
-                }
+                <div class="exchange-reveal-status" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> <span>Loading who drew whom...</span></div>
             }
-            else if (!IsPast)
+            else if (_errorMessage is not null)
             {
-                <p class="text-muted mb-0">After the event on @EventDate.ToString("MMM d, yyyy"), you can reveal who drew whom to everyone.</p>
+                <div class="alert alert-danger mb-0" role="alert">
+                    <p class="mb-2">@_errorMessage</p>
+                    <button type="button" class="btn btn-outline-danger" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadPairings">Try again</button>
+                </div>
+            }
+            else if (_pairings.Count == 0)
+            {
+                <p class="exchange-reveal-lead mb-0">No matches to show for this exchange.</p>
             }
             else
             {
-                <p class="text-muted">The event has passed. Reveal who drew whom so everyone can see how the exchange played out. Until then, every match stays private.</p>
-                @if (_errorMessage is not null)
-                {
-                    <div class="alert alert-danger" role="alert">@_errorMessage</div>
-                }
-                <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="Reveal">
-                    @if (_busy)
+                <ul class="reveal-list">
+                    @foreach (var pairing in _pairings)
                     {
-                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                        <span>Revealing...</span>
+                        <li>
+                            <span class="reveal-giver">@pairing.GiverName</span>
+                            <span class="reveal-arrow" aria-hidden="true"><OpenWishIcon Name="arrow-right" /></span>
+                            <span class="visually-hidden">drew</span>
+                            <span class="reveal-receiver">@pairing.ReceiverName</span>
+                        </li>
                     }
-                    else
-                    {
-                        <span><OpenWishIcon Name="eye" /> Reveal assignments</span>
-                    }
-                </button>
-                <p class="text-muted small mt-2 mb-0">This is permanent and the exchange can no longer be reset.</p>
+                </ul>
             }
-        </div>
+        }
+        else if (!IsPast)
+        {
+            <p class="exchange-reveal-lead mb-0">Every match stays private for now. After the event on @EventDate.ToString("MMM d, yyyy"), you can reveal who drew whom to the group.</p>
+        }
+        else
+        {
+            <p class="exchange-reveal-lead">The event has passed. Reveal who drew whom so everyone can see how the exchange played out. Until then, every match stays private.</p>
+            @if (_errorMessage is not null)
+            {
+                <div class="alert alert-danger" role="alert">@_errorMessage</div>
+            }
+            @if (_confirming)
+            {
+                <div class="exchange-reveal-confirm" role="group" aria-labelledby="exchange-reveal-confirm-title">
+                    <p id="exchange-reveal-confirm-title" class="exchange-reveal-confirm-title">Show every match to the whole group?</p>
+                    <p class="exchange-reveal-confirm-copy">Everyone in the exchange will see who drew whom. This can't be undone, and the draw can no longer be reset.</p>
+                    <div class="exchange-reveal-actions">
+                        <button type="button" class="btn btn-outline-secondary" id="exchange-reveal-cancel" disabled="@(_busy || !RendererInfo.IsInteractive)" @onclick="CancelReveal">Keep private</button>
+                        <button type="button" class="btn btn-primary" disabled="@(_busy || !RendererInfo.IsInteractive)" @onclick="Reveal">
+                            @if (_busy)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Revealing...</span>
+                            }
+                            else
+                            {
+                                <OpenWishIcon Name="eye" />
+                                <span>Reveal to everyone</span>
+                            }
+                        </button>
+                    </div>
+                    <FocusOnFirstRender ElementId="exchange-reveal-cancel" />
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary exchange-reveal-start" id="exchange-reveal-start" disabled="@(!RendererInfo.IsInteractive)" @onclick="StartReveal">
+                    <OpenWishIcon Name="eye" />
+                    <span>Reveal assignments</span>
+                </button>
+                <p class="exchange-reveal-note">You'll confirm before anything is shared.</p>
+                <FocusOnFirstRender ElementId="exchange-reveal-start" Enabled="@_returnFocus" />
+            }
+        }
     </section>
 }
 
@@ -75,6 +103,8 @@
     private List<RevealedPairingModel> _pairings = [];
     private bool _loading;
     private bool _busy;
+    private bool _confirming;
+    private bool _returnFocus;
     private string? _errorMessage;
     private bool? _loadedForRevealed;
 
@@ -111,6 +141,18 @@
         {
             _loading = false;
         }
+    }
+
+    private void StartReveal()
+    {
+        _errorMessage = null;
+        _confirming = true;
+    }
+
+    private void CancelReveal()
+    {
+        _confirming = false;
+        _returnFocus = true;
     }
 
     private async Task Reveal()

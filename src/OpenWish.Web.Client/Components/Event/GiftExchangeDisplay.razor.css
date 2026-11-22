@@ -74,6 +74,14 @@
     font-weight: 700;
 }
 
+.gift-match-countdown {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
 .gift-match-next-step {
     grid-column: 1 / -1;
     padding: 1rem;
@@ -158,28 +166,45 @@
 .gift-match-unopened {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.7fr);
+    grid-template-areas:
+        "invite box"
+        "privacy help"
+        "error error";
     align-items: center;
     gap: 1rem 2rem;
 }
 
+.gift-match-invitation {
+    grid-area: invite;
+    min-width: 0;
+}
+
 .gift-match-invitation h3 {
     max-width: 20ch;
-    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    margin-bottom: 0.75rem;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
     font-weight: 700;
     line-height: 1.2;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.02em;
 }
 
 .gift-match-invitation > p {
     max-width: 44ch;
+    margin: 0;
     color: var(--color-text-muted);
     line-height: 1.6;
 }
 
+.gift-match-unopened > .gift-match-privacy {
+    grid-area: privacy;
+    align-self: start;
+}
+
 .gift-box-button {
+    grid-area: box;
     display: grid;
     justify-items: center;
-    gap: 1.5rem;
+    gap: 1.25rem;
     min-height: 15rem;
     padding: 1.5rem;
     border: 1px solid var(--color-border);
@@ -200,22 +225,55 @@
 }
 
 .gift-box-button:disabled {
-    cursor: wait;
-    opacity: 0.7;
+    cursor: default;
+    opacity: 0.75;
 }
 
-.gift-box-button:hover ::deep .gift-box-lid,
-.gift-box-button:focus-visible ::deep .gift-box-lid {
+.gift-match-opening .gift-box-button:disabled {
+    cursor: progress;
+    opacity: 1;
+}
+
+.gift-box-button ::deep .gift-box-bow {
+    position: absolute;
+    inset: 0;
+}
+
+.gift-box-button ::deep .gift-box-lid,
+.gift-box-button ::deep .gift-box-bow {
+    transition: transform 180ms ease;
+}
+
+.gift-box-button:hover:not(:disabled) ::deep .gift-box-lid,
+.gift-box-button:hover:not(:disabled) ::deep .gift-box-bow,
+.gift-box-button:focus-visible ::deep .gift-box-lid,
+.gift-box-button:focus-visible ::deep .gift-box-bow {
     transform: translateY(-0.25rem) rotate(-2deg);
 }
 
+/* The one expressive moment: the lid and bow lift away while the match is fetched. */
+.gift-match-opening ::deep .gift-box-lid,
+.gift-match-opening ::deep .gift-box-bow {
+    transform: translateY(-1rem) rotate(-7deg);
+    transition-duration: 450ms;
+}
+
 .gift-box-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    background: var(--color-primary-bg);
+    color: #fff;
     font-size: 1rem;
     font-weight: 700;
 }
 
 .gift-box-help {
-    grid-column: 2;
+    grid-area: help;
+    align-self: start;
     margin: 0;
     color: var(--color-text-muted);
     font-size: 0.85rem;
@@ -223,7 +281,7 @@
 }
 
 .gift-match-unopened > .alert {
-    grid-column: 1 / -1;
+    grid-area: error;
     margin: 0;
 }
 
@@ -237,17 +295,34 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .gift-box-button:hover ::deep .gift-box-lid,
-    .gift-box-button:focus-visible ::deep .gift-box-lid { transform: none; }
+    .gift-box-button ::deep .gift-box-lid,
+    .gift-box-button ::deep .gift-box-bow { transition: none; transform: none !important; }
     .gift-match-just-opened .gift-match-introduction { animation: none; }
 }
 
 @media (max-width: 767.98px) {
     .gift-match-unopened {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "invite"
+            "box"
+            "help"
+            "error"
+            "privacy";
+        gap: 0.75rem;
     }
 
-    .gift-box-help {
-        grid-column: 1;
+    .gift-match-invitation h3 {
+        margin-bottom: 0.5rem;
+    }
+
+    .gift-box-button {
+        min-height: 0;
+        gap: 1rem;
+        padding: 1.25rem 1rem;
+    }
+
+    .gift-match-unopened > .gift-match-privacy {
+        margin-top: 0.5rem;
     }
 }

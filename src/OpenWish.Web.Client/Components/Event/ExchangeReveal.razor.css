@@ -1,5 +1,43 @@
+.exchange-reveal {
+    margin-bottom: 1.5rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+}
+
+.exchange-reveal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.5rem;
+    color: var(--color-text);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.exchange-reveal-title ::deep svg {
+    flex: 0 0 auto;
+    color: var(--color-accent);
+}
+
+.exchange-reveal-lead {
+    max-width: 62ch;
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.exchange-reveal-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+}
+
 .reveal-list {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
     gap: 0.5rem;
     margin: 0;
     padding: 0;
@@ -7,13 +45,78 @@
 }
 
 .reveal-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-height: 44px;
     padding: 0.6rem 0.85rem;
     border: 1px solid var(--color-border-muted);
     border-radius: 0.8rem;
+    background: var(--color-surface-alt);
     overflow-wrap: anywhere;
 }
 
+.reveal-giver,
+.reveal-receiver {
+    min-width: 0;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
 .reveal-arrow {
-    margin: 0 0.35rem;
+    display: inline-flex;
     color: var(--color-text-muted);
+}
+
+.exchange-reveal-start,
+.exchange-reveal-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.exchange-reveal-note {
+    margin: 0.5rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.exchange-reveal-confirm {
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.exchange-reveal-confirm-title {
+    margin: 0 0 0.25rem;
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.exchange-reveal-confirm-copy {
+    max-width: 62ch;
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.exchange-reveal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .exchange-reveal-start,
+    .exchange-reveal-actions .btn {
+        width: 100%;
+    }
+
+    .exchange-reveal-actions {
+        flex-direction: column-reverse;
+    }
 }

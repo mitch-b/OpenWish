@@ -11,7 +11,7 @@
 
 <PageTitle>What's new</PageTitle>
 
-<div class="container py-4">
+<div class="container page-shell whats-new-page">
     <PageHeader Title="What's new"
                 Description="Follow OpenWish as it becomes a calmer, more capable place to plan thoughtful gifts." />
 
@@ -21,7 +21,7 @@
             <p class="mb-2">@_loadError</p>
             <button class="btn btn-outline-danger"
                     type="button"
-                    disabled="@_isLoading"
+                    disabled="@(_isLoading || !RendererInfo.IsInteractive)"
                     @onclick="LoadReleaseNotesAsync">
                 @(_isLoading ? "Trying again..." : "Try again")
             </button>
@@ -29,7 +29,7 @@
     }
     else if (_releases is null)
     {
-        <div class="d-flex align-items-center gap-2" role="status">
+        <div class="release-loading" role="status">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
             <span>Loading release notes...</span>
         </div>
@@ -39,6 +39,7 @@
         @if (_releases.Count == 0)
         {
             <div class="empty-state">
+                <span class="empty-state-icon"><OpenWishIcon Name="stars" /></span>
                 <h2>No release notes yet</h2>
                 <p>New OpenWish updates will appear here.</p>
             </div>
@@ -57,7 +58,7 @@
                                    type="search"
                                    value="@_searchText"
                                    @oninput="HandleSearch"
-                                   placeholder="Search versions, features, or fixes" />
+                                   placeholder="Version, feature, or fix" />
                         </div>
                     </div>
 
@@ -82,7 +83,12 @@
                         <strong>@ResultCount</strong>
                         @if (HasActiveFilters)
                         {
-                            <button class="btn btn-link" type="button" @onclick="ClearFilters">Clear filters</button>
+                            <button class="btn btn-link"
+                                    type="button"
+                                    disabled="@(!RendererInfo.IsInteractive)"
+                                    @onclick="ClearFilters">
+                                Clear filters
+                            </button>
                         }
                     </div>
                 </section>
@@ -94,7 +100,12 @@
                     <span class="empty-state-icon"><OpenWishIcon Name="search" /></span>
                     <h2>No matching updates</h2>
                     <p>Try a different search or browse every release.</p>
-                    <button class="btn btn-outline-primary" type="button" @onclick="ClearFilters">Show all releases</button>
+                    <button class="btn btn-outline-primary"
+                            type="button"
+                            disabled="@(!RendererInfo.IsInteractive)"
+                            @onclick="ClearFilters">
+                        Show all releases
+                    </button>
                 </div>
             }
             else
@@ -103,22 +114,20 @@
                     @foreach (var release in PagedReleases)
                     {
                         <article class="release-entry" id="@GetReleaseId(release)">
-                            <time class="release-date" datetime="@release.Date">@FormatDate(release.Date)</time>
+                            <time class="release-date" datetime="@release.Date">@FormatShortDate(release.Date)</time>
                             <span class="timeline-marker" aria-hidden="true"></span>
 
                             <div class="release-card @(IsLatest(release) ? "release-card-latest" : string.Empty)">
                                 <div class="release-heading">
-                                    <div>
-                                        <div class="release-version-row">
-                                            <a class="release-version" href="#@GetReleaseId(release)">Version @release.Version</a>
-                                            @if (IsLatest(release))
-                                            {
-                                                <span class="latest-badge">Latest</span>
-                                            }
-                                        </div>
-                                        <h2>@release.Title</h2>
+                                    <div class="release-version-row">
+                                        <a class="release-version" href="#@GetReleaseId(release)">Version @release.Version</a>
+                                        @if (IsLatest(release))
+                                        {
+                                            <span class="latest-badge">Latest</span>
+                                        }
+                                        <time class="release-meta-date" datetime="@release.Date">@FormatShortDate(release.Date)</time>
                                     </div>
-                                    <time datetime="@release.Date">@FormatDate(release.Date)</time>
+                                    <h2>@release.Title</h2>
                                 </div>
                                 <p class="release-summary">@release.Summary</p>
                                 <ul class="release-highlights">
@@ -135,23 +144,21 @@
                 @if (TotalPages > 1)
                 {
                     <nav class="release-pagination" aria-label="Release pages">
-                        <a class="btn btn-outline-secondary @(_currentPage == 1 ? "disabled" : string.Empty)"
-                           href="/whats-new#release-timeline"
-                           aria-disabled="@(_currentPage == 1)"
-                           tabindex="@(_currentPage == 1 ? "-1" : null)"
-                           @onclick="PreviousPage">
+                        <button class="btn btn-outline-secondary"
+                                type="button"
+                                disabled="@(_currentPage == 1 || !RendererInfo.IsInteractive)"
+                                @onclick="PreviousPage">
                             <OpenWishIcon Name="arrow-left" />
                             Previous
-                        </a>
-                        <span>Page @_currentPage of @TotalPages</span>
-                        <a class="btn btn-outline-secondary @(_currentPage == TotalPages ? "disabled" : string.Empty)"
-                           href="/whats-new#release-timeline"
-                           aria-disabled="@(_currentPage == TotalPages)"
-                           tabindex="@(_currentPage == TotalPages ? "-1" : null)"
-                           @onclick="NextPage">
+                        </button>
+                        <span aria-live="polite">Page @_currentPage of @TotalPages</span>
+                        <button class="btn btn-outline-secondary"
+                                type="button"
+                                disabled="@(_currentPage == TotalPages || !RendererInfo.IsInteractive)"
+                                @onclick="NextPage">
                             Next
                             <OpenWishIcon Name="arrow-right" />
-                        </a>
+                        </button>
                     </nav>
                 }
             }
@@ -239,7 +246,17 @@
         }
 
         _scrollToTimeline = false;
-        await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "release-timeline");
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "release-timeline");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException ex)
+        {
+            Logger.LogDebug(ex, "Unable to scroll to the release timeline.");
+        }
     }
 
     private bool MatchesYear(ReleaseEntryModel release) =>
@@ -302,6 +319,9 @@
 
     private static string FormatDate(string date) =>
         TryGetReleaseDate(date)?.ToString("MMMM d, yyyy", CultureInfo.InvariantCulture) ?? date;
+
+    private static string FormatShortDate(string date) =>
+        TryGetReleaseDate(date)?.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) ?? date;
 
     private static string GetReleaseId(ReleaseEntryModel release) =>
         $"version-{string.Concat(release.Version.Select(character =>

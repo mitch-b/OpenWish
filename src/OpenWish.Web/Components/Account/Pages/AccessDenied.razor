@@ -2,7 +2,18 @@
 
 <PageTitle>Access denied</PageTitle>
 
-<header>
-    <h1 class="text-danger">Access denied</h1>
-    <p class="text-danger">You do not have access to this resource.</p>
-</header>
+<div class="auth-page auth-page-compact">
+    <header class="auth-heading">
+        <span class="auth-mark auth-mark-warning"><OpenWishIcon Name="lock" /></span>
+        <div>
+            <h1>Access denied</h1>
+            <p>Your account doesn't have access to this page.</p>
+        </div>
+    </header>
+    <section class="auth-card">
+        <p class="auth-card-text">If someone shared this link with you, ask them to check that it was shared with the account you're using.</p>
+        <div class="auth-actions">
+            <a class="btn btn-primary" href="/"><OpenWishIcon Name="house-door" />Go to dashboard</a>
+        </div>
+    </section>
+</div>

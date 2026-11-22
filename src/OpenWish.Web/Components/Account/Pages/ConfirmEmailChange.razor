@@ -11,9 +11,21 @@
 
 <PageTitle>Confirm email change</PageTitle>
 
-<h1>Confirm email change</h1>
-
-<StatusMessage Message="@message" />
+<div class="auth-page auth-page-compact">
+    <header class="auth-heading">
+        <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
+        <div>
+            <h1>Confirm email change</h1>
+            <p>Your new address is used to sign in and receive invitations.</p>
+        </div>
+    </header>
+    <section class="auth-card">
+        <StatusMessage Message="@message" />
+        <div class="auth-actions">
+            <a class="btn btn-primary" href="Account/Manage/Email">Back to email settings</a>
+        </div>
+    </section>
+</div>
 
 @code {
     private string? message;
@@ -41,7 +53,7 @@
         var user = await UserManager.FindByIdAsync(UserId);
         if (user is null)
         {
-            message = "Unable to find user with Id '{userId}'";
+            message = "Error: We couldn't find the account for this link.";
             return;
         }
 
@@ -49,7 +61,7 @@
         var result = await UserManager.ChangeEmailAsync(user, Email, code);
         if (!result.Succeeded)
         {
-            message = "Error changing email.";
+            message = "Error: We couldn't change your email. The link may have expired. Request a new one from your email settings.";
             return;
         }
 
@@ -58,11 +70,11 @@
         var setUserNameResult = await UserManager.SetUserNameAsync(user, Email);
         if (!setUserNameResult.Succeeded)
         {
-            message = "Error changing user name.";
+            message = "Error: We couldn't update the address you sign in with. Try again from your email settings.";
             return;
         }
 
         await SignInManager.RefreshSignInAsync(user);
-        message = "Thank you for confirming your email change.";
+        message = "Your email is updated. Use it the next time you sign in.";
     }
 }

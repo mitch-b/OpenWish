@@ -1,8 +1,9 @@
 ﻿@if (!string.IsNullOrEmpty(DisplayMessage))
 {
-    var statusMessageClass = DisplayMessage.StartsWith("Error") ? "danger" : "success";
-    <div class="alert alert-@statusMessageClass" role="alert">
-        @DisplayMessage
+    var isError = DisplayMessage.StartsWith("Error");
+    <div class="alert alert-@(isError ? "danger" : "success") auth-status" role="alert">
+        <OpenWishIcon Name="@(isError ? "exclamation-circle" : "check-circle")" />
+        <span>@DisplayMessage</span>
     </div>
 }
 

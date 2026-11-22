@@ -11,38 +11,43 @@
 
 <PageTitle>Two-factor authentication</PageTitle>
 
-<h1>Two-factor authentication</h1>
-<hr />
-<StatusMessage Message="@message" />
-<p>Your login is protected with an authenticator app. Enter your authenticator code below.</p>
-<div class="row">
-    <div class="col-md-4">
+<div class="auth-page auth-page-compact">
+    <header class="auth-heading">
+        <span class="auth-mark"><OpenWishIcon Name="shield-check" /></span>
+        <div>
+            <h1>Enter your code</h1>
+            <p>Your account is protected with an authenticator app.</p>
+        </div>
+    </header>
+    <section class="auth-card">
+        <StatusMessage Message="@message" />
         <EditForm Model="Input" FormName="login-with-2fa" OnValidSubmit="OnValidSubmitAsync" method="post">
             <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
             <input type="hidden" name="RememberMe" value="@RememberMe" />
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="off" autofocus />
+            <div class="mb-2">
                 <label for="Input.TwoFactorCode" class="form-label">Authenticator code</label>
+                <InputText @bind-Value="Input.TwoFactorCode" id="Input.TwoFactorCode" class="form-control" autocomplete="one-time-code" inputmode="numeric" aria-required="true" aria-describedby="two-factor-help" autofocus />
                 <ValidationMessage For="() => Input.TwoFactorCode" class="text-danger" />
+                <div id="two-factor-help" class="form-text">Open your authenticator app and enter the 6-digit code for OpenWish.</div>
             </div>
-            <div class="checkbox mb-3">
-                <label for="remember-machine" class="form-label">
-                    <InputCheckbox @bind-Value="Input.RememberMachine" />
-                    Remember this machine
+            <div class="auth-remember">
+                <label for="remember-machine">
+                    <InputCheckbox @bind-Value="Input.RememberMachine" id="remember-machine" class="darker-border-checkbox form-check-input" />
+                    Remember this device
                 </label>
             </div>
-            <div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Verify and sign in</button>
         </EditForm>
-    </div>
+        <div class="auth-help">
+            <h3>Can't use your authenticator?</h3>
+            <ul>
+                <li><a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">Sign in with a recovery code</a></li>
+            </ul>
+        </div>
+    </section>
 </div>
-<p>
-    Don't have access to your authenticator device? You can
-    <a href="Account/LoginWithRecoveryCode?ReturnUrl=@ReturnUrl">log in with a recovery code</a>.
-</p>
 
 @code {
     private string? message;
@@ -83,19 +88,19 @@
         else
         {
             Logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
-            message = "Error: Invalid authenticator code.";
+            message = "Error: That code didn't work. Enter the current code from your authenticator app.";
         }
     }
 
     private sealed class InputModel
     {
         [Required]
-        [StringLength(7, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [StringLength(7, ErrorMessage = "Enter the 6-digit code from your authenticator app.", MinimumLength = 6)]
         [DataType(DataType.Text)]
         [Display(Name = "Authenticator code")]
         public string? TwoFactorCode { get; set; }
 
-        [Display(Name = "Remember this machine")]
+        [Display(Name = "Remember this device")]
         public bool RememberMachine { get; set; }
     }
 }

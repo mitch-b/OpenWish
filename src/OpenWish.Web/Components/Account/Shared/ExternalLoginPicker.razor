@@ -3,27 +3,21 @@
 @using OpenWish.Data.Entities
 
 @inject SignInManager<ApplicationUser> SignInManager
-@inject IdentityRedirectManager RedirectManager
-
 @if (externalLogins.Length > 0)
 {
-    <section class="auth-card auth-card-secondary">
-    <h2>Or continue with</h2>
-    <form class="form-horizontal external-login-form"
-          action="/Account/PerformExternalLogin"
-          method="post"
-          data-enhance="false">
-        <div>
+    <section class="external-login-options">
+        <h2>Use an existing account</h2>
+        <form class="external-login-form"
+              action="/Account/PerformExternalLogin"
+              method="post"
+              data-enhance="false">
             <AntiforgeryToken />
             <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
-            <div class="external-login-actions">
-                @foreach (var provider in externalLogins)
-                {
-                    <button type="submit" class="btn btn-primary external-login-button" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">Continue with @provider.DisplayName</button>
-                }
-            </div>
-        </div>
-    </form>
+            @foreach (var provider in externalLogins)
+            {
+                <button type="submit" class="btn btn-lg btn-primary external-login-button" name="provider" value="@provider.Name">Continue with @provider.DisplayName</button>
+            }
+        </form>
     </section>
 }
 

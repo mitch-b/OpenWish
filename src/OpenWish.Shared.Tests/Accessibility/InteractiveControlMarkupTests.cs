@@ -1865,7 +1865,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
         Assert.Contains(">Create account</button>", markup, StringComparison.Ordinal);
         Assert.Contains("GetUriWithQueryParameters(\"Account/Login\"", markup, StringComparison.Ordinal);
-        Assert.Contains(">Log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Sign in</a>", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1905,12 +1905,12 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ForgotPassword.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"reset-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("If an eligible account matches", markup, StringComparison.Ordinal);
         Assert.Contains(">Send reset link</button>", markup, StringComparison.Ordinal);
-        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\"><OpenWishIcon Name=\"arrow-left\" />Back to sign in</a>", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1918,7 +1918,7 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResetPassword.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
         Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
@@ -1931,12 +1931,12 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResendEmailConfirmation.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
         Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
-        Assert.Contains("Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("Back to sign in</a>", markup, StringComparison.Ordinal);
         Assert.Contains("[\"returnUrl\"] = ReturnUrl", markup, StringComparison.Ordinal);
     }
 

@@ -14,7 +14,7 @@
 
 <PageTitle>Check your email</PageTitle>
 
-<div class="auth-page">
+<div class="auth-page auth-page-compact">
     <header class="auth-heading">
         <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
         <div>
@@ -22,27 +22,23 @@
             <p>Confirm your address to finish creating your account.</p>
         </div>
     </header>
-    <div class="row">
-    <div class="col-md-9 col-lg-8">
     <section class="auth-card">
         <StatusMessage Message="@statusMessage" />
         @if (emailConfirmationLink is not null)
         {
-            <p>This development server doesn't send email. Use this link to confirm your test account.</p>
+            <p class="auth-card-text">This development server doesn't send email. Use this link to confirm your test account.</p>
             <a class="btn btn-primary" href="@emailConfirmationLink">Confirm test account</a>
         }
         else
         {
-            <p role="status">Open the confirmation link sent to <strong>@Email</strong>. It will keep your place so you can return to your invitation or wishlist.</p>
-            <p class="text-muted">Can't find it? Check spam or junk, or request a new link. If email still doesn't arrive, ask your OpenWish host to check email delivery.</p>
+            <p class="auth-card-text" role="status">Open the confirmation link sent to <strong>@Email</strong>. It will keep your place so you can return to your invitation or wishlist.</p>
+            <p class="auth-card-text text-muted">Can't find it? Check spam or junk, or request a new link. If email still doesn't arrive, ask your OpenWish host to check email delivery.</p>
         }
-        <div class="d-flex flex-wrap gap-2 mt-3">
+        <div class="auth-actions">
             <a class="btn btn-outline-primary" href="@ResendUrl">Send a new confirmation link</a>
-            <a class="btn btn-outline-secondary" href="@LoginUrl">Back to log in</a>
+            <a class="btn btn-outline-secondary" href="@LoginUrl">Back to sign in</a>
         </div>
     </section>
-    </div>
-    </div>
 </div>
 
 @code {

@@ -1,7 +1,19 @@
 ﻿@page "/Account/InvalidUser"
 
-<PageTitle>Invalid user</PageTitle>
+<PageTitle>Account not found</PageTitle>
 
-<h3>Invalid user</h3>
-
-<StatusMessage />
+<div class="auth-page auth-page-compact">
+    <header class="auth-heading">
+        <span class="auth-mark auth-mark-warning"><OpenWishIcon Name="exclamation-triangle" /></span>
+        <div>
+            <h1>Account not found</h1>
+            <p>We couldn't load the account for this request.</p>
+        </div>
+    </header>
+    <section class="auth-card">
+        <StatusMessage />
+        <div class="auth-actions">
+            <a class="btn btn-primary" href="Account/Login">Back to sign in</a>
+        </div>
+    </section>
+</div>

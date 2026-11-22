@@ -400,10 +400,12 @@ h1:focus {
     width: min(100%, 980px);
     margin: 0 auto;
     padding-top: clamp(1rem, 5vw, 3rem);
+    padding-bottom: 2rem;
 }
 
-.auth-page-login {
-    max-width: 32rem;
+.auth-page-login,
+.auth-page-compact {
+    max-width: 30rem;
 }
 
 .auth-heading {
@@ -415,29 +417,42 @@ h1:focus {
 
 .auth-heading h1 {
     margin: 0;
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.85rem, 4vw, 2.5rem);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
 }
 
 .auth-heading p {
-    margin: 0.35rem 0 0;
+    margin: 0.4rem 0 0;
     color: var(--color-text-muted);
+    line-height: 1.5;
 }
 
 .auth-mark {
     display: grid;
-    width: 4rem;
-    height: 4rem;
+    width: 3.5rem;
+    height: 3.5rem;
     flex: 0 0 auto;
     place-items: center;
-    border-radius: 1.1rem;
+    border-radius: 1rem;
     background: var(--color-primary-soft);
     color: var(--color-primary-bg);
-    font-size: 1.6rem;
+    font-size: 1.5rem;
+}
+
+.auth-mark-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.auth-mark-success {
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
 }
 
 .auth-card {
     height: 100%;
-    padding: clamp(1.25rem, 3vw, 2rem);
+    padding: clamp(1.25rem, 4vw, 2rem);
     border: 1px solid var(--color-border-muted);
     border-radius: 1.1rem;
     background: var(--color-surface);
@@ -445,17 +460,134 @@ h1:focus {
 }
 
 .auth-card h2 {
-    margin-bottom: 1.25rem;
-    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
 }
 
-.auth-card form > div:last-child {
-    margin-top: 1rem;
-}
-
-.auth-card form > div:last-child p {
+.auth-card .form-label {
     margin-bottom: 0.4rem;
-    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.auth-card .form-control {
+    min-height: 48px;
+}
+
+.auth-card .form-text {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.auth-card > :last-child,
+.auth-card form > :last-child {
+    margin-bottom: 0;
+}
+
+.auth-card > .auth-actions:first-child {
+    margin-top: 0;
+}
+
+.auth-card-text {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.auth-card-text strong {
+    overflow-wrap: anywhere;
+}
+
+.auth-remember {
+    margin-bottom: 1.25rem;
+}
+
+.auth-remember label {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 44px;
+    margin: 0;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.auth-remember .form-check-input {
+    flex: 0 0 auto;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+.auth-remember .form-text {
+    margin: -0.35rem 0 0 1.9rem;
+}
+
+.auth-help {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.auth-help h3 {
+    margin: 0 0 0.25rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.auth-help ul {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.auth-help a,
+.auth-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    font-weight: 600;
+}
+
+.auth-switch {
+    margin: 1.25rem 0 0;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.auth-switch a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 700;
+}
+
+.auth-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.auth-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+}
+
+.auth-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    line-height: 1.5;
+}
+
+.auth-status .ow-icon {
+    flex: 0 0 auto;
+    margin-top: 0.2rem;
 }
 
 .external-login-options {
@@ -473,6 +605,17 @@ h1:focus {
 .external-login-button {
     min-height: 2.75rem;
     overflow-wrap: anywhere;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: 700;
+}
+
+.external-login-button:hover,
+.external-login-button:focus-visible {
+    border-color: var(--color-primary-bg);
+    background: var(--color-surface-hover);
+    color: var(--color-text);
 }
 
 .demo-account-panel > .alert {
@@ -482,6 +625,17 @@ h1:focus {
 @media (max-width: 575.98px) {
     .auth-heading {
         align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .auth-mark {
+        width: 3rem;
+        height: 3rem;
+        font-size: 1.25rem;
+    }
+
+    .auth-actions .btn {
+        flex: 1 1 100%;
     }
 }
 

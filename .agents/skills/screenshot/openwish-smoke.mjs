@@ -888,7 +888,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
     const returnUrl = isMobile ? "/wishlists" : "/";
     const query = `?ReturnUrl=${encodeURIComponent(returnUrl)}`;
     const signInButton = page.getByRole("button", { name: "Continue with Google" });
-    for (const [route, emailAction] of [["Register", "Create account"], ["Login", "Log in"]]) {
+    for (const [route, emailAction] of [["Register", "Create account"], ["Login", "Sign in"]]) {
       await visit(page, `/Account/${route}${query}`, "Use an existing account", visitedRoutes);
       const password = page.getByLabel("Password", { exact: true });
       const emailButton = page.getByRole("button", { name: emailAction, exact: true });
@@ -2902,8 +2902,8 @@ async function verifyAccountFreeGuests(browser, results) {
   const registerChoice = page.getByTestId("register-without-account");
   await registerChoice.waitFor({ state: "visible" });
   await screenshot(page, "register-without-account.png");
-  const loginHref = await page.getByRole("link", { name: "Log in", exact: true }).getAttribute("href");
-  if (!/#access=[A-F0-9]{64}$/.test(loginHref ?? "")) throw new Error("The Log in link dropped the no-account choice.");
+  const loginHref = await page.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true }).getAttribute("href");
+  if (!/#access=[A-F0-9]{64}$/.test(loginHref ?? "")) throw new Error("The Sign in link dropped the no-account choice.");
   await registerChoice.getByRole("link", { name: "Continue without an account" }).click();
   await page.getByRole("button", { name: "Continue with my private invitation" }).waitFor({ state: "visible" });
   if (new URL(page.url()).pathname !== "/guest") throw new Error("The registration fallback didn't open the private invitation.");
@@ -3219,7 +3219,7 @@ async function verifyFamilyExchangeJourney(browser, results) {
   await screenshot(signupPage, "family-invitation-signup.png");
   await signupPage.setViewportSize({ width: 390, height: 844 });
   await screenshot(signupPage, "family-invitation-signup-mobile.png");
-  await signupPage.getByRole("link", { name: "Log in", exact: true }).click();
+  await signupPage.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true }).click();
   const loginUrl = new URL(signupPage.url());
   if (loginUrl.searchParams.get("ReturnUrl") !== invitationRoute ||
       await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
@@ -3401,7 +3401,7 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   }
   await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
   await page.getByRole("button", { name: "Create account" }).waitFor({ state: "visible" });
-  const registrationLoginLink = page.getByRole("link", { name: "Log in", exact: true });
+  const registrationLoginLink = page.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true });
   await registrationLoginLink.waitFor({ state: "visible" });
   const loginDestination = new URL(await registrationLoginLink.getAttribute("href"), baseUrl);
   if (loginDestination.searchParams.get("ReturnUrl") !== registrationReturnUrl) {
@@ -3431,7 +3431,7 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   await visit(page, "/Account/ForgotPassword", "Request a secure link", visitedRoutes);
   await assertVisible(page, "If an eligible account matches");
   await page.getByRole("button", { name: "Send reset link" }).waitFor({ state: "visible" });
-  await page.getByRole("link", { name: "Back to log in" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Back to sign in" }).waitFor({ state: "visible" });
   await screenshot(page, "account-recovery.png");
 
   await visit(page, "/Account/ResetPassword?Code=dGVzdA", "Choose a new password", visitedRoutes);

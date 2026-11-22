@@ -38,6 +38,13 @@ body.dialog-open .top-row {
     backdrop-filter: none;
 }
 
+/* Keep the page still behind the open mobile navigation drawer. */
+@media (max-width: 640.98px) {
+    body:has(.navbar-toggler:checked) {
+        overflow: hidden;
+    }
+}
+
 a, .btn-link {
     color: var(--color-link);
 }

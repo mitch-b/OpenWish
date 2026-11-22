@@ -97,11 +97,16 @@
       <NavLink class="nav-link" href="whats-new">
         <OpenWishIcon Name="stars" /> <span>What's new</span>
       </NavLink>
-      <div class="nav-link theme-toggle-host">
-        <ThemeToggle />
+      <div class="nav-footer-utilities">
+        <div class="theme-toggle-host">
+          <ThemeToggle />
+        </div>
+        <a class="nav-utility-link" href="https://github.com/mitch-b/OpenWish" target="_blank" rel="noopener noreferrer" aria-label="OpenWish on GitHub (opens in a new tab)" title="OpenWish on GitHub">
+          <OpenWishIcon Name="github" />
+        </a>
       </div>
       <p class="nav-link version">
-        <span>@AppVersionService.GetAppVersion()</span>
+        <span>Version @AppVersionService.GetAppVersion()</span>
       </p>
     </div>
   </nav>

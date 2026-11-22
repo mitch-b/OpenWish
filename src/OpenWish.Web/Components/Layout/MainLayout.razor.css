@@ -1,4 +1,5 @@
 .page {
+    --shell-header-height: 4rem;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -19,40 +20,26 @@
         linear-gradient(165deg, var(--color-sidebar-gradient-start), var(--color-sidebar-gradient-end));
 }
 
+/* A quiet utility row aligned with the content column rather than a full-width bar. */
 .top-row {
     display: flex;
-    height: 4.5rem;
+    width: min(100%, calc(1240px + 4rem));
+    height: var(--shell-header-height);
     align-items: center;
     justify-content: flex-end;
     gap: 0.4rem;
+    margin: 0 auto;
     padding: 0 2rem;
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 1010;
-    border-bottom: 1px solid var(--color-top-row-border);
-    background: var(--color-top-row-bg);
-    backdrop-filter: blur(16px) saturate(150%);
-}
-
-.utility-button {
-    display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
-    place-items: center;
-    border: 1px solid transparent;
-    border-radius: 0.72rem;
-    color: var(--color-text-muted);
-    font-size: 1.15rem;
-}
-
-.utility-button:hover {
-    border-color: var(--color-border-muted);
-    background: var(--color-surface);
-    color: var(--color-text);
 }
 
 .content {
     padding: 1.5rem 2rem 3.5rem;
+}
+
+.top-row + .content {
+    padding-top: 0.25rem;
 }
 
 .content-frame {
@@ -70,7 +57,7 @@
         flex: 0 0 232px;
         align-self: stretch;
         position: relative;
-        box-shadow: 6px 0 24px rgba(13,15,26,.08);
+        box-shadow: var(--shadow-sm);
     }
 
     .sidebar-content {
@@ -81,15 +68,25 @@
 }
 
 @media (max-width: 640.98px) {
-    .top-row {
-        position: absolute;
+    /* One compact header: the sidebar holds the brand and menu, and the bell joins it. */
+    .sidebar {
+        position: sticky;
         top: 0;
-        right: 4.5rem;
-        height: 4.5rem;
+    }
+
+    .top-row {
+        position: fixed;
+        top: 0;
+        right: 4.25rem;
+        z-index: 1030;
+        height: var(--shell-header-height);
+        width: auto;
+        margin: 0;
         padding: 0;
-        border: 0;
-        background: transparent;
-        backdrop-filter: none;
+    }
+
+    .top-row + .content {
+        padding-top: 1rem;
     }
 
     .content {

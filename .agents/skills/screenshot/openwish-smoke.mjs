@@ -7275,9 +7275,13 @@ try {
     await runJourney("product-capture", () => verifyProductCaptureJourney(browser, results));
     await runJourney("guest-collaboration", () => verifyGuestJourney(browser, manifest, securityFixture, results));
     await runJourney("friend-gift-exchange", () => verifyFriendJourney(browser, manifest, results));
+  }
+  if (!selectedScenario && shard !== "core") {
     await runJourney("feature-day-outcomes", () => verifyFeatureDayJourney(browser, manifest, results));
     await runJourney("occasions-outcomes", () => verifyOccasionsJourney(browser, manifest, results));
     await runJourney("occasion-reminders", () => verifyOccasionRemindersJourney(browser, manifest, results));
+  }
+  if (!selectedScenario && shard !== "independent") {
     await runJourney("owner-mobile", () => verifyMobileJourney(browser, manifest, results));
     await runJourney("friend-circles", () => verifyCirclesJourney(browser, manifest, results));
     await runJourney("data-portability", () => verifyDataPortabilityJourney(browser, results));

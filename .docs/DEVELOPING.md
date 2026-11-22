@@ -233,7 +233,8 @@ retains its own evidence artifact. To reproduce a shard locally, set
 `OPENWISH_BROWSER_SHARD=core` or `OPENWISH_BROWSER_SHARD=independent`;
 without it the script runs the complete gate. The core shard also runs the
 PostgreSQL concurrency and dependent-cleanup checks; the independent shard
-includes the responsive sweep and separately seedable journeys. Logs include
+includes the responsive sweep, feature and occasion journeys, and separately
+seedable journeys. Logs include
 per-journey durations to help identify future bottlenecks.
 
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,

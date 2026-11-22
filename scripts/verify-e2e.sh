@@ -234,55 +234,30 @@ test -s "$walkthrough_directory/authenticator-setup-mobile.png"
 test -s "$walkthrough_directory/account-recovery.png"
 test -s "$walkthrough_directory/account-recovery-mobile.png"
 test -s "$walkthrough_directory/whats-new.png"
-test -s "$walkthrough_directory/first-run-checklist.png"
-test -s "$walkthrough_directory/friend-suggestions.png"
-test -s "$walkthrough_directory/exchange-revealed.png"
-test -s "$walkthrough_directory/exchange-revealed-mobile.png"
-test -s "$walkthrough_directory/stale-ideas.png"
-test -s "$walkthrough_directory/archived-ideas.png"
-test -s "$walkthrough_directory/grid-inline-coordination.png"
-test -s "$walkthrough_directory/dashboard-gifts-to-buy.png"
-test -s "$walkthrough_directory/dashboard-birthdays.png"
-test -s "$walkthrough_directory/account-birthday.png"
-test -s "$walkthrough_directory/dashboard-birthdays-mobile.png"
-test -s "$walkthrough_directory/dashboard-birthday-gift-nudge.png"
-test -s "$walkthrough_directory/wishlist-gift-hints.png"
-test -s "$walkthrough_directory/wishlist-gift-hints-mobile.png"
-test -s "$walkthrough_directory/account-gift-hints.png"
-test -s "$walkthrough_directory/gift-plan.png"
-test -s "$walkthrough_directory/gift-plan-bought.png"
-test -s "$walkthrough_directory/gift-plan-mobile.png"
-test -s "$walkthrough_directory/gift-history.png"
-test -s "$walkthrough_directory/gift-history-mobile.png"
-test -s "$walkthrough_directory/duplicate-gift-warning.png"
-test -s "$walkthrough_directory/duplicate-gift-warning-mobile.png"
-test -s "$walkthrough_directory/received-ideas-form.png"
-test -s "$walkthrough_directory/received-ideas.png"
-test -s "$walkthrough_directory/received-ideas-mobile.png"
-test -s "$walkthrough_directory/run-again.png"
-test -s "$walkthrough_directory/run-again-result.png"
-test -s "$walkthrough_directory/run-again-mobile.png"
-test -s "$walkthrough_directory/connect-in-person.png"
-test -s "$walkthrough_directory/connect-in-person-mobile.png"
-test -s "$walkthrough_directory/friend-join-confirm.png"
-test -s "$walkthrough_directory/friend-join-confirm-mobile.png"
 fi
 if [[ "$browser_shard" != "core" ]]; then
   for screenshot in invitation-email-desktop invitation-email-mobile invitation-join-choice register-without-account \
     connect-app-consent connect-app-consent-mobile connected-app-ideas connected-app-ideas-mobile \
     connected-app-edit-note connected-apps connected-apps-mobile connected-apps-mobile-dark \
     connected-apps-editor connected-apps-editor-mobile connected-apps-editor-dark \
-    connected-apps-search-empty connected-apps-empty connected-app-disconnect; do
+    connected-apps-search-empty connected-apps-empty connected-app-disconnect \
+    first-run-checklist friend-suggestions exchange-revealed exchange-revealed-mobile \
+    stale-ideas archived-ideas grid-inline-coordination dashboard-gifts-to-buy dashboard-birthdays \
+    account-birthday dashboard-birthdays-mobile dashboard-birthday-gift-nudge \
+    wishlist-gift-hints wishlist-gift-hints-mobile account-gift-hints gift-plan gift-plan-bought \
+    gift-plan-mobile gift-history gift-history-mobile duplicate-gift-warning duplicate-gift-warning-mobile \
+    received-ideas-form received-ideas received-ideas-mobile run-again run-again-result run-again-mobile \
+    connect-in-person connect-in-person-mobile friend-join-confirm friend-join-confirm-mobile; do
     test -s "$walkthrough_directory/$screenshot.png"
   done
 fi
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
 if [[ "$browser_shard" != "independent" ]]; then
-  jq -e '[.scenarios[].scenario] | index("owner-desktop") != null and index("guest-collaboration") != null and index("occasion-reminders") != null' \
+  jq -e '[.scenarios[].scenario] | index("owner-desktop") != null and index("guest-collaboration") != null' \
     "$evidence_directory/openwish-e2e-result.json" >/dev/null
 fi
 if [[ "$browser_shard" != "core" ]]; then
-  jq -e '[.scenarios[].scenario] | index("responsive-sweep") != null and index("family-exchange") != null and index("registration-and-first-match") != null and index("account-free-guests") != null and index("connected-app") != null' \
+  jq -e '[.scenarios[].scenario] | index("responsive-sweep") != null and index("feature-day-outcomes") != null and index("occasions-outcomes") != null and index("occasion-reminders") != null and index("family-exchange") != null and index("registration-and-first-match") != null and index("account-free-guests") != null and index("connected-app") != null' \
     "$evidence_directory/openwish-e2e-result.json" >/dev/null
 fi
 

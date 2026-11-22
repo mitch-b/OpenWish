@@ -95,78 +95,85 @@
                             @if (ShowInteractions)
                             {
                                 <button
-                                    class="btn btn-sm btn-outline-info"
+                                    class="btn btn-sm item-options-toggle @(ExpandedInteractions.Contains(item.Id) ? "is-open" : string.Empty)"
                                     type="button"
+                                    disabled="@(!RendererInfo.IsInteractive)"
                                     @onclick="() => ToggleInteractions(item.Id)"
                                     aria-expanded="@ExpandedInteractions.Contains(item.Id)"
                                     aria-controls="item-interactions-@item.Id"
                                     aria-label="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") gift options for @item.Name">
-                                    <OpenWishIcon Name="chat-dots" />
-                                    @(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")
+                                    <OpenWishIcon Name="@(ExpandedInteractions.Contains(item.Id) ? "x-lg" : "gift")" />
+                                    <span>@(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")</span>
                                 </button>
                             }
-                            <div class="edit-actions">
-                                @if (OnEdit.HasDelegate)
-                                {
-                                    <button
-                                        class="btn btn-sm btn-primary"
-                                        type="button"
-                                        aria-label="Edit @item.Name"
-                                        @onclick="() => HandleEdit(item)"
-                                        title="Edit @item.Name">
-                                        <OpenWishIcon Name="pencil" />
-                                    </button>
-                                }
-                                @if (OnDelete.HasDelegate)
-                                {
-                                    <button
-                                        id="delete-wishlist-item-@item.Id"
-                                        class="btn btn-sm btn-danger"
-                                        type="button"
-                                        aria-label="Delete @item.Name"
-                                        @onclick="() => HandleDelete(item)"
-                                        title="Delete @item.Name">
-                                        <OpenWishIcon Name="trash" />
-                                    </button>
-                                }
-                            </div>
+                            @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+                            {
+                                <div class="edit-actions">
+                                    @if (OnEdit.HasDelegate)
+                                    {
+                                        <button
+                                            class="btn btn-sm item-icon-action"
+                                            type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
+                                            aria-label="Edit @item.Name"
+                                            @onclick="() => HandleEdit(item)"
+                                            title="Edit">
+                                            <OpenWishIcon Name="pencil" />
+                                        </button>
+                                    }
+                                    @if (OnDelete.HasDelegate)
+                                    {
+                                        <button
+                                            id="delete-wishlist-item-@item.Id"
+                                            class="btn btn-sm item-icon-action item-delete-action"
+                                            type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
+                                            aria-label="Delete @item.Name"
+                                            @onclick="() => HandleDelete(item)"
+                                            title="Delete">
+                                            <OpenWishIcon Name="trash" />
+                                        </button>
+                                    }
+                                </div>
+                            }
                             @if (IsOwner)
                             {
-                                <div class="rank-actions" aria-label="Reorder @item.Name">
-                                    <button class="btn btn-sm @(item.IsPinned ? "btn-primary" : "btn-outline-primary")"
+                                <div class="rank-actions" role="group" aria-label="Reorder @item.Name">
+                                    <button class="btn btn-sm item-icon-action @(item.IsPinned ? "is-pinned" : string.Empty)"
                                             type="button"
-                                            disabled="@IsRanking"
+                                            disabled="@(IsRanking || !RendererInfo.IsInteractive)"
                                             aria-pressed="@item.IsPinned"
                                             aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
+                                            title="@(item.IsPinned ? "Remove from most wanted" : "Mark as most wanted")"
                                             @onclick="() => HandleTogglePin(item)">
-                                        <OpenWishIcon Name="star-fill" />
-                                        <span class="rank-action-label">Most wanted</span>
+                                        <OpenWishIcon Name="star" />
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary"
+                                    <button class="btn btn-sm item-icon-action"
                                             type="button"
-                                            disabled="@(!CanMoveItem(item, -1))"
+                                            disabled="@(!CanMoveItem(item, -1) || !RendererInfo.IsInteractive)"
                                             aria-label="Move @item.Name up"
+                                            title="Move up"
                                             @onclick="() => HandleMoveUp(item)">
-                                        <OpenWishIcon Name="arrow-up" />
-                                        <span class="rank-action-label">Move up</span>
+                                        <OpenWishIcon Name="chevron-right" Class="icon-up" />
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary"
+                                    <button class="btn btn-sm item-icon-action"
                                             type="button"
-                                            disabled="@(!CanMoveItem(item, 1))"
+                                            disabled="@(!CanMoveItem(item, 1) || !RendererInfo.IsInteractive)"
                                             aria-label="Move @item.Name down"
+                                            title="Move down"
                                             @onclick="() => HandleMoveDown(item)">
-                                        <OpenWishIcon Name="arrow-down" />
-                                        <span class="rank-action-label">Move down</span>
+                                        <OpenWishIcon Name="chevron-right" Class="icon-down" />
                                     </button>
                                     @if (CanMarkReceived)
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary"
+                                        <button class="btn btn-sm item-icon-action"
                                                 type="button"
                                                 data-testid="mark-received"
+                                                disabled="@(!RendererInfo.IsInteractive)"
                                                 aria-label="Mark @item.Name as received"
+                                                title="Mark as received"
                                                 @onclick="() => OnMarkReceived.InvokeAsync(item)">
-                                            <OpenWishIcon Name="gift" />
-                                            <span class="rank-action-label">Received</span>
+                                            <OpenWishIcon Name="check-circle" />
                                         </button>
                                     }
                                 </div>

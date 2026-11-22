@@ -7,7 +7,7 @@
 @inject ILogger<GiftExchangeManager> Logger
 @inject NavigationManager NavigationManager
 
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm mb-4 gift-exchange-manager">
     <div class="card-header">
         <h3 class="h5 mb-0"><OpenWishIcon Name="gift" /> Gift exchange</h3>
     </div>
@@ -16,12 +16,14 @@
         {
             @if (Event.NamesDrawnOn.HasValue)
             {
-                <div class="alert alert-success">
+                <div class="alert alert-success draw-status" role="status">
                     <OpenWishIcon Name="check-circle-fill" />
-                    <strong>Assignments are ready.</strong>
-                    Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt").
+                    <div>
+                        <strong>Assignments are ready.</strong>
+                        Names were drawn on @Event.NamesDrawnOn.Value.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt").
+                        <span class="d-block mt-1">Each participant can open this event to see only the person they're shopping for.</span>
+                    </div>
                 </div>
-                <p class="text-muted">Each participant can open this event to see only the person they're shopping for.</p>
 
                 @if (Event.AssignmentsRevealedOn.HasValue)
                 {
@@ -29,50 +31,47 @@
                 }
                 else
                 {
-                <div class="mt-4">
-                    <h5 class="text-danger">Reset gift exchange</h5>
-                    <p class="text-muted">This will cancel all current gift assignments and allow you to draw names again. All participants will be notified via email.</p>
+                <section class="reset-panel mt-4" aria-labelledby="reset-gift-exchange-heading">
+                    <h4 id="reset-gift-exchange-heading" class="h6 fw-semibold mb-1">Need to change the group or rules?</h4>
+                    <p class="text-muted">Reset the gift exchange to cancel every match, update invitations or exclusion rules, then draw again.</p>
 
                     @if (!_showResetConfirm)
                     {
-                        <button class="btn btn-outline-danger" @onclick="() => _showResetConfirm = true" disabled="@_eventStateChanged">
-                            <OpenWishIcon Name="arrow-clockwise" /> Reset Gift Exchange
+                        <button type="button" class="btn btn-outline-danger"
+                                @onclick="OpenResetConfirmation"
+                                disabled="@(!RendererInfo.IsInteractive || _eventStateChanged)">
+                            <OpenWishIcon Name="arrow-clockwise" /> Reset gift exchange
                         </button>
-                    }
-
-                    else if (!_showFinalConfirm)
-                    {
-                        <div class="alert alert-warning">
-                            <p class="mb-2"><strong><OpenWishIcon Name="exclamation-triangle" /> First confirmation</strong></p>
-                            <p class="mb-3">Are you sure you want to reset the gift exchange? This will cancel all current assignments.</p>
-                            <button class="btn btn-warning me-2" @onclick="() => _showFinalConfirm = true">
-                                <OpenWishIcon Name="exclamation-triangle" /> Yes, Continue
-                            </button>
-                            <button class="btn btn-secondary" @onclick="CancelReset">
-                                Cancel
-                            </button>
-                        </div>
                     }
                     else
                     {
-                        <div class="alert alert-danger">
-                            <p class="mb-2"><strong><OpenWishIcon Name="exclamation-triangle" /> Final confirmation</strong></p>
-                            <p class="mb-3">This action cannot be undone. All participants will receive an email notification about the cancellation.</p>
-                            <button class="btn btn-danger me-2" @onclick="ResetGiftExchange" disabled="@(_resetting || _eventStateChanged)">
-                                @if (_resetting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                    <span>Resetting...</span>
-                                }
-                                else
-                                {
-                                    <OpenWishIcon Name="arrow-clockwise" />
-                                    <span>Confirm reset</span>
-                                }
-                            </button>
-                            <button class="btn btn-secondary" @onclick="CancelReset" disabled="@(_resetting || _eventStateChanged)">
-                                Cancel
-                            </button>
+                        <div class="confirm-panel confirm-panel-danger" role="group" aria-labelledby="reset-confirm-title">
+                            <p id="reset-confirm-title" class="confirm-panel-title">
+                                <OpenWishIcon Name="exclamation-triangle" /> Reset the gift exchange?
+                            </p>
+                            <ul class="confirm-consequences">
+                                <li>Every match is cancelled, including any people have already seen. This can't be undone.</li>
+                                <li>Everyone in the draw gets an email that the exchange was reset.</li>
+                                <li>Guest private links stop working until you draw names again.</li>
+                                <li>Wishlists, reservations, and exclusion rules stay as they are.</li>
+                            </ul>
+                            <div class="confirm-actions">
+                                <button type="button" class="btn btn-danger" @onclick="ResetGiftExchange" disabled="@(_resetting || _eventStateChanged)">
+                                    @if (_resetting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                        <span>Resetting...</span>
+                                    }
+                                    else
+                                    {
+                                        <OpenWishIcon Name="arrow-clockwise" />
+                                        <span>Reset and cancel matches</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @ref="_resetCancelButton" @onclick="CancelReset" disabled="@(_resetting || _eventStateChanged)">
+                                    Keep current matches
+                                </button>
+                            </div>
                         </div>
                     }
 
@@ -88,85 +87,116 @@
                             }
                         </div>
                     }
-                </div>
+                </section>
                 }
             }
             else
             {
-                <div class="mb-4">
-                    <h5>@AssignmentActionLabel</h5>
+                <section class="draw-panel mb-4" aria-labelledby="draw-heading">
+                    <h4 id="draw-heading" class="h5 mb-1">@AssignmentActionLabel</h4>
                     <p class="text-muted">@AssignmentExplanation</p>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-4">
-                            <div class="readiness-stat">
-                                <strong>@_participantCount</strong>
-                                <span>ready to join</span>
-                            </div>
-                        </div>
-                        <div class="col-sm-4">
-                            <div class="readiness-stat">
-                                <strong>@_pendingParticipantCount</strong>
-                                <span>waiting</span>
-                            </div>
-                        </div>
-                        <div class="col-sm-4">
-                            <div class="readiness-stat">
-                                <strong>@_participantsWithWishlists</strong>
-                                <span>with gift ideas</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if (_participantCount < 2)
-                    {
-                        <div class="alert alert-warning">
-                            <OpenWishIcon Name="exclamation-triangle" Class="me-1" />
-                            Invite at least one person and wait for them to accept before drawing.
-                        </div>
-                    }
-                    else
-                    {
-                        @if (_pendingParticipantCount > 0)
+                    <ul class="readiness-list" aria-label="Draw readiness">
+                        @if (_participantCount < 2)
                         {
-                            <div class="alert alert-warning">
-                                @_pendingParticipantCount pending invite@(_pendingParticipantCount == 1 ? "e is" : "es are") not included in this draw.
-                            </div>
-                        }
-
-                        @if (!_showDrawConfirm)
-                        {
-                            <button class="btn btn-success btn-lg" @onclick="() => _showDrawConfirm = true" disabled="@_eventStateChanged">
-                                <OpenWishIcon Name="shuffle" />
-                                <span>@AssignmentActionLabel</span>
-                            </button>
+                            <li class="readiness-item readiness-blocker">
+                                <OpenWishIcon Name="x-circle-fill" />
+                                <div>
+                                    <strong>Needs one more person</strong>
+                                    <span>Only you have joined so far. At least one invitee has to accept before you can draw.</span>
+                                </div>
+                            </li>
                         }
                         else
                         {
-                            <div class="alert alert-warning" role="alert">
-                                <p class="mb-2"><strong>@ConfirmationPrompt</strong></p>
-                                <p class="mb-3">
-                                    Assignments are private and available immediately. To change the group later,
-                                    you'll need to reset and draw again.
-                                </p>
-                                <button class="btn btn-success btn-lg me-2" @onclick="DrawNames" disabled="@(_drawing || _eventStateChanged)">
+                            <li class="readiness-item readiness-ok">
+                                <OpenWishIcon Name="check-circle-fill" />
+                                <div>
+                                    <strong>@_participantCount people will be included</strong>
+                                    <span>You and everyone who accepted.</span>
+                                </div>
+                            </li>
+                        }
+                        @if (_pendingParticipantCount > 0)
+                        {
+                            <li class="readiness-item readiness-advisory">
+                                <OpenWishIcon Name="hourglass-split" />
+                                <div>
+                                    <strong>@_pendingParticipantCount @(_pendingParticipantCount == 1 ? "invitation is" : "invitations are") still pending</strong>
+                                    <span>Pending invitees are left out. If someone said yes outside OpenWish, mark them as accepted under Invitations.</span>
+                                </div>
+                            </li>
+                        }
+                        @if (_participantCount >= 2)
+                        {
+                            @if (_participantsWithWishlists >= _participantCount)
+                            {
+                                <li class="readiness-item readiness-ok">
+                                    <OpenWishIcon Name="check-circle-fill" />
+                                    <div>
+                                        <strong>Everyone has gift ideas</strong>
+                                        <span>Each match will have a wishlist to shop from.</span>
+                                    </div>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="readiness-item readiness-advisory">
+                                    <OpenWishIcon Name="info-circle" />
+                                    <div>
+                                        <strong>@_participantsWithWishlists of @_participantCount people have gift ideas</strong>
+                                        <span>Not required to draw. People can add ideas after the draw too.</span>
+                                    </div>
+                                </li>
+                            }
+                        }
+                    </ul>
+
+                    @if (_participantCount < 2)
+                    {
+                        <a class="btn btn-primary" href="@($"/events/{Event.PublicId}?section=event-invitations")">
+                            <OpenWishIcon Name="envelope" />
+                            <span>Invite people</span>
+                        </a>
+                    }
+                    else if (!_showDrawConfirm)
+                    {
+                        <button type="button" class="btn btn-primary btn-lg draw-action"
+                                @onclick="OpenDrawConfirmation"
+                                disabled="@(!RendererInfo.IsInteractive || _eventStateChanged)">
+                            <OpenWishIcon Name="shuffle" />
+                            <span>@AssignmentActionLabel</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="confirm-panel" role="group" aria-labelledby="draw-confirm-title">
+                            <p id="draw-confirm-title" class="confirm-panel-title">@ConfirmationPrompt</p>
+                            <ul class="confirm-consequences">
+                                <li>Each person privately sees only who they're shopping for.</li>
+                                <li>Everyone in the draw gets an email that names are ready.</li>
+                                <li>To add someone or change rules later, you'll reset and draw again.</li>
+                            </ul>
+                            <div class="confirm-actions">
+                                <button type="button" class="btn btn-primary" @ref="_drawConfirmButton" @onclick="DrawNames" disabled="@(_drawing || _eventStateChanged)">
                                     @if (_drawing)
                                     {
-                                        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                        <span>Making assignments...</span>
+                                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                        <span>@DrawingBusyLabel</span>
                                     }
                                     else
                                     {
+                                        <OpenWishIcon Name="shuffle" />
                                         <span>@ConfirmAssignmentActionLabel</span>
                                     }
                                 </button>
-                                <button class="btn btn-secondary" @onclick="CancelDrawConfirmation" disabled="@(_drawing || _eventStateChanged)">
-                                    Cancel
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelDrawConfirmation" disabled="@(_drawing || _eventStateChanged)">
+                                    Not yet
                                 </button>
                             </div>
-                        }
+                        </div>
                     }
-                </div>
+                </section>
 
                 @if (_drawErrorMessage != null)
                 {
@@ -183,8 +213,8 @@
 
                 <hr />
 
-                <h5>Pairing rules <span class="text-muted fw-normal">(optional)</span></h5>
-                <p class="text-muted small">Add exclusion rules to prevent certain people from being matched together (e.g., spouses, significant others).</p>
+                <h4 class="h6 fw-semibold mb-1">Pairing rules <span class="text-muted fw-normal">(optional)</span></h4>
+                <p class="text-muted pairing-rules-intro">Keep certain people from drawing each other, like partners or housemates. Rules apply the next time names are drawn.</p>
 
                 <div class="pairing-rules" aria-busy="@(_loadingPairingRules || _updatingPairingRules ? "true" : "false")">
                 @if (_loadingPairingRules)
@@ -198,7 +228,7 @@
                 {
                     <div class="alert alert-danger" role="alert">
                         <p class="mb-2">@_pairingRulesLoadError</p>
-                        <button type="button" class="btn btn-outline-danger" @onclick="LoadPairingRules">
+                        <button type="button" class="btn btn-outline-danger" @onclick="LoadPairingRules" disabled="@(!RendererInfo.IsInteractive)">
                             Try again
                         </button>
                     </div>
@@ -290,12 +320,12 @@
                     {
                         <div class="card surface-alt pairing-rule-card mb-3">
                             <div class="card-body">
-                                <h6>Add exclusion rule</h6>
+                                <h5 class="h6">Add exclusion rule</h5>
                                 <div class="row g-2">
                                     <div class="col-md-5">
-                                        <label for="pairing-rule-source" class="form-label">Person 1</label>
+                                        <label for="pairing-rule-source" class="form-label">Person</label>
                                         <select id="pairing-rule-source" class="form-select" @bind="_newRuleSourceKey" disabled="@_updatingPairingRules">
-                                            <option value="">Select...</option>
+                                            <option value="">Choose someone</option>
                                             @foreach (var participant in _participants)
                                             {
                                                 <option value="@participant.Key">@participant.Label</option>
@@ -303,9 +333,9 @@
                                         </select>
                                     </div>
                                     <div class="col-md-5">
-                                        <label for="pairing-rule-target" class="form-label">Person 2</label>
+                                        <label for="pairing-rule-target" class="form-label">Can't be matched with</label>
                                         <select id="pairing-rule-target" class="form-select" @bind="_newRuleTargetKey" disabled="@_updatingPairingRules">
-                                            <option value="">Select...</option>
+                                            <option value="">Choose someone</option>
                                             @foreach (var participant in _participants)
                                             {
                                                 <option value="@participant.Key">@participant.Label</option>
@@ -313,7 +343,7 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2 d-flex align-items-end">
-                                        <button class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton || _updatingPairingRules)">
+                                        <button type="button" class="btn btn-primary w-100" @onclick="AddRule" disabled="@(DisableAddRuleButton || _updatingPairingRules)">
                                             @if (_updatingPairingRules)
                                             {
                                                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -322,18 +352,18 @@
                                             else
                                             {
                                                 <OpenWishIcon Name="plus" />
-                                                <span>Add</span>
+                                                <span>Add rule</span>
                                             }
                                         </button>
                                     </div>
                                 </div>
-                                <button class="btn btn-sm btn-link" @onclick="() => _showAddRule = false" disabled="@_updatingPairingRules">Cancel</button>
+                                <button type="button" class="btn btn-outline-secondary mt-2" @onclick="() => _showAddRule = false" disabled="@_updatingPairingRules">Cancel</button>
                             </div>
                         </div>
                     }
                     else
                     {
-                        <button class="btn btn-outline-primary" @onclick="() => _showAddRule = true" disabled="@_updatingPairingRules">
+                        <button type="button" class="btn btn-outline-primary" @onclick="() => _showAddRule = true" disabled="@(!RendererInfo.IsInteractive || _updatingPairingRules)">
                             <OpenWishIcon Name="plus-circle" /> Add exclusion rule
                         </button>
                     }
@@ -359,8 +389,11 @@
     private bool _resetting = false;
     private bool _showAddRule = false;
     private bool _showResetConfirm = false;
-    private bool _showFinalConfirm = false;
     private bool _showDrawConfirm = false;
+    private bool _focusDrawConfirm;
+    private bool _focusResetConfirm;
+    private ElementReference _drawConfirmButton;
+    private ElementReference _resetCancelButton;
     private string? _newRuleSourceKey;
     private string? _newRuleTargetKey;
     private string? _drawErrorMessage;
@@ -385,6 +418,7 @@
         string.Equals(Event?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal);
     private string AssignmentActionLabel => IsSecretSantaStyle ? "Draw Secret Santa names" : "Make assignments";
     private string ConfirmAssignmentActionLabel => IsSecretSantaStyle ? "Confirm and draw names" : "Confirm assignments";
+    private string DrawingBusyLabel => IsSecretSantaStyle ? "Drawing names..." : "Making assignments...";
     private string ConfirmationPrompt => IsSecretSantaStyle
         ? $"Ready to draw Secret Santa names for {_participantCount} people?"
         : $"Ready to make private assignments for {_participantCount} people?";
@@ -512,7 +546,7 @@
                 Logger.LogError(ex, "Failed to draw names for event {EventPublicId}", Event.PublicId);
                 await ReconcileGiftExchangeStateAsync(
                     namesShouldBeDrawn: true,
-                    "Names couldn't be drawn. Check the participant list and try again.",
+                    "Names couldn't be drawn. Check the participant list and try again. If you added exclusion rules, they may leave someone without a possible match.",
                     "Names were drawn, but the response was interrupted.");
                 return;
             }
@@ -781,10 +815,38 @@
         }
     }
 
+    private void OpenDrawConfirmation()
+    {
+        _drawErrorMessage = null;
+        _showDrawConfirm = true;
+        _focusDrawConfirm = true;
+    }
+
+    private void OpenResetConfirmation()
+    {
+        _resetErrorMessage = null;
+        _showResetConfirm = true;
+        _focusResetConfirm = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusDrawConfirm && _showDrawConfirm)
+        {
+            _focusDrawConfirm = false;
+            await _drawConfirmButton.FocusAsync();
+        }
+
+        if (_focusResetConfirm && _showResetConfirm)
+        {
+            _focusResetConfirm = false;
+            await _resetCancelButton.FocusAsync();
+        }
+    }
+
     private void CancelReset()
     {
         _showResetConfirm = false;
-        _showFinalConfirm = false;
         _resetErrorMessage = null;
     }
 
@@ -878,7 +940,6 @@
             _eventStateChanged = false;
             _showDrawConfirm = false;
             _showResetConfirm = false;
-            _showFinalConfirm = false;
         }
         catch (Exception ex)
         {
@@ -913,7 +974,6 @@
         _resetErrorMessage = null;
         _showDrawConfirm = false;
         _showResetConfirm = false;
-        _showFinalConfirm = false;
     }
 
     private static bool RulesMatch(CustomPairingRuleModel first, CustomPairingRuleModel second) =>

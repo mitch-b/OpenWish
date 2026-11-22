@@ -10,6 +10,12 @@
     background: var(--color-surface-alt);
 }
 
+.setup-step-next {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 55%, var(--color-border));
+    background: var(--color-surface);
+    box-shadow: inset 3px 0 0 var(--color-primary-bg);
+}
+
 .setup-step-marker {
     display: grid;
     flex: 0 0 2rem;
@@ -17,9 +23,16 @@
     height: 2rem;
     place-items: center;
     border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    box-shadow: inset 0 0 0 1px var(--color-border);
+    font-weight: 700;
+}
+
+.setup-step-next .setup-step-marker {
     background: var(--color-primary-bg);
     color: #fff;
-    font-weight: 700;
+    box-shadow: none;
 }
 
 .setup-step-complete .setup-step-marker {
@@ -28,21 +41,74 @@
     box-shadow: inset 0 0 0 1px var(--color-success-border);
 }
 
+.setup-step-text {
+    min-width: 0;
+}
+
+.setup-step-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    overflow-wrap: anywhere;
+}
+
+.setup-step-next-badge {
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.setup-step-description {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+}
+
+.setup-step-complete .setup-step-title,
+.setup-step-complete .setup-step-description {
+    color: var(--color-text-muted);
+}
+
 .setup-step .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     min-height: 2.75rem;
+    white-space: nowrap;
+}
+
+.setup-step .setup-step-quiet-action {
+    min-width: 2.75rem;
+    color: var(--color-text-muted);
+}
+
+.setup-step .setup-step-quiet-action:hover,
+.setup-step .setup-step-quiet-action:focus-visible {
+    color: var(--color-text);
 }
 
 @media (max-width: 575.98px) {
     .setup-step {
         grid-template-columns: auto minmax(0, 1fr);
         align-items: flex-start;
+        gap: 0.5rem 0.75rem;
     }
 
     .setup-step .btn {
         grid-column: 1 / -1;
         justify-content: center;
         width: 100%;
+    }
+
+    .setup-step .setup-step-quiet-action {
+        grid-column: 2 / -1;
+        justify-content: flex-start;
+        width: auto;
+        margin-top: -0.5rem;
+        padding-inline: 0;
     }
 }

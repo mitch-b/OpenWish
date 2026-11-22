@@ -133,6 +133,48 @@ window.openWishFocusElement = function (id) {
     element.focus({ preventScroll: true });
 };
 
+// On touch devices, focusing a text field on open pops the on-screen keyboard and hides the dialog.
+function openWishPrefersCalmDialogFocus() {
+    return typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+}
+
+function openWishIsTextEntry(element) {
+    if (element instanceof HTMLTextAreaElement || element?.isContentEditable) {
+        return true;
+    }
+    if (!(element instanceof HTMLInputElement)) {
+        return false;
+    }
+    return !["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"]
+        .includes(element.type);
+}
+
+function openWishFocusDialogHeading(dialog) {
+    const labelId = dialog.getAttribute("aria-labelledby");
+    const heading = labelId ? document.getElementById(labelId) : null;
+    const target = heading instanceof HTMLElement && dialog.contains(heading) ? heading : dialog;
+    if (!target.hasAttribute("tabindex")) {
+        target.tabIndex = -1;
+    }
+    target.focus({ preventScroll: true });
+}
+
+// Focuses a dialog text field, except on touch devices where the dialog heading is focused instead.
+window.openWishFocusDialogField = function (id, dialogId) {
+    const element = document.getElementById(id);
+    if (!(element instanceof HTMLElement)) {
+        throw new Error(`Unable to focus missing element: ${id}`);
+    }
+
+    const dialog = dialogId ? document.getElementById(dialogId) : element.closest("[role='dialog']");
+    if (dialog instanceof HTMLElement && openWishIsTextEntry(element) && openWishPrefersCalmDialogFocus()) {
+        openWishFocusDialogHeading(dialog);
+        return;
+    }
+
+    element.focus({ preventScroll: true });
+};
+
 const openWishDialogs = new Map();
 const openWishInertElements = new Map();
 
@@ -261,7 +303,9 @@ window.openWishActivateDialog = function (id, returnFocusId, monitorOpenerRemova
 
     const firstFocusable = dialog.querySelector("[data-dialog-initial-focus]")
         ?? dialog.querySelector(focusableSelector);
-    if (firstFocusable instanceof HTMLElement) {
+    if (firstFocusable instanceof HTMLElement && openWishIsTextEntry(firstFocusable) && openWishPrefersCalmDialogFocus()) {
+        openWishFocusDialogHeading(dialog);
+    } else if (firstFocusable instanceof HTMLElement) {
         firstFocusable.focus({ preventScroll: true });
     } else {
         dialog.tabIndex = -1;

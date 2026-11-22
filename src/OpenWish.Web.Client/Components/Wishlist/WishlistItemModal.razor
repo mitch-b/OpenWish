@@ -194,7 +194,7 @@
             // Editing starts with the idea itself rather than the link importer.
             if (_isEditing)
             {
-                await JSRuntime.InvokeVoidAsync("openWishFocusElement", "name");
+                await JSRuntime.InvokeVoidAsync("openWishFocusDialogField", "name", "wishlist-item-dialog");
             }
         }
 
@@ -208,7 +208,7 @@
         {
             _focusImporter = false;
             await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "product-url-import-modal");
-            await JSRuntime.InvokeVoidAsync("openWishFocusElement", "product-url-import-modal");
+            await JSRuntime.InvokeVoidAsync("openWishFocusDialogField", "product-url-import-modal", "wishlist-item-dialog");
         }
     }
 

@@ -50,7 +50,7 @@ public class ItemFormMarkupTests
     {
         var markup = ReadComponent([.. _wishlistComponents, "WishlistItemModal.razor"]);
 
-        Assert.Contains("\"openWishFocusElement\", \"name\"", markup);
+        Assert.Contains("\"openWishFocusDialogField\", \"name\"", markup);
         Assert.Contains("\"wishlist-item-name-field\" : \"wishlist-item-price-field\"", markup);
         Assert.Contains("id=\"wishlist-item-save-error\"", markup);
     }

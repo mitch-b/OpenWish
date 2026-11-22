@@ -352,7 +352,7 @@ async function recordDashboardWelcomeStates(page) {
     record();
   });
 
-  // InteractiveAuto may activate through a server circuit or WebAssembly, so track both kinds of traffic.
+  // Interactive pages may activate through a server circuit or WebAssembly, so track both kinds of traffic.
   const activity = { lastAt: Date.now() };
   const touch = () => { activity.lastAt = Date.now(); };
   page.on("request", touch);
@@ -6607,33 +6607,6 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await ideaGrid.scrollIntoViewIfNeeded();
   await ideaGrid.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas.png") });
 
-  // InteractiveAuto uses a server circuit until the WebAssembly runtime is cached. Select WASM in this test only.
-  await page.addInitScript(wishlistPath => {
-    if (location.pathname !== wishlistPath) return;
-    const selectWasm = comment => {
-      if (!comment.textContent.startsWith("Blazor:{")) return;
-      const descriptor = JSON.parse(comment.textContent.slice("Blazor:".length));
-      if (descriptor.type === "auto") {
-        comment.textContent = `Blazor:${JSON.stringify({ ...descriptor, type: "webassembly" })}`;
-      }
-    };
-    new MutationObserver(records => {
-      for (const record of records) {
-        for (const added of record.addedNodes) {
-          if (added.nodeType === Node.COMMENT_NODE) selectWasm(added);
-          const walker = document.createTreeWalker(added, NodeFilter.SHOW_COMMENT);
-          while (walker.nextNode()) selectWasm(walker.currentNode);
-        }
-      }
-    }).observe(document, { childList: true, subtree: true });
-  }, `/wishlists/${allowedList.id}`);
-  const wasmItems = page.waitForResponse(response =>
-    response.url().includes(`/api/wishlists/${allowedList.id}/items`) && response.status() === 200, { timeout: 120000 });
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await wasmItems.catch(error => {
-    throw new Error(`${error.message}; WebAssembly diagnostics: ${JSON.stringify(diagnostics)}`);
-  });
-  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
   for (let attempt = 0; attempt < 100 && !await page.locator("#wishlist-item-dialog").isVisible(); attempt++) {
     await page.getByRole("button", { name: "Edit Camel wool coat" }).first().click();
     await page.waitForTimeout(100);
@@ -6644,20 +6617,16 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   });
   await screenshot(page, "connected-app-edit-note.png");
   if (await dialog.getByTestId("add-another-item").count() !== 0) {
-    throw new Error("A JSON-loaded existing idea was presented as a new item.");
+    throw new Error("An existing idea was presented as a new item.");
   }
-  const savedInWasm = page.waitForResponse(response =>
-    response.request().method() === "PUT" &&
-    response.url().includes(`/items/by-public-id/${coat.json.id}`) && response.status() === 200);
   await dialog.getByRole("button", { name: "Save changes" }).click();
-  await savedInWasm;
   await dialog.waitFor({ state: "detached" });
   const afterOwnerEdit = await connectedAppApi(token.access_token, "GET", "items");
   if (afterOwnerEdit.json.length !== 2 || !afterOwnerEdit.json.some(item => item.id === coat.json.id)) {
-    throw new Error("Editing in WebAssembly duplicated an idea or changed its identity.");
+    throw new Error("Editing an app-added idea duplicated it or changed its identity.");
   }
   assertions.push("ideas show their source app, and editing one explains the sync");
-  assertions.push("WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it");
+  assertions.push("editing preserves the sync warning, public identity, and existing idea without duplicating it");
 
   await page.getByRole("link", { name: "Integrations", exact: true }).click();
   await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });

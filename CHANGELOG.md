@@ -8,14 +8,15 @@ All notable user-facing changes to OpenWish are documented here.
 
 ### Changed
 
-- Pages run in the browser with WebAssembly once OpenWish is cached. The
-  dashboard and notifications panel no longer keep every page on a server
-  connection.
+- Interactive pages use a live server connection, the fastest mode in a
+  benchmark of every page on desktop and simulated mobile, and no longer
+  download the browser WebAssembly runtime in the background.
 
 ### Fixed
 
 - Reordering ideas, reservations, comments, invitations, friend requests, and
-  gift exchange rules work the same in the browser as on the server.
+  gift exchange rules use public identifiers, so they work wherever a page
+  runs.
 - Event management and invitations no longer flash a loading state as the page
   becomes interactive.
 

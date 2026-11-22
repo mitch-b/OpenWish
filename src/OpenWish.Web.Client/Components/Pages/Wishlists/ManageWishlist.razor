@@ -14,7 +14,7 @@
 @inject ILogger<ManageWishlist> Logger
 @inject IEventService EventService
 
-@rendermode InteractiveAuto
+@rendermode InteractiveServer
 
 <PageTitle>@(_wishlist is null ? "Manage wishlist" : $"Manage {_wishlist.Name}")</PageTitle>
 

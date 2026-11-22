@@ -1,6 +1,6 @@
 ---
 name: openwish-render-modes
-description: Choose or benchmark Blazor render modes and WebAssembly performance in OpenWish. Use for InteractiveAuto, static SSR, SignalR circuits, hydration, browser startup, and render-boundary decisions.
+description: Choose or benchmark Blazor render modes and WebAssembly performance in OpenWish. Use for InteractiveServer, InteractiveAuto, static SSR, SignalR circuits, hydration, browser startup, and render-boundary decisions.
 ---
 
 # OpenWish render modes
@@ -22,14 +22,21 @@ material local-click advantage under the tested conditions. Don't treat a
 cached download as a cached running runtime or infer in-app navigation,
 high-RTT interaction, or concurrent server costs from these results.
 
+**Current decision:** all interactive boundaries use `InteractiveServer`, the
+measured winner. WebAssembly stays registered in `Program.cs` so the benchmark
+can force it, but no production component selects it, so browsers do not
+download the runtime. Keep the HTTP client services and `PublicId` routes
+working so a future Auto or WASM experiment stays correct. Change the policy
+only after a new benchmark shows a clear win on the measured journey.
+
 | Component type | Default | When to reconsider |
 | --- | --- | --- |
 | App shell, layouts, passive markup | Static SSR | Add an island only for behavior that requires it. A static page can still boot an interactive layout island. |
 | Account, sign-in/out, recovery, consent | Static SSR/HTTP forms | Keep Identity, cookies, redirects, antiforgery, and request-bound `HttpContext` on the server. Don't move them into a circuit or WASM to chase a timing result. |
-| Wishlist, dashboard, event, friends, gift plan and other interactive routes | `InteractiveAuto` | Compare cold and warm navigation, real actions, and load before changing a boundary. Keep both server and browser service paths working. |
+| Wishlist, dashboard, event, friends, gift plan and other interactive routes | `InteractiveServer` | Compare cold and warm navigation, real actions, and load before changing a boundary. Keep both server and browser service paths working. |
 | Child forms, cards, dialogs, filtering and coordination controls | Inherit | Consider a separate island only across a static parent and serializable boundary with a specific measured benefit. |
-| Theme toggle | Auto today; candidate for plain JS | It only needs browser state. Compare a behavior-equivalent JS prototype, including system theme and persistence, on a route that would otherwise stay static. |
-| Notification flyout | Auto today | Never pin the shared layout to InteractiveServer. Measure open-to-data, and check whether fetch-on-open or a lighter island would save work before rewriting. |
+| Theme toggle | Server today; candidate for plain JS | It only needs browser state. Compare a behavior-equivalent JS prototype, including system theme and persistence, on a route that would otherwise stay static. |
+| Notification flyout | Server today | Use the same policy as the routes: a Server layout island pins Auto siblings to Server. Measure open-to-data, and check whether fetch-on-open or a lighter island would save work before rewriting. |
 
 Auto can render via Server on a cold load while fetching the WASM bundle in
 the background. On a later load it may pick cached WASM; it also prefers
@@ -52,7 +59,7 @@ BENCHMARK_SAMPLES=1 BENCHMARK_PROFILES=desktop scripts/benchmark-render-modes.sh
 This starts an isolated verification stack with synthetic data; never use
 the local review stack or production. It instruments a temporary copy of
 tracked app sources, uses the same Release image for all three policies,
-forces each policy across the existing Auto roots together, and records the
+forces each policy across the existing interactive roots together, and records the
 actual renderer. No runtime override ships with the app.
 
 `pr-assets/render-benchmark/` contains `components.json` (all Razor UI

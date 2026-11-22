@@ -12,7 +12,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<ManageEvent> Logger
 
-@rendermode InteractiveAuto
+@rendermode InteractiveServer
 
 <PageTitle>@(_event?.Name is { Length: > 0 } eventName ? $"Manage event – {eventName}" : "Manage event")</PageTitle>
 

@@ -46,7 +46,7 @@ public class AppShellMarkupTests
     }
 
     [Fact]
-    public void InteractiveComponents_UseAutoSoTheyCanMoveToWebAssembly()
+    public void InteractiveComponents_UseOneMeasuredServerPolicy()
     {
         var solutionDirectory = FindSolutionDirectory();
         var components = Directory
@@ -54,8 +54,8 @@ public class AppShellMarkupTests
             .Concat(Directory.EnumerateFiles(Path.Combine(solutionDirectory, "OpenWish.Web.Client"), "*.razor", SearchOption.AllDirectories))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
-        var serverModes = components
-            .Where(path => Regex.IsMatch(File.ReadAllText(path), @"\b(InteractiveServer|InteractiveWebAssembly)\b"))
+        var otherModes = components
+            .Where(path => Regex.IsMatch(File.ReadAllText(path), @"\b(InteractiveAuto|InteractiveWebAssembly)\b"))
             .Select(path => Path.GetRelativePath(solutionDirectory, path))
             .ToList();
         var serverComponents = Directory
@@ -64,8 +64,8 @@ public class AppShellMarkupTests
             .Select(path => Path.GetRelativePath(solutionDirectory, path))
             .ToList();
 
-        // A server-only component opens a circuit that keeps every Auto component on the server.
-        Assert.Empty(serverModes);
+        // InteractiveServer benchmarked fastest; mixing Server and WebAssembly roots is unsupported.
+        Assert.Empty(otherModes);
         Assert.Empty(serverComponents);
     }
 

@@ -8,7 +8,7 @@ import sys
 
 root = Path(sys.argv[1])
 rows = []
-mode_pattern = re.compile(r"^@rendermode\s+InteractiveAuto[ \t]*$", re.MULTILINE)
+mode_pattern = re.compile(r"^@rendermode\s+Interactive(?:Auto|Server)[ \t]*$", re.MULTILINE)
 for project in ["OpenWish.Web", "OpenWish.Web.Client"]:
     for path in sorted((root / project / "Components").rglob("*.razor")):
         if path.name == "_Imports.razor":

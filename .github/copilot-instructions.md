@@ -1,7 +1,7 @@
 # Copilot Instructions
 
 OpenWish is a .NET 11, self-hosted wishlist and gift-exchange application. It
-uses ASP.NET Core Blazor with server rendering plus interactive WebAssembly,
+uses ASP.NET Core Blazor with server rendering and interactive Server components,
 EF Core with PostgreSQL, and .NET Aspire for local orchestration.
 
 ## Commands
@@ -94,11 +94,11 @@ server-rendered components and maps the client assembly for interactive
 WebAssembly.
 
 `OpenWish.Web.Client` contains the interactive UI and HTTP
-implementations of shared service interfaces. Interactive components use
-`@rendermode InteractiveAuto` and live in `OpenWish.Web.Client`, so they run
-in WebAssembly once its runtime is cached. Do not add `InteractiveServer`
-components: Auto reuses an existing circuit, so one server-only component
-keeps every Auto component on the server. The client uses the named
+implementations of shared service interfaces. Interactive components live in
+`OpenWish.Web.Client` and use `@rendermode InteractiveServer`, which
+benchmarked fastest (see `.agents/skills/openwish-render-modes`). Keep one
+policy for every interactive root and rerun that benchmark before changing
+it. The client uses the named
 `OpenWish.API` `HttpClient`, whose base address is the hosting application.
 
 `OpenWish.Shared` is the server/client boundary: DTOs, request models, and

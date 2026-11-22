@@ -2,11 +2,11 @@
   {
     "version": "0.21.3",
     "date": "2026-11-22",
-    "title": "Faster in your browser",
-    "summary": "Pages run in your browser once OpenWish is cached, with the same behavior as before.",
+    "title": "Faster interactive pages",
+    "summary": "Pages become interactive sooner, without downloading a browser runtime in the background.",
     "highlights": [
-      "The dashboard and notifications no longer keep every page on the server.",
-      "Reordering, reservations, comments, invitations, and friend requests work in the browser.",
+      "Every interactive page uses the fastest mode measured on desktop and mobile.",
+      "Reordering, reservations, comments, invitations, and friend requests use public identifiers.",
       "Event management keeps its data on screen while the page loads."
     ]
   },

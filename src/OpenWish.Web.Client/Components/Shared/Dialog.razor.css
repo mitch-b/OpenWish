@@ -1,10 +1,7 @@
 .dialog-container {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background-color: rgba(13, 15, 26, 0.62);
     z-index: 1060;
     animation: fadeIn 0.16s ease-in;
@@ -15,45 +12,116 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding:
+        max(1rem, env(safe-area-inset-top))
+        max(0.75rem, env(safe-area-inset-right))
+        max(1rem, env(safe-area-inset-bottom))
+        max(0.75rem, env(safe-area-inset-left));
 }
 
 .dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 36rem);
+    max-height: 100%;
+    overflow: hidden;
     background: var(--color-surface);
     color: var(--color-text);
     border: 1px solid var(--color-border-muted);
     border-radius: 1.1rem;
-    padding: 1.25rem;
-    min-width: 300px;
-    max-width: 90%;
-    max-height: 90vh;
     box-shadow: var(--shadow-lg);
     animation: slideIn 0.18s ease-out;
     transition: background-color .25s ease, color .25s ease, border-color .25s ease;
 }
 
+.dialog:focus {
+    outline: none;
+}
+
 .dialog-header {
     display: flex;
+    flex: 0 0 auto;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
+    gap: 0.75rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.25rem;
     border-bottom: 1px solid var(--color-border-muted);
 }
 
-.close-button {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0.25rem;
-    color: var(--color-text);
-    transition: color .2s ease, background-color .2s ease;
-    border-radius: 0.6rem;
+.dialog-header h3 {
+    min-width: 0;
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
 }
 
-.close-button:hover {
-    background: var(--color-surface-alt);
-    color: var(--color-link-hover);
+.close-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.7rem;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+    cursor: pointer;
+    transition: color .2s ease, background-color .2s ease;
+}
+
+.close-button:hover:not(:disabled) {
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+.close-button:focus-visible {
+    outline: 2px solid var(--color-primary-bg);
+    outline-offset: 2px;
+}
+
+.close-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.dialog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.25rem;
+    overflow-wrap: anywhere;
+}
+
+.dialog-content ::deep > .modal-body {
+    padding: 0;
+}
+
+.dialog-content ::deep > .modal-body > :last-child,
+.dialog-content ::deep > :last-child {
+    margin-bottom: 0;
+}
+
+/* Keep confirmation actions reachable while long content scrolls. */
+.dialog-content ::deep > .modal-footer {
+    position: sticky;
+    bottom: -1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin: 1.25rem -1.25rem -1.25rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--color-border-muted);
+    background: var(--color-surface);
+}
+
+.dialog-content ::deep > .modal-footer > * {
+    margin: 0;
 }
 
 @keyframes fadeIn {
@@ -66,23 +134,33 @@
     to { transform: translateY(0); }
 }
 
-/* Mobile responsive improvements */
-@media (max-width: 767.98px) {
-    .dialog {
-        min-width: 280px;
-        max-width: 95%;
-        padding: 0.75rem;
-    }
-
+@media (max-width: 575.98px) {
     .dialog-header {
-        margin-bottom: 0.75rem;
+        padding-left: 1rem;
     }
 
     .dialog-header h3 {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
     }
 
-    .close-button {
-        font-size: 1.25rem;
+    .dialog-content {
+        padding: 1rem;
+    }
+
+    .dialog-content ::deep > .modal-footer {
+        bottom: -1rem;
+        margin: 1rem -1rem -1rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .dialog-content ::deep > .modal-footer > .btn {
+        flex: 1 1 auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dialog-container,
+    .dialog {
+        animation: none;
     }
 }

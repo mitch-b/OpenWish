@@ -13,32 +13,37 @@
 
 @if (ShouldShowCard)
 {
-    <div class="card shadow-sm mb-4 pending-invitations-card"
-         aria-busy="@(_isLoading ? "true" : "false")"
-         aria-labelledby="pending-invitations-title">
+    <section class="card mb-4 pending-invitations-card"
+             aria-busy="@(_isLoading ? "true" : "false")"
+             aria-labelledby="pending-invitations-title">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="card-title mb-0" id="pending-invitations-title">
-                    <OpenWishIcon Name="envelope" Class="me-2" /> Pending invitations
-                    @if (_invitations?.Any() == true)
-                    {
-                        <span class="badge bg-warning text-dark ms-2">@_invitations.Count()</span>
-                    }
-                </h5>
+            <div class="pending-invitations-header">
+                <span class="pending-invitations-icon" aria-hidden="true"><OpenWishIcon Name="envelope" /></span>
+                <div>
+                    <h2 class="pending-invitations-title" id="pending-invitations-title">
+                        Pending invitations
+                        @if (_invitations?.Any() == true)
+                        {
+                            <span class="pending-invitations-count">@_invitations.Count()</span>
+                        }
+                    </h2>
+                    <p class="pending-invitations-hint">Accept to see the event and share your wishlist with the group.</p>
+                </div>
             </div>
 
             @if (_isLoading)
             {
-                <div class="text-center py-3" role="status">
+                <div class="pending-invitations-loading" role="status">
                     <div class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></div>
-                    <div class="mt-2">Loading invitations...</div>
+                    <span>Loading invitations...</span>
                 </div>
             }
             else if (!string.IsNullOrWhiteSpace(_loadError))
             {
                 <div class="alert alert-danger mb-0" role="alert">
                     <p class="mb-2">@_loadError</p>
-                    <button class="btn btn-outline-danger btn-sm" type="button" @onclick="LoadInvitations">
+                    <button class="btn btn-outline-danger btn-sm" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadInvitations">
                         Try again
                     </button>
                 </div>
@@ -49,29 +54,72 @@
                 {
                     <div class="alert alert-danger" role="alert">@_actionError</div>
                 }
-                <div class="list-group list-group-flush">
+                <ul class="pending-invitation-list">
                     @foreach (var invitation in _invitations)
                     {
-                        <div class="list-group-item px-0" @key="invitation.PublicId">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1 me-3">
-                                    <h6 class="mb-1">@(invitation.Event?.Name ?? "Event")</h6>
-                                    <small class="text-muted d-block">
-                                        @if (invitation.Event?.Date != null)
+                        <li class="pending-invitation" @key="invitation.PublicId">
+                            <div class="pending-invitation-info">
+                                <h3 class="pending-invitation-name">@(invitation.Event?.Name ?? "Event")</h3>
+                                <p class="pending-invitation-meta">
+                                    @if (invitation.Event?.Date != null)
+                                    {
+                                        <span><OpenWishIcon Name="calendar-event" /> @invitation.Event.Date.ToString("ddd, MMM d, yyyy")</span>
+                                        @if (!EventCountdown.IsPast(invitation.Event.Date, DateTimeOffset.UtcNow))
                                         {
-                                            <span class="me-2"><OpenWishIcon Name="calendar-event" /> @invitation.Event.Date.ToString("MMMM dd, yyyy")</span>
+                                            <span class="pending-invitation-countdown">@EventCountdown.Badge(invitation.Event.Date, DateTimeOffset.UtcNow)</span>
                                         }
-                                        @if (!string.IsNullOrEmpty(invitation.Event?.CreatedBy?.UserName))
-                                        {
-                                            <span>Invited by @invitation.Event.CreatedBy.UserName</span>
-                                        }
-                                    </small>
-                                </div>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-success"
+                                    }
+                                    @if (!string.IsNullOrEmpty(invitation.Event?.CreatedBy?.UserName))
+                                    {
+                                        <span>Invited by @invitation.Event.CreatedBy.UserName</span>
+                                    }
+                                </p>
+                            </div>
+                            <div class="pending-invitation-actions">
+                                @if (_pendingDeclinePublicId == invitation.PublicId)
+                                {
+                                    <div id="decline-invitation-@invitation.PublicId" role="group"
+                                         class="pending-invitation-confirm"
+                                         aria-label="Confirm declining @(invitation.Event?.Name ?? "this event")">
+                                        <p class="pending-invitation-confirm-text">Decline this invitation? It will be removed from your list.</p>
+                                        <button class="btn btn-outline-secondary"
+                                                type="button"
+                                                aria-expanded="true"
+                                                aria-controls="decline-invitation-@invitation.PublicId"
+                                                @onclick="CancelDecline"
+                                                disabled="@(!RendererInfo.IsInteractive || IsProcessing(invitation.PublicId))">
+                                            Keep invitation
+                                        </button>
+                                        <button class="btn btn-danger"
+                                                type="button"
+                                                @onclick="() => DeclineInvitation(invitation)"
+                                                disabled="@(!RendererInfo.IsInteractive || IsProcessing(invitation.PublicId))">
+                                            @if (IsProcessing(invitation.PublicId) && _processingAction == "decline")
+                                            {
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                <span>Declining...</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Confirm decline</span>
+                                            }
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-outline-secondary"
+                                            type="button"
+                                            aria-expanded="false"
+                                            aria-controls="decline-invitation-@invitation.PublicId"
+                                            @onclick="() => ConfirmDecline(invitation.PublicId)"
+                                            disabled="@(!RendererInfo.IsInteractive || IsProcessing(invitation.PublicId))">
+                                        Decline
+                                    </button>
+                                    <button class="btn btn-primary"
                                             type="button"
                                             @onclick="() => AcceptInvitation(invitation)"
-                                            disabled="@IsProcessing(invitation.PublicId)">
+                                            disabled="@(!RendererInfo.IsInteractive || IsProcessing(invitation.PublicId))">
                                         @if (IsProcessing(invitation.PublicId) && _processingAction == "accept")
                                         {
                                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -79,56 +127,18 @@
                                         }
                                         else
                                         {
+                                            <OpenWishIcon Name="check-lg" />
                                             <span>Accept</span>
                                         }
                                     </button>
-                                    @if (_pendingDeclinePublicId == invitation.PublicId)
-                                    {
-                                        <div id="decline-invitation-@invitation.PublicId" role="group"
-                                             aria-label="Confirm declining @(invitation.Event?.Name ?? "this event")">
-                                            <button class="btn btn-outline-secondary"
-                                                    type="button"
-                                                    aria-expanded="true"
-                                                    aria-controls="decline-invitation-@invitation.PublicId"
-                                                    @onclick="CancelDecline"
-                                                    disabled="@IsProcessing(invitation.PublicId)">
-                                                Keep invitation
-                                            </button>
-                                            <button class="btn btn-danger"
-                                                    type="button"
-                                                    @onclick="() => DeclineInvitation(invitation)"
-                                                    disabled="@IsProcessing(invitation.PublicId)">
-                                                @if (IsProcessing(invitation.PublicId) && _processingAction == "decline")
-                                                {
-                                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                                                    <span>Declining...</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>Confirm decline</span>
-                                                }
-                                            </button>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-outline-secondary"
-                                                type="button"
-                                                aria-expanded="false"
-                                                aria-controls="decline-invitation-@invitation.PublicId"
-                                                @onclick="() => ConfirmDecline(invitation.PublicId)"
-                                                disabled="@IsProcessing(invitation.PublicId)">
-                                            Decline
-                                        </button>
-                                    }
-                                </div>
+                                }
                             </div>
-                        </div>
+                        </li>
                     }
-                </div>
+                </ul>
             }
         </div>
-    </div>
+    </section>
 }
 
 @code {

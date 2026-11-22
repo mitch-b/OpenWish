@@ -19,16 +19,18 @@
     <PageHeader Title="Events"
                 Description="Plan an exchange or a shared occasion.">
         <Actions>
-            @if (_events is { Count: > 0 })
-            {
-                <button type="button" class="btn btn-outline-light btn-lg" data-testid="events-download"
-                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadEventsAsync">
-                    <OpenWishIcon Name="download" Class="me-2" /> Download CSV
-                </button>
-            }
-            <a href="/events/new" class="btn btn-light btn-lg">
-                <OpenWishIcon Name="gift" Class="me-2" /> Start a gift exchange
-            </a>
+            <div class="events-header-actions">
+                @if (_events is { Count: > 0 })
+                {
+                    <button type="button" class="btn btn-outline-secondary" data-testid="events-download"
+                            disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadEventsAsync">
+                        <OpenWishIcon Name="download" /> Download CSV
+                    </button>
+                }
+                <a href="/events/new" class="btn btn-primary events-new-action">
+                    <OpenWishIcon Name="plus-lg" /> New event
+                </a>
+            </div>
         </Actions>
     </PageHeader>
 
@@ -54,7 +56,8 @@
         {
             <div class="alert alert-danger" role="alert">
                 <p class="mb-2">@_downloadError</p>
-                <button class="btn btn-outline-danger btn-sm" type="button" @onclick="DownloadEventsAsync">
+                <button class="btn btn-outline-danger btn-sm" type="button"
+                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadEventsAsync">
                     Try again
                 </button>
             </div>
@@ -67,32 +70,61 @@
 
         @if (_events == null && _isLoading)
         {
-            <div class="text-center" role="status">
-                <div class="spinner-border text-primary" aria-hidden="true"></div>
-                <div class="mt-2">Loading events...</div>
+            <div class="events-loading" role="status">
+                <div class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></div>
+                <span>Loading events...</span>
             </div>
         }
         else if (_events?.Any() == false)
         {
-            <div class="empty-state text-center">
-                <OpenWishIcon Name="calendar-event" Class="empty-state-icon" />
-                <h2>No events yet</h2>
-                <p class="lead">Invite your group and make private gift assignments in minutes.</p>
-                <a href="/events/new" class="btn btn-primary btn-lg mt-3">
-                    Start your first gift exchange
+            <div class="empty-state">
+                <span class="empty-state-icon" aria-hidden="true"><OpenWishIcon Name="calendar-event" /></span>
+                <h3>No events yet</h3>
+                <p>Create a gift exchange or shared occasion, or accept an invitation, and it will show up here.</p>
+                <a href="/events/new" class="btn btn-outline-secondary">
+                    <OpenWishIcon Name="plus-lg" /> Create your first event
                 </a>
             </div>
         }
         else if (_events?.Any() == true)
         {
-            <div class="row g-3 event-grid">
-                @foreach (var evt in _events)
+            <section class="events-group" aria-labelledby="events-upcoming-title">
+                <h3 id="events-upcoming-title" class="events-group-title">
+                    Upcoming <span class="events-group-count">@UpcomingEvents.Count</span>
+                </h3>
+                @if (UpcomingEvents.Count == 0)
                 {
-                    <div class="col-md-6 col-lg-4" @key="evt.PublicId">
-                        <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                    <p class="events-group-empty">Nothing coming up. <a href="/events/new">Plan your next event</a>.</p>
+                }
+                else
+                {
+                    <div class="row g-3 event-grid">
+                        @foreach (var evt in UpcomingEvents)
+                        {
+                            <div class="col-md-6 col-xl-4" @key="evt.PublicId">
+                                <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                            </div>
+                        }
                     </div>
                 }
-            </div>
+            </section>
+
+            @if (PastEvents.Count > 0)
+            {
+                <section class="events-group events-group-past" aria-labelledby="events-past-title">
+                    <h3 id="events-past-title" class="events-group-title">
+                        Past events <span class="events-group-count">@PastEvents.Count</span>
+                    </h3>
+                    <div class="row g-3 event-grid">
+                        @foreach (var evt in PastEvents)
+                        {
+                            <div class="col-md-6 col-xl-4" @key="evt.PublicId">
+                                <EventCard Event="@evt" OnDelete="@HandleEventDeleted" />
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
         }
     </section>
 </div>
@@ -105,6 +137,16 @@
     private string? _statusMessage;
     private string? _userId;
     private int _loadVersion;
+
+    private List<EventModel> UpcomingEvents => (_events ?? [])
+        .Where(evt => !EventCountdown.IsPast(evt.Date, DateTimeOffset.UtcNow))
+        .OrderBy(evt => evt.Date)
+        .ToList();
+
+    private List<EventModel> PastEvents => (_events ?? [])
+        .Where(evt => EventCountdown.IsPast(evt.Date, DateTimeOffset.UtcNow))
+        .OrderByDescending(evt => evt.Date)
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {

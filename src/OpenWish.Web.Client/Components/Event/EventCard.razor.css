@@ -4,6 +4,13 @@
     transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
 }
 
+.event-card .card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.1rem 1.15rem 1.15rem;
+}
+
 .event-card:hover {
     border-color: color-mix(in srgb, var(--color-primary-bg) 38%, var(--color-border));
     box-shadow: var(--shadow-md);
@@ -17,13 +24,17 @@
 }
 
 .event-card-heading {
+    display: flex;
     min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
 }
 
 .event-card-icon {
     display: grid;
-    width: 2.8rem;
-    height: 2.8rem;
+    width: 2.75rem;
+    height: 2.75rem;
     flex: 0 0 auto;
     place-items: center;
     border-radius: 0.8rem;
@@ -32,46 +43,78 @@
     font-size: 1.2rem;
 }
 
+.event-card-past .event-card-icon {
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+}
+
 .card-title {
     margin: 0;
     color: var(--color-text);
-    font-size: 1.05rem;
+    font-size: 1.08rem;
+    font-weight: 700;
+    line-height: 1.3;
     overflow-wrap: anywhere;
 }
 
 .card-owner {
     color: var(--color-text-muted);
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
+}
+
+.event-role {
+    display: inline-block;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-nav-active-text);
     font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .event-meta,
+.event-details,
 .event-status {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 0.85rem;
-    margin-top: 1rem;
+    align-items: center;
+    gap: 0.4rem 0.85rem;
     color: var(--color-text-muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
 }
 
 .event-meta span,
+.event-details span,
 .event-status span {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
 }
 
-.event-meta .event-countdown {
-    padding: 0.1rem 0.5rem;
-    border-radius: 999px;
-    background: var(--color-surface-alt);
+.event-meta .event-date {
     color: var(--color-text);
+    font-weight: 600;
+}
+
+.event-meta .event-countdown {
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-nav-active-text);
     font-weight: 700;
 }
 
 .event-meta .event-countdown-past {
-    font-weight: 500;
+    background: var(--color-surface-alt);
+    font-weight: 600;
     color: var(--color-text-muted);
+}
+
+.event-status {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border-muted);
 }
 
 .event-status .status-ready {
@@ -109,7 +152,8 @@
     position: relative;
     z-index: 2;
     flex: 0 0 auto;
-    margin: -0.5rem -0.5rem -0.5rem auto;
+    align-self: flex-start;
+    margin: -0.35rem -0.5rem -0.35rem auto;
 }
 
 .event-card:has(.kebab-menu[aria-expanded="true"]) {

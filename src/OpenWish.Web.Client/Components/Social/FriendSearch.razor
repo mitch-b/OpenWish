@@ -10,7 +10,7 @@
         <span class="social-heading-icon"><OpenWishIcon Name="person-plus" /></span>
         <div>
             <h2>Invite friends</h2>
-            <p>Send one invitation or paste a whole list.</p>
+            <p>Add people by email. Anyone already on OpenWish gets a friend request right away; everyone else gets an invitation to join.</p>
         </div>
     </div>
     
@@ -19,26 +19,30 @@
             <label for="emailInvites" class="form-label">Email addresses</label>
             <textarea id="emailInvites" class="form-control" rows="3" 
                       placeholder="friend@example.com, another@example.com"
+                      autocomplete="off"
+                      inputmode="email"
+                      spellcheck="false"
                       aria-describedby="emailInvitesHelp"
                       aria-invalid="@(_error ? "true" : "false")"
                       value="@inviteEmails"
                       @oninput="UpdateInviteEmails"
                       @onkeydown="HandleInviteKeyDown"></textarea>
             <div class="form-text" id="emailInvitesHelp">
-                Separate multiple addresses with commas, spaces, or semicolons. Press Ctrl+Enter to send.
+                Paste one or several, separated by commas, spaces, or new lines.<span class="invite-shortcut-hint"> Press Ctrl+Enter to send.</span>
             </div>
         </div>
         
-        <button class="btn btn-primary" type="button" @onclick="SendEmailInvites"
-                disabled="@(_sendingInvites || string.IsNullOrWhiteSpace(inviteEmails))">
+        <button class="btn btn-primary invite-send" type="button" @onclick="SendEmailInvites"
+                disabled="@(!RendererInfo.IsInteractive || _sendingInvites || string.IsNullOrWhiteSpace(inviteEmails))">
             @if (_sendingInvites)
             {
                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                <span class="ms-1">Sending...</span>
+                <span>Sending invitations...</span>
             }
             else
             {
-                <span><OpenWishIcon Name="send" /> Send invitations</span>
+                <OpenWishIcon Name="send" />
+                <span>Send invitations</span>
             }
         </button>
     </div>

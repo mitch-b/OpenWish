@@ -1286,9 +1286,9 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Social", "FriendRequestList.razor");
 
         Assert.Contains("aria-label=\"Accept friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Reject friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Decline friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Resend friend request to @GetReceiverName(request)\"", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_processingRequestId.HasValue\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("await OnFriendshipsChanged.InvokeAsync();", markup, StringComparison.Ordinal);
@@ -1296,7 +1296,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Friend requests could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadRequests\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryLoadRequests()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _loading)\"", markup, StringComparison.Ordinal);
         Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any())", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Resend invitation to @invite.Email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Cancel invitation to @invite.Email\"", markup, StringComparison.Ordinal);

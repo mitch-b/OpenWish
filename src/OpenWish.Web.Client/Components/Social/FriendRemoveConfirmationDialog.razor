@@ -1,15 +1,23 @@
 @using OpenWish.Web.Client.Components.Shared
 
-<Dialog @ref="dialog" Title="@Title" DescriptionId="friend-removal-description">
+<Dialog @ref="dialog" Title="@Title" DescriptionId="friend-removal-description" CanClose="@(!_isRemoving)" OnClose="HandleClosed">
     <div class="modal-body">
-        <p id="friend-removal-description">@Message</p>
+        <p id="friend-removal-description" class="mb-0">@Message</p>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@_isRemoving" @onclick="Close">
             Keep friend
         </button>
         <button type="button" class="btn btn-danger" disabled="@_isRemoving" @onclick="HandleConfirm">
-            @(_isRemoving ? "Removing..." : "Remove friend")
+            @if (_isRemoving)
+            {
+                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                <span role="status">Removing...</span>
+            }
+            else
+            {
+                <span>Remove friend</span>
+            }
         </button>
     </div>
 </Dialog>
@@ -22,7 +30,10 @@
 
     [Parameter]
     public EventCallback<string> OnConfirm { get; set; }
-    
+
+    [Parameter]
+    public EventCallback OnClosed { get; set; }
+
     [Parameter]
     public string FriendId { get; set; } = string.Empty;
 
@@ -31,10 +42,14 @@
         Title = title;
         Message = message;
         FriendId = friendId;
+        // Re-render first so the dialog receives the new title before it opens.
+        StateHasChanged();
         dialog.Show();
     }
 
     public Task Close() => dialog.CloseAsync();
+
+    private Task HandleClosed() => OnClosed.InvokeAsync();
 
     private async Task HandleConfirm()
     {
@@ -47,11 +62,12 @@
         {
             _isRemoving = true;
             await OnConfirm.InvokeAsync(FriendId);
-            await dialog.CloseAsync();
         }
         finally
         {
             _isRemoving = false;
         }
+
+        await dialog.CloseAsync();
     }
 }

@@ -310,6 +310,12 @@ app.Use(async (context, next) =>
     });
     await next();
 });
+// Show a friendly page for unknown routes in browser navigations; API and asset 404s stay unchanged.
+app.UseWhen(
+    context => HttpMethods.IsGet(context.Request.Method) &&
+        context.Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase) &&
+        !context.Request.Path.StartsWithSegments("/api"),
+    branch => branch.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true));
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

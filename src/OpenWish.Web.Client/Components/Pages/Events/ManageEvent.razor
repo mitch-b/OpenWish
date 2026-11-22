@@ -14,7 +14,7 @@
 
 @rendermode InteractiveAuto
 
-<PageTitle>Manage Event - @(_event?.Name ?? "")</PageTitle>
+<PageTitle>@(_event?.Name is { Length: > 0 } eventName ? $"Manage event – {eventName}" : "Manage event")</PageTitle>
 
 @if (_isLoading && _event == null)
 {
@@ -49,11 +49,9 @@ else
     <div class="container page-shell" aria-busy="@_isLoading">
         <PageHeader Title="Manage event" Description="@_event.Name">
             <Actions>
-                <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">
-                        <OpenWishIcon Name="arrow-left" /> Back to event
-                    </button>
-                </div>
+                <a class="btn btn-outline-secondary page-header-back" href="/events/@EventId">
+                    <OpenWishIcon Name="arrow-left" /> Back to event
+                </a>
             </Actions>
         </PageHeader>
 
@@ -81,11 +79,10 @@ else
         <PageSections Label="Event settings sections" Items="Sections" Active="@ActiveSection">
             <div class="page-section-panel" hidden="@(ActiveSection != "details")">
                 <h2 class="h4">Event details</h2>
-                            <EventForm Model="@_event"
-                                     OnSubmit="@HandleSubmit"
-                                     ShowValidationSummary="true"
-                                     LockEventType="@_event.NamesDrawnOn.HasValue"
-                                     IsSubmitting="@_isSaving" />
+                <EventForm Model="@_event"
+                           OnSubmit="@HandleSubmit"
+                           LockEventType="@_event.NamesDrawnOn.HasValue"
+                           IsSubmitting="@_isSaving" />
             </div>
             <div class="page-section-panel" hidden="@(ActiveSection != "wishlists")">
                     <EventWishlistManager EventId="@EventId"
@@ -103,6 +100,13 @@ else
             </div>
             <div class="page-section-panel" hidden="@(ActiveSection != "participants")">
                         <h2 class="h4">Participants</h2>
+                        @if (_event!.NamesDrawnOn.HasValue)
+                        {
+                            <p class="form-text manage-event-participants-locked mb-0">
+                                <OpenWishIcon Name="lock" />
+                                <span>Names have been drawn, so participants can't be removed. Reset the draw first to change the group.</span>
+                            </p>
+                        }
                         @{
                             var participants = GetParticipantList().ToList();
                             var hasOwner = _event?.CreatedBy != null;
@@ -134,7 +138,10 @@ else
                                             <span class="small text-muted">@contact</span>
                                         }
                                         <div class="d-flex flex-wrap gap-2 manage-event-participant-status">
-                                            <span class="badge bg-primary">@participant.Role</span>
+                                            @if (ShouldShowRole(participant))
+                                            {
+                                                <span class="badge bg-primary">@participant.Role</span>
+                                            }
                                             <span class="badge @GetStatusBadgeClass(participant)">@GetNormalizedStatus(participant)</span>
                                         </div>
                                     </div>
@@ -161,10 +168,17 @@ else
                 </div>
                 <div class="page-section-panel" hidden="@(ActiveSection != "delete")">
                     <h2 class="h4">Delete event</h2>
-                    <p>Remove this event and its invitations. This cannot be undone.</p>
-                    <button class="btn btn-outline-danger" type="button" @onclick="ShowDeleteConfirmation">
-                        <OpenWishIcon Name="trash" /> Delete event
-                    </button>
+                    <div class="manage-event-danger-zone">
+                        <p class="mb-2">Deleting <strong>@_event!.Name</strong> removes its invitations, participants, and any drawn names.</p>
+                        <p class="form-text mb-3">Linked wishlists are unlinked and stay with their owners. This cannot be undone.</p>
+                        <button class="btn btn-outline-danger"
+                                id="manage-event-delete"
+                                type="button"
+                                disabled="@(!RendererInfo.IsInteractive)"
+                                @onclick="ShowDeleteConfirmation">
+                            <OpenWishIcon Name="trash" /> Delete event
+                        </button>
+                    </div>
                 </div>
             </PageSections>
     </div>
@@ -235,61 +249,57 @@ else
     </div>
 </Dialog>
 
-@if (_showDeleteConfirmation && _event is not null)
-{
-    <div class="modal fade show d-block"
-         tabindex="-1"
-         role="dialog"
-         aria-labelledby="delete-event-dialog-title"
-         aria-describedby="delete-event-dialog-description">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="delete-event-dialog-title">Delete event</h5>
-                    <button type="button"
-                            class="btn-close"
-                            aria-label="Close delete event confirmation"
-                            @onclick="CancelDeleteEvent"
-                            disabled="@_isDeleting"></button>
-                </div>
-                <div class="modal-body" id="delete-event-dialog-description">
-                    @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
-                    {
-                        <p>Deleting <strong>@_event.Name</strong> will remove all wishlists, participants, and activity. This action cannot be undone.</p>
-                        <p class="mb-0">Click "Continue" to confirm once more before permanently deleting the event.</p>
-                    }
-                    else
-                    {
-                        <p>This is your final confirmation. Once you delete <strong>@_event.Name</strong>, it cannot be restored.</p>
-                        <p class="text-danger mb-0">Are you absolutely sure you want to permanently delete this event?</p>
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CancelDeleteEvent" disabled="@_isDeleting">Cancel</button>
-                    @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
-                    {
-                        <button type="button" class="btn btn-warning" @onclick="ConfirmFirstDeleteStep">Continue</button>
-                    }
-                    else
-                    {
-                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteEventAsync" disabled="@_isDeleting">
-                            @if (_isDeleting)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                <span>Deleting...</span>
-                            }
-                            else
-                            {
-                                <span>Delete Event</span>
-                            }
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
+<Dialog @ref="_deleteDialog"
+        Title="Delete event"
+        DescriptionId="delete-event-dialog-description"
+        ReturnFocusElementId="manage-event-delete"
+        CanClose="@(!_isDeleting)"
+        OnClose="ResetDeleteConfirmation">
+    <div class="modal-body" id="delete-event-dialog-description">
+        @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
+        {
+            <p>Deleting <strong>@_event?.Name</strong> removes its invitations, participants, and any drawn names. Linked wishlists stay with their owners.</p>
+            <p class="mb-0">Select "Continue" to confirm once more.</p>
+        }
+        else
+        {
+            <p>This is your final confirmation. Once you delete <strong>@_event?.Name</strong>, it cannot be restored.</p>
+            <p class="text-danger mb-0">Permanently delete this event?</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_deleteError))
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert">@_deleteError</div>
+        }
     </div>
-}
-
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                data-dialog-initial-focus
+                @ref="_cancelDeleteButton"
+                disabled="@_isDeleting"
+                @onclick="CancelDeleteEventAsync">
+            Cancel
+        </button>
+        @if (_deleteConfirmationStep == DeleteConfirmationStep.First)
+        {
+            <button type="button" class="btn btn-warning" @onclick="ConfirmFirstDeleteStepAsync">Continue</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteEventAsync" disabled="@_isDeleting">
+                @if (_isDeleting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>Deleting event...</span>
+                }
+                else
+                {
+                    <span>Delete event</span>
+                }
+            </button>
+        }
+    </div>
+</Dialog>
 
 @code {
     private static readonly PageSection[] Sections =
@@ -308,7 +318,9 @@ else
     private EventModel? _event;
     private string? _currentUserId;
     private bool _isOwner;
-    private bool _showDeleteConfirmation;
+    private Dialog _deleteDialog = default!;
+    private ElementReference _cancelDeleteButton;
+    private string? _deleteError;
     private bool _isDeleting;
     private bool _isLoading = true;
     private bool _isSaving;
@@ -421,11 +433,6 @@ else
         await LoadEvent();
     }
 
-    private void HandleCancel()
-    {
-        NavigationManager.NavigateTo($"/events/{EventId}");
-    }
-
     private void ShowDeleteConfirmation()
     {
         if (_event == null)
@@ -433,22 +440,19 @@ else
             return;
         }
 
-        _deleteConfirmationStep = DeleteConfirmationStep.First;
-        _showDeleteConfirmation = true;
+        ResetDeleteConfirmation();
+        _deleteDialog.Show();
     }
 
-    private void CancelDeleteEvent()
+    private void ResetDeleteConfirmation()
     {
-        if (_isDeleting)
-        {
-            return;
-        }
-
-        _showDeleteConfirmation = false;
         _deleteConfirmationStep = DeleteConfirmationStep.First;
+        _deleteError = null;
     }
 
-    private void ConfirmFirstDeleteStep()
+    private Task CancelDeleteEventAsync() => _isDeleting ? Task.CompletedTask : _deleteDialog.CloseAsync();
+
+    private async Task ConfirmFirstDeleteStepAsync()
     {
         if (_event == null)
         {
@@ -456,6 +460,9 @@ else
         }
 
         _deleteConfirmationStep = DeleteConfirmationStep.Second;
+        StateHasChanged();
+        await Task.Yield();
+        await _cancelDeleteButton.FocusAsync();
     }
 
     private async Task ConfirmDeleteEventAsync()
@@ -466,12 +473,17 @@ else
         }
 
         _isDeleting = true;
+        _deleteError = null;
 
         try
         {
             await EventService.DeleteEventByPublicIdAsync(EventId, _currentUserId!);
-            _showDeleteConfirmation = false;
             NavigationManager.NavigateTo("/events");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete event {EventId}", EventId);
+            _deleteError = "We couldn't delete the event. Check your connection and try again.";
         }
         finally
         {
@@ -601,6 +613,11 @@ else
         "Rejected" => 2,
         _ => 3
     };
+
+    // Every row is a participant, so only roles beyond that are worth a badge.
+    private static bool ShouldShowRole(EventUserModel eventUser) =>
+        !string.IsNullOrWhiteSpace(eventUser.Role) &&
+        !string.Equals(eventUser.Role, "Participant", StringComparison.OrdinalIgnoreCase);
 
     private static string GetStatusBadgeClass(EventUserModel eventUser) => GetNormalizedStatus(eventUser) switch
     {

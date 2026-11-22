@@ -43,7 +43,7 @@
                 <span class="consent-mark consent-mark-app">@IntegrationDisplay.Monogram(app.DisplayName)</span>
             </div>
             <div>
-                <h1>Connect @app.DisplayName</h1>
+                <h1>@(consent.IsReconnecting ? "Reconnect" : "Connect") @app.DisplayName</h1>
                 <p>
                     @if (consent.IsReconnecting)
                     {
@@ -79,8 +79,8 @@
 
             <fieldset class="consent-section" aria-describedby="consent-lists-help">
                 <legend>Lists @app.DisplayName can use</legend>
-                <p id="consent-lists-help" class="consent-help">New ideas go to the first selected list in this list order. You can change this anytime from Integrations.</p>
-                <div class="form-check mb-3">
+                <p id="consent-lists-help" class="consent-help">New ideas go to the first list you check, in the order shown. You can change this anytime in Integrations.</p>
+                <div class="form-check consent-toggle">
                     <input class="form-check-input" type="checkbox" id="consent-all-lists" name="allowAllWishlists" value="true" checked="@allowAllWishlists" aria-describedby="consent-all-lists-help" />
                     <label class="form-check-label" for="consent-all-lists">Allow all wishlists</label>
                     <div id="consent-all-lists-help" class="form-text">Includes every list you own now and create later, even private lists. Leave this off to allow only the lists you check below.</div>
@@ -92,28 +92,39 @@
                 }
 
                 <div class="consent-new-list">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="consent-new-list" name="createList" value="true" checked="@createList" />
+                    <div class="form-check consent-toggle">
+                        <input class="form-check-input" type="checkbox" id="consent-new-list" name="createList" value="true" checked="@createList" aria-controls="consent-new-list-field" />
                         <label class="form-check-label" for="consent-new-list">Start a new list for these ideas</label>
                     </div>
-                    <label class="form-label" for="consent-new-list-name">New list name</label>
-                    <input class="form-control" id="consent-new-list-name" name="newListName" value="@newListName" maxlength="@IntegrationConnectionService.NewWishlistNameMaxLength" autocomplete="off" placeholder="Christmas @DateTime.UtcNow.Year" aria-describedby="consent-new-list-help" />
-                    <div id="consent-new-list-help" class="form-text">A new list starts private and becomes where new ideas go. Share it from OpenWish when you're ready.</div>
+                    <div class="consent-new-list-field" id="consent-new-list-field">
+                        <label class="form-label" for="consent-new-list-name">New list name</label>
+                        <input class="form-control" id="consent-new-list-name" name="newListName" value="@newListName" maxlength="@IntegrationConnectionService.NewWishlistNameMaxLength" autocomplete="off" placeholder="Christmas @DateTime.UtcNow.Year" aria-describedby="consent-new-list-help" />
+                        <div id="consent-new-list-help" class="form-text">A new list starts private and becomes where new ideas go. Share it from OpenWish when you're ready.</div>
+                    </div>
                 </div>
             </fieldset>
 
             <section class="consent-section consent-permissions" aria-labelledby="consent-permissions-title">
                 <h2 id="consent-permissions-title">What @app.DisplayName can do</h2>
-                <div class="form-check mb-3">
+                <ul class="consent-can" role="list">
+                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>See the names of the lists you allow</span></li>
+                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>Add ideas to those lists, and edit or remove the ideas it added</span></li>
+                </ul>
+                <div class="form-check consent-toggle consent-optional">
                     <input class="form-check-input" type="checkbox" id="consent-existing-items" name="manageExistingItems" value="true" checked="@manageExistingItems" aria-describedby="consent-existing-items-help" />
                     <label class="form-check-label" for="consent-existing-items">Manage existing items in allowed lists</label>
                     <div id="consent-existing-items-help" class="form-text">See, edit, move, and remove ideas already on these lists, including ideas you or other apps added. Turn this off for more privacy: the app can only see and manage ideas it added.</div>
                 </div>
-                <ul role="list">
-                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>See the names of the lists you choose</span></li>
-                    <li><OpenWishIcon Name="check-circle" Class="consent-allowed" /> <span>Add ideas to those lists, and edit or remove the ideas it added</span></li>
-                    <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>It never sees reservations, purchases, comments, hidden surprises, your friends, or lists you haven't allowed</span></li>
-                </ul>
+
+                <div class="consent-never" role="group" aria-labelledby="consent-never-title">
+                    <h3 id="consent-never-title"><OpenWishIcon Name="shield-check" /> @app.DisplayName never sees</h3>
+                    <ul role="list">
+                        <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>Reservations, purchases, or comments</span></li>
+                        <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>Hidden surprises others add for you</span></li>
+                        <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>Your friends, events, and email address</span></li>
+                        <li><OpenWishIcon Name="eye-slash" Class="consent-denied" /> <span>Lists you haven't allowed</span></li>
+                    </ul>
+                </div>
                 <p class="consent-help mb-0">Adjust lists or disconnect anytime from <strong>Integrations</strong>. Ideas it added stay on your lists.</p>
             </section>
 

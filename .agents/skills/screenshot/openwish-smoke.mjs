@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
+import { verifyResponsiveSweep } from "./responsive-sweep.mjs";
 
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
 const evidenceDirectory = process.env.OPENWISH_EVIDENCE_DIR ?? "/evidence";
@@ -114,7 +115,7 @@ async function generateTotp(secret) {
 
 async function enableTwoFactorAuthentication(page, authenticatorKey) {
   const recoveryCodesHeading = page.getByRole("heading", { name: "Save your recovery codes" });
-  const invalidCodeMessage = page.getByText("Error: Verification code is invalid.", { exact: true });
+  const invalidCodeMessage = page.getByText("Verification code is invalid.", { exact: true });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const verificationCode = await generateTotp(authenticatorKey);
@@ -520,7 +521,7 @@ async function verifyCompactEventForm(page) {
     const height = await page.locator("main form").evaluate(element => element.getBoundingClientRect().height);
     const columns = await page.locator(".event-type-options").evaluate(element =>
       getComputedStyle(element).gridTemplateColumns.split(" ").length);
-    if (columns !== (name === "desktop" ? 2 : 1)) {
+    if (columns !== (name === "mobile" ? 1 : 2)) {
       throw new Error(`${name} event choices use ${columns} columns instead of fitting the available form width.`);
     }
     if (height > maximumHeight) {
@@ -888,7 +889,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
     const returnUrl = isMobile ? "/wishlists" : "/";
     const query = `?ReturnUrl=${encodeURIComponent(returnUrl)}`;
     const signInButton = page.getByRole("button", { name: "Continue with Google" });
-    for (const [route, emailAction] of [["Register", "Create account"], ["Login", "Log in"]]) {
+    for (const [route, emailAction] of [["Register", "Create account"], ["Login", "Sign in"]]) {
       await visit(page, `/Account/${route}${query}`, "Use an existing account", visitedRoutes);
       const password = page.getByLabel("Password", { exact: true });
       const emailButton = page.getByRole("button", { name: emailAction, exact: true });
@@ -2902,8 +2903,8 @@ async function verifyAccountFreeGuests(browser, results) {
   const registerChoice = page.getByTestId("register-without-account");
   await registerChoice.waitFor({ state: "visible" });
   await screenshot(page, "register-without-account.png");
-  const loginHref = await page.getByRole("link", { name: "Log in", exact: true }).getAttribute("href");
-  if (!/#access=[A-F0-9]{64}$/.test(loginHref ?? "")) throw new Error("The Log in link dropped the no-account choice.");
+  const loginHref = await page.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true }).getAttribute("href");
+  if (!/#access=[A-F0-9]{64}$/.test(loginHref ?? "")) throw new Error("The Sign in link dropped the no-account choice.");
   await registerChoice.getByRole("link", { name: "Continue without an account" }).click();
   await page.getByRole("button", { name: "Continue with my private invitation" }).waitFor({ state: "visible" });
   if (new URL(page.url()).pathname !== "/guest") throw new Error("The registration fallback didn't open the private invitation.");
@@ -3219,7 +3220,7 @@ async function verifyFamilyExchangeJourney(browser, results) {
   await screenshot(signupPage, "family-invitation-signup.png");
   await signupPage.setViewportSize({ width: 390, height: 844 });
   await screenshot(signupPage, "family-invitation-signup-mobile.png");
-  await signupPage.getByRole("link", { name: "Log in", exact: true }).click();
+  await signupPage.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true }).click();
   const loginUrl = new URL(signupPage.url());
   if (loginUrl.searchParams.get("ReturnUrl") !== invitationRoute ||
       await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
@@ -3401,7 +3402,7 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   }
   await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
   await page.getByRole("button", { name: "Create account" }).waitFor({ state: "visible" });
-  const registrationLoginLink = page.getByRole("link", { name: "Log in", exact: true });
+  const registrationLoginLink = page.locator(".auth-switch").getByRole("link", { name: "Sign in", exact: true });
   await registrationLoginLink.waitFor({ state: "visible" });
   const loginDestination = new URL(await registrationLoginLink.getAttribute("href"), baseUrl);
   if (loginDestination.searchParams.get("ReturnUrl") !== registrationReturnUrl) {
@@ -3431,7 +3432,7 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   await visit(page, "/Account/ForgotPassword", "Request a secure link", visitedRoutes);
   await assertVisible(page, "If an eligible account matches");
   await page.getByRole("button", { name: "Send reset link" }).waitFor({ state: "visible" });
-  await page.getByRole("link", { name: "Back to log in" }).waitFor({ state: "visible" });
+  await page.getByRole("link", { name: "Back to sign in" }).waitFor({ state: "visible" });
   await screenshot(page, "account-recovery.png");
 
   await visit(page, "/Account/ResetPassword?Code=dGVzdA", "Choose a new password", visitedRoutes);
@@ -3956,7 +3957,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   await assertVisible(page, "My reserved items");
   await assertVisible(page, "Noise-Cancelling Headphones");
   const countdown = (await friendMatch.getByTestId("exchange-countdown").textContent())?.trim() ?? "";
-  if (!/^· (today|tomorrow|in \d+ days)$/.test(countdown)) {
+  if (!/^(today|tomorrow|in \d+ days)$/i.test(countdown)) {
     throw new Error(`The match did not show how soon the exchange is: ${countdown}`);
   }
   const reservedSpend = (await page.getByTestId("reserved-spend").textContent())?.replace(/\s+/g, " ").trim() ?? "";
@@ -4142,6 +4143,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await reveal.waitFor({ state: "visible" });
     await screenshot(ownerPage, "exchange-reveal-ready.png");
     await reveal.getByRole("button", { name: "Reveal assignments" }).click();
+    await reveal.getByRole("button", { name: "Reveal to everyone" }).click();
     await reveal.getByText("AlexDemo").first().waitFor({ state: "visible" });
     await reveal.getByText("JordanDemo").first().waitFor({ state: "visible" });
     if ((await reveal.textContent()).includes("@")) {
@@ -6487,7 +6489,10 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByRole("link", { name: "Connect OpenWish" }).click();
   await page.waitForURL(url => url.pathname === "/oauth/authorize");
   await page.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
-  await assertVisible(page, "It never sees reservations, purchases, comments, hidden surprises");
+  await page.getByRole("heading", { name: `${connectedApp.name} never sees` }).waitFor({ state: "visible" });
+  for (const hidden of ["Reservations, purchases, or comments", "Hidden surprises others add for you"]) {
+    await assertVisible(page, hidden);
+  }
   if (await page.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
       !await page.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
     throw new Error("New consent must default to selected lists and managing existing items.");
@@ -6657,7 +6662,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByText("Address copied. Paste it into your assistant.", { exact: true }).waitFor({ state: "visible" });
   assertions.push("MCP address copy reports success and actionable clipboard failure");
   const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
-  await connection.getByText("2 ideas added").waitFor({ state: "visible" });
+  await connection.locator(".connected-app-count").getByText("2", { exact: true }).waitFor({ state: "visible" });
   await connection.getByRole("link", { name: listName, exact: true }).first().waitFor({ state: "visible" });
   if (await page.locator('[data-integration-picker]').count() !== 0) {
     throw new Error("The overview must not render permission forms for every connection.");
@@ -6690,7 +6695,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
     if (result.status !== 201) throw new Error(`Scale idea creation failed: ${result.text}`);
   }
   await page.reload({ waitUntil: "domcontentloaded" });
-  await connection.getByText("102 ideas added").waitFor({ state: "visible" });
+  await connection.locator(".connected-app-count").getByText("102", { exact: true }).waitFor({ state: "visible" });
   if (await connection.evaluate(element => element.getBoundingClientRect().height) > compactHeight + 4) {
     throw new Error("A hundred more ideas inflated the connection summary.");
   }
@@ -7242,6 +7247,7 @@ try {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
+    results.push(await verifyResponsiveSweep(browser, { baseUrl, manifest, outputDirectory: evidenceDirectory }));
     await verifyAppInstall(browser, results);
     await verifyPageSections(browser, manifest, results);
     await verifyDevelopmentLoginJourney(browser, results);

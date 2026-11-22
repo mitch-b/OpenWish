@@ -12,10 +12,12 @@
 
 @if (!_hasLoaded && _isLoading)
 {
-    <div class="card shadow-sm event-wishlist-manager">
-        <div class="card-body text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading event wishlists...</span>
+    <div class="card shadow-sm event-wishlist-manager" aria-busy="true">
+        <div class="card-body">
+            <h2 class="h4 mb-3">Event wishlists</h2>
+            <div class="event-wishlist-loading" role="status">
+                <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                <span>Loading event wishlists...</span>
             </div>
         </div>
     </div>
@@ -24,10 +26,12 @@ else if (!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage))
 {
     <div class="card shadow-sm event-wishlist-manager">
         <div class="card-body">
+            <h2 class="h4 mb-3">Event wishlists</h2>
             <div class="alert alert-danger mb-0" role="alert">
                 <p class="mb-2">@_loadErrorMessage</p>
-                <button type="button" class="btn btn-outline-danger" @onclick="LoadWishlistsAsync">
-                    Try again
+                <button type="button" class="btn btn-outline-danger" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadWishlistsAsync">
+                    <OpenWishIcon Name="arrow-clockwise" />
+                    <span>Try again</span>
                 </button>
             </div>
         </div>
@@ -35,23 +39,33 @@ else if (!_hasLoaded && !string.IsNullOrWhiteSpace(_loadErrorMessage))
 }
 else
 {
-    <div class="card shadow-sm event-wishlist-manager">
+    var myWishlists = GetCurrentUserWishlists().ToList();
+    var attachableWishlists = GetAttachableWishlists().ToList();
+    var hasOwnWishlist = myWishlists.Count > 0;
+
+    <div class="card shadow-sm event-wishlist-manager" aria-busy="@(_isLoading ? "true" : "false")">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="event-wishlist-header">
                 <h2 class="h4 mb-0">Event wishlists</h2>
-                @if (_isLoading)
-                {
-                    <span class="text-muted small">Refreshing…</span>
-                }
+                <span class="event-wishlist-refreshing small" role="status">
+                    @if (_isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                        <span>Refreshing...</span>
+                    }
+                </span>
             </div>
 
             @if (!string.IsNullOrEmpty(_statusMessage))
             {
-                <div class="alert alert-success" role="status">
-                    @_statusMessage
+                <div class="alert alert-success event-wishlist-status" role="status">
+                    <span>@_statusMessage</span>
                     @if (_createdWishlistPublicId is not null)
                     {
-                        <a class="btn btn-primary d-block mt-2" href="/wishlists/@_createdWishlistPublicId/items/new?firstIdea=true">Add my first gift idea</a>
+                        <a class="btn btn-primary" href="/wishlists/@_createdWishlistPublicId/items/new?firstIdea=true">
+                            <OpenWishIcon Name="plus-lg" />
+                            <span>Add my first gift idea</span>
+                        </a>
                     }
                 </div>
             }
@@ -65,44 +79,48 @@ else
             {
                 <div class="alert alert-danger" role="alert">
                     <p class="mb-2">@_loadErrorMessage</p>
-                    <button type="button" class="btn btn-outline-danger" @onclick="LoadWishlistsAsync">
-                        Try again
+                    <button type="button" class="btn btn-outline-danger" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadWishlistsAsync">
+                        <OpenWishIcon Name="arrow-clockwise" />
+                        <span>Try again</span>
                     </button>
                 </div>
             }
 
-            <section class="event-wishlist-owner-section mb-4">
-                <h3 class="h5 mb-2">Your wishlists</h3>
-                @{ var myWishlists = GetCurrentUserWishlists().ToList(); }
-                @if (!myWishlists.Any())
+            <section class="event-wishlist-owner-section" aria-labelledby="event-wishlist-mine-title">
+                <h3 class="h5 mb-1" id="event-wishlist-mine-title">Your wishlists</h3>
+                @if (!_showCreateForm)
                 {
-                    @if (!_showCreateForm)
-                    {
-                        <div class="alert alert-info mb-3">
-                            <strong>Give your gift giver a few clues.</strong>
-                            Share an existing wishlist or make a quick one for this event.
-                        </div>
-                    }
+                    <p class="event-wishlist-privacy">
+                        <OpenWishIcon Name="eye-slash" />
+                        <span>Everyone in this event can see lists you share here. Reservations stay hidden from you.</span>
+                    </p>
                 }
-                else
+
+                @if (hasOwnWishlist)
                 {
-                    <ul class="list-group event-wishlist-list mb-3">
+                    <ul class="list-group event-wishlist-list">
                         @foreach (var wishlist in myWishlists)
                         {
                             <li class="list-group-item event-wishlist-row">
                                 <div class="event-wishlist-summary">
                                     <span class="fw-semibold">@wishlist.Name</span>
-                                    <span class="badge bg-light text-dark event-wishlist-count">@GetItemCountText(wishlist)</span>
+                                    <span class="event-wishlist-count">@GetItemCountText(wishlist)</span>
                                 </div>
                                 <div class="event-wishlist-actions">
                                     <a href="/wishlists/@wishlist.PublicId/items/new"
-                                       class="btn btn-primary btn-sm">Add gift ideas</a>
-                                    <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
+                                       class="btn btn-primary btn-sm event-wishlist-add">
+                                        <OpenWishIcon Name="plus-lg" />
+                                        <span>Add gift ideas</span>
+                                    </a>
+                                    <a href="/wishlists/@wishlist.PublicId"
+                                       class="btn btn-outline-primary btn-sm"
+                                       aria-label="@($"View {wishlist.Name}")">View</a>
                                     @if (CanDetach(wishlist))
                                     {
                                         <button class="btn btn-outline-secondary btn-sm"
+                                                type="button"
                                                 id="@($"remove-my-event-wishlist-{wishlist.Id}")"
-                                                disabled="@_isSubmitting"
+                                                disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
                                                 @onclick="() => PromptWishlistRemoval(wishlist.Id)">
                                             Remove
                                         </button>
@@ -113,69 +131,84 @@ else
                     </ul>
                 }
 
-                @{ var attachableWishlists = GetAttachableWishlists().ToList(); }
-                <div class="event-wishlist-tools">
-                    @if (attachableWishlists.Count == 1)
+                @if (!_showCreateForm)
+                {
+                    <div class="@(hasOwnWishlist ? "event-wishlist-more" : "event-wishlist-empty")" data-testid="@(hasOwnWishlist ? null : "event-wishlist-empty")">
+                    @if (!hasOwnWishlist)
                     {
-                        var onlyWishlist = attachableWishlists[0];
-                        <button class="btn btn-primary event-wishlist-share-button"
-                                type="button"
-                                aria-label="@GetShareWishlistAccessibleName(onlyWishlist)"
-                                disabled="@_isSubmitting"
-                                @onclick="() => AttachWishlistAsync(onlyWishlist)">
-                            <OpenWishIcon Name="link-45deg" />
-                            <span>@GetShareWishlistButtonText()</span>
-                        </button>
-                        <span class="text-muted small event-wishlist-share-target">Not shared yet: @onlyWishlist.Name</span>
-                    }
-                    else if (attachableWishlists.Count > 1)
-                    {
-                        <div class="event-wishlist-share-options">
-                            <label for="event-wishlist-select" class="form-label">Share an existing wishlist</label>
-                            <div class="input-group">
-                                <select id="event-wishlist-select" class="form-select"
-                                        @bind="_selectedWishlistId"
-                                        disabled="@_isSubmitting">
-                                    <option value="">Select a wishlist</option>
-                                    @foreach (var option in attachableWishlists)
-                                    {
-                                        <option value="@option.Id">@option.Name</option>
-                                    }
-                                </select>
-                                <button class="btn btn-primary"
-                                        type="button"
-                                        disabled="@(!_selectedWishlistId.HasValue || _isSubmitting)"
-                                        @onclick="AttachSelectedWishlistAsync">
-                                    @(_isSubmitting ? "Sharing..." : "Share wishlist")
-                                </button>
+                        <div class="event-wishlist-empty-message">
+                            <OpenWishIcon Name="gift" Class="event-wishlist-empty-icon" />
+                            <div>
+                                <p class="fw-semibold mb-1">Give your gift giver a few clues.</p>
+                                <p class="mb-0 small text-muted">
+                                    @(attachableWishlists.Count > 0
+                                        ? "Share a list you already have, or start a new one for this event."
+                                        : "Start a list for this event. You can add ideas right after.")
+                                </p>
                             </div>
                         </div>
                     }
-                    else if (HasUnattachedPrivateWishlist)
-                    {
-                        <div class="form-text">
-                            Private wishlists stay private and cannot be shared with an event. Create a shared wishlist below.
-                        </div>
-                    }
-                    else if (myWishlists.Any())
-                    {
-                        <div class="form-text">All of your available wishlists are already attached.</div>
-                    }
+                    <div class="event-wishlist-tools">
+                        @if (attachableWishlists.Count == 1)
+                        {
+                            var onlyWishlist = attachableWishlists[0];
+                            <div class="event-wishlist-share-single">
+                                <button class="btn @(hasOwnWishlist ? "btn-outline-primary" : "btn-primary") event-wishlist-share-button"
+                                        type="button"
+                                        aria-label="@GetShareWishlistAccessibleName(onlyWishlist)"
+                                        disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
+                                        @onclick="() => AttachWishlistAsync(onlyWishlist)">
+                                    <OpenWishIcon Name="link-45deg" />
+                                    <span>@GetShareWishlistButtonText()</span>
+                                </button>
+                                <span class="text-muted small event-wishlist-share-target">Not shared yet: @onlyWishlist.Name</span>
+                            </div>
+                        }
+                        else if (attachableWishlists.Count > 1)
+                        {
+                            <div class="event-wishlist-share-options">
+                                <label for="event-wishlist-select" class="form-label">Share an existing wishlist</label>
+                                <div class="event-wishlist-share-picker">
+                                    <select id="event-wishlist-select" class="form-select"
+                                            @bind="_selectedWishlistId"
+                                            disabled="@(_isSubmitting || !RendererInfo.IsInteractive)">
+                                        <option value="">Select a wishlist</option>
+                                        @foreach (var option in attachableWishlists)
+                                        {
+                                            <option value="@option.Id">@option.Name</option>
+                                        }
+                                    </select>
+                                    <button class="btn @(hasOwnWishlist ? "btn-outline-primary" : "btn-primary")"
+                                            type="button"
+                                            disabled="@(!_selectedWishlistId.HasValue || _isSubmitting || !RendererInfo.IsInteractive)"
+                                            @onclick="AttachSelectedWishlistAsync">
+                                        <OpenWishIcon Name="link-45deg" />
+                                        <span>@(_isSubmitting ? "Sharing..." : "Share wishlist")</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else if (!hasOwnWishlist && HasUnattachedPrivateWishlist)
+                        {
+                            <p class="form-text mb-0 event-wishlist-private-note">
+                                <OpenWishIcon Name="lock" />
+                                <span>Private lists can't be shared with an event.</span>
+                            </p>
+                        }
 
-                    @if (!_showCreateForm)
-                    {
-                        <button class="btn btn-outline-primary event-wishlist-create-button"
+                        <button class="btn @GetCreateButtonClass(hasOwnWishlist, attachableWishlists.Count) event-wishlist-create-button"
                                 type="button"
-                                disabled="@_isSubmitting"
+                                disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
                                 @onclick="ToggleCreateForm">
-                            Create a wishlist for this event
+                            <OpenWishIcon Name="plus-lg" />
+                            <span>Create a wishlist for this event</span>
                         </button>
-                    }
-                </div>
-
-                @if (_showCreateForm)
+                    </div>
+                    </div>
+                }
+                else
                 {
-                    <div class="mt-3">
+                    <div class="event-wishlist-create-form">
                         <WishlistForm Model="_draftWishlist"
                                       OnSubmit="HandleCreateWishlistAsync"
                                       OnCancel="CancelCreateWishlist"
@@ -186,21 +219,19 @@ else
                 }
             </section>
 
-            <hr />
-
-            <section>
-                <h3 class="h5 mb-3">Participant wishlists</h3>
+            <section class="event-wishlist-participants-section" aria-labelledby="event-wishlist-participants-title">
+                <h3 class="h5 mb-3" id="event-wishlist-participants-title">Participant wishlists</h3>
 
                 @if (BuildParticipantGroups() is not { Count: > 0 } participantGroups)
                 {
-                    <p class="text-muted small mb-0">We do not have participant details yet.</p>
+                    <p class="text-muted small mb-0">Participant lists will appear here once people join.</p>
                 }
                 else
                 {
                     <div class="event-participant-list">
                         @foreach (var participant in participantGroups)
                         {
-                            <article class="event-participant-row">
+                            <article class="event-participant-row" aria-label="@participant.Label">
                                 <div class="event-participant-header">
                                     <div class="event-participant-identity">
                                         <span class="fw-semibold">@participant.Label</span>
@@ -210,14 +241,17 @@ else
                                         }
                                     </div>
                                     <div class="event-participant-badges">
-                                        <span class="badge bg-primary">@participant.Role</span>
-                                        @if (!string.Equals(participant.Status, "Owner", StringComparison.OrdinalIgnoreCase))
-                                        {
-                                            <span class="badge @GetStatusBadgeClass(participant.Status)">@participant.Status</span>
-                                        }
                                         @if (participant.IsCurrentUser)
                                         {
-                                            <span class="badge bg-info text-dark">You</span>
+                                            <span class="badge event-participant-badge event-participant-badge-you">You</span>
+                                        }
+                                        @if (ShouldShowRole(participant))
+                                        {
+                                            <span class="badge event-participant-badge">@participant.Role</span>
+                                        }
+                                        @if (ShouldShowStatus(participant))
+                                        {
+                                            <span class="badge @GetStatusBadgeClass(participant.Status)">@participant.Status</span>
                                         }
                                     </div>
                                 </div>
@@ -229,16 +263,19 @@ else
                                         {
                                             <li class="event-participant-wishlist">
                                                 <div class="event-wishlist-summary">
-                                                    <span class="fw-semibold">@wishlist.Name</span>
-                                                    <span class="badge bg-light text-dark event-wishlist-count">@GetItemCountText(wishlist)</span>
+                                                    <span class="event-participant-wishlist-name">@wishlist.Name</span>
+                                                    <span class="event-wishlist-count">@GetItemCountText(wishlist)</span>
                                                 </div>
                                                 <div class="event-wishlist-actions">
-                                                    <a href="/wishlists/@wishlist.PublicId" class="btn btn-outline-primary btn-sm">View</a>
-                                                    @if (CanDetach(wishlist) && (participant.IsCurrentUser || _isEventOwner))
+                                                    <a href="/wishlists/@wishlist.PublicId"
+                                                       class="btn btn-outline-primary btn-sm"
+                                                       aria-label="@($"View {wishlist.Name}")">View</a>
+                                                    @if (CanDetach(wishlist) && _isEventOwner && !participant.IsCurrentUser)
                                                     {
                                                         <button class="btn btn-outline-secondary btn-sm"
+                                                                type="button"
                                                                 id="@($"remove-participant-event-wishlist-{wishlist.Id}")"
-                                                                disabled="@_isSubmitting"
+                                                                disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
                                                                 @onclick="() => PromptWishlistRemoval(wishlist.Id)">
                                                             Remove
                                                         </button>
@@ -250,7 +287,7 @@ else
                                 }
                                 else
                                 {
-                                    <p class="event-participant-empty mb-0">No wishlist attached.</p>
+                                    <p class="event-participant-empty mb-0">No wishlist shared yet.</p>
                                 }
                             </article>
                         }
@@ -268,31 +305,31 @@ else
         OnClose="ClearWishlistRemoval">
     @if (_wishlistPendingRemoval is not null)
     {
-                <div class="modal-body">
-                    <p id="remove-wishlist-dialog-description">Are you sure you want to remove <strong>@_wishlistPendingRemoval.Name</strong> from this event?</p>
-                    <p class="mb-0 text-muted">The wishlist remains available elsewhere, but participants will no longer see it in this event.</p>
-                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
-                    {
-                        <div class="alert alert-danger mt-3 mb-0" role="alert">@_errorMessage</div>
-                    }
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="CancelWishlistRemoval" disabled="@_isSubmitting">Keep wishlist</button>
-                    <button type="button"
-                            class="btn btn-danger"
-                            @onclick="ConfirmWishlistRemovalAsync"
-                            disabled="@_isSubmitting">
-                        @if (_isSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                            <span>Removing…</span>
-                        }
-                        else
-                        {
-                            <span>Remove</span>
-                        }
-                    </button>
-                </div>
+        <div class="modal-body">
+            <p id="remove-wishlist-dialog-description">Remove <strong>@_wishlistPendingRemoval.Name</strong> from this event?</p>
+            <p class="mb-0 text-muted">The list and its ideas stay in place. People in this event just won't see it here anymore.</p>
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <div class="alert alert-danger mt-3 mb-0" role="alert">@_errorMessage</div>
+            }
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dialog-initial-focus @onclick="CancelWishlistRemoval" disabled="@_isSubmitting">Keep wishlist</button>
+            <button type="button"
+                    class="btn btn-danger"
+                    @onclick="ConfirmWishlistRemovalAsync"
+                    disabled="@_isSubmitting">
+                @if (_isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+                    <span>Removing...</span>
+                }
+                else
+                {
+                    <span>Remove</span>
+                }
+            </button>
+        </div>
     }
 </Dialog>
 
@@ -675,7 +712,7 @@ else
                 Label = PublicDisplayName.ForGiftRecipient(Event.CreatedBy.UserName, null),
                 Email = Event.CreatedBy.Email,
                 UserId = ownerId,
-                Role = "Owner",
+                Role = "Organizer",
                 Status = "Owner",
                 IsOwner = true,
                 IsCurrentUser = string.Equals(ownerId, _currentUserId, StringComparison.Ordinal),
@@ -718,7 +755,7 @@ else
         {
             result.Add(new ParticipantWishlistViewModel
             {
-                Label = "Shared Event Lists",
+                Label = "Shared event lists",
                 Role = "Shared",
                 Status = "Attached",
                 IsOwner = false,
@@ -781,11 +818,31 @@ else
     {
         var count = GetWishlistItemCount(wishlist);
 
-        return count == 1 ? "1 item" : $"{count} items";
+        return count switch
+        {
+            0 => "No ideas yet",
+            1 => "1 idea",
+            _ => $"{count} ideas"
+        };
     }
 
     private static int GetWishlistItemCount(WishlistModel wishlist) =>
         EventGiftIdeas.Count(wishlist);
+
+    private static string GetCreateButtonClass(bool hasOwnWishlist, int attachableCount) =>
+        hasOwnWishlist ? "btn-link" : attachableCount > 0 ? "btn-outline-primary" : "btn-primary";
+
+    // Every row is a participant, so only roles beyond that (and the organizer) are worth a badge.
+    private static bool ShouldShowRole(ParticipantWishlistViewModel participant) =>
+        !string.IsNullOrWhiteSpace(participant.Role) &&
+        !string.Equals(participant.Role, "Participant", StringComparison.OrdinalIgnoreCase);
+
+    // Accepted is the expected state; only call out invitations that still need attention.
+    private static bool ShouldShowStatus(ParticipantWishlistViewModel participant) =>
+        !participant.IsOwner &&
+        !string.Equals(participant.Status, "Owner", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(participant.Status, "Accepted", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(participant.Status, "Attached", StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeStatus(EventUserModel participant)
     {

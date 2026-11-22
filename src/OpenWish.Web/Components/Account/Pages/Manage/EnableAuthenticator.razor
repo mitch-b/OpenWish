@@ -19,13 +19,11 @@
 else
 {
     <StatusMessage Message="@message" />
-    <h3>Set up authenticator app</h3>
-    <p>Connect any authenticator app that supports time-based one-time passwords (TOTP).</p>
-    <div class="row">
-        <div class="col-xl-8">
-        <ol class="ps-3">
+    <h2>Set up authenticator app</h2>
+    <p class="account-lead">Connect any authenticator app that supports time-based one-time passwords (TOTP).</p>
+    <ol class="authenticator-steps">
             <li>
-                <h4 class="h5">Get an authenticator app</h4>
+                <h3>Get an authenticator app</h3>
                 <p>
                     Install an authenticator app such as Microsoft Authenticator for
                     <a href="https://go.microsoft.com/fwlink/?Linkid=825072">Android</a> and
@@ -36,31 +34,29 @@ else
                 </p>
             </li>
             <li>
-                <h4 class="h5">Add your OpenWish key</h4>
+                <h3>Add your OpenWish key</h3>
                 <p>Choose the option to enter a setup key, then enter:</p>
                 <p><kbd id="shared-key" class="d-inline-block text-break">@sharedKey</kbd></p>
-                <p class="text-body-secondary">Spaces and letter casing do not matter. Keep this key private.</p>
+                <p class="form-text">Spaces and letter casing do not matter. Keep this key private.</p>
             </li>
             <li>
-                <h4 class="h5">Verify the connection</h4>
+                <h3>Verify the connection</h3>
                 <p id="verification-code-help">Enter the current 6-digit code from your app.</p>
                 <EditForm Model="Input" FormName="send-code" OnValidSubmit="OnValidSubmitAsync" method="post">
                     <DataAnnotationsValidator />
                     <ValidationSummary class="text-danger" role="alert" />
-                    <div class="form-floating mb-3">
+                    <div class="form-floating mb-3 account-form">
                         <InputText @bind-Value="Input.Code" id="Input.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" maxlength="11" aria-describedby="verification-code-help" autofocus placeholder="123456" />
                         <label for="Input.Code" class="control-label form-label">Verification code</label>
                         <ValidationMessage For="() => Input.Code" class="text-danger" />
                     </div>
-                    <div class="d-flex flex-column flex-sm-row gap-2">
+                    <div class="d-flex flex-column flex-sm-row gap-2 account-actions">
                         <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Back to two-factor settings</a>
                         <button type="submit" class="btn btn-primary">Verify and enable 2FA</button>
                     </div>
                 </EditForm>
             </li>
-        </ol>
-        </div>
-    </div>
+    </ol>
 }
 
 @code {

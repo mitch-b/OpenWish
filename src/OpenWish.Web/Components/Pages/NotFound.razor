@@ -1,0 +1,57 @@
+@page "/not-found"
+@using Microsoft.AspNetCore.Diagnostics
+
+<PageTitle>@Heading | OpenWish</PageTitle>
+
+<section class="status-page" aria-labelledby="not-found-title">
+    <span class="status-page-mark" aria-hidden="true">
+        <OpenWishIcon Name="@(IsNotFound ? "search" : "info-circle")" />
+    </span>
+    <h1 id="not-found-title" tabindex="-1">@Heading</h1>
+    <p class="status-page-lead">
+        @if (StatusCode == StatusCodes.Status429TooManyRequests)
+        {
+            @:OpenWish received a lot of requests from this device. Wait a moment, then try again.
+        }
+        else if (IsNotFound)
+        {
+            @:The link may be mistyped or out of date, or the wishlist or event may no longer be shared with you.
+            @:Ask the person who sent it for a fresh link, or start from your dashboard.
+        }
+        else
+        {
+            @:This page couldn't be opened. Check that you're signed in to the right account, or start from your dashboard.
+        }
+    </p>
+    <div class="status-page-actions">
+        <a class="btn btn-primary" href="/">
+            <OpenWishIcon Name="house-door" /> Go to dashboard
+        </a>
+        <a class="btn btn-outline-secondary" href="/wishlists">
+            <OpenWishIcon Name="gift" /> View wishlists
+        </a>
+    </div>
+</section>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private int StatusCode { get; set; } = StatusCodes.Status404NotFound;
+    private bool IsNotFound => StatusCode == StatusCodes.Status404NotFound;
+
+    private string Heading => StatusCode switch
+    {
+        StatusCodes.Status404NotFound => "We couldn't find that page",
+        StatusCodes.Status429TooManyRequests => "Too many requests",
+        _ => "This page isn't available"
+    };
+
+    protected override void OnInitialized()
+    {
+        if (HttpContext?.Features.Get<IStatusCodeReExecuteFeature>() is { } reExecute)
+        {
+            StatusCode = reExecute.OriginalStatusCode;
+        }
+    }
+}

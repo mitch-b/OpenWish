@@ -16,7 +16,7 @@
 @inject IWebHostEnvironment Environment
 @inject IOptions<OpenWishSettings> OpenWishSettings
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Sign in</PageTitle>
 
 <div class="auth-page auth-page-login">
 <header class="auth-heading">
@@ -37,18 +37,18 @@
                 <DataAnnotationsValidator />
                 <h2>Sign in with email</h2>
                 <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <div class="mb-3">
                     <label for="Input.Email" class="form-label">Email</label>
+                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
+                <div class="mb-2">
                     <label for="Input.Password" class="form-label">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" />
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label" for="remember-me">
+                <div class="auth-remember">
+                    <label for="remember-me">
                         <InputCheckbox @bind-Value="Input.RememberMe"
                                        id="remember-me"
                                        class="darker-border-checkbox form-check-input"
@@ -59,19 +59,20 @@
                         Keep me signed in on this device. Avoid this on shared devices.
                     </div>
                 </div>
-                <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div class="mt-4">
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Sign in</button>
+                <div class="auth-help">
                     <h3 class="h6">Need help signing in?</h3>
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2"><a href="Account/ForgotPassword">Reset your password</a></li>
-                        <li class="mb-2"><a href="Account/ResendEmailConfirmation">Resend your confirmation email</a></li>
-                        <li><a data-enhance-nav="false" data-carry-guest-access href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Create an account</a></li>
+                    <ul>
+                        <li><a href="Account/ForgotPassword">Reset your password</a></li>
+                        <li><a href="@(NavigationManager.GetUriWithQueryParameters("Account/ResendEmailConfirmation", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Resend your confirmation email</a></li>
                     </ul>
                 </div>
             </EditForm>
         </section>
+        <p class="auth-switch">
+            New to OpenWish?
+            <a data-enhance-nav="false" data-carry-guest-access href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Create an account</a>
+        </p>
 
 @if (Environment.IsDevelopment() && OpenWishSettings.Value.EnableDevelopmentLogin)
 {

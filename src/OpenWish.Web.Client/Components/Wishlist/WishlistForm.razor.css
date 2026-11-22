@@ -79,6 +79,49 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary-bg) 18%, transparent);
 }
 
+.wishlist-visibility-field {
+    min-width: 0;
+    margin: 0 0 1.5rem;
+}
+
+.wishlist-visibility-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.wishlist-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.wishlist-form-actions .btn {
+    min-height: 2.75rem;
+}
+
+.wishlist-form-status {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
+.wishlist-form-status:empty {
+    display: none;
+}
+
+.wishlist-form-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 0;
+    color: var(--color-text-muted);
+}
+
 .visibility-options {
     display: flex;
     flex-direction: column;
@@ -97,7 +140,11 @@
     transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.visibility-option:hover,
+.visibility-option:hover {
+    border-color: var(--color-primary-bg);
+    background: var(--color-surface-alt);
+}
+
 .visibility-option:focus-within {
     border-color: var(--color-primary-bg);
     background: var(--color-surface-alt);
@@ -157,9 +204,10 @@
     }
 
     .visibility-option {
+        gap: 0.75rem;
         padding: 0.875rem 1rem;
     }
-    
+
     .visibility-icon {
         font-size: 1.5rem;
         width: 40px;
@@ -167,10 +215,20 @@
     }
     
     .visibility-title {
-        font-size: 0.9rem;
+        font-size: 0.95rem;
     }
     
     .visibility-desc {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    .wishlist-form-actions .btn {
+        flex: 1 1 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .visibility-option {
+        transition: none;
     }
 }

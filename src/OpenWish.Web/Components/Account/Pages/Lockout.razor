@@ -1,8 +1,21 @@
 ﻿@page "/Account/Lockout"
 
-<PageTitle>Locked out</PageTitle>
+<PageTitle>Sign-in paused</PageTitle>
 
-<header>
-    <h1 class="text-danger">Locked out</h1>
-    <p class="text-danger" role="alert">This account has been locked out, please try again later.</p>
-</header>
+<div class="auth-page auth-page-compact">
+    <header class="auth-heading">
+        <span class="auth-mark auth-mark-warning"><OpenWishIcon Name="lock" /></span>
+        <div>
+            <h1>Sign-in is paused</h1>
+            <p>There were too many unsuccessful attempts.</p>
+        </div>
+    </header>
+    <section class="auth-card">
+        <p class="auth-card-text" role="alert">To protect this account, signing in is temporarily locked. Wait 15 minutes before you try again.</p>
+        <p class="auth-card-text text-muted">If you've forgotten your password, reset it now so you're ready when the lock ends.</p>
+        <div class="auth-actions">
+            <a class="btn btn-primary" href="Account/ForgotPassword">Reset your password</a>
+            <a class="btn btn-outline-secondary" href="Account/Login">Back to sign in</a>
+        </div>
+    </section>
+</div>

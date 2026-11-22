@@ -11,15 +11,25 @@
 }
 else
 {
-    <div class="card h-100 event-card">
+    var isPast = EventCountdown.IsPast(Event.Date, DateTimeOffset.UtcNow);
+    <article class="@(isPast ? "card h-100 event-card event-card-past" : "card h-100 event-card")">
         <div class="card-body">
             <div class="card-title-row">
-                <span class="event-card-icon"><OpenWishIcon Name="calendar-event" /></span>
+                <span class="event-card-icon" aria-hidden="true"><OpenWishIcon Name="@(Event.IsGiftExchange ? "gift" : "calendar-event")" /></span>
                 <div class="event-card-heading">
                     <h5 class="card-title"><a class="event-card-link" href="/events/@Event.PublicId">@Event.Name</a></h5>
-                    <span class="card-owner">Hosted by @Event.CreatedBy?.UserName</span>
+                    <span class="card-owner">
+                        @if (IsOrganizer)
+                        {
+                            <span class="event-role">Organizer</span>
+                        }
+                        else
+                        {
+                            <span>Hosted by @Event.CreatedBy?.UserName</span>
+                        }
+                    </span>
                 </div>
-                @if (_currentUserId == Event.CreatedBy?.Id)
+                @if (IsOrganizer)
                 {
                     <div class="dropdown d-inline-block event-card-actions">
                         <button class="btn btn-outline-secondary btn-sm kebab-menu"
@@ -43,33 +53,42 @@ else
                 }
             </div>
             <div class="event-meta">
-                <span><OpenWishIcon Name="calendar-event" /> @Event.Date.ToString("MMM d, yyyy")</span>
-                <span class="@(EventCountdown.IsPast(Event.Date, DateTimeOffset.UtcNow) ? "event-countdown event-countdown-past" : "event-countdown")" data-testid="event-countdown">@EventCountdown.Badge(Event.Date, DateTimeOffset.UtcNow)</span>
-                @if (Event.IsGiftExchange)
-                {
-                    <span><OpenWishIcon Name="gift" /> @GiftExchangeStyleLabel</span>
-                }
+                <span class="event-date"><OpenWishIcon Name="calendar-event" /> <time datetime="@Event.Date.ToString("yyyy-MM-dd")">@Event.Date.ToString("ddd, MMM d, yyyy")</time></span>
+                <span class="@(isPast ? "event-countdown event-countdown-past" : "event-countdown")" data-testid="event-countdown">@EventCountdown.Badge(Event.Date, DateTimeOffset.UtcNow)</span>
             </div>
+            @if (Event.IsGiftExchange || Event.Budget is > 0)
+            {
+                <div class="event-details">
+                    @if (Event.IsGiftExchange)
+                    {
+                        <span>@GiftExchangeStyleLabel</span>
+                    }
+                    @if (Event.Budget is > 0)
+                    {
+                        <span><OpenWishIcon Name="cash" /> @Event.Budget.Value.ToString("C") budget</span>
+                    }
+                </div>
+            }
             @if (Event.IsGiftExchange)
             {
                 <div class="event-status">
-                    <span><OpenWishIcon Name="people" /> @AcceptedParticipantCount participants</span>
+                    <span><OpenWishIcon Name="people" /> @AcceptedParticipantCount @(AcceptedParticipantCount == 1 ? "participant" : "participants")</span>
                     @if (Event.NamesDrawnOn.HasValue)
                     {
                         <span class="status-ready"><OpenWishIcon Name="check-circle" /> Names drawn</span>
                     }
                     else if (PendingInvitationCount > 0)
                     {
-                        <span>@PendingInvitationCount waiting to respond</span>
+                        <span class="status-waiting"><OpenWishIcon Name="hourglass-split" /> @PendingInvitationCount waiting to respond</span>
                     }
                     else
                     {
-                        <span>Ready for setup</span>
+                        <span class="status-waiting"><OpenWishIcon Name="hourglass-split" /> Names not drawn yet</span>
                     }
                 </div>
             }
         </div>
-    </div>
+    </article>
 
 }
 
@@ -182,6 +201,9 @@ else
         InvitationCount ?? Event?.EventUsers?.Count(participant =>
             !participant.Deleted &&
             string.Equals(participant.Status, "Pending", StringComparison.OrdinalIgnoreCase)) ?? 0;
+
+    private bool IsOrganizer =>
+        !string.IsNullOrEmpty(_currentUserId) && _currentUserId == Event?.CreatedBy?.Id;
 
     private string GiftExchangeStyleLabel =>
         string.Equals(Event?.GiftExchangeStyle, "SecretSanta", StringComparison.Ordinal)

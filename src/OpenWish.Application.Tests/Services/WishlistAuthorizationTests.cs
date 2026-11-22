@@ -1,3 +1,4 @@
+using System.Globalization;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -282,6 +283,107 @@ public class WishlistAuthorizationTests
                 new WishlistItemModel { Name = "Tea infuser", Price = 12.345m }));
 
         Assert.Contains("two decimal places", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("", null, "Give the idea a name.")]
+    [InlineData("   ", null, "Give the idea a name.")]
+    [InlineData("Tea infuser", "-0.01", "Price cannot be negative.")]
+    public async Task ItemWrites_RejectBlankNamesAndNegativePrices(string name, string? price, string expectedMessage)
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var invalid = new WishlistItemModel { Name = name, Price = price is null ? null : decimal.Parse(price, CultureInfo.InvariantCulture) };
+        var added = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AddItemToWishlistByPublicIdAsync(wishlist.PublicId, invalid));
+        Assert.StartsWith(expectedMessage, added.Message, StringComparison.Ordinal);
+
+        var existing = await service.AddItemToWishlistByPublicIdAsync(
+            wishlist.PublicId,
+            new WishlistItemModel { Name = "Valid idea", Price = 0m });
+        var updated = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateWishlistItemAsync(wishlist.Id, existing.Id, invalid));
+        Assert.StartsWith(expectedMessage, updated.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task WishlistWrites_RejectBlankNames(string name)
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var created = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateWishlistAsync(new WishlistModel { Name = name }, wishlist.OwnerId));
+        Assert.StartsWith("Give the wishlist a name.", created.Message, StringComparison.Ordinal);
+
+        var updated = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateWishlistByPublicIdAsync(wishlist.PublicId, new WishlistModel { Name = name }, wishlist.OwnerId));
+        Assert.StartsWith("Give the wishlist a name.", updated.Message, StringComparison.Ordinal);
+
+        await using var verify = factory.CreateDbContext();
+        Assert.Equal(1, await verify.Wishlists.CountAsync());
+    }
+
+    [Fact]
+    public async Task WishlistWrites_TrimNames()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var created = await service.CreateWishlistAsync(new WishlistModel { Name = "  Holiday ideas  " }, wishlist.OwnerId);
+        Assert.Equal("Holiday ideas", created.Name);
+
+        var updated = await service.UpdateWishlistByPublicIdAsync(
+            wishlist.PublicId,
+            new WishlistModel { Id = wishlist.Id, PublicId = wishlist.PublicId, OwnerId = wishlist.OwnerId, Name = "  Birthday  " },
+            wishlist.OwnerId);
+        Assert.Equal("Birthday", updated.Name);
+    }
+
+    [Fact]
+    public async Task GetWishlistItemsByPublicIdAsync_IncludesActiveComments()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var commenter = new ApplicationUser { Id = "friend", UserName = "friend" };
+        var commented = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist, OrderIndex = 0 };
+        var quiet = new WishlistItem { Name = "Mug", Wishlist = wishlist, OrderIndex = 1 };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(commenter);
+            context.WishlistItems.AddRange(commented, quiet);
+            context.ItemComments.AddRange(
+                new ItemComment { WishlistItem = commented, UserId = commenter.Id, Text = "Great pick" },
+                new ItemComment { WishlistItem = commented, UserId = commenter.Id, Text = "Removed", Deleted = true });
+            await context.SaveChangesAsync();
+        }
+
+        var items = (await CreateService(factory).GetWishlistItemsByPublicIdAsync(wishlist.PublicId, wishlist.OwnerId)).ToList();
+
+        var withComments = Assert.Single(items, item => item.Id == commented.Id);
+        Assert.Equal("Great pick", Assert.Single(withComments.Comments).Text);
+        Assert.Empty(Assert.Single(items, item => item.Id == quiet.Id).Comments);
     }
 
     [Fact]

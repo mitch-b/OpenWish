@@ -16,7 +16,7 @@
 }
 else
 {
-    <h3>Replace recovery codes</h3>
+    <h2>Replace recovery codes</h2>
     <div class="alert alert-warning" role="alert">
         <strong>Your current recovery codes will stop working immediately.</strong>
         The authenticator app connected to your account will continue to work.
@@ -24,7 +24,7 @@ else
     <p>Replace the codes only if you have lost them, used most of them, or believe someone else has seen them.</p>
     <form @formname="generate-recovery-codes" @onsubmit="OnSubmitAsync" method="post">
         <AntiforgeryToken />
-        <div class="d-flex flex-column flex-sm-row gap-2">
+        <div class="d-flex flex-column flex-sm-row gap-2 account-actions">
             <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Keep current recovery codes</a>
             <button class="btn btn-danger" type="submit">Replace recovery codes</button>
         </div>

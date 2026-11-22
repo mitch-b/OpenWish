@@ -21,7 +21,7 @@
 <div class="container page-shell">
 <PageHeader Title="Manage wishlist" Description="@_wishlist?.Name">
     <Actions>
-        <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary">
+        <a href="/wishlists/@WishlistId" class="btn btn-outline-secondary page-header-back">
             <OpenWishIcon Name="arrow-left" /> Back to wishlist
         </a>
     </Actions>
@@ -38,7 +38,7 @@ else if (_loadErrorMessage is not null)
 {
     <div class="alert alert-danger" role="alert">
         <p class="mb-2">@_loadErrorMessage</p>
-        <button class="btn btn-outline-danger" type="button" @onclick="LoadWishlistAsync">
+        <button class="btn btn-outline-danger" type="button" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadWishlistAsync">
             Try again
         </button>
     </div>
@@ -58,110 +58,130 @@ else if (!_isOwner)
 else
 {
     <PageSections Label="Wishlist settings sections" Items="Sections" Active="@ActiveSection">
-        <div class="page-section-panel" hidden="@(ActiveSection != "details")">
+        <div class="page-section-panel manage-wishlist-details" hidden="@(ActiveSection != "details")">
             <h2 class="h4">Wishlist details</h2>
-            <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" />
+            <p class="manage-wishlist-intro">Rename the list, pick an icon, and choose who can see it.</p>
+            <WishlistForm Model="_wishlist" OnSubmit="HandleSubmit" IsSubmitting="@_savingDetails">
+                <StatusContent>
+                    @if (!string.IsNullOrEmpty(_detailsStatusMessage))
+                    {
+                        <div class="alert alert-success manage-wishlist-feedback" role="status" aria-live="polite">
+                            <OpenWishIcon Name="check-circle" /> <span>@_detailsStatusMessage</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_detailsErrorMessage))
+                    {
+                        <div class="alert alert-danger manage-wishlist-feedback" role="alert">
+                            <OpenWishIcon Name="exclamation-circle" /> <span>@_detailsErrorMessage</span>
+                        </div>
+                    }
+                </StatusContent>
+            </WishlistForm>
         </div>
 
-    <div class="page-section-panel friends-access-card" hidden="@(ActiveSection != "sharing")"
-         aria-busy="@(_loadingFriendsWithAccess || _loadingAvailableFriends || _sharingBusy ? "true" : "false")">
-        <div class="card-body">
-            <div class="section-header">
-                <div class="section-icon"><OpenWishIcon Name="eye" /></div>
-                <div>
-                    <h2 class="h5 mb-0">Who can see this?</h2>
-                    <p class="text-muted small mb-0">Manage access to your wishlist.</p>
-                </div>
+        <div class="page-section-panel friends-access-card" hidden="@(ActiveSection != "sharing")"
+             aria-busy="@(_loadingFriendsWithAccess || _loadingAvailableFriends || _sharingBusy ? "true" : "false")">
+            <h2 class="h4">Who can see this?</h2>
+
+            <div class="visibility-status">
+                @if (_wishlist.IsPrivate)
+                {
+                    <span class="status-badge status-private"><OpenWishIcon Name="lock" /> Private</span>
+                }
+                else if (_wishlist.IsFriendsOnly)
+                {
+                    <span class="status-badge status-specific"><OpenWishIcon Name="person-check" /> Specific friends</span>
+                }
+                else
+                {
+                    <span class="status-badge status-all"><OpenWishIcon Name="people" /> All friends</span>
+                }
+                @if (!_loadingFriendsWithAccess && _friendsLoadErrorMessage is null && _friendsWithAccess.Count > 0)
+                {
+                    <span class="friend-count">@_friendsWithAccess.Count friend@(_friendsWithAccess.Count != 1 ? "s" : "") can see this</span>
+                }
             </div>
+            <p class="manage-wishlist-intro" data-testid="sharing-summary">
+                @SharingSummary
+                <a href="@DetailsSectionHref" class="manage-wishlist-change-link"
+                   data-enhance-nav="@(RendererInfo.IsInteractive ? null : "false")">Change visibility</a>
+            </p>
 
             @if (_loadingFriendsWithAccess)
             {
-                <div class="loading-state">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading friends with access...</span>
-                    </div>
-                    <span>Finding your friends...</span>
+                <div class="loading-state" role="status">
+                    <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                    <span>Loading who can see this list...</span>
                 </div>
             }
             else if (_friendsLoadErrorMessage is not null)
             {
                 <div class="alert alert-danger" role="alert">
                     <p class="mb-2">@_friendsLoadErrorMessage</p>
-                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshFriendsWithAccessAsync">
+                    <button class="btn btn-outline-danger" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)"
+                            @onclick="RefreshFriendsWithAccessAsync">
                         Try again
                     </button>
                 </div>
             }
             else if (_friendsWithAccess.Count == 0)
             {
-                <div class="empty-state-card">
-                    @if (_wishlist.IsPrivate)
-                    {
-                        <div class="empty-icon"><OpenWishIcon Name="lock" /></div>
-                        <h3 class="h5">Private wishlist</h3>
-                        <p>Only you can see this wishlist.</p>
-                    }
-                    else if (_wishlist.IsFriendsOnly)
-                    {
+                @if (_wishlist.IsFriendsOnly)
+                {
+                    <div class="empty-state-card">
                         <div class="empty-icon"><OpenWishIcon Name="person-check" /></div>
-                        <h3 class="h5">Choose specific friends</h3>
-                        <p>No one has access yet. Select friends below when you're ready to share.</p>
-                    }
-                    else
-                    {
+                        <div>
+                            <h3 class="h6">No one has access yet</h3>
+                            <p>Choose friends or a circle below when you're ready to share.</p>
+                        </div>
+                    </div>
+                }
+                else if (!_wishlist.IsPrivate)
+                {
+                    <div class="empty-state-card">
                         <div class="empty-icon"><OpenWishIcon Name="people" /></div>
-                        <h3 class="h5">Build your circle</h3>
-                        <p>Add friends to start sharing this wishlist.</p>
-                        <a href="/friends?section=invite" class="btn btn-primary btn-fun">
-                            <OpenWishIcon Name="person-plus" /> Find friends
-                        </a>
-                    }
-                </div>
+                        <div>
+                            <h3 class="h6">Add friends to share this list</h3>
+                            <p>Once you add friends, they'll be able to see this wishlist.</p>
+                            <a href="/friends?section=invite" class="btn btn-primary">
+                                <OpenWishIcon Name="person-plus" /> Find friends
+                            </a>
+                        </div>
+                    </div>
+                }
             }
             else
             {
-                <div class="visibility-status">
-                    @if (_wishlist.IsPrivate)
-                    {
-                        <span class="status-badge status-private"><OpenWishIcon Name="lock" /> Private</span>
-                    }
-                    else if (_wishlist.IsFriendsOnly)
-                    {
-                        <span class="status-badge status-specific"><OpenWishIcon Name="person-check" /> Specific friends</span>
-                    }
-                    else
-                    {
-                        <span class="status-badge status-all"><OpenWishIcon Name="people" /> All friends</span>
-                    }
-                    <span class="friend-count">@_friendsWithAccess.Count friend@(_friendsWithAccess.Count != 1 ? "s" : "") can see this</span>
-                </div>
-
-                <div class="friends-grid">
+                <ul class="friends-grid" aria-label="Friends who can see this list">
                     @foreach (var friend in _friendsWithAccess)
                     {
-                        <div class="friend-chip">
-                            <div class="friend-avatar">
+                        <li class="friend-chip">
+                            <span class="friend-avatar" aria-hidden="true">
                                 @((friend.UserName ?? friend.Email ?? "?")[0].ToString().ToUpper())
-                            </div>
-                            <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
-                            @if (CircleNamesFor(friend) is { Count: > 0 } viaCircles)
-                            {
-                                <span class="badge circle-badge" data-testid="friend-via-circle">via @CircleRules.JoinNames(viaCircles)</span>
-                            }
+                            </span>
+                            <span class="friend-chip-text">
+                                <span class="friend-name">@(friend.UserName ?? friend.Email ?? "Unknown")</span>
+                                @if (CircleNamesFor(friend) is { Count: > 0 } viaCircles)
+                                {
+                                    <span class="badge circle-badge" data-testid="friend-via-circle">via @CircleRules.JoinNames(viaCircles)</span>
+                                }
+                            </span>
                             @if (_wishlist.IsFriendsOnly || _wishlist.IsPrivate)
                             {
                                 var friendName = GetFriendName(friend);
                                 <button class="remove-btn"
                                         type="button"
                                         @onclick="() => RemoveFriendAccess(friend.Id!)"
-                                        disabled="@_sharingBusy"
-                                        aria-label="Remove access for @friendName">
+                                        disabled="@(_sharingBusy || !RendererInfo.IsInteractive)"
+                                        aria-label="Remove access for @friendName"
+                                        title="Remove access">
                                     <OpenWishIcon Name="x-lg" />
                                 </button>
                             }
-                        </div>
+                        </li>
                     }
-                </div>
+                </ul>
             }
 
             @if (_friendsLoadErrorMessage is null && _wishlist.IsFriendsOnly && _loadingAvailableFriends)
@@ -177,7 +197,9 @@ else
             {
                 <div class="alert alert-danger" role="alert">
                     <p class="mb-2">@_availableFriendsLoadErrorMessage</p>
-                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshAvailableFriendsAsync">
+                    <button class="btn btn-outline-danger" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)"
+                            @onclick="RefreshAvailableFriendsAsync">
                         Try again
                     </button>
                 </div>
@@ -187,17 +209,17 @@ else
                      _availableFriendsToShare.Count > 0)
             {
                 <div class="add-friend-section">
-                    <div class="add-friend-header">
+                    <h3 class="add-friend-header">
                         <OpenWishIcon Name="person-plus" />
                         <span>Add a friend</span>
-                    </div>
+                    </h3>
                     <div class="add-friend-form">
                         <label class="form-label" for="friend-access-select">Friend to share with</label>
                         <select id="friend-access-select"
                                 class="form-select friend-select"
                                 @bind="_selectedFriendToShareId"
                                 disabled="@_sharingBusy">
-                            <option value="">Choose a friend to invite...</option>
+                            <option value="">Choose a friend...</option>
                             @foreach (var friend in _availableFriendsToShare)
                             {
                                 <option value="@friend.Id">@(friend.UserName ?? friend.Email ?? "Unknown")</option>
@@ -205,7 +227,7 @@ else
                         </select>
                         <button class="btn btn-primary btn-add"
                                 type="button"
-                                disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy)"
+                                disabled="@(string.IsNullOrEmpty(_selectedFriendToShareId) || _sharingBusy || !RendererInfo.IsInteractive)"
                                 @onclick="AddFriendAccess">
                             @if (_sharingBusy)
                             {
@@ -225,10 +247,10 @@ else
             @if (_friendsLoadErrorMessage is null && _wishlist.IsFriendsOnly)
             {
                 <div class="add-friend-section circle-share-section" data-testid="circle-share">
-                    <div class="add-friend-header">
+                    <h3 class="add-friend-header">
                         <OpenWishIcon Name="people-fill" />
                         <span>Share with a circle</span>
-                    </div>
+                    </h3>
                     @if (_circles.Count == 0)
                     {
                         <p class="text-muted mb-0">Group friends into a circle, like Family, to share this list with all of them at once.
@@ -243,7 +265,8 @@ else
                                 {
                                     <li>
                                         <span><strong>@circle.Name</strong> (@circle.Members.Count) can see this list, including friends who join later.</span>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@_circleBusy"
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@(_circleBusy || !RendererInfo.IsInteractive)"
                                                 aria-label="Stop sharing with @circle.Name"
                                                 @onclick="() => UnshareWithCircleAsync(circle)">Stop sharing</button>
                                     </li>
@@ -264,7 +287,7 @@ else
                                     }
                                 </select>
                                 <button class="btn btn-primary btn-add" type="button"
-                                        disabled="@(string.IsNullOrEmpty(_selectedCircleId) || _circleBusy)"
+                                        disabled="@(string.IsNullOrEmpty(_selectedCircleId) || _circleBusy || !RendererInfo.IsInteractive)"
                                         @onclick="ShareWithCircleAsync">
                                     @if (_circleBusy)
                                     {
@@ -297,11 +320,10 @@ else
                 </div>
             }
         </div>
-    </div>
 
-    <div class="page-section-panel" hidden="@(ActiveSection != "event")" aria-busy="@(_loadingEvents || _eventBusy ? "true" : "false")">
-        <div class="card-body">
-            <h2 class="h5">Event connection</h2>
+        <div class="page-section-panel" hidden="@(ActiveSection != "event")" aria-busy="@(_loadingEvents || _eventBusy ? "true" : "false")">
+            <h2 class="h4">Event connection</h2>
+            <p class="manage-wishlist-intro">Connect this list to a gift exchange or celebration so it appears with that event.</p>
 
             @if (!string.IsNullOrEmpty(_eventStatusMessage))
             {
@@ -317,7 +339,9 @@ else
             {
                 <div class="alert alert-danger" role="alert">
                     <p class="mb-2">@_eventLoadErrorMessage</p>
-                    <button class="btn btn-outline-danger" type="button" @onclick="RefreshEventsAsync">Try again</button>
+                    <button class="btn btn-outline-danger" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)"
+                            @onclick="RefreshEventsAsync">Try again</button>
                 </div>
             }
 
@@ -330,36 +354,54 @@ else
             }
             else if (_attachedEvent is not null)
             {
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="fw-semibold">@_attachedEvent.Name</div>
-                        <div class="small text-muted">@_attachedEvent.Date.ToString("MMMM d, yyyy")</div>
-                        @if (_attachedEvent.Budget.HasValue)
-                        {
-                            <div class="small text-muted">Budget: @_attachedEvent.Budget.Value.ToString("C")</div>
-                        }
+                <div class="manage-wishlist-event">
+                    <span class="manage-wishlist-event-icon" aria-hidden="true"><OpenWishIcon Name="calendar-event" /></span>
+                    <div class="manage-wishlist-event-info">
+                        <div class="manage-wishlist-event-name">@_attachedEvent.Name</div>
+                        <div class="manage-wishlist-event-meta">
+                            <span>@_attachedEvent.Date.ToString("MMMM d, yyyy")</span>
+                            @if (_attachedEvent.Budget.HasValue)
+                            {
+                                <span>Budget @_attachedEvent.Budget.Value.ToString("C")</span>
+                            }
+                        </div>
                     </div>
-                    <div class="btn-group">
-                        <a href="/events/@_attachedEvent.PublicId" class="btn btn-outline-primary btn-sm">View event</a>
-                        <button class="btn btn-outline-secondary btn-sm"
+                    <div class="manage-wishlist-event-actions">
+                        <a href="/events/@_attachedEvent.PublicId" class="btn btn-outline-primary">View event</a>
+                        <button class="btn btn-outline-secondary"
                                 type="button"
-                                disabled="@_eventBusy"
+                                disabled="@(_eventBusy || !RendererInfo.IsInteractive)"
+                                aria-label="Remove this wishlist from @_attachedEvent.Name"
                                 @onclick="DetachFromEventAsync">
                             @(_eventBusy ? "Removing..." : "Remove")
                         </button>
                     </div>
                 </div>
+                @if (_wishlist.IsPrivate)
+                {
+                    <p class="manage-wishlist-note" data-testid="private-event-note">
+                        <OpenWishIcon Name="lock" /> This list is private, so event participants can't see it.
+                        <a href="@DetailsSectionHref" data-enhance-nav="@(RendererInfo.IsInteractive ? null : "false")">Change visibility</a>
+                    </p>
+                }
+            }
+            else if (_eventLoadErrorMessage is null && _wishlist.IsPrivate)
+            {
+                <p class="manage-wishlist-note" data-testid="private-event-note">
+                    <OpenWishIcon Name="lock" /> Private lists can't be connected to an event. Share this list with friends first.
+                    <a href="@DetailsSectionHref" data-enhance-nav="@(RendererInfo.IsInteractive ? null : "false")">Change visibility</a>
+                </p>
             }
             else if (_eventLoadErrorMessage is null && _availableEvents.Any())
             {
-                <div class="mb-3">
+                <div class="manage-wishlist-event-attach">
                     <label class="form-label" for="event-connection-select">Attach to an event</label>
-                    <div class="input-group">
+                    <div class="manage-wishlist-event-attach-row">
                         <select id="event-connection-select"
                                 class="form-select"
                                 @bind="_selectedEventId"
                                 disabled="@_eventBusy">
-                            <option value="">Select an event</option>
+                            <option value="">Choose an event...</option>
                             @foreach (var evt in _availableEvents)
                             {
                                 <option value="@evt.Id">@GetEventOptionLabel(evt)</option>
@@ -367,7 +409,7 @@ else
                         </select>
                         <button class="btn btn-primary"
                                 type="button"
-                                disabled="@(!_selectedEventId.HasValue || _eventBusy)"
+                                disabled="@(!_selectedEventId.HasValue || _eventBusy || !RendererInfo.IsInteractive)"
                                 @onclick="AttachToSelectedEventAsync">
                             @(_eventBusy ? "Attaching..." : "Attach")
                         </button>
@@ -376,22 +418,41 @@ else
             }
             else if (_eventLoadErrorMessage is null)
             {
-                <p class="text-muted small mb-0">You do not have any upcoming events to attach this wishlist to yet.</p>
+                <div class="empty-state-card">
+                    <div class="empty-icon"><OpenWishIcon Name="calendar-event" /></div>
+                    <div>
+                        <h3 class="h6">No events to connect yet</h3>
+                        <p>Create or join an event, then come back to connect this list.</p>
+                        <a href="/events/new" class="btn btn-outline-secondary">
+                            <OpenWishIcon Name="plus-lg" /> Create an event
+                        </a>
+                    </div>
+                </div>
             }
         </div>
-    </div>
         <div class="page-section-panel" hidden="@(ActiveSection != "delete")">
             <h2 class="h4">Delete wishlist</h2>
-            <p>Remove this wishlist and its gift ideas. This cannot be undone.</p>
-            <button class="btn btn-outline-danger" type="button" @onclick="ShowDeleteDialog">
-                <OpenWishIcon Name="trash" /> Delete wishlist
-            </button>
+            <div class="manage-wishlist-danger-zone">
+                <p>Deleting <strong>@_wishlist.Name</strong> removes it and all of its gift ideas, for you and everyone it's shared with. This can't be undone.</p>
+                <button id="manage-wishlist-delete"
+                        class="btn btn-outline-danger"
+                        type="button"
+                        disabled="@(!RendererInfo.IsInteractive)"
+                        @onclick="ShowDeleteDialog">
+                    <OpenWishIcon Name="trash" /> Delete wishlist
+                </button>
+            </div>
         </div>
     </PageSections>
 }
 </div>
 
-<WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDeleteWishlist" />
+<WishlistDeleteDialog @ref="deleteDialog"
+                      OnConfirm="HandleDeleteWishlist"
+                      IsBusy="@_isDeleting"
+                      ErrorMessage="@_deleteErrorMessage"
+                      CloseOnConfirm="false"
+                      ConfirmLabel="Delete wishlist" />
 
 
 @code {
@@ -411,6 +472,11 @@ else
 
     private WishlistModel? _wishlist;
     private WishlistDeleteDialog deleteDialog = null!;
+    private bool _savingDetails;
+    private string? _detailsStatusMessage;
+    private string? _detailsErrorMessage;
+    private bool _isDeleting;
+    private string? _deleteErrorMessage;
     private string? _currentUserId;
     private bool _isOwner;
     private bool _loadingWishlist = true;
@@ -447,6 +513,15 @@ else
 
     private IReadOnlyList<string> CircleNamesFor(ApplicationUserModel friend) =>
         CircleRules.GetSharingCircleNames(_circles, WishlistId, friend.Id);
+
+    private string DetailsSectionHref => NavigationManager.GetUriWithQueryParameter("section", "details");
+
+    private string SharingSummary => _wishlist switch
+    {
+        { IsPrivate: true } => "Only you can see this list.",
+        { IsFriendsOnly: true } => "Only the friends and circles you choose can see this list.",
+        _ => "Everyone in your friend list can see this list.",
+    };
 
     private List<CircleModel> AvailableCircles =>
         _circles.Where(circle => circle.Wishlists.All(list => list.PublicId != WishlistId)).ToList();
@@ -730,29 +805,67 @@ else
 
     private async Task HandleSubmit(WishlistModel updatedWishlist)
     {
-        if (string.IsNullOrWhiteSpace(_currentUserId))
+        if (_savingDetails)
         {
-            _sharingErrorMessage = "Sign in again to update this wishlist.";
             return;
         }
 
-        await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist, _currentUserId);
-        // Refresh to show updated visibility
-        _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
-        await RefreshFriendsWithAccessAsync();
+        _detailsStatusMessage = null;
+        _detailsErrorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_currentUserId))
+        {
+            _detailsErrorMessage = "Sign in again to update this wishlist.";
+            return;
+        }
+
+        _savingDetails = true;
         StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            updatedWishlist.Name = updatedWishlist.Name.Trim();
+            await WishlistService.UpdateWishlistByPublicIdAsync(WishlistId, updatedWishlist, _currentUserId);
+            // Refresh to show updated visibility
+            _wishlist = await WishlistService.GetWishlistByPublicIdAsync(WishlistId, _currentUserId);
+            _sharingStatusMessage = null;
+            _sharingErrorMessage = null;
+            _detailsStatusMessage = "Changes saved.";
+            await RefreshFriendsWithAccessAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to save wishlist details for {WishlistId}", WishlistId);
+            _detailsErrorMessage = "We couldn't save your changes. Check your connection and try again.";
+        }
+        finally
+        {
+            _savingDetails = false;
+        }
     }
 
-    private void ShowDeleteDialog()
+    private Task ShowDeleteDialog()
     {
-        deleteDialog.Show(
-            "Delete Wishlist",
-            $"Are you sure you want to delete the wishlist '{_wishlist?.Name}'? This action cannot be undone."
+        _deleteErrorMessage = null;
+        // ShowAsync renders the title and message before the dialog opens.
+        return deleteDialog.ShowAsync(
+            "Delete wishlist",
+            $"Delete {_wishlist?.Name} and all of its gift ideas? Everyone it's shared with loses access. This can't be undone.",
+            "manage-wishlist-delete"
         );
     }
 
     private async Task HandleDeleteWishlist()
     {
+        if (_isDeleting)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+        _deleteErrorMessage = null;
+
         try
         {
             await WishlistService.DeleteWishlistByPublicIdAsync(WishlistId);
@@ -761,6 +874,11 @@ else
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error deleting wishlist {WishlistId}", WishlistId);
+            _deleteErrorMessage = "We couldn't delete this wishlist. Check your connection and try again.";
+        }
+        finally
+        {
+            _isDeleting = false;
         }
     }
 

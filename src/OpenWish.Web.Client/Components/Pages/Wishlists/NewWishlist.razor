@@ -16,13 +16,12 @@
     <PageHeader Title="Create a wishlist"
                 Description="Name your list, keep it private to start, then add your first idea.">
         <Actions>
-            <a href="/wishlists" class="btn btn-outline-secondary">
+            <a href="/wishlists" class="btn btn-outline-secondary page-header-back">
                 <OpenWishIcon Name="arrow-left" /> Back to wishlists
             </a>
         </Actions>
     </PageHeader>
-    <div class="row">
-        <div class="col-lg-8">
+    <div class="new-wishlist-form">
         @if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <div class="alert alert-danger" role="alert">@_errorMessage</div>
@@ -32,7 +31,6 @@
                       OnCancel="@HandleCancel"
                       AutoFocusName="true"
                       IsSubmitting="@_isSubmitting" />
-        </div>
     </div>
 </div>
 
@@ -64,6 +62,7 @@
                 return;
             }
 
+            submittedWishlist.Name = submittedWishlist.Name.Trim();
             var createdWishlist = await WishlistService.CreateWishlistAsync(submittedWishlist, userId);
             NavigationManager.NavigateTo($"/wishlists/{createdWishlist.PublicId}/items/new?firstIdea=true");
         }

@@ -1,6 +1,7 @@
-<div class="setup-step @(IsComplete ? "setup-step-complete" : string.Empty)">
+<div class="setup-step @(IsComplete ? "setup-step-complete" : string.Empty) @(IsNext ? "setup-step-next" : string.Empty)"
+     aria-current="@(IsNext ? "step" : null)">
     <span class="visually-hidden">
-        Step @Number: @(IsComplete ? "complete" : "not complete").
+        Step @Number: @(IsComplete ? "complete" : IsNext ? "next step" : "not complete").
     </span>
     <div class="setup-step-marker" aria-hidden="true">
         @if (IsComplete)
@@ -12,13 +13,19 @@
             @Number
         }
     </div>
-    <div class="flex-grow-1">
-        <div class="fw-semibold">@Title</div>
-        <div class="small text-muted">@Description</div>
+    <div class="setup-step-text">
+        <div class="setup-step-title">
+            <span class="fw-semibold">@Title</span>
+            @if (IsNext)
+            {
+                <span class="setup-step-next-badge" aria-hidden="true">Next</span>
+            }
+        </div>
+        <div class="setup-step-description">@Description</div>
     </div>
     @if (!IsComplete || !string.Equals(ActionLabel, "Go to draw", StringComparison.Ordinal))
     {
-        <a class="btn btn-sm @(IsComplete ? "btn-outline-secondary" : "btn-outline-primary")"
+        <a class="btn btn-sm @ActionClass"
            href="@ActionHref"
            @onclick="HandleActionAsync">@ActionLabel</a>
     }
@@ -29,9 +36,14 @@
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Description { get; set; } = string.Empty;
     [Parameter] public bool IsComplete { get; set; }
+    [Parameter] public bool IsNext { get; set; }
     [Parameter, EditorRequired] public string ActionHref { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string ActionLabel { get; set; } = string.Empty;
     [Parameter] public EventCallback OnAction { get; set; }
+
+    private string ActionClass => IsNext
+        ? "btn-primary"
+        : IsComplete ? "btn-link setup-step-quiet-action" : "btn-outline-secondary";
 
     private Task HandleActionAsync() => OnAction.HasDelegate ? OnAction.InvokeAsync() : Task.CompletedTask;
 }

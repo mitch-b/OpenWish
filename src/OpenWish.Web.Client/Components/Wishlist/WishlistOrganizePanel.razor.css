@@ -118,3 +118,57 @@
     margin: 0.75rem 0 0;
     color: var(--bs-danger, #b02a37);
 }
+
+/* Closed: a slim bar so ideas stay near the top of the page. */
+.organize:not(.is-open) {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    box-shadow: none;
+}
+
+.organize-heading {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.organize-heading h2 {
+    margin: 0;
+    font-weight: 700;
+}
+
+.organize:not(.is-open) .organize-intro {
+    font-size: 0.875rem;
+}
+
+#organize-toggle {
+    min-height: 2.75rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+    .organize:not(.is-open) .organize-intro {
+        display: none;
+    }
+
+    .organize:not(.is-open) .organize-header {
+        flex-wrap: nowrap;
+    }
+}
+
+.organize .btn-outline-primary {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 45%, var(--color-border));
+    background: var(--color-surface);
+    color: var(--color-link);
+}
+
+.organize .btn-outline-primary:hover:not(:disabled) {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+}
+
+.organize .btn-primary {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-bg);
+    color: #fff;
+}

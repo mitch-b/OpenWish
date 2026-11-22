@@ -16,7 +16,7 @@
 
 <div class="container page-shell gift-plan" data-testid="gift-plan">
     <PageHeader Title="My gift plan"
-                Description="Every gift you've reserved, by person, what is still to buy, and gifts you've already given. Only you can see this page." />
+                Description="Who you're buying for, what's still to buy, and what's wrapped. Only you can see this page." />
 
     <section aria-labelledby="gift-plan-heading" aria-busy="@(_isLoading ? "true" : "false")">
         <h2 id="gift-plan-heading" class="visually-hidden" tabindex="-1">Gifts you've reserved</h2>
@@ -34,7 +34,7 @@
         {
             <div class="alert alert-danger" role="alert">
                 <p class="mb-2">@_loadError</p>
-                <button class="btn btn-outline-danger btn-sm" type="button" disabled="@_isLoading" @onclick="LoadAsync">Try again</button>
+                <button class="btn btn-outline-danger btn-sm" type="button" disabled="@(_isLoading || !RendererInfo.IsInteractive)" @onclick="LoadAsync">Try again</button>
             </div>
         }
         else if (_plan is null)
@@ -46,11 +46,17 @@
         }
         else if (_plan.ItemCount == 0 && _plan.HistoryCount == 0)
         {
-            <div class="empty-state text-center" data-testid="gift-plan-empty">
-                <OpenWishIcon Name="gift" Class="empty-state-icon" />
+            <div class="empty-state" data-testid="gift-plan-empty">
+                <span class="empty-state-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
                 <h2>Nothing reserved yet</h2>
-                <p class="lead">Reserve an idea on a friend's wishlist and it will show up here, grouped by person.</p>
-                <a href="/wishlists" class="btn btn-primary btn-lg mt-3">Browse wishlists</a>
+                <p>Reserve an idea on a friend's wishlist and it shows up here, grouped by person, ready to check off as you shop.</p>
+                <p class="empty-state-privacy">
+                    <OpenWishIcon Name="eye-slash" /> The person you're buying for never sees your reservations.
+                </p>
+                <div class="empty-state-actions">
+                    <a href="/wishlists" class="btn btn-primary">Browse wishlists</a>
+                    <a href="/events" class="btn btn-outline-secondary">See your events</a>
+                </div>
             </div>
         }
         else
@@ -92,11 +98,13 @@
                                 aria-pressed="@(_filter == GiftPlanFilter.All ? "true" : "false")"
                                 id="gift-plan-show-all"
                                 data-testid="gift-plan-show-all"
+                                disabled="@(!RendererInfo.IsInteractive)"
                                 @onclick="() => SetFilter(GiftPlanFilter.All)">All gifts</button>
                         <button type="button" class="btn btn-sm @(_filter == GiftPlanFilter.ToBuy ? "btn-primary" : "btn-outline-primary")"
                                 aria-pressed="@(_filter == GiftPlanFilter.ToBuy ? "true" : "false")"
                                 id="gift-plan-show-to-buy"
                                 data-testid="gift-plan-show-to-buy"
+                                disabled="@(!RendererInfo.IsInteractive)"
                                 @onclick="() => SetFilter(GiftPlanFilter.ToBuy)">Still to buy (@_plan.ToBuyCount)</button>
                         @if (_plan.OverBudgetCount > 0 || _filter == GiftPlanFilter.OverBudget)
                         {
@@ -104,16 +112,18 @@
                                     aria-pressed="@(_filter == GiftPlanFilter.OverBudget ? "true" : "false")"
                                     id="gift-plan-show-over-budget"
                                     data-testid="gift-plan-show-over-budget"
-                                    @onclick="() => SetFilter(GiftPlanFilter.OverBudget)">Over budget (@_plan.OverBudgetCount)</button>
+                                    disabled="@(!RendererInfo.IsInteractive)"
+                                @onclick="() => SetFilter(GiftPlanFilter.OverBudget)">Over budget (@_plan.OverBudgetCount)</button>
                         }
                     </div>
                     <div class="plan-actions">
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-copy"
                                 data-copy-text="@ShoppingListText"
-                                disabled="@(_plan.ToBuyCount == 0 || _busyKey is not null)" @onclick="CopyShoppingListAsync">
+                                disabled="@(_plan.ToBuyCount == 0 || _busyKey is not null || !RendererInfo.IsInteractive)" @onclick="CopyShoppingListAsync">
                             <OpenWishIcon Name="clipboard" /> @(_listCopied ? "List copied" : "Copy shopping list")
                         </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-print" @onclick="PrintPlanAsync">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-print"
+                                disabled="@(!RendererInfo.IsInteractive)" @onclick="PrintPlanAsync">
                             <OpenWishIcon Name="list-check" /> Print
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" data-testid="gift-plan-download"
@@ -132,7 +142,8 @@
 
                 @if (_plan.OverBudgetCount > 0)
                 {
-                    <p class="plan-note plan-over-budget-note" data-testid="gift-plan-over-budget-summary">
+                    <p class="plan-over-budget-note" data-testid="gift-plan-over-budget-summary">
+                        <OpenWishIcon Name="exclamation-triangle" />
                         @(_plan.OverBudgetCount == 1 ? "1 gift is" : $"{_plan.OverBudgetCount} gifts are") over an occasion's budget.
                     </p>
                 }
@@ -149,136 +160,160 @@
                 {
                     <div class="plan-no-match" role="status" data-testid="gift-plan-no-match">
                         <p class="lead mb-2">No gifts match "@_search.Trim()".</p>
-                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ClearSearch">Clear search</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" disabled="@(!RendererInfo.IsInteractive)" @onclick="ClearSearch">Clear search</button>
                     </div>
                 }
 
                 @foreach (var recipient in VisibleRecipients)
                 {
+                    var budget = RecipientBudget(recipient);
                     <section class="plan-recipient" aria-labelledby="@RecipientId(recipient)" data-testid="gift-plan-recipient" @key="RecipientKey(recipient)">
                         <header class="plan-recipient-header">
-                            <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
-                            <p>
-                                @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
-                                &middot; @recipient.Total.ToString("C")
-                                &middot; @recipient.ToBuyCount to buy
-                                @if (recipient.UnpricedCount > 0)
+                            <div class="plan-recipient-title">
+                                <h3 id="@RecipientId(recipient)">@recipient.RecipientName</h3>
+                                <p class="plan-recipient-meta">
+                                    @(recipient.Items.Count == 1 ? "1 gift" : $"{recipient.Items.Count} gifts")
+                                    &middot; @recipient.Total.ToString("C")
+                                    @if (budget is { } limit)
+                                    {
+                                        <span class="@(recipient.Total > limit ? "plan-recipient-over" : null)" data-testid="gift-plan-recipient-budget">
+                                            @(recipient.Total > limit
+                                                ? $" · {(recipient.Total - limit).ToString("C")} over the {limit.ToString("C")} budget"
+                                                : $" · {(limit - recipient.Total).ToString("C")} left of {limit.ToString("C")}")
+                                        </span>
+                                    }
+                                    @if (recipient.UnpricedCount > 0)
+                                    {
+                                        <span>@($" · {UnpricedText(recipient.UnpricedCount)}")</span>
+                                    }
+                                </p>
+                            </div>
+                            <div class="plan-recipient-aside">
+                                @if (recipient.GetNextOccasion(_now) is { } occasion)
                                 {
-                                    <span class="plan-note">(@UnpricedText(recipient.UnpricedCount))</span>
+                                    <p class="plan-occasion" data-testid="gift-plan-occasion">
+                                        <OpenWishIcon Name="calendar" />
+                                        @OccasionText(occasion)
+                                    </p>
                                 }
-                            </p>
+                                @if (RecipientOverall(recipient).ToBuyCount > 0)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary btn-sm plan-recipient-copy" data-testid="gift-plan-copy-person"
+                                            data-copy-text="@GiftPlanText.BuildForRecipient(RecipientOverall(recipient), _now)"
+                                            disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)" @onclick="() => CopyRecipientAsync(recipient)">
+                                        <OpenWishIcon Name="clipboard" /> @(_copiedRecipientKey == RecipientKey(recipient) ? "Copied" : "Copy list")
+                                        <span class="visually-hidden"> of gifts still to buy for @recipient.RecipientName</span>
+                                    </button>
+                                }
+                            </div>
                             <div class="plan-progress" data-testid="gift-plan-progress">
                                 <progress max="@recipient.GiftCount" value="@recipient.BoughtCount"
                                           aria-label="Gifts bought for @recipient.RecipientName"></progress>
                                 <span>@recipient.BoughtCount of @recipient.GiftCount bought</span>
                             </div>
-                            @if (recipient.GetNextOccasion(_now) is { } occasion)
-                            {
-                                <p class="plan-occasion" data-testid="gift-plan-occasion">
-                                    <OpenWishIcon Name="calendar" />
-                                    @OccasionText(occasion)
-                                </p>
-                            }
-                            @if (RecipientOverall(recipient).ToBuyCount > 0)
-                            {
-                                <button type="button" class="btn btn-outline-secondary btn-sm plan-recipient-copy" data-testid="gift-plan-copy-person"
-                                        data-copy-text="@GiftPlanText.BuildForRecipient(RecipientOverall(recipient), _now)"
-                                        disabled="@(_busyKey is not null)" @onclick="() => CopyRecipientAsync(recipient)">
-                                    <OpenWishIcon Name="clipboard" /> @(_copiedRecipientKey == RecipientKey(recipient) ? "Copied" : "Copy list")
-                                    <span class="visually-hidden"> of gifts still to buy for @recipient.RecipientName</span>
-                                </button>
-                            }
                         </header>
                         <ul class="plan-items">
                             @foreach (var item in recipient.Items)
                             {
-                                <li class="plan-item" data-testid="gift-plan-item" @key="@($"{item.WishlistPublicId}/{item.ItemPublicId}")">
+                                var key = KeyOf(item);
+                                var isBusy = _busyKey == key;
+                                <li class="plan-item @StatusClass(item)" data-testid="gift-plan-item" @key="@key">
                                     <div class="plan-item-main">
-                                        <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
-                                        <small>
+                                        <div class="plan-item-heading">
+                                            <a class="plan-item-name" href="/wishlists/@item.WishlistPublicId">@item.ItemName</a>
+                                            <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
+                                        </div>
+                                        <small class="plan-item-meta">
                                             @item.WishlistName
                                             @if (item.EventName is not null)
                                             {
                                                 <span> &middot; <a href="/events/@item.EventPublicId">@item.EventName</a></span>
                                             }
+                                            <span> &middot; Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d")</span>
                                         </small>
-                                        <small>Reserved @item.ReservedOn.ToLocalTime().ToString("MMM d, yyyy")</small>
-                                        @if (item.IsOverBudget)
-                                        {
-                                            <small class="plan-over-budget" data-testid="gift-plan-over-budget">
-                                                Over the @item.EventBudget!.Value.ToString("C") budget for @item.EventName
-                                            </small>
-                                        }
-                                        @if (item.PurchasedOn is { } purchasedOn)
-                                        {
-                                            <small class="plan-bought" data-testid="gift-plan-bought">
-                                                <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d, yyyy")
-                                            </small>
-                                        }
-                                        @if (item.IsWrapped)
-                                        {
-                                            <small class="plan-bought" data-testid="gift-plan-wrapped">
-                                                <OpenWishIcon Name="gift" /> Wrapped @item.WrappedOn!.Value.ToLocalTime().ToString("MMM d, yyyy")
-                                            </small>
-                                        }
+                                        <div class="plan-item-status">
+                                            @if (!item.IsPurchased)
+                                            {
+                                                <span class="plan-status plan-status-to-buy" data-testid="gift-plan-status-to-buy">
+                                                    <OpenWishIcon Name="circle" /> To buy
+                                                </span>
+                                            }
+                                            @if (item.PurchasedOn is { } purchasedOn)
+                                            {
+                                                <span class="plan-status plan-status-done" data-testid="gift-plan-bought">
+                                                    <OpenWishIcon Name="check-circle" /> Bought @purchasedOn.ToLocalTime().ToString("MMM d")
+                                                </span>
+                                            }
+                                            @if (item.IsWrapped)
+                                            {
+                                                <span class="plan-status plan-status-done" data-testid="gift-plan-wrapped">
+                                                    <OpenWishIcon Name="gift" /> Wrapped @item.WrappedOn!.Value.ToLocalTime().ToString("MMM d")
+                                                </span>
+                                            }
+                                            @if (item.IsOverBudget)
+                                            {
+                                                <span class="plan-status plan-status-warning" data-testid="gift-plan-over-budget">
+                                                    <OpenWishIcon Name="exclamation-triangle" /> Over the @item.EventBudget!.Value.ToString("C") budget for @item.EventName
+                                                </span>
+                                            }
+                                        </div>
                                     </div>
-                                    <div class="plan-item-side">
-                                        @if (item.IsPurchased)
-                                        {
-                                            <button class="btn btn-sm @(item.IsWrapped ? "btn-outline-secondary" : "btn-primary")"
+                                    @if (_confirmReleaseKey == key)
+                                    {
+                                        <div class="plan-release-confirm" role="group" aria-label="Release @item.ItemName">
+                                            <p class="plan-release-text" data-testid="gift-plan-release-text">
+                                                Release @item.ItemName?
+                                                @(item.IsPurchased
+                                                    ? "It is marked as bought; releasing removes it from your plan and its bought record, and someone else can reserve it."
+                                                    : "It leaves your plan and someone else can reserve it.")
+                                            </p>
+                                            <button class="btn btn-outline-secondary btn-sm" type="button" id="@ElementIdFor("keep", item)"
+                                                    disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)" @onclick="() => CancelRelease(item)">Keep</button>
+                                            <button class="btn btn-danger btn-sm" type="button" data-testid="gift-plan-release-confirm"
+                                                    disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)" @onclick="() => ReleaseAsync(item)">
+                                                @(isBusy ? "Releasing..." : "Release it")
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="plan-item-actions">
+                                            @if (item.IsPurchased)
+                                            {
+                                                <button class="btn btn-sm @(item.IsWrapped ? "btn-outline-secondary" : "btn-primary")"
+                                                        type="button"
+                                                        data-testid="gift-plan-wrap-toggle"
+                                                        disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)"
+                                                        @onclick="() => ToggleWrappedAsync(item)">
+                                                    @(isBusy && _busyAction == BusyWrapped ? "Saving..." : item.IsWrapped ? "Not wrapped yet" : "Mark as wrapped")
+                                                    <span class="visually-hidden"> for @item.ItemName</span>
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
                                                     type="button"
-                                                    data-testid="gift-plan-wrap-toggle"
-                                                    disabled="@(_busyKey is not null)"
-                                                    @onclick="() => ToggleWrappedAsync(item)">
-                                                @(_busyKey == KeyOf(item) ? "Saving..." : item.IsWrapped ? "Not wrapped yet" : "Mark as wrapped")
+                                                    data-testid="gift-plan-toggle"
+                                                    disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)"
+                                                    @onclick="() => TogglePurchasedAsync(item)">
+                                                @(isBusy && _busyAction == BusyPurchased ? "Saving..." : item.IsPurchased ? "Not bought yet" : "Mark as bought")
                                                 <span class="visually-hidden"> for @item.ItemName</span>
                                             </button>
-                                        }
-                                        <button class="btn btn-sm @(item.IsPurchased ? "btn-outline-secondary" : "btn-primary")"
-                                                type="button"
-                                                data-testid="gift-plan-toggle"
-                                                disabled="@(_busyKey is not null)"
-                                                @onclick="() => TogglePurchasedAsync(item)">
-                                            @(_busyKey == KeyOf(item) ? "Saving..." : item.IsPurchased ? "Not bought yet" : "Mark as bought")
-                                            <span class="visually-hidden"> for @item.ItemName</span>
-                                        </button>
-                                        <span class="plan-price">@(item.Price is { } price ? price.ToString("C") : "No price")</span>
-                                        @if (_confirmReleaseKey == KeyOf(item))
-                                        {
-                                            <div class="plan-release-confirm" role="group" aria-label="Release @item.ItemName">
-                                                <p class="plan-release-text" data-testid="gift-plan-release-text">
-                                                    Release @item.ItemName?
-                                                    @(item.IsPurchased
-                                                        ? "It is marked as bought; releasing removes it from your plan and its bought record, and someone else can reserve it."
-                                                        : "It leaves your plan and someone else can reserve it.")
-                                                </p>
-                                                <button class="btn btn-outline-secondary btn-sm" type="button" id="@ElementIdFor("keep", item)"
-                                                        disabled="@(_busyKey is not null)" @onclick="() => CancelRelease(item)">Keep</button>
-                                                <button class="btn btn-danger btn-sm" type="button" data-testid="gift-plan-release-confirm"
-                                                        disabled="@(_busyKey is not null)" @onclick="() => ReleaseAsync(item)">
-                                                    @(_busyKey == KeyOf(item) ? "Releasing..." : "Release it")
-                                                </button>
-                                            </div>
-                                        }
-                                        else
-                                        {
+                                            @if (!string.IsNullOrWhiteSpace(item.Url))
+                                            {
+                                                <a class="btn btn-outline-primary btn-sm"
+                                                   href="@item.Url"
+                                                   target="_blank"
+                                                   rel="noopener noreferrer nofollow"
+                                                   aria-label="Open store page for @item.ItemName (opens in a new tab)">
+                                                    <OpenWishIcon Name="box-arrow-up-right" /> Store
+                                                </a>
+                                            }
                                             <button class="btn btn-outline-secondary btn-sm" type="button" data-testid="gift-plan-release"
                                                     id="@ElementIdFor("release", item)"
-                                                    disabled="@(_busyKey is not null)" @onclick="() => AskToRelease(item)">
+                                                    disabled="@(_busyKey is not null || !RendererInfo.IsInteractive)" @onclick="() => AskToRelease(item)">
                                                 Release<span class="visually-hidden"> @item.ItemName so someone else can reserve it</span>
                                             </button>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(item.Url))
-                                        {
-                                            <a class="btn btn-outline-primary btn-sm"
-                                               href="@item.Url"
-                                               target="_blank"
-                                               rel="noopener noreferrer nofollow"
-                                               aria-label="Open store page for @item.ItemName (opens in a new tab)">
-                                                <OpenWishIcon Name="box-arrow-up-right" /> Store
-                                            </a>
-                                        }
-                                    </div>
+                                        </div>
+                                    }
                                 </li>
                             }
                         </ul>
@@ -333,6 +368,9 @@
     private string? _actionError;
     private string? _statusMessage;
     private string? _busyKey;
+    private string? _busyAction;
+    private const string BusyPurchased = "purchased";
+    private const string BusyWrapped = "wrapped";
     private string? _userId;
     private GiftPlanFilter _filter = GiftPlanFilter.All;
     private string _search = string.Empty;
@@ -564,6 +602,7 @@
         finally
         {
             _busyKey = null;
+            _busyAction = null;
         }
     }
 
@@ -580,6 +619,7 @@
 
         var markBought = !item.IsPurchased;
         _busyKey = KeyOf(item);
+        _busyAction = BusyPurchased;
         _actionError = null;
         _statusMessage = null;
         try
@@ -600,6 +640,7 @@
         finally
         {
             _busyKey = null;
+            _busyAction = null;
         }
     }
 
@@ -612,6 +653,7 @@
 
         var markWrapped = !item.IsWrapped;
         _busyKey = KeyOf(item);
+        _busyAction = BusyWrapped;
         _actionError = null;
         _statusMessage = null;
         try
@@ -628,6 +670,7 @@
         finally
         {
             _busyKey = null;
+            _busyAction = null;
         }
     }
 
@@ -655,6 +698,19 @@
         {
             _isLoading = false;
         }
+    }
+
+    private static string StatusClass(GiftPlanItemModel item) =>
+        item.IsWrapped ? "is-wrapped" : item.IsPurchased ? "is-bought" : "is-to-buy";
+
+    // A per-person budget only makes sense when every gift for them belongs to the same budgeted occasion.
+    private static decimal? RecipientBudget(GiftPlanRecipientModel recipient)
+    {
+        var first = recipient.Items[0];
+        return first.EventBudget is { } budget && first.EventPublicId is { } eventId &&
+               recipient.Items.All(item => item.EventPublicId == eventId)
+            ? budget
+            : null;
     }
 
     private static string UnpricedText(int count) => count == 1 ? "1 gift has no price" : $"{count} gifts have no price";

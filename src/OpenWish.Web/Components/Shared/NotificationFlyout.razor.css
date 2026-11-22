@@ -5,69 +5,159 @@
 
 .notification-bell {
     display: grid;
-    width: 2.6rem;
-    min-height: 2.6rem;
+    width: 2.75rem;
+    min-height: 2.75rem;
     place-items: center;
     padding: 0;
     border: 1px solid transparent;
-    border-radius: 0.72rem;
+    border-radius: 0.75rem;
     background: transparent;
     color: var(--color-text-muted);
     font-size: 1.15rem;
     position: relative;
 }
 
-.notification-bell:hover {
+.notification-bell:hover,
+.notification-bell[aria-expanded="true"] {
     border-color: var(--color-border-muted);
     background: var(--color-surface);
     color: var(--color-text);
 }
 
-.notification-badge {
-    top: -0.15rem;
-    right: -0.2rem;
-    font-size: 0.65rem;
-    min-width: 1.2em;
-    height: 1.2em;
-    line-height: 1.2em;
-    padding: 0;
+/* Disabled only until the circuit connects; keep the bell looking normal meanwhile. */
+.notification-bell:disabled {
+    opacity: 1;
+    color: var(--color-text-muted);
 }
 
+.notification-badge {
+    top: 0.2rem;
+    right: 0.15rem;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--color-danger-solid);
+    box-shadow: 0 0 0 2px var(--color-bg);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.15rem;
+}
+
+/* The dialog element positions the sheet; the sheet carries the surface. */
 .notification-flyout {
     position: absolute;
     top: 100%;
     right: 0;
-    width: min(420px, calc(100vw - 2rem));
-    max-height: min(680px, calc(100vh - 6rem));
+    z-index: 1040;
+    width: min(26rem, calc(100vw - 2rem));
     margin-top: 0.5rem;
-    background: var(--color-surface-raised);
+}
+
+.notification-flyout-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: transparent;
+}
+
+.notification-sheet {
+    display: flex;
+    flex-direction: column;
+    max-height: min(42rem, calc(100vh - 6rem));
+    max-height: min(42rem, calc(100dvh - 6rem));
+    overflow: hidden;
     border: 1px solid var(--color-border-muted);
     border-radius: 1rem;
-    z-index: 1040;
-    overflow: hidden;
+    background: var(--color-surface-raised);
     box-shadow: var(--shadow-lg);
-    transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+    color: var(--color-text);
+    animation: notification-sheet-in 160ms ease-out;
 }
 
 .notification-header {
-    background-color: var(--color-surface-raised);
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0.75rem 0.75rem 1.5rem;
     border-bottom: 1px solid var(--color-border-muted);
+    background: var(--color-surface-raised);
+}
+
+.notification-header-text {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .notification-heading {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.05rem;
+    font-weight: 700;
 }
 
 .notification-subheading {
-    margin: 0.12rem 0 0;
+    margin: 0.1rem 0 0;
     color: var(--color-text-muted);
-    font-size: 0.76rem;
+    font-size: 0.82rem;
+}
+
+.notification-mark-all {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    color: var(--color-link);
+    font-size: 0.85rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.notification-mark-all:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-link-hover);
+}
+
+.notification-mark-all:disabled {
+    opacity: 1;
+    color: var(--color-text-muted);
+}
+
+.notification-icon-button {
+    display: inline-grid;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var(--color-text-muted);
+}
+
+.notification-icon-button:hover {
+    border-color: var(--color-border-muted);
+    background: var(--color-surface-hover);
+    color: var(--color-text);
+}
+
+.notification-delete:hover {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
 }
 
 .notification-content {
-    max-height: 500px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .notification-error {
@@ -75,85 +165,161 @@
 }
 
 .notification-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
     background: var(--color-surface);
 }
 
 .notification-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.875rem 0.75rem 0.875rem 1.5rem;
     border-bottom: 1px solid var(--color-border-muted);
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
-.notification-item:hover {
-    background-color: var(--color-surface-alt);
+.notification-item:last-child {
+    border-bottom: 0;
 }
 
 .notification-item.unread {
-    background-color: color-mix(in srgb, var(--color-primary-soft) 70%, var(--color-surface));
-    box-shadow: inset 3px 0 0 var(--color-primary-bg);
-}
-
-.notification-item.unread:hover {
-    background-color: var(--color-primary-soft);
+    background-color: color-mix(in srgb, var(--color-primary-soft) 65%, var(--color-surface));
 }
 
 .notification-item.read {
     background-color: var(--color-surface);
 }
 
+/* Shape, not just colour: unread rows get a dot beside the title. */
+.unread-indicator {
+    position: absolute;
+    top: 1.3rem;
+    left: 0.625rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+}
+
+.notification-item.read .unread-indicator {
+    display: none;
+}
+
 .notification-body {
+    flex: 1 1 auto;
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .notification-title {
-    font-size: 0.9rem;
+    margin: 0;
     color: var(--color-text);
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.notification-item.read .notification-title {
+    font-weight: 600;
 }
 
 .notification-message {
-    color: var(--bs-secondary-color);
-    line-height: 1.4;
+    margin: 0.2rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
 }
 
 .notification-date {
     display: block;
-    font-size: 0.75rem;
-    color: var(--bs-secondary-color);
-    opacity: .7;
-    margin-top: 0.25rem;
+    margin-top: 0.3rem;
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
 }
 
 .notification-cta {
-    margin-top: 0.75rem;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
+    margin-top: 0.75rem;
 }
 
-.notification-actions {
-    display: flex;
+.notification-cta .btn {
+    display: inline-flex;
     align-items: center;
-    flex-shrink: 0;
+    gap: 0.4rem;
 }
 
 .notification-outcome {
     display: inline-flex;
     align-items: center;
+    gap: 0.4rem;
     min-height: 2rem;
-    color: var(--color-text-muted);
-    font-size: 0.82rem;
+    color: var(--color-success-text);
+    font-size: 0.85rem;
     font-weight: 600;
 }
 
-.unread-indicator {
-    width: 8px;
-    height: 8px;
-    display: inline-block;
+.notification-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.125rem;
+    margin-top: -0.35rem;
+}
+
+.notification-more {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.notification-more-text {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.notification-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+}
+
+.notification-state-text {
+    max-width: 18rem;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
 }
 
 .notification-empty-icon {
-    width: 2rem;
-    height: 2rem;
-    color: var(--color-text-subtle);
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    margin-bottom: 0.25rem;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.2rem;
+}
+
+.notification-empty-title {
+    margin: 0;
+    color: var(--color-text);
+    font-weight: 700;
 }
 
 .notification-modal-backdrop {
@@ -172,28 +338,63 @@
     z-index: 1;
 }
 
-/* Mobile responsiveness */
-@media (max-width: 767.98px) {
+.notification-delete-modal .modal-footer .btn {
+    min-height: 2.75rem;
+}
+
+@keyframes notification-sheet-in {
+    from {
+        opacity: 0;
+        transform: translateY(-0.35rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .notification-sheet {
+        animation: none;
+    }
+}
+
+/* Phones: a full-width sheet under the app header with a dimmed page behind it. */
+@media (max-width: 640.98px) {
     .notification-flyout {
         position: fixed;
-        top: 4.25rem;
-        right: 0.75rem;
-        left: 0.75rem;
+        top: var(--shell-header-height, 4rem);
+        right: 0;
+        left: 0;
         width: auto;
-        max-width: none;
-        max-height: calc(100vh - 5rem);
-        margin: 0 auto;
+        margin: 0;
     }
 
-    .notification-content {
-        max-height: calc(100vh - 9rem);
+    .notification-flyout-backdrop {
+        background: rgba(12, 14, 28, 0.45);
     }
 
+    .notification-sheet {
+        max-height: calc(100vh - var(--shell-header-height, 4rem) - 1rem);
+        max-height: calc(100dvh - var(--shell-header-height, 4rem) - 1rem);
+        border-width: 1px 0;
+        border-radius: 0 0 1rem 1rem;
+    }
+
+    .notification-mark-all,
+    .notification-icon-button,
     .notification-flyout .btn-sm {
-        min-height: 2.75rem;
         min-width: 2.75rem;
-        display: inline-flex;
-        align-items: center;
+        min-height: 2.75rem;
+    }
+
+    .notification-icon-button {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    .notification-cta .btn {
         justify-content: center;
     }
 }

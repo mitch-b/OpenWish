@@ -1,26 +1,49 @@
-<section class="app-install @(Banner ? "app-install-banner" : null)"
+<section class="app-install @(Banner ? "app-install-banner" : "app-install-account")"
          data-app-install="@(Banner ? "banner" : "account")"
          aria-labelledby="@HeadingId" hidden="@Banner">
     <img src="@Assets["icons/app/apple-touch-icon.png"]" width="48" height="48" alt="" class="app-install-icon" />
     <div class="app-install-content">
         <h2 id="@HeadingId">@(Banner ? "Install OpenWish" : "Install as app")</h2>
-        <p data-install-copy>Open your wishlists and gift exchanges straight from your Home Screen.</p>
-        <p data-install-installed role="status" hidden>OpenWish is installed.</p>
-        <button type="button" class="btn btn-primary" data-install-native hidden>Install as app</button>
-        <details data-install-manual open="@(!Banner)">
-            <summary>Install as app</summary>
-            <ol data-install-ios hidden>
-                <li>In Safari, open the <strong>Share</strong> menu. If you don't see Share, tap <strong>More</strong> first.</li>
-                <li>Choose <strong>Add to Home Screen</strong>.</li>
-                <li>Turn on <strong>Open as Web App</strong> if shown, then tap <strong>Add</strong>.</li>
-            </ol>
-            <p data-install-browser>Open your browser's menu and look for <strong>Install app</strong> or <strong>Add to Home screen</strong>. If neither option appears, try a browser that supports installing web apps, such as Chrome or Edge.</p>
-        </details>
-        <p data-install-error role="status" hidden>The install prompt didn't open. Use the browser steps instead.</p>
+        <div data-install-copy>
+            <p>Open your wishlists and gift exchanges straight from your Home Screen.</p>
+            @if (!Banner)
+            {
+                <ul class="app-install-benefits">
+                    <li><OpenWishIcon Name="phone" /> Opens in its own window, like any other app.</li>
+                    <li><OpenWishIcon Name="shield-check" /> No app store or download needed.</li>
+                    <li><OpenWishIcon Name="arrow-repeat" /> Stays up to date and can be removed anytime.</li>
+                </ul>
+            }
+        </div>
+        <p class="app-install-installed" data-install-installed role="status" hidden>
+            <OpenWishIcon Name="check-circle" />
+            OpenWish is installed.
+        </p>
+        <p class="app-install-error" data-install-error role="status" hidden>
+            <OpenWishIcon Name="exclamation-circle" />
+            The install prompt didn't open. Use the browser steps instead.
+        </p>
         @if (Banner)
         {
-            <button type="button" class="btn btn-outline-secondary" data-install-dismiss>Not now</button>
+            <details class="app-install-steps" data-install-manual>
+                <summary>How to install</summary>
+                @InstallSteps
+            </details>
         }
+        else
+        {
+            <div class="app-install-steps" data-install-manual>
+                <h3>How to install</h3>
+                @InstallSteps
+            </div>
+        }
+        <div class="app-install-actions">
+            <button type="button" class="btn btn-primary" data-install-native hidden>Install as app</button>
+            @if (Banner)
+            {
+                <button type="button" class="btn btn-outline-secondary" data-install-dismiss>Not now</button>
+            }
+        </div>
     </div>
 </section>
 
@@ -28,4 +51,20 @@
     [Parameter] public bool Banner { get; set; }
 
     private string HeadingId => Banner ? "app-install-banner-heading" : "app-install-account-heading";
+
+    private static readonly RenderFragment InstallSteps =
+        @<text>
+            <ol data-install-ios hidden>
+                <li>In Safari, open the <strong>Share</strong> menu. If you don't see Share, tap <strong>More</strong> first.</li>
+                <li>Choose <strong>Add to Home Screen</strong>.</li>
+                <li>Turn on <strong>Open as Web App</strong> if shown, then tap <strong>Add</strong>.</li>
+            </ol>
+            <div data-install-browser>
+                <ol>
+                    <li>Open your browser's menu.</li>
+                    <li>Choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                </ol>
+                <p class="app-install-note">Don't see either option? Try a browser that supports installing web apps, such as Chrome or Edge.</p>
+            </div>
+        </text>;
 }

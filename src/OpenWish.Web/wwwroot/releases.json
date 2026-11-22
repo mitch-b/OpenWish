@@ -1,5 +1,18 @@
 [
   {
+    "version": "0.21.1",
+    "date": "2026-11-22",
+    "title": "Ready for the holidays",
+    "summary": "Thirty polish passes make every core journey calmer, especially wishlists on phones.",
+    "highlights": [
+      "Wishlists and the add-idea form fit phones without sideways scrolling.",
+      "Gift-exchange organizers see the next step first.",
+      "Participants confirm before revealing matches to everyone.",
+      "Account settings share one layout and clearer save buttons.",
+      "Connected-app consent says what an app never sees."
+    ]
+  },
+  {
     "version": "0.21.0",
     "date": "2026-11-21",
     "title": "Take your lists with you",

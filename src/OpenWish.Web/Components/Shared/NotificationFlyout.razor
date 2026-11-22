@@ -14,17 +14,18 @@
 @implements IAsyncDisposable
 
 <div class="notification-flyout-container position-relative">
-    <button class="btn btn-link text-decoration-none notification-bell"
+    <button class="btn btn-link text-decoration-none notification-bell @(_unreadCount > 0 ? "has-unread" : null)"
             @onclick="ToggleFlyout"
             @onclick:stopPropagation="true"
             aria-label="@(_unreadCount > 0 ? $"Notifications, {_unreadCount} unread" : "Notifications")"
             aria-expanded="@(_isVisible ? "true" : "false")"
             aria-controls="notification-flyout"
+            disabled="@(!RendererInfo.IsInteractive)"
             type="button">
         <OpenWishIcon Name="bell" />
         @if (_unreadCount > 0)
         {
-            <span class="badge bg-danger position-absolute translate-middle rounded-pill notification-badge">
+            <span class="badge position-absolute rounded-pill notification-badge" aria-hidden="true">
                 @(_unreadCount > 99 ? "99+" : _unreadCount.ToString())
             </span>
         }
@@ -33,29 +34,42 @@
     @if (_isVisible)
     {
         <div id="notification-flyout"
-             class="notification-flyout shadow-lg"
+             class="notification-flyout"
              role="dialog"
              aria-modal="true"
              aria-labelledby="notification-flyout-title"
              aria-describedby="notification-flyout-description"
              @onclick:stopPropagation="true">
-            <div class="notification-header d-flex justify-content-between align-items-center p-3 border-bottom">
-                <div>
-                    <h2 class="notification-heading" id="notification-flyout-title">Notifications</h2>
-                    <p class="notification-subheading" id="notification-flyout-description">Recent updates and invitations</p>
-                </div>
-                <div class="d-flex gap-2">
+            @* Inside the dialog so it stays clickable while the page behind is inert. *@
+            <div class="notification-flyout-backdrop" aria-hidden="true" @onclick="CloseFlyout"></div>
+            <div class="notification-sheet">
+                <div class="notification-header">
+                    <div class="notification-header-text">
+                        <h2 class="notification-heading" id="notification-flyout-title">Notifications</h2>
+                        <p class="notification-subheading" id="notification-flyout-description">@GetSummary()</p>
+                    </div>
                     @if (_notifications?.Any(n => !n.IsRead) == true)
                     {
-                        <button class="btn btn-sm btn-outline-primary"
+                        <button type="button"
+                                class="btn btn-sm notification-mark-all"
                                 @onclick="MarkAllAsRead"
                                 disabled="@(_isLoading || _isMarkingRead)"
                                 aria-busy="@_isMarkingRead"
                                 data-dialog-initial-focus>
-                            Mark all as read
+                            @if (_isMarkingAll)
+                            {
+                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                <span>Marking as read…</span>
+                            }
+                            else
+                            {
+                                <OpenWishIcon Name="check-lg" />
+                                <span>Mark all as read</span>
+                            }
                         </button>
                     }
-                    <button class="btn btn-sm btn-outline-secondary"
+                    <button type="button"
+                            class="btn btn-sm notification-icon-button notification-close"
                             id="notification-close-button"
                             aria-label="Close notifications"
                             data-dialog-close
@@ -64,42 +78,47 @@
                         <OpenWishIcon Name="x-lg" />
                     </button>
                 </div>
-            </div>
 
-            <div class="notification-content">
-                @if (!_showDeleteConfirmation && !string.IsNullOrWhiteSpace(_errorMessage))
-                {
-                    <div class="alert alert-danger notification-error" role="alert">
-                        @_errorMessage
-                    </div>
-                }
-                @if (!string.IsNullOrWhiteSpace(_statusMessage))
-                {
-                    <div class="visually-hidden" role="status" aria-live="polite">
-                        @_statusMessage
-                    </div>
-                }
-                @if (_isLoading)
-                {
-                    <div class="text-center p-4" role="status">
-                        <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
-                        <div class="mt-2">Loading notifications...</div>
-                    </div>
-                }
-                else if (_notifications?.Any() == true)
-                {
-                    <div class="notification-list">
-                        @foreach (var notification in _notifications.Take(_visibleCount))
-                        {
-                            <div class="notification-item @(notification.IsRead ? "read" : "unread")">
-                                <div class="d-flex justify-content-between align-items-start p-3">
-                                    <div class="notification-body flex-grow-1">
-                                        @if (!string.IsNullOrEmpty(notification.Title))
+                <div class="notification-content">
+                    @if (!_showDeleteConfirmation && !string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger notification-error" role="alert">
+                            @_errorMessage
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+                    {
+                        <div class="visually-hidden" role="status" aria-live="polite">
+                            @_statusMessage
+                        </div>
+                    }
+                    @if (_isLoading)
+                    {
+                        <div class="notification-state" role="status">
+                            <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
+                            <p class="notification-state-text">Loading notifications…</p>
+                        </div>
+                    }
+                    else if (_notifications?.Any() == true)
+                    {
+                        <ul class="notification-list" aria-label="Notifications">
+                            @foreach (var notification in _notifications.Take(_visibleCount))
+                            {
+                                <li class="notification-item @(notification.IsRead ? "read" : "unread")">
+                                    <span class="unread-indicator" aria-hidden="true"></span>
+                                    <div class="notification-body">
+                                        <p class="notification-title">
+                                            @if (!notification.IsRead)
+                                            {
+                                                <span class="visually-hidden">Unread: </span>
+                                            }
+                                            @(string.IsNullOrWhiteSpace(notification.Title) ? "Notification" : notification.Title)
+                                        </p>
+                                        @if (!string.IsNullOrWhiteSpace(notification.Message))
                                         {
-                                            <div class="notification-title fw-semibold mb-1">@notification.Title</div>
+                                            <p class="notification-message">@notification.Message</p>
                                         }
-                                        <div class="notification-message small">@notification.Message</div>
-                                        <time class="notification-date text-muted small"
+                                        <time class="notification-date"
                                               datetime="@notification.Date.UtcDateTime.ToString("O")"
                                               title="@notification.Date.UtcDateTime.ToString("MMM d, yyyy HH:mm") UTC">@NotificationTime.Describe(notification.Date, DateTimeOffset.UtcNow)</time>
                                         @if (notification.Action is { } action && ((action.Options?.Count ?? 0) > 0 || !string.IsNullOrWhiteSpace(action.NavigateTo)))
@@ -107,21 +126,25 @@
                                             <div class="notification-cta">
                                                 @if (GetInvitationOutcome(notification) is { } outcome)
                                                 {
-                                                    <span class="notification-outcome">@outcome</span>
+                                                    <span class="notification-outcome">
+                                                        <OpenWishIcon Name="check-circle" />
+                                                        @outcome
+                                                    </span>
                                                 }
                                                 else if ((action.Options?.Count ?? 0) > 0)
                                                 {
                                                     foreach (var option in action.Options ?? new List<NotificationActionOptionModel>())
                                                     {
-                                                        var buttonClass = option.IsPrimary ? "btn btn-sm btn-success" : "btn btn-sm btn-outline-secondary";
-                                                        <button class="@buttonClass"
+                                                        var buttonClass = option.IsPrimary ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-secondary";
+                                                        <button type="button"
+                                                                class="@buttonClass"
                                                                 disabled="@IsNotificationProcessing(notification.Id)"
                                                                 aria-busy="@IsNotificationProcessing(notification.Id)"
                                                                 @onclick="() => HandleActionOption(notification, option.Key)"
                                                                 @onclick:stopPropagation="true">
                                                             @if (option.IsPrimary && IsNotificationProcessing(notification.Id))
                                                             {
-                                                                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                             }
                                                             @option.Label
                                                         </button>
@@ -129,10 +152,12 @@
                                                 }
                                                 @if (!string.IsNullOrWhiteSpace(action.NavigateTo))
                                                 {
-                                                    <button class="btn btn-sm btn-outline-primary"
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary"
                                                             @onclick="() => OpenNotification(notification, action.NavigateTo!)"
                                                             @onclick:stopPropagation="true">
-                                                        View
+                                                        @GetOpenLabel(action.NavigateTo!)
+                                                        <OpenWishIcon Name="arrow-right" />
                                                     </button>
                                                 }
                                             </div>
@@ -141,8 +166,8 @@
                                     <div class="notification-actions">
                                         @if (!notification.IsRead)
                                         {
-                                            <span class="unread-indicator bg-primary rounded-circle" aria-hidden="true"></span>
-                                            <button class="btn btn-sm btn-outline-secondary ms-2 notification-mark-read"
+                                            <button type="button"
+                                                    class="btn btn-sm notification-icon-button notification-mark-read"
                                                     aria-label="@($"Mark {GetNotificationName(notification)} as read")"
                                                     title="Mark as read"
                                                     disabled="@_isMarkingRead"
@@ -151,33 +176,36 @@
                                                 <OpenWishIcon Name="check-lg" />
                                             </button>
                                         }
-                                        <button class="btn btn-sm btn-outline-danger ms-2"
+                                        <button type="button"
+                                                class="btn btn-sm notification-icon-button notification-delete"
                                                 aria-label="Delete notification"
+                                                title="Delete"
                                                 @onclick="() => ShowDeleteConfirmation(notification)"
                                                 @onclick:stopPropagation="true">
                                             <OpenWishIcon Name="trash3" />
                                         </button>
                                     </div>
-                                </div>
+                                </li>
+                            }
+                        </ul>
+
+                        @if (_notifications.Count() > _visibleCount)
+                        {
+                            <div class="notification-more">
+                                <p class="notification-more-text">Showing @_visibleCount of @_notifications.Count()</p>
+                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ShowMore">Show more</button>
                             </div>
                         }
-                    </div>
-
-                    @if (_notifications.Count() > _visibleCount)
+                    }
+                    else
                     {
-                        <div class="text-center p-3 border-top">
-                            <small class="text-muted d-block mb-2">Showing @_visibleCount of @_notifications.Count() notifications</small>
-                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ShowMore">Show more</button>
+                        <div class="notification-state notification-empty">
+                            <span class="notification-empty-icon" aria-hidden="true"><OpenWishIcon Name="bell" /></span>
+                            <p class="notification-empty-title">You're all caught up</p>
+                            <p class="notification-state-text">Event invitations and updates from your friends and lists will show up here.</p>
                         </div>
                     }
-                }
-                else
-                {
-                    <div class="text-center p-4 text-muted">
-                        <OpenWishIcon Name="bell" Class="notification-empty-icon" />
-                        <div class="mt-2 fw-semibold">You're all caught up</div>
-                    </div>
-                }
+                </div>
             </div>
         </div>
     }
@@ -211,16 +239,16 @@
                     }
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm"
+                    <button type="button" class="btn btn-outline-secondary"
                             data-dialog-close
                             data-dialog-initial-focus
                             @onclick="CancelDelete">Keep notification</button>
-                    <button type="button" class="btn btn-danger btn-sm" @onclick="ConfirmDelete" disabled="@_isDeleting">
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@_isDeleting">
                         @if (_isDeleting)
                         {
                             <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                         }
-                        Delete
+                        @(_isDeleting ? "Deleting…" : "Delete")
                     </button>
                 </div>
             </div>
@@ -234,6 +262,7 @@
     private bool _isDeleting = false;
     private bool _showDeleteConfirmation = false;
     private bool _isMarkingRead = false;
+    private bool _isMarkingAll = false;
     private string? _errorMessage;
     private string? _statusMessage;
     private int _unreadCount = 0;
@@ -423,6 +452,7 @@
         if (_userId is not null && !_isMarkingRead)
         {
             _isMarkingRead = true;
+            _isMarkingAll = true;
             _errorMessage = null;
             _statusMessage = null;
             try
@@ -462,9 +492,33 @@
             finally
             {
                 _isMarkingRead = false;
+                _isMarkingAll = false;
             }
         }
     }
+
+    private string GetSummary()
+    {
+        if (_isLoading || _notifications is null)
+        {
+            return "Loading your updates";
+        }
+
+        var unread = _notifications.Count(n => !n.IsRead);
+        return unread switch
+        {
+            0 when !_notifications.Any() => "Updates and invitations",
+            0 => "All caught up",
+            1 => "1 unread",
+            _ => $"{unread} unread"
+        };
+    }
+
+    private static string GetOpenLabel(string route) =>
+        route.StartsWith("/events/", StringComparison.OrdinalIgnoreCase) ? "Open event"
+        : route.StartsWith("/wishlists/", StringComparison.OrdinalIgnoreCase) ? "Open wishlist"
+        : route.StartsWith("/friends", StringComparison.OrdinalIgnoreCase) ? "Open friends"
+        : "Open";
 
     private void ShowDeleteConfirmation(NotificationModel notification)
     {

@@ -15,7 +15,7 @@
             <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
             @foreach (var provider in externalLogins)
             {
-                <button type="submit" class="btn btn-lg btn-primary external-login-button" name="provider" value="@provider.Name">Continue with @provider.DisplayName</button>
+                <button type="submit" class="btn btn-lg external-login-button" name="provider" value="@provider.Name">Continue with @provider.DisplayName</button>
             }
         </form>
     </section>

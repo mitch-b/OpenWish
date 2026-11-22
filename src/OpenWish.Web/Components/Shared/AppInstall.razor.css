@@ -4,8 +4,9 @@
     gap: 16px;
 }
 
-.app-install[hidden] {
-    display: none;
+.app-install[hidden],
+.app-install [hidden] {
+    display: none !important;
 }
 
 .app-install-banner {
@@ -17,13 +18,17 @@
 }
 
 .app-install-icon {
+    flex: none;
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
 }
 
 .app-install-content {
+    display: grid;
+    flex: 1;
     min-width: 0;
     max-width: 64ch;
+    gap: 12px;
 }
 
 .app-install h2 {
@@ -32,26 +37,126 @@
 }
 
 .app-install p,
-.app-install ol {
-    margin: 0 0 8px;
+.app-install ol,
+.app-install ul {
+    margin: 0;
     color: var(--color-text-muted);
 }
 
-.app-install button,
-.app-install summary {
+.app-install-benefits {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px !important;
+    padding: 0;
+    list-style: none;
+}
+
+.app-install-benefits li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: var(--color-text);
+}
+
+.app-install-benefits ::deep .ow-icon,
+.app-install-installed ::deep .ow-icon,
+.app-install-error ::deep .ow-icon {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.2rem;
+}
+
+.app-install-benefits ::deep .ow-icon {
+    color: var(--color-link);
+}
+
+.app-install-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.app-install-actions:not(:has(button:not([hidden]))) {
+    display: none;
+}
+
+.app-install button {
     min-height: 44px;
 }
 
-.app-install summary {
-    line-height: 44px;
+.app-install-account .app-install-steps {
+    padding: 16px 20px;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 16px;
+    background: var(--color-surface-alt);
+}
+
+.app-install-steps h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
     font-weight: 700;
+}
+
+.app-install summary {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    width: fit-content;
+    font-weight: 700;
+    color: var(--color-link);
     cursor: pointer;
 }
 
-.app-install [data-install-error] {
-    margin-top: 8px;
+.app-install-steps ol {
+    display: grid;
+    gap: 10px;
+    padding: 0;
+    list-style: none;
+    counter-reset: install-step;
 }
 
-.app-install [data-install-dismiss] {
-    margin-top: 8px;
+.app-install-steps li {
+    position: relative;
+    padding-left: 36px;
+    color: var(--color-text);
+    line-height: 1.5;
+    counter-increment: install-step;
+}
+
+.app-install-steps li::before {
+    position: absolute;
+    top: -0.05rem;
+    left: 0;
+    display: grid;
+    width: 1.6rem;
+    height: 1.6rem;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 0.82rem;
+    font-weight: 750;
+    content: counter(install-step);
+}
+
+.app-install-note {
+    margin-top: 12px !important;
+    font-size: 0.9rem;
+}
+
+.app-install-installed,
+.app-install-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-weight: 650;
+}
+
+.app-install-installed {
+    color: var(--color-success-text, var(--color-text)) !important;
+}
+
+.app-install-error {
+    color: var(--color-warning-text, var(--color-text)) !important;
 }

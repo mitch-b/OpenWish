@@ -34,3 +34,24 @@
     align-items: center;
     gap: 0.45rem;
 }
+
+.social-heading p {
+    max-width: 38rem;
+}
+
+.friend-search .form-control {
+    min-height: 6rem;
+}
+
+@media (pointer: coarse) {
+    .invite-shortcut-hint {
+        display: none;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .invite-send {
+        width: 100%;
+        justify-content: center;
+    }
+}

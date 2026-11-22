@@ -8,126 +8,154 @@
 <div class="item-reservation" aria-busy="@(_loading || _isUpdating)">
     @if (_loading && !_hasLoaded)
     {
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading reservation...</span>
+        <div class="reservation-loading" role="status">
+            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+            <span>Checking reservation…</span>
         </div>
     }
     else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))
     {
-        <div class="alert alert-danger" role="alert">
+        <div class="alert alert-danger reservation-alert" role="alert">
             <p class="mb-2">@_loadErrorMessage</p>
             <button class="btn btn-outline-danger btn-sm"
                     type="button"
-                    disabled="@_loading"
+                    disabled="@(_loading || !RendererInfo.IsInteractive)"
                     @onclick="RetryReservation">
-                Try again
+                <OpenWishIcon Name="arrow-clockwise" /> Try again
             </button>
         </div>
     }
-    else
+    else if (_currentUserId is null)
     {
-        @if (_isReserved)
+        <p class="reservation-hint mb-0">Sign in to reserve this item.</p>
+    }
+    else if (_currentUserId == OwnerId)
+    {
+        @* Owners never see reservation details or controls for their own list. *@
+    }
+    else if (_isReserved)
+    {
+        @if (_myReservation)
         {
-            <div class="alert alert-success mb-2">
-                @if (_myReservation)
-                {
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>You have reserved this item.</strong>
-                            <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MMM d, yyyy")</div>
-                        </div>
-                        <button class="btn btn-sm btn-outline-danger"
-                                @ref="_cancelReservationButton"
-                                type="button"
-                                disabled="@(_isUpdating || _loading)"
-                                @onclick="ShowCancelConfirmation">
-                            <OpenWishIcon Name="x-circle" /> Cancel reservation
-                        </button>
-                    </div>
-                }
-                else
-                {
-                    <div>
-                        @if (_reservation.IsAnonymous)
-                        {
-                            <strong>This item has been reserved</strong>
-                        }
-                        else
-                        {
-                            <strong>Reserved by @(_reservation.User?.UserName ?? "Unknown User")</strong>
-                        }
-                        <div class="small mt-1">Reserved on @_reservation.ReservationDate.ToLocalTime().ToString("MMM d, yyyy")</div>
-                    </div>
-                }
-            </div>
-            @if (_showCancelConfirmation)
-            {
-                <div class="alert alert-warning mt-2"
-                     role="alertdialog"
-                     aria-labelledby="cancel-reservation-title-@ItemId"
-                     aria-describedby="cancel-reservation-description-@ItemId">
-                    <div id="cancel-reservation-title-@ItemId" class="fw-semibold">Release this reservation?</div>
-                    <p id="cancel-reservation-description-@ItemId" class="mb-2">
-                        Other shoppers will be able to reserve this item.
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button @ref="_keepReservationButton"
-                                type="button"
-                                class="btn btn-sm btn-secondary"
-                                disabled="@(_isUpdating || _loading)"
-                                @onclick="KeepReservation">
-                            Keep reservation
-                        </button>
-                        <button type="button"
-                                class="btn btn-sm btn-danger"
-                                disabled="@(_isUpdating || _loading)"
-                                @onclick="CancelReservation">
-                            @(_isUpdating ? "Releasing..." : "Release reservation")
-                        </button>
-                    </div>
+            <div class="reservation-status reservation-status-mine" data-testid="reservation-status">
+                <OpenWishIcon Name="check-circle-fill" Class="reservation-status-icon" />
+                <div class="reservation-status-body">
+                    <strong class="reservation-status-title">You reserved this gift</strong>
+                    <span class="reservation-status-meta">
+                        Reserved @FormatDate(_reservation.ReservationDate)@(_reservation.IsAnonymous ? " · Your name is hidden from other shoppers" : string.Empty)
+                    </span>
                 </div>
-            }
+                <button class="btn btn-sm btn-outline-danger reservation-cancel"
+                        @ref="_cancelReservationButton"
+                        type="button"
+                        disabled="@(_isUpdating || _loading || _showCancelConfirmation || !RendererInfo.IsInteractive)"
+                        @onclick="ShowCancelConfirmation">
+                    <OpenWishIcon Name="x-circle" /> Cancel reservation
+                </button>
+            </div>
         }
         else
         {
-            @if (_givenMatches.Count > 0)
-            {
-                <div class="alert alert-warning mb-2" role="note" data-testid="duplicate-gift-warning">
-                    You marked a gift like this as given to @_givenMatches[0].RecipientName on @_givenMatches[0].PurchasedOn.ToLocalTime().ToString("MMM d, yyyy"). Reserve anyway?
+            <div class="reservation-status reservation-status-taken" data-testid="reservation-status">
+                <OpenWishIcon Name="lock" Class="reservation-status-icon" />
+                <div class="reservation-status-body">
+                    <strong class="reservation-status-title">
+                        @if (_reservation.IsAnonymous)
+                        {
+                            @:Someone reserved this gift
+                        }
+                        else
+                        {
+                            @:Reserved by @(_reservation.User?.UserName ?? "another shopper")
+                        }
+                    </strong>
+                    <span class="reservation-status-meta">
+                        Reserved @FormatDate(_reservation.ReservationDate) · Pick another idea to avoid a duplicate gift.
+                    </span>
                 </div>
-            }
-            <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="anonymousCheckbox-@ItemId" disabled="@(_isUpdating || _loading)" @bind="_anonymous" />
-                <label class="form-check-label" for="anonymousCheckbox-@ItemId">
-                    Reserve anonymously
-                </label>
             </div>
-            
-            <button class="btn btn-success w-100"
-                    @ref="_reserveItemButton"
-                    type="button"
-                    disabled="@(_isUpdating || _loading)"
-                    aria-busy="@_isUpdating"
-                    @onclick="ReserveItem">
-                <OpenWishIcon Name="gift" /> @(_isUpdating ? "Reserving..." : "Reserve this item")
-            </button>
         }
+        @if (_showCancelConfirmation)
+        {
+            <div class="alert alert-warning reservation-confirm"
+                 role="alertdialog"
+                 aria-labelledby="cancel-reservation-title-@ItemId"
+                 aria-describedby="cancel-reservation-description-@ItemId">
+                <div id="cancel-reservation-title-@ItemId" class="fw-semibold">Release this reservation?</div>
+                <p id="cancel-reservation-description-@ItemId" class="mb-2">
+                    Other shoppers will be able to reserve this item.
+                </p>
+                <div class="reservation-confirm-actions">
+                    <button @ref="_keepReservationButton"
+                            type="button"
+                            class="btn btn-sm btn-secondary"
+                            disabled="@(_isUpdating || _loading || !RendererInfo.IsInteractive)"
+                            @onclick="KeepReservation">
+                        Keep reservation
+                    </button>
+                    <button type="button"
+                            class="btn btn-sm btn-danger"
+                            disabled="@(_isUpdating || _loading || !RendererInfo.IsInteractive)"
+                            @onclick="CancelReservation">
+                        @(_isUpdating ? "Releasing…" : "Release reservation")
+                    </button>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <p class="reservation-hint" id="reservation-hint-@ItemId">
+            Reserve it so other shoppers know it's covered. The list owner never sees reservations.
+        </p>
+        @if (_givenMatches.Count > 0)
+        {
+            <div class="alert alert-warning reservation-alert" role="note" data-testid="duplicate-gift-warning">
+                <OpenWishIcon Name="exclamation-triangle" />
+                You marked a gift like this as given to @_givenMatches[0].RecipientName on @FormatDate(_givenMatches[0].PurchasedOn). Reserve anyway?
+            </div>
+        }
+        <div class="form-check reservation-anonymous">
+            <input class="form-check-input"
+                   type="checkbox"
+                   id="anonymousCheckbox-@ItemId"
+                   aria-describedby="anonymousHelp-@ItemId"
+                   disabled="@(_isUpdating || _loading || !RendererInfo.IsInteractive)"
+                   @bind="_anonymous" />
+            <label class="form-check-label" for="anonymousCheckbox-@ItemId">
+                Reserve anonymously
+            </label>
+            <div id="anonymousHelp-@ItemId" class="reservation-anonymous-help">Hide your name from other shoppers.</div>
+        </div>
+
+        <button class="btn btn-primary reservation-reserve"
+                @ref="_reserveItemButton"
+                type="button"
+                disabled="@(_isUpdating || _loading || !RendererInfo.IsInteractive)"
+                aria-busy="@_isUpdating"
+                aria-describedby="reservation-hint-@ItemId"
+                @onclick="ReserveItem">
+            <OpenWishIcon Name="gift" /> @(_isUpdating ? "Reserving…" : "Reserve this item")
+        </button>
     }
 
     @if (!string.IsNullOrWhiteSpace(_statusMessage))
     {
-        <div class="alert alert-success mt-2" role="status" aria-live="polite">
-            @_statusMessage
-            @if (_showGiftPlanLink)
-            {
-                <a class="alert-link ms-1" href="/gift-plan" data-testid="reservation-gift-plan-link">View my gift plan</a>
-            }
-        </div>
+        <p class="reservation-feedback" role="status" aria-live="polite">
+            <OpenWishIcon Name="check-circle" />
+            <span>
+                @_statusMessage
+                @if (_showGiftPlanLink)
+                {
+                    <a class="ms-1" href="/gift-plan" data-testid="reservation-gift-plan-link">View my gift plan</a>
+                }
+            </span>
+        </p>
     }
-    
+
     @if (_error)
     {
-        <div @ref="_errorAlert" class="alert alert-danger mt-2" role="alert" tabindex="-1">
+        <div @ref="_errorAlert" class="alert alert-danger reservation-alert" role="alert" tabindex="-1">
             @_errorMessage
         </div>
     }
@@ -304,6 +332,8 @@
             Logger.LogWarning(ex, "Failed to check previously given gifts for wishlist {WishlistPublicId}, item {WishlistItemId}", WishlistId, ItemId);
         }
     }
+
+    private static string FormatDate(DateTimeOffset date) => date.ToLocalTime().ToString("MMM d, yyyy");
 
     private async Task RetryReservation()
     {

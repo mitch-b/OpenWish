@@ -2,7 +2,7 @@
     display: flex;
     align-items: flex-start;
     gap: 0.85rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
 }
 
 .social-heading-icon {
@@ -13,7 +13,7 @@
     place-items: center;
     border-radius: 0.8rem;
     background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
+    color: var(--color-link);
     font-size: 1.15rem;
 }
 
@@ -23,9 +23,68 @@
 }
 
 .social-heading p {
+    max-width: 38rem;
     margin: 0.2rem 0 0;
     color: var(--color-text-muted);
     font-size: 0.86rem;
+}
+
+.circle-create {
+    max-width: 34rem;
+}
+
+.circle-create__row,
+.circle-add__row,
+.circle-rename__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.circle-create__row .form-control,
+.circle-add__row .form-select,
+.circle-rename__row .form-control {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.circle-create .btn,
+.circle-add .btn,
+.circle-rename .btn,
+.circle-card__footer .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.circle-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    color: var(--color-text-muted);
+}
+
+.circle-empty {
+    max-width: 38rem;
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px dashed var(--color-border);
+    border-radius: 1rem;
+    background: var(--color-surface);
+}
+
+.circle-empty__title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.circle-empty__copy {
+    margin: 0.3rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
 }
 
 .circle-list {
@@ -34,76 +93,167 @@
 }
 
 .circle-card {
-    padding: 0.9rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+    padding: 1rem 1.15rem;
     border: 1px solid var(--color-border-muted);
-    border-radius: 0.8rem;
+    border-radius: 1rem;
+    background: var(--color-surface);
 }
 
 .circle-card__header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem 0.75rem;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
 }
 
-.circle-card__header h3 {
+.circle-card__title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.6rem;
+    min-width: 0;
+    flex: 1 1 12rem;
+}
+
+.circle-card__title h3 {
+    min-width: 0;
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.05rem;
+    font-weight: 700;
     overflow-wrap: anywhere;
 }
 
 .circle-card__count {
     color: var(--color-text-muted);
     font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .circle-card__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin-left: auto;
+}
+
+.circle-card__actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .circle-card__note {
-    margin: 0.6rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.4rem;
+    margin: 0;
     color: var(--color-text-muted);
-    font-size: 0.85rem;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+}
+
+.circle-card__note ::deep .ow-icon {
+    flex-shrink: 0;
+}
+
+.circle-confirm {
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 0.8rem;
+    background: var(--color-danger-bg);
+}
+
+.circle-confirm__title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--color-danger-text);
+    overflow-wrap: anywhere;
+}
+
+.circle-confirm__copy {
+    margin: 0.25rem 0 0.75rem;
+    color: var(--color-text);
+    font-size: 0.88rem;
+}
+
+.circle-confirm__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.circle-confirm__actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .circle-members {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin: 0.75rem 0 0.4rem;
+    margin: 0;
 }
 
 .circle-member {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.1rem 0.2rem 0.1rem 0.7rem;
+    gap: 0.15rem;
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.1rem 0.15rem 0.1rem 0.75rem;
     border-radius: 999px;
     background: var(--color-primary-soft);
+    color: var(--color-text);
     font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.circle-member__name {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .circle-member__remove {
     display: inline-grid;
     width: 2rem;
     height: 2rem;
+    flex: 0 0 auto;
     place-items: center;
     border: 0;
     border-radius: 50%;
     background: transparent;
-    color: inherit;
+    color: var(--color-text-muted);
 }
 
 .circle-member__remove:hover:not(:disabled) {
-    background: rgb(0 0 0 / 0.08);
+    background: var(--color-surface-hover);
+    color: var(--color-danger-text);
 }
 
-.circle-add {
-    margin-top: 0.75rem;
+.circle-member__remove:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 1px;
+}
+
+.circle-add .form-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.88rem;
+}
+
+.circle-add__row {
+    max-width: 30rem;
+}
+
+.circle-card__footer {
+    display: flex;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border-muted);
 }
 
 @media (max-width: 767.98px) {
@@ -111,6 +261,39 @@
     .circles-panel .form-control,
     .circles-panel .form-select {
         min-height: 2.75rem;
+    }
+
+    .circle-card {
+        padding: 0.9rem;
+    }
+
+    .circle-card__actions {
+        width: 100%;
+    }
+
+    .circle-card__actions .btn,
+    .circle-confirm__actions .btn {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+
+    .circle-create__row .btn,
+    .circle-add__row .btn {
+        flex: 1 1 100%;
+    }
+
+    .circle-rename__actions {
+        display: flex;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .circle-rename__actions .btn {
+        flex: 1 1 0;
+    }
+
+    .circle-card__footer .btn {
+        width: 100%;
     }
 
     .circle-member__remove {

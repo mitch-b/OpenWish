@@ -46,16 +46,17 @@
 
     @if (_isImporting)
     {
-        <p class="product-import-feedback" role="status">
-            <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+        <p class="product-import-message is-pending" role="status">
+            <OpenWishIcon Name="search" />
             <span>Checking @_lookupStoreName for product details...</span>
         </p>
     }
     else if (!string.IsNullOrEmpty(_message))
     {
-        <div class="alert @MessageClass product-import-message" role="@(_messageIsError ? "alert" : "status")">
-            @_message
-        </div>
+        <p class="product-import-message @MessageClass" role="@(_messageIsError ? "alert" : "status")">
+            <OpenWishIcon Name="@MessageIcon" />
+            <span>@_message</span>
+        </p>
     }
 
     @* Wait for interactivity so an image that fails to load is caught and Remove image works. *@
@@ -79,7 +80,7 @@
 
     [Parameter, EditorRequired] public WishlistItemModel Model { get; set; } = new();
     [Parameter] public string InputId { get; set; } = "product-url-import";
-    [Parameter] public string Placeholder { get; set; } = "Paste a link from any store";
+    [Parameter] public string Placeholder { get; set; } = "Paste a store link";
     [Parameter] public string HelpText { get; set; } =
         "Paste a product link or text shared from a shopping app. Existing details won't be replaced.";
     [Parameter] public bool Disabled { get; set; }
@@ -104,8 +105,11 @@
     private string? _importedImage;
     private string HelpId => $"{InputId}-help";
     private string MessageClass => _messageIsError
-        ? "alert-danger"
-        : _messageIsSuccess ? "alert-success" : "alert-info";
+        ? "is-error"
+        : _messageIsSuccess ? "is-success" : "is-info";
+    private string MessageIcon => _messageIsError
+        ? "exclamation-circle"
+        : _messageIsSuccess ? "check-circle" : "info-circle";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

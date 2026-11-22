@@ -1,0 +1,40 @@
+.gift-profile-settings {
+    max-width: 38rem;
+}
+
+.gift-profile-lead {
+    max-width: 60ch;
+    margin: 0 0 1.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+.gift-hint-field {
+    margin-bottom: 1.25rem;
+}
+
+.gift-hint-field .form-label {
+    margin-bottom: 0.375rem;
+    font-weight: 700;
+}
+
+.gift-hint-field .form-text {
+    margin: 0.375rem 0 0;
+}
+
+.gift-hint-field ::deep textarea {
+    min-height: 5.5rem;
+    resize: vertical;
+}
+
+.gift-profile-submit {
+    min-width: 12rem;
+    min-height: 2.75rem;
+}
+
+@media (max-width: 640px) {
+    .gift-profile-submit {
+        width: 100%;
+    }
+}

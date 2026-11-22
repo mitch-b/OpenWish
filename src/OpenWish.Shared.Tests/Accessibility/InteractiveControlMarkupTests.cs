@@ -476,9 +476,9 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
 
-        Assert.Contains("role=\"dialog\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-labelledby=\"delete-event-dialog-title\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"delete-event-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Dialog @ref=\"_deleteDialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Delete event\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"delete-event-dialog-description\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -644,7 +644,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("placeholder=\"@EventNamePlaceholder\"", markup, StringComparison.Ordinal);
         Assert.Contains("Suggested budget per gift", markup, StringComparison.Ordinal);
         Assert.Contains(".exchange-style-options", styles, StringComparison.Ordinal);
-        Assert.Contains("grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));", styles, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));", styles, StringComparison.Ordinal);
         Assert.DoesNotContain("min-height: 8rem;", styles, StringComparison.Ordinal);
         Assert.DoesNotContain("min-height: 5.75rem;", styles, StringComparison.Ordinal);
     }
@@ -781,7 +781,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("<button type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\">", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("<button type=\"submit\" class=\"btn btn-primary\" disabled=\"@(IsBusy || !RendererInfo.IsInteractive)\">", formMarkup, StringComparison.Ordinal);
         Assert.Contains("private bool IsBusy => IsSubmitting || _isImporting;", formMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
@@ -1032,8 +1032,8 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("aria-label=\"Remove access for @friendName\"", markup, StringComparison.Ordinal);
         Assert.Contains("<label class=\"form-label\" for=\"friend-access-select\">Friend to share with</label>", markup, StringComparison.Ordinal);
-        Assert.Contains("<h2 class=\"h5 mb-0\">Who can see this?</h2>", markup, StringComparison.Ordinal);
-        Assert.Contains("<h2 class=\"h5\">Event connection</h2>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h4\">Who can see this?</h2>", markup, StringComparison.Ordinal);
+        Assert.Contains("<h2 class=\"h4\">Event connection</h2>", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(_selectedFriendToShareId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("if (string.IsNullOrEmpty(friendId) || _wishlist == null || _sharingBusy)", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Sharing...</span>", markup, StringComparison.Ordinal);
@@ -1286,9 +1286,9 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Social", "FriendRequestList.razor");
 
         Assert.Contains("aria-label=\"Accept friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Reject friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Decline friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Resend friend request to @GetReceiverName(request)\"", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_processingRequestId.HasValue\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("await OnFriendshipsChanged.InvokeAsync();", markup, StringComparison.Ordinal);
@@ -1296,7 +1296,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Friend requests could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadRequests\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryLoadRequests()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _loading)\"", markup, StringComparison.Ordinal);
         Assert.Contains("string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any())", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Resend invitation to @invite.Email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Cancel invitation to @invite.Email\"", markup, StringComparison.Ordinal);
@@ -1327,7 +1327,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"RetryLoadComments\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task<bool> LoadComments()", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryLoadComments()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_loading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1351,7 +1351,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"RetryReservation\"", markup, StringComparison.Ordinal);
         Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryReservation()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_loading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
         Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
         Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
         var reservationMethods = client[
@@ -1436,8 +1436,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("We couldn't add this item.", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(IsSubmitting || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@(IsSubmitting || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
         var cancelHandler = pageMarkup[pageMarkup.IndexOf("private void HandleCancel()", StringComparison.Ordinal)..];
         Assert.Contains("if (_isSubmitting)", cancelHandler, StringComparison.Ordinal);
         Assert.True(
@@ -1445,7 +1445,7 @@ public class InteractiveControlMarkupTests
             cancelHandler.IndexOf("NavigationManager.NavigateTo", StringComparison.Ordinal));
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("type=\"submit\" class=\"btn btn-primary\" disabled=\"@(IsBusy || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
     }
 
@@ -1865,7 +1865,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("uppercase letter, lowercase letter, number, and symbol", markup, StringComparison.Ordinal);
         Assert.Contains(">Create account</button>", markup, StringComparison.Ordinal);
         Assert.Contains("GetUriWithQueryParameters(\"Account/Login\"", markup, StringComparison.Ordinal);
-        Assert.Contains(">Log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains(">Sign in</a>", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1905,12 +1905,12 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ForgotPassword.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"reset-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("If an eligible account matches", markup, StringComparison.Ordinal);
         Assert.Contains(">Send reset link</button>", markup, StringComparison.Ordinal);
-        Assert.Contains("href=\"Account/Login\">Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("href=\"Account/Login\"><OpenWishIcon Name=\"arrow-left\" />Back to sign in</a>", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1918,7 +1918,7 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResetPassword.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("id=\"password-guidance\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"password-guidance\"", markup, StringComparison.Ordinal);
         Assert.Contains("6 to 100 characters", markup, StringComparison.Ordinal);
@@ -1931,12 +1931,12 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web", "Components", "Account", "Pages", "ResendEmailConfirmation.razor");
 
-        Assert.Contains("class=\"auth-page\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"auth-page auth-page-compact\"", markup, StringComparison.Ordinal);
         Assert.Contains("autocomplete=\"email\" inputmode=\"email\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-describedby=\"confirmation-email-help\"", markup, StringComparison.Ordinal);
         Assert.Contains("For privacy, the result is the same", markup, StringComparison.Ordinal);
         Assert.Contains(">Send confirmation email</button>", markup, StringComparison.Ordinal);
-        Assert.Contains("Back to log in</a>", markup, StringComparison.Ordinal);
+        Assert.Contains("Back to sign in</a>", markup, StringComparison.Ordinal);
         Assert.Contains("[\"returnUrl\"] = ReturnUrl", markup, StringComparison.Ordinal);
     }
 
@@ -1945,7 +1945,7 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "WhatsNew.razor");
 
-        Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_isLoading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadReleaseNotesAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("@(_isLoading ? \"Trying again...\" : \"Try again\")", markup, StringComparison.Ordinal);
         Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);
@@ -1972,7 +1972,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<PageTitle>Create an event</PageTitle>", markup, StringComparison.Ordinal);
         Assert.Contains("Title=\"Create an event\"", markup, StringComparison.Ordinal);
         Assert.Contains("gift exchange or coordinate wishlists for a celebration", markup, StringComparison.Ordinal);
-        Assert.Contains("class=\"btn btn-outline-secondary\" href=\"/events\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary page-header-back\" href=\"/events\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2018,7 +2018,7 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "NewEvent.razor");
 
         Assert.DoesNotContain("Step 1 of 3", markup, StringComparison.Ordinal);
-        Assert.Contains("<a class=\"btn btn-outline-secondary\" href=\"/events\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<a class=\"btn btn-outline-secondary page-header-back\" href=\"/events\">", markup, StringComparison.Ordinal);
     }
 
     [Fact]

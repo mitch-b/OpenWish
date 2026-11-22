@@ -18,7 +18,7 @@
                     <input class="form-check-input" type="checkbox" id="@inputId" name="wishlist" value="@wishlist.PublicId" checked="@SelectedIds.Contains(wishlist.PublicId)" />
                     <span>
                         <strong>@wishlist.Name</strong>
-                        <span class="integration-picker-meta">@(wishlist.ItemCount == 1 ? "1 idea" : $"{wishlist.ItemCount} ideas")@(wishlist.EventName is not null ? $" - {wishlist.EventName}" : "")</span>
+                        <span class="integration-picker-meta">@(wishlist.ItemCount == 1 ? "1 idea" : $"{wishlist.ItemCount} ideas")@(wishlist.EventName is not null ? $" · {wishlist.EventName}" : "")</span>
                     </span>
                 </label>
             </li>

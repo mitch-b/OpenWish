@@ -70,37 +70,44 @@ else
                     <span class="fab-label">Add item</span>
                 </button>
             }
-            <button id="copy-wishlist-link" class="btn btn-outline-secondary" type="button" @onclick="ShareWishlist">
-                <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
-                <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
-            </button>
-            @if (_items is { Count: > 0 })
-            {
-                <button id="copy-wishlist-text" class="btn btn-outline-secondary" type="button" @onclick="CopyWishlistText">
-                    <OpenWishIcon Name="@(_textCopied ? "check-lg" : "clipboard")" />
-                    <span class="btn-text">@(_textCopied ? "List copied" : "Copy as text")</span>
+            <div class="hero-tools" role="group" aria-label="Share and export">
+                <button id="copy-wishlist-link" class="btn btn-outline-secondary hero-tool" type="button" @onclick="ShareWishlist">
+                    <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
+                    <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
+                    <span class="btn-short" aria-hidden="true">@(_linkCopied ? "Copied" : "Link")</span>
                 </button>
-                <button id="print-wishlist" class="btn btn-outline-secondary" type="button" @onclick="PrintWishlist">
-                    <OpenWishIcon Name="list-check" />
-                    <span class="btn-text">Print</span>
-                </button>
-                <button id="download-wishlist-csv" class="btn btn-outline-secondary" type="button"
-                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadWishlistCsv">
-                    <OpenWishIcon Name="download" />
-                    <span class="btn-text">Download CSV</span>
-                </button>
-            }
-            @if (_isOwner)
-            {
-                <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary">
-                    <OpenWishIcon Name="gear" />
-                    <span class="btn-text">Manage list</span>
-                </a>
-            }
+                @if (_items is { Count: > 0 })
+                {
+                    <button id="copy-wishlist-text" class="btn btn-outline-secondary hero-tool" type="button" @onclick="CopyWishlistText">
+                        <OpenWishIcon Name="@(_textCopied ? "check-lg" : "clipboard")" />
+                        <span class="btn-text">@(_textCopied ? "List copied" : "Copy as text")</span>
+                        <span class="btn-short" aria-hidden="true">@(_textCopied ? "Copied" : "Text")</span>
+                    </button>
+                    <button id="print-wishlist" class="btn btn-outline-secondary hero-tool" type="button" @onclick="PrintWishlist">
+                        <OpenWishIcon Name="list-check" />
+                        <span class="btn-text">Print</span>
+                        <span class="btn-short" aria-hidden="true">Print</span>
+                    </button>
+                    <button id="download-wishlist-csv" class="btn btn-outline-secondary hero-tool" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadWishlistCsv">
+                        <OpenWishIcon Name="download" />
+                        <span class="btn-text">Download CSV</span>
+                        <span class="btn-short" aria-hidden="true">CSV</span>
+                    </button>
+                }
+                @if (_isOwner)
+                {
+                    <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary hero-tool">
+                        <OpenWishIcon Name="gear" />
+                        <span class="btn-text">Manage list</span>
+                        <span class="btn-short" aria-hidden="true">Manage</span>
+                    </a>
+                }
+            </div>
         </div>
     </div>
 
-    @if (_canEdit)
+    @if (_canEdit && _items.Count > 0)
     {
         <p class="paste-hint">
             <OpenWishIcon Name="clipboard" />
@@ -117,7 +124,7 @@ else
                     <span class="event-label">Part of event</span>
                     <span class="event-name">@_wishlist.Event.Name</span>
                 </div>
-                <OpenWishIcon Name="arrow-right" />
+                <OpenWishIcon Name="chevron-right" Class="event-chevron" />
             </a>
         </div>
     }
@@ -139,105 +146,109 @@ else
         <GiftProfilePanel WishlistPublicId="@_wishlist.PublicId" ViewerId="@_currentUserId" />
     }
 
-    <div class="stats-dashboard">
-        <div class="stat-card">
-            <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
-            <div class="stat-content">
-                <div class="stat-value">@_items.Count</div>
-                <div class="stat-label">Total items</div>
-            </div>
-        </div>
-        @if (!_isOwner)
-        {
+    @* Stats, search and view controls have nothing to act on until the list has an idea. *@
+    @if (_items.Count > 0)
+    {
+        <div class="stats-dashboard">
             <div class="stat-card">
-                <div class="stat-icon"><OpenWishIcon Name="check-circle" /></div>
+                <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
                 <div class="stat-content">
-                    <div class="stat-value">@GetReservedCount()</div>
-                    <div class="stat-label">Reserved</div>
+                    <div class="stat-value">@_items.Count</div>
+                    <div class="stat-label">@(_items.Count == 1 ? "Item" : "Items")</div>
                 </div>
             </div>
-            <button class="stat-card stat-action"
-                    type="button"
-                    aria-label="Show items reserved by you"
-                    aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
-                    @onclick='() => ToggleFilter(StatusFilters, "mine")'>
-                <div class="stat-icon"><OpenWishIcon Name="gift" /></div>
-                <div class="stat-content">
-                    <div class="stat-value">@GetMyReservedCount()</div>
-                    <div class="stat-label">Reserved by you</div>
-                </div>
-            </button>
-        }
-        <button class="stat-card stat-action"
-                type="button"
-                aria-label="Show items with comments"
-                @onclick="FocusCommentsAsync">
-            <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
-            <div class="stat-content">
-                <div class="stat-value">@GetCommentCount()</div>
-                <div class="stat-label">Comments</div>
-            </div>
-        </button>
-    </div>
-
-    <div class="search-filter-bar">
-        <div class="search-container">
-            <OpenWishIcon Name="search" Class="search-icon" />
-            <label for="wishlist-item-search" class="visually-hidden">Search wishlist items</label>
-            <input id="wishlist-item-search"
-                   type="search"
-                   class="search-input"
-                   placeholder="Search items by name, description, or store..."
-                   aria-controls="wishlist-items"
-                   @bind="SearchQuery"
-                   @bind:event="oninput"
-                   @bind:after="ApplyFiltersAndSort"
-                   @onkeydown="HandleSearchKeyDown" />
-            @if (!string.IsNullOrEmpty(SearchQuery))
+            @if (!_isOwner)
             {
-                <button class="search-clear"
+                <div class="stat-card">
+                    <div class="stat-icon"><OpenWishIcon Name="check-circle" /></div>
+                    <div class="stat-content">
+                        <div class="stat-value">@GetReservedCount()</div>
+                        <div class="stat-label">Reserved</div>
+                    </div>
+                </div>
+                <button class="stat-card stat-action"
                         type="button"
-                        aria-label="Clear wishlist item search"
-                        @onclick="ClearSearch">
-                    <OpenWishIcon Name="x-lg" />
+                        aria-label="Show items reserved by you"
+                        aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
+                        @onclick='() => ToggleFilter(StatusFilters, "mine")'>
+                    <div class="stat-icon"><OpenWishIcon Name="gift" /></div>
+                    <div class="stat-content">
+                        <div class="stat-value">@GetMyReservedCount()</div>
+                        <div class="stat-label">Reserved by you</div>
+                    </div>
                 </button>
             }
-        </div>
-
-        <button class="btn btn-filter @(_showFilters ? "active" : "")"
-                type="button"
-                aria-expanded="@(_showFilters ? "true" : "false")"
-                aria-controls="wishlist-filters"
-                @onclick="ToggleFilters">
-            <OpenWishIcon Name="funnel" />
-            <span class="btn-text">Filters</span>
-            @if (GetActiveFilterCount() > 0)
-            {
-                <span class="filter-count">@GetActiveFilterCount()</span>
-            }
-        </button>
-
-        <div class="btn-group view-toggle" role="group" aria-label="Wishlist view">
-            <button type="button"
-                    class="btn @(ViewMode == "grid" ? "active" : "")"
-                    aria-label="Grid view"
-                    aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
-                    aria-controls="wishlist-items"
-                    disabled="@(!RendererInfo.IsInteractive)"
-                    @onclick="@(() => SetViewMode("grid"))">
-                <OpenWishIcon Name="grid-3x3-gap" />
-            </button>
-            <button type="button"
-                    class="btn @(ViewMode == "list" ? "active" : "")"
-                    aria-label="List view"
-                    aria-pressed="@(ViewMode == "list" ? "true" : "false")"
-                    aria-controls="wishlist-items"
-                    disabled="@(!RendererInfo.IsInteractive)"
-                    @onclick="@(() => SetViewMode("list"))">
-                <OpenWishIcon Name="list-ul" />
+            <button class="stat-card stat-action"
+                    type="button"
+                    aria-label="Show items with comments"
+                    @onclick="FocusCommentsAsync">
+                <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
+                <div class="stat-content">
+                    <div class="stat-value">@GetCommentCount()</div>
+                    <div class="stat-label">@(GetCommentCount() == 1 ? "Comment" : "Comments")</div>
+                </div>
             </button>
         </div>
-    </div>
+
+        <div class="search-filter-bar">
+            <div class="search-container">
+                <OpenWishIcon Name="search" Class="search-icon" />
+                <label for="wishlist-item-search" class="visually-hidden">Search wishlist items</label>
+                <input id="wishlist-item-search"
+                       type="search"
+                       class="search-input"
+                       placeholder="Search ideas"
+                       aria-controls="wishlist-items"
+                       @bind="SearchQuery"
+                       @bind:event="oninput"
+                       @bind:after="ApplyFiltersAndSort"
+                       @onkeydown="HandleSearchKeyDown" />
+                @if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    <button class="search-clear"
+                            type="button"
+                            aria-label="Clear wishlist item search"
+                            @onclick="ClearSearch">
+                        <OpenWishIcon Name="x-lg" />
+                    </button>
+                }
+            </div>
+
+            <button class="btn btn-filter @(_showFilters ? "active" : "")"
+                    type="button"
+                    aria-expanded="@(_showFilters ? "true" : "false")"
+                    aria-controls="wishlist-filters"
+                    @onclick="ToggleFilters">
+                <OpenWishIcon Name="funnel" />
+                <span class="btn-text">Filters</span>
+                @if (GetActiveFilterCount() > 0)
+                {
+                    <span class="filter-count">@GetActiveFilterCount()</span>
+                }
+            </button>
+
+            <div class="btn-group view-toggle" role="group" aria-label="Wishlist view">
+                <button type="button"
+                        class="btn @(ViewMode == "grid" ? "active" : "")"
+                        aria-label="Grid view"
+                        aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
+                        aria-controls="wishlist-items"
+                        disabled="@(!RendererInfo.IsInteractive)"
+                        @onclick="@(() => SetViewMode("grid"))">
+                    <OpenWishIcon Name="grid-3x3-gap" />
+                </button>
+                <button type="button"
+                        class="btn @(ViewMode == "list" ? "active" : "")"
+                        aria-label="List view"
+                        aria-pressed="@(ViewMode == "list" ? "true" : "false")"
+                        aria-controls="wishlist-items"
+                        disabled="@(!RendererInfo.IsInteractive)"
+                        @onclick="@(() => SetViewMode("list"))">
+                    <OpenWishIcon Name="list-ul" />
+                </button>
+            </div>
+        </div>
+    }
     <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
     @if (HasActiveFilters)
     {
@@ -292,7 +303,7 @@ else
     }
     @if (_isOwner)
     {
-        <p id="wishlist-ranking-help" class="ranking-help" role="status">
+        <p id="wishlist-ranking-help" class="ranking-help @(CanReorder ? "visually-hidden" : string.Empty)" role="status">
             @if (CanReorder)
             {
                 <span>Use the most wanted and move controls to organize your ideas. Pinned ideas stay at the top.</span>
@@ -304,7 +315,7 @@ else
         </p>
     }
 
-    @if (_isOwner && !string.IsNullOrEmpty(_currentUserId))
+    @if (_isOwner && !string.IsNullOrEmpty(_currentUserId) && _items.Count > 0)
     {
         <WishlistOrganizePanel WishlistId="@WishlistId"
                                CurrentUserId="@_currentUserId"
@@ -592,10 +603,7 @@ else
                         @if (_canEdit)
                         {
                             <h2>No ideas in this wishlist yet</h2>
-                            <p>Add a name now, or paste a product link and we'll fill in what we can.</p>
-                            <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
-                                <OpenWishIcon Name="plus-lg" /> Add item
-                            </button>
+                            <p>Choose <strong>Add item</strong> above, or paste a product link anywhere on this page and we'll fill in what we can.</p>
                         }
                         else
                         {
@@ -657,7 +665,7 @@ else
                                     <h3 class="item-title">@item.Name</h3>
                                     @if (item.IsPinned)
                                     {
-                                        <span class="most-wanted"><OpenWishIcon Name="star-fill" /> Most wanted</span>
+                                        <span class="most-wanted"><OpenWishIcon Name="star" /> Most wanted</span>
                                     }
                                     @if (item.Priority.HasValue)
                                     {
@@ -725,79 +733,89 @@ else
                                 {
                                     <button class="btn-icon coordination-action"
                                             type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
                                             aria-expanded="@(_gridCoordinationItemId == item.Id ? "true" : "false")"
                                             aria-controls="item-coordination-@item.Id"
                                             @onclick="() => ToggleGridCoordination(item.Id)">
-                                        <OpenWishIcon Name="@(_gridCoordinationItemId == item.Id ? "chevron-up" : "gift")" /> @(_gridCoordinationItemId == item.Id ? "Hide gift details" : GetCoordinationLabel(item))
-                                    </button>
-                                }
-                                @if (_canEdit)
-                                {
-                                    <button class="btn-icon"
-                                            type="button"
-                                            aria-label="Edit @item.Name"
-                                            @onclick="() => HandleItemEditClick(item)">
-                                        <OpenWishIcon Name="pencil" />
-                                    </button>
-                                    <button class="btn-icon btn-danger"
-                                            id="delete-wishlist-item-@item.Id"
-                                            type="button"
-                                            aria-label="Delete @item.Name"
-                                            @onclick="() => ShowItemDeleteDialogAsync(item)">
-                                        <OpenWishIcon Name="trash" />
+                                        <OpenWishIcon Name="@(_gridCoordinationItemId == item.Id ? "x-lg" : "gift")" /> @(_gridCoordinationItemId == item.Id ? "Hide gift details" : GetCoordinationLabel(item))
                                     </button>
                                 }
                                 @if (_isOwner)
                                 {
-                                    <button class="btn-icon @(item.IsPinned ? "is-pinned" : "")"
-                                            type="button"
-                                            disabled="@_isRanking"
-                                            aria-pressed="@item.IsPinned"
-                                            aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
-                                            @onclick="() => ToggleItemPinAsync(item)">
-                                        <OpenWishIcon Name="star-fill" />
-                                        <span class="rank-action-label">Most wanted</span>
-                                    </button>
-                                    @if (CanMarkReceived)
+                                    <div class="rank-actions" role="group" aria-label="Reorder @item.Name">
+                                        <button class="btn-icon @(item.IsPinned ? "is-pinned" : "")"
+                                                type="button"
+                                                disabled="@(_isRanking || !RendererInfo.IsInteractive)"
+                                                aria-pressed="@item.IsPinned"
+                                                aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
+                                                title="@(item.IsPinned ? "Remove from most wanted" : "Mark as most wanted")"
+                                                @onclick="() => ToggleItemPinAsync(item)">
+                                            <OpenWishIcon Name="star" />
+                                        </button>
+                                        <button class="btn-icon"
+                                                type="button"
+                                                disabled="@(!CanMoveItem(item, -1) || !RendererInfo.IsInteractive)"
+                                                aria-describedby="wishlist-ranking-help"
+                                                aria-label="Move @item.Name up"
+                                                title="Move up"
+                                                @onclick="() => MoveItemAsync(item, -1)">
+                                            <OpenWishIcon Name="chevron-right" Class="icon-up" />
+                                        </button>
+                                        <button class="btn-icon"
+                                                type="button"
+                                                disabled="@(!CanMoveItem(item, 1) || !RendererInfo.IsInteractive)"
+                                                aria-describedby="wishlist-ranking-help"
+                                                aria-label="Move @item.Name down"
+                                                title="Move down"
+                                                @onclick="() => MoveItemAsync(item, 1)">
+                                            <OpenWishIcon Name="chevron-right" Class="icon-down" />
+                                        </button>
+                                        @if (CanMarkReceived)
+                                        {
+                                            <button class="btn-icon"
+                                                    type="button"
+                                                    data-testid="mark-received"
+                                                    disabled="@(!RendererInfo.IsInteractive)"
+                                                    aria-label="Mark @item.Name as received"
+                                                    title="Mark as received"
+                                                    @onclick="() => BeginMarkReceived(item)">
+                                                <OpenWishIcon Name="check-circle" />
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                <div class="card-tools">
+                                    @if (_canEdit)
                                     {
                                         <button class="btn-icon"
                                                 type="button"
-                                                data-testid="mark-received"
-                                                aria-label="Mark @item.Name as received"
-                                                @onclick="() => BeginMarkReceived(item)">
-                                            <OpenWishIcon Name="gift" />
-                                            <span class="rank-action-label">Received</span>
+                                                disabled="@(!RendererInfo.IsInteractive)"
+                                                aria-label="Edit @item.Name"
+                                                title="Edit"
+                                                @onclick="() => HandleItemEditClick(item)">
+                                            <OpenWishIcon Name="pencil" />
+                                        </button>
+                                        <button class="btn-icon btn-danger"
+                                                id="delete-wishlist-item-@item.Id"
+                                                type="button"
+                                                disabled="@(!RendererInfo.IsInteractive)"
+                                                aria-label="Delete @item.Name"
+                                                title="Delete"
+                                                @onclick="() => ShowItemDeleteDialogAsync(item)">
+                                            <OpenWishIcon Name="trash" />
                                         </button>
                                     }
-                                    <div class="rank-actions" aria-label="Reorder @item.Name">
-                                        <button class="btn-icon"
-                                                type="button"
-                                                disabled="@(!CanMoveItem(item, -1))"
-                                                aria-describedby="wishlist-ranking-help"
-                                                aria-label="Move @item.Name up"
-                                                @onclick="() => MoveItemAsync(item, -1)">
-                                            <OpenWishIcon Name="arrow-up" />
-                                            <span class="rank-action-label">Move up</span>
-                                        </button>
-                                        <button class="btn-icon"
-                                                type="button"
-                                                disabled="@(!CanMoveItem(item, 1))"
-                                                aria-describedby="wishlist-ranking-help"
-                                                aria-label="Move @item.Name down"
-                                                @onclick="() => MoveItemAsync(item, 1)">
-                                            <OpenWishIcon Name="arrow-down" />
-                                            <span class="rank-action-label">Move down</span>
-                                        </button>
-                                    </div>
-                                }
-                                <button class="btn-icon"
-                                        type="button"
-                                        aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
-                                        aria-expanded="@(_expandedItemId == item.Id)"
-                                        aria-controls="item-details-@item.Id"
-                                        @onclick="() => ToggleItemDetails(item.Id)">
-                                    <OpenWishIcon Name="three-dots" />
-                                </button>
+                                    <button class="btn-icon"
+                                            type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
+                                            aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
+                                            aria-expanded="@(_expandedItemId == item.Id)"
+                                            aria-controls="item-details-@item.Id"
+                                            title="Details"
+                                            @onclick="() => ToggleItemDetails(item.Id)">
+                                        <OpenWishIcon Name="three-dots" />
+                                    </button>
+                                </div>
                             </div>
 
                             @if (!_isOwner && _gridCoordinationItemId == item.Id)

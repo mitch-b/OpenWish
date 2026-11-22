@@ -8,7 +8,7 @@
 
 <section class="circles-panel" data-testid="circles-panel" aria-labelledby="circles-heading" aria-busy="@(_loading || _busy ? "true" : "false")">
     <div class="social-heading">
-        <span class="social-heading-icon"><OpenWishIcon Name="people-fill" /></span>
+        <span class="social-heading-icon" aria-hidden="true"><OpenWishIcon Name="people-fill" /></span>
         <div>
             <h2 id="circles-heading">Circles</h2>
             <p>Group friends, like Family or Book club, to share a list or invite them to an event in one step. Only you see your circles.</p>
@@ -17,10 +17,10 @@
 
     <form class="circle-create" @onsubmit="CreateAsync" @onsubmit:preventDefault="true">
         <label class="form-label" for="new-circle-name">New circle name</label>
-        <div class="input-group">
+        <div class="circle-create__row">
             <input id="new-circle-name" class="form-control" maxlength="@CircleRules.MaxNameLength"
-                   autocomplete="off" placeholder="Family" @bind="_newName" @bind:event="oninput" />
-            <button type="submit" class="btn btn-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName))">
+                   autocomplete="off" placeholder="e.g. Family" @bind="_newName" @bind:event="oninput" />
+            <button type="submit" class="btn btn-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newName) || !RendererInfo.IsInteractive)">
                 <OpenWishIcon Name="plus-lg" /> Create circle
             </button>
         </div>
@@ -28,30 +28,35 @@
 
     @if (_errorMessage is not null)
     {
-        <div class="alert alert-danger mt-3" role="alert">
+        <div class="alert alert-danger mt-3 mb-0" role="alert">
             <p class="mb-0">@_errorMessage</p>
             @if (_circles is null)
             {
-                <button class="btn btn-outline-danger btn-sm mt-2" type="button" @onclick="() => LoadAsync()">Try again</button>
+                <button class="btn btn-outline-danger btn-sm mt-2" type="button" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => LoadAsync()">Try again</button>
             }
         </div>
     }
 
-    @if (_statusMessage is not null)
-    {
-        <div class="alert alert-success mt-3" role="status" aria-live="polite">@_statusMessage</div>
-    }
+    <div role="status" aria-live="polite">
+        @if (_statusMessage is not null)
+        {
+            <div class="alert alert-success mt-3 mb-0">@_statusMessage</div>
+        }
+    </div>
 
     @if (_loading)
     {
-        <div class="d-flex align-items-center gap-2 mt-3" role="status">
+        <div class="circle-loading" role="status">
             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
             <span>Loading circles...</span>
         </div>
     }
     else if (_circles is { Count: 0 })
     {
-        <p class="text-muted mt-3 mb-0">No circles yet. Name one above, then add the friends who belong in it.</p>
+        <div class="circle-empty" data-testid="circles-empty">
+            <p class="circle-empty__title">No circles yet</p>
+            <p class="circle-empty__copy">Name one above, then add the friends who belong in it. You can share a list or invite a whole circle to an event at once.</p>
+        </div>
     }
     else if (_circles is not null)
     {
@@ -63,56 +68,62 @@
                     @if (_renamingId == circle.PublicId)
                     {
                         <form class="circle-rename" @onsubmit="() => RenameAsync(circle)" @onsubmit:preventDefault="true">
-                            <label class="visually-hidden" for="rename-@circle.PublicId">Circle name</label>
-                            <div class="input-group">
+                            <label class="form-label" for="rename-@circle.PublicId">Rename @circle.Name</label>
+                            <div class="circle-rename__row">
                                 <input id="rename-@circle.PublicId" class="form-control" maxlength="@CircleRules.MaxNameLength"
-                                       autocomplete="off" @bind="_renameValue" @bind:event="oninput" />
-                                <button type="submit" class="btn btn-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_renameValue))">Save</button>
-                                <button type="button" class="btn btn-outline-secondary" @onclick="() => _renamingId = null">Cancel</button>
+                                       autocomplete="off" @ref="_renameInput" @bind="_renameValue" @bind:event="oninput" />
+                                <div class="circle-rename__actions">
+                                    <button type="button" class="btn btn-outline-secondary" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => _renamingId = null">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_renameValue) || !RendererInfo.IsInteractive)">Save</button>
+                                </div>
                             </div>
                         </form>
                     }
                     else
                     {
                         <div class="circle-card__header">
-                            <h3>@circle.Name</h3>
-                            <span class="circle-card__count">@circle.Members.Count @(circle.Members.Count == 1 ? "friend" : "friends")</span>
-                            <div class="circle-card__actions">
-                                <button type="button" class="btn btn-outline-secondary btn-sm"
-                                        aria-label="Rename @circle.Name" @onclick="() => StartRename(circle)">
-                                    <OpenWishIcon Name="pencil" /> Rename
-                                </button>
-                                @if (_deletingId == circle.PublicId)
-                                {
-                                    <button type="button" class="btn btn-danger btn-sm" disabled="@_busy"
-                                            aria-label="Confirm deleting @circle.Name" @onclick="() => DeleteAsync(circle)">
-                                        Delete circle
+                            <div class="circle-card__title">
+                                <h3>@circle.Name</h3>
+                                <span class="circle-card__count">@circle.Members.Count @(circle.Members.Count == 1 ? "friend" : "friends")</span>
+                            </div>
+                            @if (_deletingId != circle.PublicId)
+                            {
+                                <div class="circle-card__actions">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            aria-label="Rename @circle.Name" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => StartRename(circle)">
+                                        <OpenWishIcon Name="pencil" /> Rename
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => _deletingId = null">Keep</button>
-                                }
-                                else
-                                {
                                     <button type="button" class="btn btn-outline-danger btn-sm"
-                                            aria-label="Delete @circle.Name" @onclick="() => _deletingId = circle.PublicId">
+                                            aria-label="Delete @circle.Name" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => StartDelete(circle)">
                                         <OpenWishIcon Name="trash" /> Delete
                                     </button>
-                                }
-                            </div>
+                                </div>
+                            }
                         </div>
                         @if (_deletingId == circle.PublicId)
                         {
-                            <p class="circle-card__note">Deleting a circle withdraws the access it gave to shared lists. Your friends stay your friends.</p>
+                            <div class="circle-confirm" role="group" aria-label="Delete @circle.Name?" data-testid="circle-delete-confirm">
+                                <p class="circle-confirm__title">Delete @circle.Name?</p>
+                                <p class="circle-confirm__copy">Lists shared with this circle stop being shared through it. Your friends stay your friends.</p>
+                                <div class="circle-confirm__actions">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@(!RendererInfo.IsInteractive)" @onclick="() => _deletingId = null">Keep circle</button>
+                                    <button type="button" class="btn btn-danger btn-sm" disabled="@(_busy || !RendererInfo.IsInteractive)"
+                                            aria-label="Confirm deleting @circle.Name" @onclick="() => DeleteAsync(circle)">
+                                        <OpenWishIcon Name="trash" /> @(_busy ? "Deleting..." : "Delete circle")
+                                    </button>
+                                </div>
+                            </div>
                         }
                     }
 
                     @if (circle.Members.Count > 0)
                     {
-                        <ul class="circle-members list-unstyled">
+                        <ul class="circle-members list-unstyled" aria-label="Friends in @circle.Name">
                             @foreach (var member in circle.Members)
                             {
                                 <li class="circle-member">
-                                    <span>@member.UserName</span>
-                                    <button type="button" class="circle-member__remove" disabled="@_busy"
+                                    <span class="circle-member__name">@member.UserName</span>
+                                    <button type="button" class="circle-member__remove" disabled="@(_busy || !RendererInfo.IsInteractive)"
                                             aria-label="Remove @member.UserName from @circle.Name"
                                             @onclick="() => RemoveMemberAsync(circle, member)">
                                         <OpenWishIcon Name="x" />
@@ -120,7 +131,6 @@
                                 </li>
                             }
                         </ul>
-                        <a class="btn btn-link btn-sm p-0" href="/wishlists?tab=friends&circle=@Uri.EscapeDataString(circle.PublicId)">View their lists</a>
                     }
                     else
                     {
@@ -130,8 +140,8 @@
                     @if (available.Count > 0)
                     {
                         <div class="circle-add">
-                            <label class="form-label" for="add-@circle.PublicId">Add a friend to @circle.Name</label>
-                            <div class="input-group">
+                            <label class="form-label" for="add-@circle.PublicId">Add a friend<span class="visually-hidden"> to @circle.Name</span></label>
+                            <div class="circle-add__row">
                                 <select id="add-@circle.PublicId" class="form-select" @onchange="args => _selectedFriend[circle.PublicId] = args.Value?.ToString() ?? string.Empty">
                                     <option value="">Choose a friend...</option>
                                     @foreach (var friend in available)
@@ -140,7 +150,7 @@
                                     }
                                 </select>
                                 <button type="button" class="btn btn-outline-primary"
-                                        disabled="@(_busy || string.IsNullOrEmpty(_selectedFriend.GetValueOrDefault(circle.PublicId)))"
+                                        disabled="@(_busy || string.IsNullOrEmpty(_selectedFriend.GetValueOrDefault(circle.PublicId)) || !RendererInfo.IsInteractive)"
                                         aria-label="Add selected friend to @circle.Name"
                                         @onclick="() => AddMemberAsync(circle)">
                                     <OpenWishIcon Name="person-plus" /> Add
@@ -150,19 +160,32 @@
                     }
                     else if (_friends is { Count: 0 })
                     {
-                        <p class="circle-card__note">Connect with friends first, then add them here.</p>
+                        <p class="circle-card__note">Connect with friends first, then add them here. <a href="/friends?section=invite">Invite friends</a></p>
                     }
 
                     @if (circle.Wishlists.Count > 0)
                     {
                         <p class="circle-card__note" data-testid="circle-shared-lists">
-                            Shared with this circle:
-                            @for (var index = 0; index < circle.Wishlists.Count; index++)
-                            {
-                                var list = circle.Wishlists[index];
-                                <a href="@($"/wishlists/{Uri.EscapeDataString(list.PublicId)}/manage?section=sharing")" aria-label="Manage sharing for @list.Name">@list.Name</a>@(index < circle.Wishlists.Count - 1 ? ", " : "")
-                            }
+                            <OpenWishIcon Name="share" />
+                            <span>
+                                Shared with this circle:
+                                @for (var index = 0; index < circle.Wishlists.Count; index++)
+                                {
+                                    var list = circle.Wishlists[index];
+                                    <a href="@($"/wishlists/{Uri.EscapeDataString(list.PublicId)}/manage?section=sharing")" aria-label="Manage sharing for @list.Name">@list.Name</a>@(index < circle.Wishlists.Count - 1 ? ", " : "")
+                                }
+                            </span>
                         </p>
+                    }
+
+                    @if (circle.Members.Count > 0)
+                    {
+                        <div class="circle-card__footer">
+                            <a class="btn btn-outline-primary btn-sm" href="/wishlists?tab=friends&circle=@Uri.EscapeDataString(circle.PublicId)"
+                               aria-label="View lists from @circle.Name">
+                                View their lists <OpenWishIcon Name="arrow-right" />
+                            </a>
+                        </div>
                     }
                 </li>
             }
@@ -183,11 +206,22 @@
     private string? _statusMessage;
     private bool _loading = true;
     private bool _busy;
+    private bool _focusRename;
+    private ElementReference _renameInput;
 
     [Parameter]
     public EventCallback OnCirclesChanged { get; set; }
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusRename)
+        {
+            _focusRename = false;
+            await _renameInput.FocusAsync();
+        }
+    }
 
     /// <summary>Reloads circles and friends after friendships change elsewhere on the page.</summary>
     public Task ReloadAsync() => LoadAsync(silent: true);
@@ -244,6 +278,13 @@
         _renamingId = circle.PublicId;
         _renameValue = circle.Name;
         _deletingId = null;
+        _focusRename = true;
+    }
+
+    private void StartDelete(CircleModel circle)
+    {
+        _deletingId = circle.PublicId;
+        _renamingId = null;
     }
 
     private Task RenameAsync(CircleModel circle) =>

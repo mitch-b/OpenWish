@@ -26,9 +26,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         ArgumentNullException.ThrowIfNull(wishlistModel);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId, nameof(ownerId));
+        var name = NormalizeWishlistName(wishlistModel.Name);
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntity = _mapper.Map<Wishlist>(wishlistModel);
+        wishlistEntity.Name = name;
         wishlistEntity.OwnerId = ownerId;
 
         if (wishlistModel.EventId.HasValue)
@@ -161,6 +163,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlistModel)
     {
         ArgumentNullException.ThrowIfNull(wishlistModel);
+        var name = NormalizeWishlistName(wishlistModel.Name);
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists.FindAsync(id)
@@ -168,6 +171,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         // Map updated values to existing entity
         _mapper.Map(wishlistModel, existingWishlist);
+        existingWishlist.Name = name;
         existingWishlist.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
@@ -191,6 +195,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         ArgumentException.ThrowIfNullOrWhiteSpace(publicId, nameof(publicId));
         ArgumentNullException.ThrowIfNull(wishlistModel);
         ArgumentException.ThrowIfNullOrWhiteSpace(requestorId, nameof(requestorId));
+        var name = NormalizeWishlistName(wishlistModel.Name);
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var existingWishlist = await context.Wishlists
@@ -204,6 +209,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         // Map updated values to existing entity
         _mapper.Map(wishlistModel, existingWishlist);
+        existingWishlist.Name = name;
         existingWishlist.UpdatedOn = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync();
@@ -264,6 +270,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         ArgumentNullException.ThrowIfNull(itemModel);
 
+        ValidateItemName(itemModel.Name);
         ValidateItemUrls(itemModel);
         ValidateItemPrice(itemModel.Price);
         var creationRequestHash = string.IsNullOrWhiteSpace(itemModel.PublicId)
@@ -487,6 +494,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
     {
+        ArgumentNullException.ThrowIfNull(itemModel);
+
+        ValidateItemName(itemModel.Name);
         ValidateItemUrls(itemModel);
         ValidateItemPrice(itemModel.Price);
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -1845,6 +1855,21 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         var itemModels = _mapper.Map<List<WishlistItemModel>>(itemEntities);
         var itemIds = itemEntities.Select(i => i.Id).ToList();
 
+        // Comment counts, badges and the "commented" filter read item.Comments, so load them with the items.
+        var commentEntities = await context.ItemComments
+            .AsNoTracking()
+            .Include(c => c.User)
+            .Where(c => !c.Deleted && itemIds.Contains(c.WishlistItemId))
+            .OrderBy(c => c.CreatedOn)
+            .ToListAsync();
+        var commentsByItem = commentEntities
+            .GroupBy(c => c.WishlistItemId)
+            .ToDictionary(g => g.Key, g => _mapper.Map<List<ItemCommentModel>>(g.ToList()));
+        foreach (var item in itemModels)
+        {
+            item.Comments = commentsByItem.TryGetValue(item.Id, out var comments) ? comments : [];
+        }
+
         var reservationEntities = await context.ItemReservations
             .AsNoTracking()
             .Include(r => r.User)
@@ -1928,8 +1953,31 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         ValidateExternalUrl(item.Image, nameof(item.Image));
     }
 
+    private static string NormalizeWishlistName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Give the wishlist a name.", nameof(WishlistModel.Name));
+        }
+
+        return name.Trim();
+    }
+
+    private static void ValidateItemName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Give the idea a name.", nameof(WishlistItemModel.Name));
+        }
+    }
+
     private static void ValidateItemPrice(decimal? price)
     {
+        if (price < 0)
+        {
+            throw new ArgumentException("Price cannot be negative.", nameof(price));
+        }
+
         if (price.HasValue && decimal.Round(price.Value, 2) != price.Value)
         {
             throw new ArgumentException("Price cannot have more than two decimal places.", nameof(price));

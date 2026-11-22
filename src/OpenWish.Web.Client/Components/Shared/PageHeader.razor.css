@@ -22,9 +22,16 @@
     content: "";
 }
 
+.page-header-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .page-header h1 {
     font-size: clamp(1.8rem, 4vw, 2.6rem);
     margin: 0;
+    overflow-wrap: anywhere;
+    text-wrap: balance;
 }
 
 .page-header p {
@@ -35,7 +42,11 @@
 }
 
 .page-header-actions {
-    flex: 0 0 auto;
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: .5rem;
 }
 
 @media (max-width: 767.98px) {
@@ -46,7 +57,34 @@
         padding: 1.25rem;
     }
 
+    .page-header-actions {
+        flex-direction: column;
+    }
+
     .page-header-actions ::deep .btn {
         width: 100%;
+    }
+}
+
+.page-header-actions ::deep .page-header-back {
+    white-space: nowrap;
+}
+
+/* On phones a lone back link sits above the title as a compact link rather than a full-width button. */
+@media (max-width: 767.98px) {
+    .page-header ::deep .page-header-actions:has(> .page-header-back:only-child) {
+        order: -1;
+        margin-bottom: -0.25rem;
+    }
+
+    .page-header-actions ::deep .btn.page-header-back {
+        align-self: flex-start;
+        width: auto;
+        min-height: 2.75rem;
+        margin-left: -0.5rem;
+        padding-inline: 0.5rem 0.75rem;
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-link);
     }
 }

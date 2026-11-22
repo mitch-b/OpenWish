@@ -13,164 +13,184 @@
 
 <PageTitle>Event invitation</PageTitle>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-7">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h1 class="h3 mb-3">You're almost in!</h1>
+<div class="accept-invite-page">
+    <section class="accept-invite" aria-labelledby="accept-invite-title">
+        <div class="accept-invite-mark" aria-hidden="true">
+            <OpenWishIcon Name="gift" />
+        </div>
+        <h1 id="accept-invite-title" class="accept-invite-title">You're almost in!</h1>
 
-                    @if (_isLoading)
-                    {
-                        <div class="text-center py-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading invitation...</span>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(_errorMessage))
-                        {
-                            <div class="alert alert-danger" role="alert">
-                                @_errorMessage
-                                @if (_canRetry)
-                                {
-                                    <button class="btn btn-outline-danger d-block mt-2" type="button" disabled="@_isLoading" @onclick="OnParametersSetAsync">Try again</button>
-                                }
-                            </div>
-                        }
-
-                        @if (string.IsNullOrWhiteSpace(InviteEmail))
-                        {
-                            <div class="alert alert-warning" role="alert">
-                                This invitation link is missing the email identifier we need to match you to the event.
-                                Please click the link directly from your invitation email.
-                            </div>
-                        }
-                        else if (!_isAuthenticated)
-                        {
-                            @if (_guestAccessToken is null)
-                            {
-                                <p class="lead">
-                                    Sign in or create an account with <strong>@InviteEmail</strong> to accept your invitation.
-                                </p>
-                                <p class="text-muted">We'll bring you straight back here. You don't need to add friends or set up an event.</p>
-                            }
-                            else
-                            {
-                                <p class="lead">
-                                    Join with an account for <strong>@InviteEmail</strong>, or continue without one.
-                                </p>
-                                <p class="text-muted">An account lets you share your own wishlist and keep your events in one place. We'll bring you straight back here.</p>
-                            }
-                            <div class="d-flex flex-wrap gap-2">
-                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Register")" data-enhance-nav="false">
-                                    Create account
-                                </a>
-                                <a class="btn btn-outline-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false">
-                                    Sign in
-                                </a>
-                            </div>
-                            @if (_guestAccessToken is not null)
-                            {
-                                <div class="mt-4 pt-3 border-top" data-testid="continue-without-account">
-                                    <p class="mb-2 text-muted">Rather not make an account? You can still accept and see your own match.</p>
-                                    <a class="btn btn-outline-secondary" href="/guest#access=@_guestAccessToken" data-enhance-nav="false">
-                                        Continue without an account
-                                    </a>
-                                </div>
-                            }
-                        }
-                        else if (_invitation == null)
-                        {
-                            @if (string.IsNullOrEmpty(_errorMessage))
-                            {
-                                <div class="alert alert-warning" role="alert">
-                                    We couldn't find a pending invitation for <strong>@InviteEmail</strong>.
-                                    Double-check that you're signed in with the same email address that received the invite or ask the host to resend it.
-                                </div>
-                            }
-                            <div class="d-flex flex-wrap gap-2" data-testid="invitation-recovery">
-                                <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false" data-testid="invitation-switch-account">
-                                    Sign in with a different account
-                                </a>
-                                <a class="btn btn-outline-secondary" href="/events">Back to events</a>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="mb-4">
-                                @if (_event != null)
-                                {
-                                    <div class="mb-3">
-                                        <p class="text-muted mb-1">Event</p>
-                                        <h2 class="h4 mb-0">@_event.Name</h2>
-                                        @if (!string.IsNullOrWhiteSpace(_event.Description))
-                                        {
-                                            <p class="mb-0 text-muted">@_event.Description</p>
-                                        }
-                                        <div class="mt-2 small text-muted">
-                                            <OpenWishIcon Name="calendar-event" />
-                                            @_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")
-                                        </div>
-                                        <div class="small text-muted">
-                                            <OpenWishIcon Name="person-circle" />
-                                            Hosted by @HostName
-                                        </div>
-                                    </div>
-                                }
-
-                                <div class="alert alert-info" role="alert">
-                                    Invitation for <strong>@InviteEmail</strong>
-                                </div>
-
-                                @switch (NormalizeStatus(_invitation.Status))
-                                {
-                                    case "accepted":
-                                        <div class="alert alert-success" role="status" data-testid="invitation-outcome">
-                                            @(_successMessage ?? AcceptedMessage)
-                                        </div>
-                                        <a class="btn btn-success" href="@($"/events/{EventId}?section=event-wishlists")" @ref="_continueLink">
-                                            Continue and add my wishlist
-                                        </a>
-                                        break;
-                                    case "rejected":
-                                        <div class="alert alert-warning" role="status" data-testid="invitation-outcome">
-                                            @(_successMessage ?? "You previously declined this invitation. Ask the host to send a new one if you changed your mind.")
-                                        </div>
-                                        <a class="btn btn-outline-secondary" href="/events">Back to events</a>
-                                        break;
-                                    default:
-                                        <p class="mb-3">Would you like to accept the invitation?</p>
-                                        <div class="d-flex flex-wrap gap-2" aria-busy="@_isProcessing">
-                                            <button class="btn btn-success" @onclick="AcceptInviteAsync" disabled="@_isProcessing">
-                                                @if (_isProcessing && _processingAction == "accept")
-                                                {
-                                                    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                                                    <span>Accepting invitation...</span>
-                                                }
-                                                else
-                                                {
-                                                    <span>Accept invite</span>
-                                                }
-                                            </button>
-                                            <button id="decline-event-invitation"
-                                                    class="btn btn-outline-secondary"
-                                                    @onclick="PromptRejectInvite"
-                                                    disabled="@_isProcessing">
-                                                Decline invite
-                                            </button>
-                                        </div>
-                                        break;
-                                }
-                            </div>
-                        }
-                    }
+        @if (_isLoading)
+        {
+            <div class="accept-invite-loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading invitation...</span>
                 </div>
             </div>
-        </div>
-    </div>
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @_errorMessage
+                    @if (_canRetry)
+                    {
+                        <button class="btn btn-outline-danger d-block mt-2" type="button" disabled="@_isLoading" @onclick="OnParametersSetAsync">Try again</button>
+                    }
+                </div>
+            }
+
+            @if (string.IsNullOrWhiteSpace(InviteEmail))
+            {
+                <div class="alert alert-warning" role="alert">
+                    This invitation link is missing the email identifier we need to match you to the event.
+                    Please click the link directly from your invitation email.
+                </div>
+            }
+            else if (!_isAuthenticated)
+            {
+                @if (_guestAccessToken is null)
+                {
+                    <p class="accept-invite-lead">
+                        Sign in or create an account with <strong class="accept-invite-email">@InviteEmail</strong> to accept your invitation.
+                    </p>
+                    <p class="accept-invite-muted">We'll bring you straight back here. You don't need to add friends or set up an event.</p>
+                }
+                else
+                {
+                    <p class="accept-invite-lead">
+                        Join with an account for <strong class="accept-invite-email">@InviteEmail</strong>, or continue without one.
+                    </p>
+                    <p class="accept-invite-muted">An account lets you share your own wishlist and keep your events in one place. We'll bring you straight back here.</p>
+                }
+                <div class="accept-invite-actions">
+                    <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Register")" data-enhance-nav="false">
+                        Create account
+                    </a>
+                    <a class="btn btn-outline-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false">
+                        Sign in
+                    </a>
+                </div>
+                @if (_guestAccessToken is not null)
+                {
+                    <div class="accept-invite-alt" data-testid="continue-without-account">
+                        <p class="accept-invite-muted mb-2">Rather not make an account? You can still accept and see your own match.</p>
+                        <a class="btn btn-outline-secondary" href="/guest#access=@_guestAccessToken" data-enhance-nav="false">
+                            Continue without an account
+                        </a>
+                    </div>
+                }
+            }
+            else if (_invitation == null)
+            {
+                @if (string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-warning" role="alert">
+                        We couldn't find a pending invitation for <strong class="accept-invite-email">@InviteEmail</strong>.
+                        Double-check that you're signed in with the same email address that received the invite or ask the host to resend it.
+                    </div>
+                }
+                <div class="accept-invite-actions" data-testid="invitation-recovery">
+                    <a class="btn btn-primary" href="@BuildIdentityUrl("Account/Login")" data-enhance-nav="false" data-testid="invitation-switch-account">
+                        Sign in with a different account
+                    </a>
+                    <a class="btn btn-outline-secondary" href="/events">Back to events</a>
+                </div>
+            }
+            else
+            {
+                @if (_event != null)
+                {
+                    <div class="accept-invite-event">
+                        <h2 class="accept-invite-event-name">@_event.Name</h2>
+                        @if (!string.IsNullOrWhiteSpace(_event.Description))
+                        {
+                            <p class="accept-invite-muted mb-0">@_event.Description</p>
+                        }
+                        <ul class="accept-invite-facts" aria-label="Event details">
+                            <li>
+                                <OpenWishIcon Name="calendar-event" />
+                                <span>@_event.Date.ToString("dddd, MMMM d, yyyy 'at' h:mm tt")</span>
+                            </li>
+                            <li>
+                                <OpenWishIcon Name="person-circle" />
+                                <span>Hosted by @HostName</span>
+                            </li>
+                            @if (_event.Budget is { } budget)
+                            {
+                                <li>
+                                    <OpenWishIcon Name="cash" />
+                                    <span><strong>@budget.ToString("C")</strong> gift budget</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <p class="accept-invite-invited-as">
+                    <OpenWishIcon Name="envelope" />
+                    <span>Invitation for <strong class="accept-invite-email">@InviteEmail</strong></span>
+                </p>
+
+                @switch (NormalizeStatus(_invitation.Status))
+                {
+                    case "accepted":
+                        <div class="alert alert-success" role="status" data-testid="invitation-outcome">
+                            @(_successMessage ?? AcceptedMessage)
+                        </div>
+                        <div class="accept-invite-actions">
+                            <a class="btn btn-primary" href="@($"/events/{EventId}?section=event-wishlists")" @ref="_continueLink">
+                                Continue and add my wishlist
+                            </a>
+                        </div>
+                        break;
+                    case "rejected":
+                        <div class="alert alert-warning" role="status" data-testid="invitation-outcome">
+                            @(_successMessage ?? "You previously declined this invitation. Ask the host to send a new one if you changed your mind.")
+                        </div>
+                        <div class="accept-invite-actions">
+                            <a class="btn btn-outline-secondary" href="/events">Back to events</a>
+                        </div>
+                        break;
+                    default:
+                        <ul class="accept-invite-reassurance" aria-label="What happens when you accept">
+                            <li>
+                                <OpenWishIcon Name="check-lg" />
+                                <span>@(_event?.IsGiftExchange == false
+                                    ? "The host will see you're coming."
+                                    : "You'll be included when names are drawn.")</span>
+                            </li>
+                            <li>
+                                <OpenWishIcon Name="gift" />
+                                <span>Next, add a few gift ideas so people know what you'd love.</span>
+                            </li>
+                        </ul>
+                        <div class="accept-invite-actions" aria-busy="@_isProcessing">
+                            <button class="btn btn-primary accept-invite-primary" @onclick="AcceptInviteAsync" disabled="@(_isProcessing || !RendererInfo.IsInteractive)">
+                                @if (_isProcessing && _processingAction == "accept")
+                                {
+                                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                    <span>Accepting invitation...</span>
+                                }
+                                else
+                                {
+                                    <OpenWishIcon Name="check-lg" />
+                                    <span>Accept invite</span>
+                                }
+                            </button>
+                            <button id="decline-event-invitation"
+                                    class="btn btn-link accept-invite-decline"
+                                    @onclick="PromptRejectInvite"
+                                    disabled="@(_isProcessing || !RendererInfo.IsInteractive)">
+                                Decline invite
+                            </button>
+                        </div>
+                        break;
+                }
+            }
+        }
+    </section>
 </div>
 
 <Dialog @ref="_rejectDialog"

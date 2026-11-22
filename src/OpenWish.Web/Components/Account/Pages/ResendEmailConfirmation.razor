@@ -16,7 +16,7 @@
 
 <PageTitle>Resend email confirmation</PageTitle>
 
-<div class="auth-page">
+<div class="auth-page auth-page-compact">
     <header class="auth-heading">
         <span class="auth-mark"><OpenWishIcon Name="envelope" /></span>
         <div>
@@ -24,28 +24,24 @@
             <p>Request a new confirmation link if the original one expired.</p>
         </div>
     </header>
-    <div class="row">
-        <div class="col-md-7 col-lg-6">
-            <section class="auth-card">
-                <h2>Send a new link</h2>
-                <StatusMessage Message="@message" />
-                <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary class="text-danger" role="alert" />
-                    <div class="form-floating mb-2">
-                        <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" inputmode="email" aria-required="true" aria-describedby="confirmation-email-help" autofocus placeholder="name@example.com" />
-                        <label for="Input.Email" class="form-label">Email</label>
-                        <ValidationMessage For="() => Input.Email" class="text-danger" />
-                    </div>
-                    <div id="confirmation-email-help" class="form-text mb-3">
-                        For privacy, the result is the same whether or not an account matches.
-                    </div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Send confirmation email</button>
-                    <p class="mt-3 mb-0"><a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))">Back to log in</a></p>
-                </EditForm>
-            </section>
-        </div>
-    </div>
+    <section class="auth-card">
+        <h2>Send a new link</h2>
+        <StatusMessage Message="@message" />
+        <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="mb-3">
+                <label for="Input.Email" class="form-label">Email</label>
+                <InputText type="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="email" inputmode="email" aria-required="true" aria-describedby="confirmation-email-help" autofocus placeholder="name@example.com" />
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+                <div id="confirmation-email-help" class="form-text">
+                    For privacy, the result is the same whether or not an account matches.
+                </div>
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Send confirmation email</button>
+        </EditForm>
+    </section>
+    <p class="auth-switch"><a class="auth-back-link" href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl, ["email"] = InvitedEmail }))"><OpenWishIcon Name="arrow-left" />Back to sign in</a></p>
 </div>
 
 @code {

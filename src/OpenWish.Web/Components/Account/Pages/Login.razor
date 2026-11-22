@@ -18,7 +18,7 @@
 
 <PageTitle>Log in</PageTitle>
 
-<div class="auth-page">
+<div class="auth-page auth-page-login">
 <header class="auth-heading">
     <span class="auth-mark"><OpenWishIcon Name="gift" /></span>
     <div>
@@ -30,21 +30,20 @@
     <OpenWishIcon Name="person-circle" />
     <span>No account yet? <a href="/guest" data-enhance-nav="false">Continue without an account</a> to accept and see your own match.</span>
 </p>
-<div class="row g-4 auth-grid">
-    <div class="col-lg-6">
         <section class="auth-card">
+            <ExternalLoginPicker />
             <StatusMessage Message="@errorMessage" />
             <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
                 <h2>Sign in with email</h2>
                 <ValidationSummary class="text-danger" role="alert" />
                 <div class="form-floating mb-3">
-                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" autofocus="@string.IsNullOrWhiteSpace(InvitedEmail)" placeholder="name@example.com" />
+                    <InputText type="email" inputmode="email" @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
                     <label for="Input.Email" class="form-label">Email</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" autofocus="@(!string.IsNullOrWhiteSpace(InvitedEmail))" placeholder="password" />
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
                     <label for="Input.Password" class="form-label">Password</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
@@ -73,11 +72,6 @@
                 </div>
             </EditForm>
         </section>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <ExternalLoginPicker />
-    </div>
-</div>
 
 @if (Environment.IsDevelopment() && OpenWishSettings.Value.EnableDevelopmentLogin)
 {

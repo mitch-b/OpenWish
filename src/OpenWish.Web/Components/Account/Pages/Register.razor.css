@@ -102,10 +102,6 @@
     line-height: 1.5;
 }
 
-.registration-external {
-    margin-top: 1rem;
-}
-
 @media (max-width: 767.98px) {
     .registration-layout {
         grid-template-columns: minmax(0, 1fr);

@@ -852,6 +852,7 @@ async function verifyExternalLogin(browser, results) {
 async function verifyExternalLoginHandoff(browser, results, isMobile) {
   const context = await browser.newContext({
     viewport: isMobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 },
+    colorScheme: isMobile ? "dark" : "light",
     isMobile
   });
   const page = await context.newPage();
@@ -885,7 +886,24 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       });
     });
     const returnUrl = isMobile ? "/wishlists" : "/";
-    await visit(page, `/Account/Login?ReturnUrl=${encodeURIComponent(returnUrl)}`, "Or continue with", visitedRoutes);
+    const query = `?ReturnUrl=${encodeURIComponent(returnUrl)}`;
+    const signInButton = page.getByRole("button", { name: "Continue with Google" });
+    for (const [route, emailAction] of [["Register", "Create account"], ["Login", "Log in"]]) {
+      await visit(page, `/Account/${route}${query}`, "Use an existing account", visitedRoutes);
+      const password = page.getByLabel("Password", { exact: true });
+      const emailButton = page.getByRole("button", { name: emailAction, exact: true });
+      const providerBox = await signInButton.boundingBox();
+      const passwordBox = await password.boundingBox();
+      const emailButtonBox = await emailButton.boundingBox();
+      if (!providerBox || !passwordBox || !emailButtonBox ||
+          providerBox.y + providerBox.height > Math.min(passwordBox.y, page.viewportSize().height) ||
+          providerBox.width < emailButtonBox.width ||
+          await page.locator(".auth-card input[autofocus]").count() > 0) {
+        throw new Error(`The provider action on ${route} must be visible before the password form and at least as wide.`);
+      }
+      await assertMinimumTouchTarget(signInButton, `${route} with Google`);
+      await screenshot(page, `${route.toLowerCase()}-providers-${isMobile ? "mobile" : "desktop"}.png`);
+    }
 
     const externalLoginForm = page.locator("form.external-login-form");
     if (await externalLoginForm.getAttribute("data-enhance") !== "false") {
@@ -895,11 +913,6 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
       throw new Error("External login must post to the root-relative challenge endpoint.");
     }
 
-    const signInButton = page.getByRole("button", { name: "Continue with Google" });
-    await signInButton.waitFor({ state: "visible" });
-    if (isMobile) {
-      await screenshot(page, "login-mobile.png");
-    }
     const challengeResponse = page.waitForResponse(response =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname === "/Account/PerformExternalLogin"
@@ -951,6 +964,7 @@ async function verifyExternalLoginHandoff(browser, results, isMobile) {
     results.push({
       scenario: isMobile ? "mobile-external-login" : "desktop-external-login",
       visitedRoutes,
+      assertions: ["Provider actions appear before email forms on sign-in and registration without input autofocus"],
       challengeStatus: response.status(),
       authorizationOrigin: authorizationUrl.origin,
       redirectUri: authorizationUrl.searchParams.get("redirect_uri")
@@ -3198,8 +3212,9 @@ async function verifyFamilyExchangeJourney(browser, results) {
   if (await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
     throw new Error("Event invitation signup lost the invited email address.");
   }
-  if (await signupPage.evaluate(() => document.activeElement?.id) !== "Input.Password") {
-    throw new Error("Invitation signup did not focus the password after prefilling the email.");
+  if (await signupPage.getByRole("button", { name: "Continue with Google" })
+    .evaluate(button => button.form.elements.ReturnUrl.value) !== invitationRoute) {
+    throw new Error("Provider signup did not preserve the invitation destination.");
   }
   await screenshot(signupPage, "family-invitation-signup.png");
   await signupPage.setViewportSize({ width: 390, height: 844 });
@@ -3210,8 +3225,9 @@ async function verifyFamilyExchangeJourney(browser, results) {
       await signupPage.getByLabel("Email", { exact: true }).inputValue() !== guestEmail) {
     throw new Error("Switching to sign in lost the invitation or email.");
   }
-  if (await signupPage.evaluate(() => document.activeElement?.id) !== "Input.Password") {
-    throw new Error("Invitation sign-in did not focus the password.");
+  if (await signupPage.getByRole("button", { name: "Continue with Google" })
+    .evaluate(button => button.form.elements.ReturnUrl.value) !== invitationRoute) {
+    throw new Error("Provider sign-in did not preserve the invitation destination.");
   }
   if (await signupPage.getByText("Single sign-on", { exact: true }).count()) {
     throw new Error("Guest sign-in still uses identity-provider jargon.");
@@ -3378,8 +3394,10 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   if (await invitedEmailInput.getAttribute("type") !== "hidden") {
     throw new Error("Invited registration exposed an editable email field.");
   }
+  await page.getByRole("button", { name: "Continue with Google" }).focus();
+  await page.keyboard.press("Tab");
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Password") {
-    throw new Error("Invited registration did not focus the first editable field.");
+    throw new Error("Keyboard navigation did not reach the invited registration password after the provider.");
   }
   await assertVisible(page, "Use 6 to 100 characters with an uppercase letter, lowercase letter, number, and symbol.");
   await page.getByRole("button", { name: "Create account" }).waitFor({ state: "visible" });
@@ -3400,8 +3418,10 @@ async function verifyDevelopmentLoginJourney(browser, results) {
   await page.setViewportSize({ width: 1280, height: 900 });
 
   await visit(page, "/Account/Login", "Local demo accounts", visitedRoutes);
+  await page.getByRole("button", { name: "Continue with Google" }).focus();
+  await page.keyboard.press("Tab");
   if (await page.evaluate(() => document.activeElement?.id) !== "Input.Email") {
-    throw new Error("Login did not focus the first editable field.");
+    throw new Error("Keyboard navigation did not reach the login email after the provider.");
   }
   await assertVisible(page, "Avoid this on shared devices.");
   await assertVisible(page, "Need help signing in?");

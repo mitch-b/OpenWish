@@ -1811,13 +1811,14 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(
         string wishlistPublicId, string itemPublicId, string userId, string text)
     {
-        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, userId);
         return await AddCommentToItemAsync(wishlistId, itemId, userId, text);
     }
 
-    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
     {
-        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, requestingUserId);
         return await GetItemCommentsAsync(wishlistId, itemId);
     }
 
@@ -1835,7 +1836,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<bool> ReserveItemByPublicIdAsync(
         string wishlistPublicId, string itemPublicId, string userId, bool isAnonymous = false)
     {
-        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, userId);
         return await ReserveItemAsync(wishlistId, itemId, userId, isAnonymous);
     }
 
@@ -1848,7 +1849,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
         string wishlistPublicId, string itemPublicId, string requestingUserId)
     {
-        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, requestingUserId);
         return await GetItemReservationAsync(wishlistId, itemId, requestingUserId);
     }
 
@@ -1865,6 +1866,25 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
 
         return (keys.WishlistId, keys.Id);
+    }
+
+    // Items the viewer can't see (private, hidden from the owner, or no longer active) are reported as missing.
+    private async Task<(int WishlistId, int ItemId)> ResolveVisibleItemKeysAsync(
+        string wishlistPublicId, string itemPublicId, string viewerId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
+            .AsNoTracking()
+            .Include(i => i.Wishlist)
+            .Where(i => i.PublicId == itemPublicId && !i.Deleted &&
+                i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
+            .SingleOrDefaultAsync();
+        if (item is null || !CanViewerSeeItem(item, item.Wishlist!.OwnerId, viewerId))
+        {
+            throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+        }
+
+        return (item.WishlistId, item.Id);
     }
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)

@@ -366,7 +366,8 @@ public interface IWishlistService
     Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId, string text);
 
     /// <summary>Lists comments on a wishlist item by public wishlist and item IDs.</summary>
-    Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, string itemPublicId);
+    Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId);
 
     /// <summary>Removes a comment by its public ID, verifying the user is the author or wishlist owner.</summary>
     Task<bool> RemoveItemCommentByPublicIdAsync(string commentPublicId, string userId);

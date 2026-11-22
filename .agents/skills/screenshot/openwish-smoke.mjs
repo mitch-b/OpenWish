@@ -3745,7 +3745,6 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     throw new Error(`A shared wishlist did not name its owner: ${ownerSubtitle}`);
   }
   await screenshot(page, "wishlist-shopper-grid.png");
-  await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Reserve gift" }).click();
   await guestGridCard.locator(".item-coordination").waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
@@ -5701,7 +5700,6 @@ async function verifyMobileJourney(browser, manifest, results) {
     throw new Error(`The returning mobile dashboard welcome is too tall (${welcomeBox?.height}px).`);
   }
   await screenshot(page, "home-mobile.png");
-  await screenshot(page, "readme-mobile.png", false);
   await assertDashboardWelcomeWrapsLongNames(
     page,
     ".dashboard-welcome",

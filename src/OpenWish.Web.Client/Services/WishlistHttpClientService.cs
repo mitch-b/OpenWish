@@ -328,8 +328,10 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             ?? throw new InvalidOperationException("Unable to deserialize created comment.");
     }
 
-    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
     {
+        _ = requestingUserId;
         return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>(
             $"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/comments")
             ?? Enumerable.Empty<ItemCommentModel>();

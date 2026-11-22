@@ -860,7 +860,7 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
                 return Forbid();
             }
 
-            return Ok(await _wishlistService.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId));
+            return Ok(await _wishlistService.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId, userId));
         }
         catch (KeyNotFoundException)
         {

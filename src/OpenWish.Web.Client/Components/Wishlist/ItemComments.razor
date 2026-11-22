@@ -253,7 +253,9 @@
             _loadErrorMessage = null;
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
-            var comments = await WishlistService.GetItemCommentsByPublicIdAsync(WishlistId, ItemPublicId);
+            var comments = _currentUserId is null
+                ? []
+                : await WishlistService.GetItemCommentsByPublicIdAsync(WishlistId, ItemPublicId, _currentUserId);
             _comments = comments.ToList();
             _hasLoaded = true;
             return true;

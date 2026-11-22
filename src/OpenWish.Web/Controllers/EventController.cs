@@ -654,9 +654,9 @@ public class EventController(IEventService eventService, ApiUserContextService u
             }
             return NoContent();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            return Forbid(ex.Message);
+            return Forbid();
         }
         catch (InvalidOperationException ex)
         {
@@ -681,9 +681,9 @@ public class EventController(IEventService eventService, ApiUserContextService u
             }
             return NoContent();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            return Forbid(ex.Message);
+            return Forbid();
         }
         catch (InvalidOperationException ex)
         {
@@ -993,9 +993,9 @@ public class EventController(IEventService eventService, ApiUserContextService u
             }
             return NoContent();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            return Forbid(ex.Message);
+            return Forbid();
         }
         catch (InvalidOperationException ex)
         {

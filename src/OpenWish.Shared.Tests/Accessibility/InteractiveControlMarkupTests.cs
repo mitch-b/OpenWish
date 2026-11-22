@@ -450,7 +450,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("All notifications marked as read.", markup, StringComparison.Ordinal);
         Assert.Contains("The invitation could not be updated. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("Unable to delete notification {NotificationPublicId}", markup, StringComparison.Ordinal);
-        Assert.Contains("ex is InvalidOperationException or DbException or HttpRequestException", markup, StringComparison.Ordinal);
+        Assert.Contains("catch (Exception ex) when (ex is not OperationCanceledException)", markup, StringComparison.Ordinal);
         Assert.Contains("openWishFocusElement\", \"notification-close-button\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("// Handle gracefully", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("// swallow for now", markup, StringComparison.Ordinal);

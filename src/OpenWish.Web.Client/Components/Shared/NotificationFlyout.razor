@@ -1,5 +1,4 @@
 @using System.Collections.Generic
-@using System.Data.Common
 @using OpenWish.Shared.Dashboard
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.Services
@@ -317,7 +316,7 @@
                 _unreadCount = await NotificationService.GetUnreadNotificationCountAsync(_userId);
                 StateHasChanged();
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogError(ex, "Unable to load the notification count for user {UserId}.", _userId);
                 _unreadCount = 0;
@@ -334,7 +333,7 @@
             {
                 _notifications = await NotificationService.GetUserNotificationsAsync(_userId, includeRead: true);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogError(ex, "Unable to load notifications for user {UserId}.", _userId);
                 _errorMessage = "Notifications could not be loaded. Refresh the page and try again.";
@@ -437,7 +436,7 @@
                 _errorMessage = "This notification could not be marked as read. Try again.";
             }
         }
-        catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Logger.LogError(ex, "Unable to mark notification {NotificationPublicId} as read.", notification.PublicId);
             _errorMessage = "This notification could not be marked as read. Try again.";
@@ -485,7 +484,7 @@
                 _focusFlyoutCloseAfterRender = true;
                 StateHasChanged();
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogError(ex, "Unable to mark all notifications as read for user {UserId}.", _userId);
                 _errorMessage = "Notifications could not be marked as read. Try again.";
@@ -570,7 +569,7 @@
             _statusMessage = "Notification deleted.";
             _focusFlyoutCloseAfterRender = true;
         }
-        catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Logger.LogError(
                 ex,
@@ -653,7 +652,7 @@
                     ? await EventService.AcceptEventInvitationAsync(eventUserId, userId)
                     : await EventService.RejectEventInvitationAsync(eventUserId, userId);
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogError(ex, "Unable to update invitation from notification {NotificationPublicId}.", notification.PublicId);
                 _errorMessage = "The invitation could not be updated. Try again.";
@@ -678,7 +677,7 @@
                     _errorMessage = "The invitation was updated, but its notification could not be marked as read.";
                 }
             }
-            catch (Exception ex) when (ex is InvalidOperationException or DbException or HttpRequestException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 Logger.LogError(
                     ex,

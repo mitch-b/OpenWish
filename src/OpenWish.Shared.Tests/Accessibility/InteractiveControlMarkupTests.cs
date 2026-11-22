@@ -1945,7 +1945,7 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "WhatsNew.razor");
 
-        Assert.Contains("disabled=\"@_isLoading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_isLoading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"LoadReleaseNotesAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("@(_isLoading ? \"Trying again...\" : \"Try again\")", markup, StringComparison.Ordinal);
         Assert.Contains("if (_isLoading)", markup, StringComparison.Ordinal);

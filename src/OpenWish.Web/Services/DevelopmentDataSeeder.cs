@@ -530,6 +530,7 @@ public sealed class DevelopmentDataSeeder(
                 Title = "Wishlist activity",
                 Message = "Jordan commented on Family Gift Ideas.",
                 Type = "WishlistComment",
+                ActionData = $$"""{"type":"OpenWishlist","navigateTo":"/wishlists/{{WishlistPublicId}}"}""",
                 SenderUser = friend,
                 SenderUserId = friend.Id,
                 User = owner,

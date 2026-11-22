@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
+import { verifyResponsiveSweep } from "./responsive-sweep.mjs";
 
 const baseUrl = process.env.OPENWISH_BASE_URL ?? "http://web:8080";
 const evidenceDirectory = process.env.OPENWISH_EVIDENCE_DIR ?? "/evidence";
@@ -7243,6 +7244,7 @@ try {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
   if (!selectedScenario) {
+    results.push(await verifyResponsiveSweep(browser, { baseUrl, manifest, outputDirectory: evidenceDirectory }));
     await verifyAppInstall(browser, results);
     await verifyPageSections(browser, manifest, results);
     await verifyDevelopmentLoginJourney(browser, results);

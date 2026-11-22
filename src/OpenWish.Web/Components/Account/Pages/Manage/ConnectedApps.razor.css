@@ -35,7 +35,7 @@
 }
 
 .connected-apps-mcp-url .btn,
-.connected-app-adjust {
+.connected-app-row-actions .btn {
     display: inline-flex;
     min-height: 2.75rem;
     flex: 0 0 auto;
@@ -153,10 +153,25 @@
     overflow-wrap: anywhere;
 }
 
-.connected-app-count {
+.connected-app-description {
+    max-width: 62ch;
+    margin: 0.5rem 0 0 3.25rem;
+    font-size: 0.9rem;
+}
+
+.connected-app-unverified {
+    display: flex;
+    gap: 0.5rem;
+    color: var(--color-warning-text);
+}
+
+.connected-app-unverified ::deep .ow-icon {
     flex: 0 0 auto;
-    color: var(--color-text-muted);
-    font-size: 0.85rem;
+    margin-top: 0.2rem;
+}
+
+.connected-app-alert {
+    margin: 0.75rem 0 0;
 }
 
 .connected-app-kind {
@@ -171,25 +186,50 @@
 }
 
 .connected-app-routing {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0 1rem;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 0.75rem 1.5rem;
+    margin: 0.85rem 0 0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: var(--color-surface-alt);
+    font-size: 0.92rem;
     overflow-wrap: anywhere;
 }
 
-.connected-app-routing > span,
-.connected-app-access {
+.connected-app-routing > div {
     min-width: 0;
+}
+
+.connected-app-routing dt {
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.connected-app-routing dd {
+    margin: 0.15rem 0 0;
+    font-weight: 650;
+}
+
+.connected-app-access summary {
+    min-height: 1.75rem;
+    font-size: 0.92rem;
+}
+
+.connected-app-access p {
+    margin: 0.25rem 0;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    font-weight: 400;
 }
 
 .connected-app-access ul {
     max-height: 12rem;
     overflow-y: auto;
     padding-left: 1.25rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
+    font-weight: 400;
 }
 
 .connected-app-access li a {
@@ -197,13 +237,22 @@
     padding: 0.5rem 0;
 }
 
-.connected-app-disconnect {
-    display: inline-flex;
-    min-height: 2.75rem;
+.connected-app-row-actions {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    margin-top: 0.25rem;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.connected-app-disconnect {
     color: var(--color-text-muted);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+}
+
+.connected-app-disconnect:hover,
+.connected-app-disconnect:focus-visible {
+    color: var(--color-danger-text);
 }
 
 .connected-app-lists {
@@ -219,6 +268,62 @@
     margin-bottom: 1rem;
 }
 
+.connected-app-permissions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.connected-app-lists legend {
+    margin-bottom: 0.5rem;
+}
+
+.connected-app-never {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 62ch;
+    margin: 0.5rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.connected-app-never ::deep .ow-icon {
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+    color: var(--color-success-text);
+}
+
+/* 44px checkbox rows: the label is the touch target, the help text sits under it. */
+.connected-app-toggle {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: start;
+    margin: 0 0 0.75rem;
+    padding: 0;
+}
+
+.connected-app-toggle .form-check-input {
+    float: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.75rem 0 0;
+    cursor: pointer;
+}
+
+.connected-app-toggle .form-check-label {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.connected-app-toggle .form-text {
+    grid-column: 2;
+    margin-top: 0;
+}
+
 .connected-app-lists legend,
 .connected-app-default .form-label,
 .connected-app-confirm h4 {
@@ -228,6 +333,10 @@
 
 .connected-app-default {
     max-width: 26rem;
+}
+
+.connected-app-default .form-select {
+    min-height: 2.75rem;
 }
 
 .connected-app-actions {
@@ -337,16 +446,16 @@
 }
 
 @media (max-width: 767.98px) {
-    .connected-app-header {
-        flex-wrap: wrap;
+    .connected-app-routing {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 
-    .connected-app-title {
-        flex-basis: calc(100% - 3.25rem);
+    .connected-app-access-fact {
+        grid-column: 1 / -1;
     }
 
-    .connected-app-count {
-        flex: 1 1 auto;
+    .connected-app-description {
+        margin-left: 0;
     }
 
     .connected-apps-mcp-url {
@@ -359,6 +468,17 @@
 
     .connected-apps-mcp-url .btn {
         flex: 1 1 auto;
+    }
+
+    .connected-apps-available li {
+        display: grid;
+        grid-template-columns: 2.5rem minmax(0, 1fr);
+    }
+
+    .connected-apps-available li > .btn,
+    .connected-apps-available .connected-app-start-hint {
+        grid-column: 2;
+        justify-self: start;
     }
 }
 

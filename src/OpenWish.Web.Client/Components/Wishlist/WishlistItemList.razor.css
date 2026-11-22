@@ -9,9 +9,9 @@
         background: var(--color-surface-alt);
         color: var(--color-link-hover);
         font-weight: 600;
-        text-transform: uppercase;
         font-size: 0.875rem;
-        padding: 1rem;
+        padding: 0.75rem 1rem;
+        white-space: nowrap;
         transition: background-color .25s ease, color .25s ease;
         border-color: var(--color-border-muted);
     }
@@ -30,7 +30,7 @@
     }
 
         .table tbody tr:hover {
-            background-color: rgba(31, 111, 235, 0.08);
+            background-color: var(--color-primary-soft);
         }
 
 .tooltip-container {
@@ -343,6 +343,63 @@
     to {
         opacity: 1;
         max-height: 500px;
+    }
+}
+
+/* Desktop and tablet: readable columns and one aligned action row. */
+@media (min-width: 768px) {
+    .table th {
+        color: var(--color-text-muted);
+        letter-spacing: 0;
+        text-transform: none;
+    }
+
+    .table th.col-name,
+    .table td.item-cell-name {
+        min-width: 13rem;
+        width: 24%;
+    }
+
+    .table th.col-actions,
+    .table td.item-cell-actions {
+        width: 1%;
+        white-space: nowrap;
+    }
+
+    .table td.item-cell-added {
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+        white-space: nowrap;
+    }
+
+    .item-description {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+
+    .item-row.is-expanded .item-description {
+        display: inline;
+        -webkit-line-clamp: unset;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1399.98px) {
+    .table th.col-added,
+    .table td.item-cell-added {
+        display: none;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+
+    .rank-actions {
+        padding-left: 0;
+        border-left: 0;
     }
 }
 

@@ -311,7 +311,7 @@ else
         </p>
     }
 
-    @if (_isOwner && !string.IsNullOrEmpty(_currentUserId))
+    @if (_isOwner && !string.IsNullOrEmpty(_currentUserId) && _items.Count > 0)
     {
         <WishlistOrganizePanel WishlistId="@WishlistId"
                                CurrentUserId="@_currentUserId"

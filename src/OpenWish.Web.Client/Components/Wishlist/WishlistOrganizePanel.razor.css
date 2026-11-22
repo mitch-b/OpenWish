@@ -154,3 +154,21 @@
         flex-wrap: nowrap;
     }
 }
+
+.organize .btn-outline-primary {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 45%, var(--color-border));
+    background: var(--color-surface);
+    color: var(--color-link);
+}
+
+.organize .btn-outline-primary:hover:not(:disabled) {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+}
+
+.organize .btn-primary {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-bg);
+    color: #fff;
+}

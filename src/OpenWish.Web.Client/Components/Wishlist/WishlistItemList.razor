@@ -4,16 +4,16 @@
     <table class="table table-hover">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
+                <th scope="col" class="col-name">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Price</th>
                 @if (Budget.HasValue)
                 {
                     <th>Budget</th>
                 }
-                <th>Priority</th>
-                <th>Added</th>
-                <th>Actions</th>
+                <th scope="col">Priority</th>
+                <th scope="col" class="col-added">Added</th>
+                <th scope="col" class="col-actions">Actions</th>
             </tr>
         </thead>
         <tbody>

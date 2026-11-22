@@ -1842,6 +1842,7 @@
 /* Header: one dominant add action with quieter share and export tools. */
 .hero-actions {
     display: flex;
+    flex: 1 1 100%;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 0.75rem;
@@ -1986,6 +1987,10 @@
     border-radius: 0.875rem;
 }
 
+.search-input::-webkit-search-cancel-button {
+    appearance: none;
+}
+
 @media (max-width: 767.98px) {
     .wishlist-hero {
         padding: 1rem;
@@ -2090,4 +2095,16 @@
         width: 2.75rem;
         padding-inline: 0;
     }
+}
+
+.empty-state .btn-outline-primary {
+    min-height: 2.75rem;
+    border-color: color-mix(in srgb, var(--color-primary-bg) 45%, var(--color-border));
+    color: var(--color-link);
+}
+
+.empty-state .btn-outline-primary:hover {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-soft);
+    color: var(--color-text);
 }

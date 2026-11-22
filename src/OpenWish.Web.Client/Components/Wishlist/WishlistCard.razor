@@ -94,18 +94,20 @@ else
     private bool isCurrentUserOwner = false;
     private int DisplayItemCount => ItemCount ?? Wishlist?.Items?.Count ?? Wishlist?.ItemCount ?? 0;
 
+    private bool HasEventAccess => Wishlist?.EventId is not null || Wishlist?.Event is not null;
+
     private string PrivacyLabel => Wishlist switch
     {
-        { IsPrivate: true } => "Private",
-        { IsFriendsOnly: true } => "Specific friends",
-        _ => "All friends"
+        { IsPrivate: true } => HasEventAccess ? "Event members" : "Private",
+        { IsFriendsOnly: true } => HasEventAccess ? "Specific friends + event" : "Specific friends",
+        _ => HasEventAccess ? "All friends + event" : "All friends"
     };
 
     private string PrivacyDescription => Wishlist switch
     {
-        { IsPrivate: true } => "Private: only you can see it",
-        { IsFriendsOnly: true } => "Shared with specific friends",
-        _ => "Shared with all friends"
+        { IsPrivate: true } => HasEventAccess ? "Only you and event members can see it" : "Private: only you can see it",
+        { IsFriendsOnly: true } => HasEventAccess ? "Shared with specific friends and event members" : "Shared with specific friends",
+        _ => HasEventAccess ? "Shared with all friends and event members" : "Shared with all friends"
     };
 
     private string PrivacyIcon => Wishlist switch

@@ -53,7 +53,8 @@ public class WishlistsIndexMarkupTests
         var styles = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistCard.razor.css");
 
         Assert.Contains("@if (isCurrentUserOwner)\n                {\n                    <span class=\"wishlist-meta-chip\" title=\"@PrivacyDescription\">", markup, StringComparison.Ordinal);
-        Assert.Contains("{ IsFriendsOnly: true } => \"Shared with specific friends\"", markup, StringComparison.Ordinal);
+        Assert.Contains("{ IsFriendsOnly: true } => HasEventAccess ? \"Shared with specific friends and event members\" : \"Shared with specific friends\"", markup, StringComparison.Ordinal);
+        Assert.Contains("{ IsPrivate: true } => HasEventAccess ? \"Only you and event members can see it\"", markup, StringComparison.Ordinal);
         Assert.Contains("<a class=\"wishlist-card-event\" href=\"/events/@eventPublicId\">", markup, StringComparison.Ordinal);
         Assert.Contains("@(DisplayItemCount == 1 ? \"idea\" : \"ideas\")", markup, StringComparison.Ordinal);
         Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive)\"\n                                        @onclick:stopPropagation=\"true\"", markup, StringComparison.Ordinal);

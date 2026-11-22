@@ -86,7 +86,8 @@ public class AuthPagesMarkupTests
 
         Assert.Contains("auth-status\" role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("<OpenWishIcon Name=\"@(isError ? \"exclamation-circle\" : \"check-circle\")\" />", markup, StringComparison.Ordinal);
-        Assert.Contains("<span>@DisplayMessage</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<span>@visibleMessage</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"visually-hidden\">Error: </span>", markup, StringComparison.Ordinal);
     }
 
     private static string ReadAccountPage(string fileName) =>

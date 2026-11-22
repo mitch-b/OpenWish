@@ -115,7 +115,7 @@ async function generateTotp(secret) {
 
 async function enableTwoFactorAuthentication(page, authenticatorKey) {
   const recoveryCodesHeading = page.getByRole("heading", { name: "Save your recovery codes" });
-  const invalidCodeMessage = page.getByText("Error: Verification code is invalid.", { exact: true });
+  const invalidCodeMessage = page.getByText("Verification code is invalid.", { exact: true });
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const verificationCode = await generateTotp(authenticatorKey);

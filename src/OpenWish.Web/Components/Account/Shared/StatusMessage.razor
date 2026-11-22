@@ -1,9 +1,17 @@
 ﻿@if (!string.IsNullOrEmpty(DisplayMessage))
 {
-    var isError = DisplayMessage.StartsWith("Error");
+    var isError = DisplayMessage.StartsWith("Error", StringComparison.Ordinal);
+    var hasErrorPrefix = DisplayMessage.StartsWith("Error:", StringComparison.Ordinal);
+    var visibleMessage = hasErrorPrefix ? DisplayMessage["Error:".Length..].TrimStart() : DisplayMessage;
     <div class="alert alert-@(isError ? "danger" : "success") auth-status" role="alert">
         <OpenWishIcon Name="@(isError ? "exclamation-circle" : "check-circle")" />
-        <span>@DisplayMessage</span>
+        <span>
+            @if (hasErrorPrefix)
+            {
+                <span class="visually-hidden">Error: </span>
+            }
+            <span>@visibleMessage</span>
+        </span>
     </div>
 }
 

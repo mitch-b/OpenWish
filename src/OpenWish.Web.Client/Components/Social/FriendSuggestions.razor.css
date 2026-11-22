@@ -1,3 +1,9 @@
+.friend-suggestions {
+    margin-top: 2rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--color-border);
+}
+
 .social-heading {
     display: flex;
     align-items: flex-start;
@@ -24,6 +30,7 @@
 }
 
 .social-heading p {
+    max-width: 38rem;
     margin: 0.2rem 0 0;
     color: var(--color-text-muted);
     font-size: 0.86rem;
@@ -37,17 +44,50 @@
 
 .request-row {
     justify-content: space-between;
-    gap: 1rem;
+    gap: 0.75rem 1rem;
 }
 
 .request-identity {
-    gap: 0.7rem;
+    min-width: 0;
+    gap: 0.75rem;
 }
 
 .request-avatar {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.suggestion-copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.1rem;
+}
+
+.suggestion-copy strong {
+    overflow-wrap: anywhere;
+}
+
+.suggestion-copy small {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+}
+
+.request-row .btn {
+    display: inline-flex;
+    min-height: 2.75rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
 }
 
 @media (max-width: 575.98px) {
@@ -55,18 +95,8 @@
         align-items: stretch;
         flex-direction: column;
     }
-}
 
-.suggestion-copy {
-    display: grid;
-    min-width: 0;
-}
-
-.suggestion-copy small {
-    color: var(--color-text-muted);
-    overflow-wrap: anywhere;
-}
-
-.request-row .btn {
-    min-height: 2.75rem;
+    .request-row .btn {
+        width: 100%;
+    }
 }

@@ -10,7 +10,7 @@
         <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
         <div>
             <h2>Friend requests@(_receivedRequests.Count > 0 ? $" ({_receivedRequests.Count})" : "")</h2>
-            <p>Choose who joins your trusted circle.</p>
+            <p>Choose who joins your trusted circle. Friends can see the wishlists you share with them.</p>
         </div>
     </div>
 
@@ -27,7 +27,7 @@
             <p class="mb-2">@_loadErrorMessage</p>
             <button class="btn btn-outline-danger btn-sm"
                     type="button"
-                    disabled="@_loading"
+                    disabled="@(!RendererInfo.IsInteractive || _loading)"
                     @onclick="RetryLoadRequests">
                 Try again
             </button>
@@ -35,107 +35,121 @@
     }
     else if (!_receivedRequests.Any())
     {
-        <div class="alert alert-info">
-            No requests waiting for you. People who ask to connect will show up here.
+        <div class="request-empty" data-testid="friend-requests-empty">
+            <p class="request-empty-title">No requests waiting for you</p>
+            <p class="request-empty-copy">When someone asks to connect, you'll accept or decline it here.</p>
+            @if (!_sentRequests.Any() && !_pendingInvites.Any())
+            {
+                <a class="btn btn-outline-primary" href="/friends?section=invite">
+                    <OpenWishIcon Name="person-plus" /> Invite friends
+                </a>
+            }
         </div>
     }
     else
     {
-        <div class="list-group">
+        <ul class="list-group request-list" aria-label="Requests waiting for you">
             @foreach (var request in _receivedRequests)
             {
-                <div class="list-group-item request-row">
+                <li class="list-group-item request-row">
                     <div class="request-identity">
-                        <span class="request-avatar"><OpenWishIcon Name="person-circle" /></span>
-                        <strong>@request.Requester?.UserName</strong>
+                        <span class="request-avatar" aria-hidden="true">@GetInitial(GetRequesterName(request))</span>
+                        <div class="request-copy">
+                            <strong>@GetRequesterName(request)</strong>
+                            <small>Wants to be friends</small>
+                        </div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-primary btn-sm"
+                    <div class="request-actions">
+                        <button class="btn btn-primary"
                                 type="button"
-                                disabled="@_processingRequestId.HasValue"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
                                 aria-label="Accept friend request from @GetRequesterName(request)"
                                 @onclick="() => AcceptRequest(request)">
                             <OpenWishIcon Name="check" />
-                            @(_processingRequestId == request.Id ? "Accepting..." : "Accept")
+                            <span>@(IsBusy("accept", request.Id) ? "Accepting..." : "Accept")</span>
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm"
+                        <button class="btn btn-outline-secondary"
                                 type="button"
-                                disabled="@_processingRequestId.HasValue"
-                                aria-label="Reject friend request from @GetRequesterName(request)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                aria-label="Decline friend request from @GetRequesterName(request)"
                                 @onclick="() => RejectRequest(request)">
-                            <OpenWishIcon Name="x" /> Reject
+                            <OpenWishIcon Name="x" />
+                            <span>@(IsBusy("decline", request.Id) ? "Declining..." : "Decline")</span>
                         </button>
                     </div>
-                </div>
+                </li>
             }
-        </div>
+        </ul>
     }
 
-    @if (string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any()))
+    @if (!_loading && string.IsNullOrWhiteSpace(_loadErrorMessage) && (_sentRequests.Any() || _pendingInvites.Any()))
     {
-        <h3 class="h5 mt-4 mb-3">Sent requests</h3>
-        <div class="list-group">
+        <div class="sent-heading">
+            <h3 id="sent-requests-heading">Sent requests</h3>
+            <p>Waiting on the other person. Resend a reminder or cancel at any time.</p>
+        </div>
+        <ul class="list-group" aria-labelledby="sent-requests-heading">
             @foreach (var invite in _pendingInvites)
             {
-                <div class="list-group-item sent-row" data-testid="pending-invite">
-                    <div class="text-break">
-                        <OpenWishIcon Name="envelope" Class="me-2" />
-                        @invite.Email
-                    </div>
-                    <div class="sent-actions">
-                        <span class="badge bg-secondary">Invited</span>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Email invitation actions">
-                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1"
-                                    type="button"
-                                    disabled="@_processingRequestId.HasValue"
-                                    aria-label="Resend invitation to @invite.Email"
-                                    @onclick="() => ResendInvite(invite)">
-                                <OpenWishIcon Name="arrow-clockwise" />
-                                <span>@(_processingRequestId == invite.Id ? "Resending..." : "Resend")</span>
-                            </button>
-                            <button class="btn btn-outline-danger d-flex align-items-center gap-1"
-                                    type="button"
-                                    disabled="@_processingRequestId.HasValue"
-                                    aria-label="Cancel invitation to @invite.Email"
-                                    @onclick="() => CancelInvite(invite)">
-                                <OpenWishIcon Name="trash" />
-                                <span>Cancel</span>
-                            </button>
+                <li class="list-group-item sent-row" data-testid="pending-invite">
+                    <div class="request-identity">
+                        <span class="request-avatar request-avatar-muted" aria-hidden="true"><OpenWishIcon Name="envelope" /></span>
+                        <div class="request-copy">
+                            <strong>@invite.Email</strong>
+                            <small>Invited by email · hasn't joined yet</small>
                         </div>
                     </div>
-                </div>
+                    <div class="sent-actions" role="group" aria-label="Email invitation actions">
+                        <button class="btn btn-outline-secondary"
+                                type="button"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                aria-label="Resend invitation to @invite.Email"
+                                @onclick="() => ResendInvite(invite)">
+                            <OpenWishIcon Name="arrow-clockwise" />
+                            <span>@(IsBusy("resend-invite", invite.Id) ? "Resending..." : "Resend")</span>
+                        </button>
+                        <button class="btn btn-outline-danger"
+                                type="button"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                aria-label="Cancel invitation to @invite.Email"
+                                @onclick="() => CancelInvite(invite)">
+                            <OpenWishIcon Name="x" />
+                            <span>@(IsBusy("cancel-invite", invite.Id) ? "Canceling..." : "Cancel")</span>
+                        </button>
+                    </div>
+                </li>
             }
             @foreach (var request in _sentRequests)
             {
-                <div class="list-group-item sent-row">
-                    <div class="text-break">
-                        <OpenWishIcon Name="person-circle" Class="me-2" />
-                        @request.Receiver?.UserName
-                    </div>
-                    <div class="sent-actions">
-                        <span class="badge bg-secondary">Pending</span>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Sent request actions">
-                            <button class="btn btn-outline-secondary d-flex align-items-center gap-1"
-                                    type="button"
-                                    disabled="@_processingRequestId.HasValue"
-                                    aria-label="Resend friend request to @GetReceiverName(request)"
-                                    @onclick="() => ResendSentRequest(request)">
-                                <OpenWishIcon Name="arrow-clockwise" />
-                                <span>@(_processingRequestId == request.Id ? "Resending..." : "Resend")</span>
-                            </button>
-                            <button class="btn btn-outline-danger d-flex align-items-center gap-1"
-                                    type="button"
-                                    disabled="@_processingRequestId.HasValue"
-                                    aria-label="Cancel friend request to @GetReceiverName(request)"
-                                    @onclick="() => CancelSentRequest(request)">
-                                <OpenWishIcon Name="trash" />
-                                <span>Cancel</span>
-                            </button>
+                <li class="list-group-item sent-row">
+                    <div class="request-identity">
+                        <span class="request-avatar request-avatar-muted" aria-hidden="true">@GetInitial(GetReceiverName(request))</span>
+                        <div class="request-copy">
+                            <strong>@GetReceiverName(request)</strong>
+                            <small>Request sent · waiting for a reply</small>
                         </div>
                     </div>
-                </div>
+                    <div class="sent-actions" role="group" aria-label="Sent request actions">
+                        <button class="btn btn-outline-secondary"
+                                type="button"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                aria-label="Resend friend request to @GetReceiverName(request)"
+                                @onclick="() => ResendSentRequest(request)">
+                            <OpenWishIcon Name="arrow-clockwise" />
+                            <span>@(IsBusy("resend", request.Id) ? "Resending..." : "Resend")</span>
+                        </button>
+                        <button class="btn btn-outline-danger"
+                                type="button"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                aria-label="Cancel friend request to @GetReceiverName(request)"
+                                @onclick="() => CancelSentRequest(request)">
+                            <OpenWishIcon Name="x" />
+                            <span>@(IsBusy("cancel", request.Id) ? "Canceling..." : "Cancel")</span>
+                        </button>
+                    </div>
+                </li>
             }
-        </div>
+        </ul>
     }
 
     @if (!string.IsNullOrWhiteSpace(_statusMessage))
@@ -167,6 +181,7 @@
     private bool _loading = true;
     private string? _currentUserId;
     private int? _processingRequestId;
+    private string? _processingAction;
     private string? _statusMessage;
     private string? _errorMessage;
     private string? _loadErrorMessage;
@@ -238,7 +253,7 @@
         var requesterName = GetRequesterName(request);
         try
         {
-            BeginRequestAction(request.Id);
+            BeginRequestAction("accept", request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -276,7 +291,7 @@
         var requesterName = GetRequesterName(request);
         try
         {
-            BeginRequestAction(request.Id);
+            BeginRequestAction("decline", request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -284,7 +299,7 @@
                 if (await FriendService.RejectFriendRequestAsync(request.Id, _currentUserId))
                 {
                     await LoadRequests(clearFeedback: false, silent: true);
-                    _statusMessage = $"Friend request from {requesterName} rejected.";
+                    _statusMessage = $"Friend request from {requesterName} declined.";
                 }
                 else
                 {
@@ -293,13 +308,13 @@
             }
             else
             {
-                _errorMessage = "Sign in again to reject this friend request.";
+                _errorMessage = "Sign in again to decline this friend request.";
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to reject friend request {FriendRequestId}", request.Id);
-            _errorMessage = $"The friend request from {requesterName} could not be rejected. Try again.";
+            _errorMessage = $"The friend request from {requesterName} could not be declined. Try again.";
         }
         finally
         {
@@ -312,7 +327,7 @@
         var receiverName = GetReceiverName(request);
         try
         {
-            BeginRequestAction(request.Id);
+            BeginRequestAction("cancel", request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -348,7 +363,7 @@
         var receiverName = GetReceiverName(request);
         try
         {
-            BeginRequestAction(request.Id);
+            BeginRequestAction("resend", request.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -377,7 +392,7 @@
     {
         try
         {
-            BeginRequestAction(invite.Id);
+            BeginRequestAction("resend-invite", invite.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -406,7 +421,7 @@
     {
         try
         {
-            BeginRequestAction(invite.Id);
+            BeginRequestAction("cancel-invite", invite.Id);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
@@ -437,13 +452,19 @@
         }
     }
 
-    private void BeginRequestAction(int requestId)
+    private void BeginRequestAction(string action, int requestId)
     {
+        _processingAction = action;
         _processingRequestId = requestId;
         _statusMessage = null;
         _acceptedFriendName = null;
         _errorMessage = null;
     }
+
+    private bool IsBusy(string action, int id) => _processingAction == action && _processingRequestId == id;
+
+    private static string GetInitial(string name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[..1].ToUpperInvariant();
 
     private static string GetRequesterName(FriendRequestModel request) =>
         request.Requester?.UserName ?? request.Requester?.Email ?? "this person";

@@ -45,9 +45,11 @@ else
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.Id)">
                             <li>
                                 <button class="dropdown-item text-danger"
+                                        type="button"
+                                        disabled="@(!RendererInfo.IsInteractive)"
                                         @onclick:stopPropagation="true"
                                         @onclick="ShowDeleteDialog">
-                                    Delete
+                                    <OpenWishIcon Name="trash3" /> Delete
                                 </button>
                             </li>
                         </ul>
@@ -55,20 +57,23 @@ else
                 }
             </div>
             <div class="wishlist-meta">
-                <span>@DisplayItemCount @(DisplayItemCount == 1 ? "item" : "items")</span>
+                <span class="wishlist-meta-count"><strong>@DisplayItemCount</strong> @(DisplayItemCount == 1 ? "idea" : "ideas")</span>
                 @if (Wishlist.IsCollaborative)
                 {
-                    <span><OpenWishIcon Name="people" /> Collaborative</span>
+                    <span class="wishlist-meta-chip"><OpenWishIcon Name="people" /> Collaborative</span>
                 }
-                @if (Wishlist.IsPrivate)
+                @if (isCurrentUserOwner)
                 {
-                    <span><OpenWishIcon Name="lock" /> Private</span>
-                }
-                else
-                {
-                    <span><OpenWishIcon Name="eye" /> Shared</span>
+                    <span class="wishlist-meta-chip" title="@PrivacyDescription"><OpenWishIcon Name="@PrivacyIcon" /> <span aria-hidden="true">@PrivacyLabel</span><span class="visually-hidden">@PrivacyDescription</span></span>
                 }
             </div>
+            @if (Wishlist.Event is { PublicId: { Length: > 0 } eventPublicId } wishlistEvent)
+            {
+                <a class="wishlist-card-event" href="/events/@eventPublicId">
+                    <OpenWishIcon Name="calendar-event" />
+                    <span>For <strong>@wishlistEvent.Name</strong></span>
+                </a>
+            }
         </div>
     </div>
 
@@ -88,6 +93,27 @@ else
     private WishlistDeleteDialog deleteDialog = default!;
     private bool isCurrentUserOwner = false;
     private int DisplayItemCount => ItemCount ?? Wishlist?.Items?.Count ?? Wishlist?.ItemCount ?? 0;
+
+    private string PrivacyLabel => Wishlist switch
+    {
+        { IsPrivate: true } => "Private",
+        { IsFriendsOnly: true } => "Specific friends",
+        _ => "All friends"
+    };
+
+    private string PrivacyDescription => Wishlist switch
+    {
+        { IsPrivate: true } => "Private: only you can see it",
+        { IsFriendsOnly: true } => "Shared with specific friends",
+        _ => "Shared with all friends"
+    };
+
+    private string PrivacyIcon => Wishlist switch
+    {
+        { IsPrivate: true } => "lock",
+        { IsFriendsOnly: true } => "person-check",
+        _ => "eye"
+    };
 
     protected override async Task OnParametersSetAsync()
     {

@@ -1,5 +1,178 @@
+.item-reservation {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.item-reservation .alert,
+.item-reservation p {
+    margin-bottom: 0;
+}
+
+.reservation-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.reservation-hint {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 60ch;
+}
+
+.reservation-alert {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 0.8rem;
+}
+
+.reservation-alert > p {
+    flex-basis: 100%;
+}
+
+.reservation-status {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface);
+}
+
+.reservation-status-mine {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+}
+
+.reservation-status ::deep .reservation-status-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    align-self: start;
+    margin-top: 0.125rem;
+    color: var(--color-text-muted);
+}
+
+.reservation-status-mine ::deep .reservation-status-icon,
+.reservation-status-mine .reservation-status-title {
+    color: var(--color-success-text);
+}
+
+.reservation-status-body {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.reservation-status-title {
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.reservation-status-meta {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.reservation-cancel {
+    white-space: nowrap;
+    background: var(--color-surface);
+}
+
+.reservation-confirm {
+    padding: 0.875rem 1rem;
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
+}
+
+.reservation-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.reservation-anonymous {
+    margin: 0;
+    min-height: 2.75rem;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.5rem;
+    align-content: center;
+    padding-left: 0;
+}
+
+.reservation-anonymous .form-check-input {
+    float: none;
+    margin: 0.2rem 0 0;
+    width: 1.15rem;
+    height: 1.15rem;
+}
+
+.reservation-anonymous .form-check-label {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.reservation-anonymous-help {
+    grid-column: 2;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+}
+
+.reservation-reserve {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding-inline: 1.25rem;
+}
+
+.reservation-feedback {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--color-success-text);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.reservation-feedback a {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 @media (max-width: 767.98px) {
     .item-reservation .btn {
         min-height: 2.75rem;
+    }
+
+    .reservation-status {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .reservation-cancel {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .reservation-reserve {
+        justify-self: stretch;
+    }
+
+    .reservation-confirm-actions .btn {
+        flex: 1 1 9rem;
     }
 }

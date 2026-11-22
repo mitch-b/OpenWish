@@ -54,7 +54,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@if (!string.IsNullOrWhiteSpace(Model?.SourceAppName))", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Model?.Id > 0 &&", markup, StringComparison.Ordinal);
         Assert.Contains("keeps this idea in sync", markup, StringComparison.Ordinal);
-        Assert.Contains("_isEditing = model is not null && (model.Id > 0 || !string.IsNullOrWhiteSpace(model.PublicId))", markup, StringComparison.Ordinal);
+        Assert.Contains("_isEditing = model is not null && !string.IsNullOrWhiteSpace(model.PublicId)", markup, StringComparison.Ordinal);
         Assert.Contains("@if (!_isEditing)", markup, StringComparison.Ordinal);
         var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
         Assert.Contains("PublicId = item.PublicId", details, StringComparison.Ordinal);
@@ -132,7 +132,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void Dashboard_PersistsEachHydratedContentSection()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor");
 
         Assert.Contains("[PersistentState]\n    public List<DashboardWishlistCard>? FeaturedWishlists { get; set; }", markup, StringComparison.Ordinal);
         Assert.Contains("[PersistentState]\n    public List<DashboardEventCard>? Events { get; set; }", markup, StringComparison.Ordinal);
@@ -145,7 +145,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void Dashboard_PrioritizesFirstWishlistOnlyAfterLoadingAnEmptyCollection()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor");
 
         Assert.Contains("private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;", markup, StringComparison.Ordinal);
         Assert.Contains("IsFirstWishlist ? \"action-tile-primary\" : string.Empty", markup, StringComparison.Ordinal);
@@ -234,7 +234,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<button class=\"stat-card stat-action\"", markup, StringComparison.Ordinal);
         Assert.Contains("No ideas shared yet", markup, StringComparison.Ordinal);
         Assert.Contains("GetCoordinationLabel(item)", markup, StringComparison.Ordinal);
-        Assert.Contains("ToggleGridCoordination(item.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("ToggleGridCoordination(item.PublicId)", markup, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"item-coordination-", markup, StringComparison.Ordinal);
         Assert.Contains("data-testid=\"stale-ideas\"", markup, StringComparison.Ordinal);
         Assert.Contains("MaxPrice = PriceCeiling;", markup, StringComparison.Ordinal);
@@ -398,7 +398,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void NotificationFlyout_ExposesDisclosureStateAndDialogContext()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor");
 
         Assert.Contains("aria-expanded=\"@(_isVisible ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-controls=\"notification-flyout\"", markup, StringComparison.Ordinal);
@@ -413,7 +413,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void NotificationFlyout_MarksReadDeliberatelyAndShowsTruthfulState()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor");
 
         Assert.DoesNotContain("@onmouseenter", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("@ontouchstart", markup, StringComparison.Ordinal);
@@ -427,7 +427,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void NotificationDeletion_ProvidesAFocusSafeDestructiveConfirmation()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor");
 
         Assert.Contains("id=\"notification-delete-dialog\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", markup, StringComparison.Ordinal);
@@ -442,15 +442,15 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void NotificationUpdates_ExposeBusySuccessAndFailureStates()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor");
 
         Assert.Contains("aria-busy=\"@_isMarkingRead\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-busy=\"@IsNotificationProcessing(notification.Id)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-busy=\"@IsNotificationProcessing(notification.PublicId)\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("All notifications marked as read.", markup, StringComparison.Ordinal);
         Assert.Contains("The invitation could not be updated. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("Unable to delete notification {NotificationPublicId}", markup, StringComparison.Ordinal);
-        Assert.Contains("ex is InvalidOperationException or DbUpdateException or DbException", markup, StringComparison.Ordinal);
+        Assert.Contains("catch (Exception ex) when (ex is not OperationCanceledException)", markup, StringComparison.Ordinal);
         Assert.Contains("openWishFocusElement\", \"notification-close-button\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("// Handle gracefully", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("// swallow for now", markup, StringComparison.Ordinal);
@@ -462,13 +462,13 @@ public class InteractiveControlMarkupTests
         var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
         var cardMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemCard.razor");
 
-        Assert.Contains("aria-expanded=\"@ExpandedInteractions.Contains(item.Id)\"", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("id=\"item-interactions-@item.Id\"", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("hidden=\"@(!ExpandedInteractions.Contains(item.Id))\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"@ExpandedInteractions.Contains(item.PublicId)\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-interactions-@item.PublicId\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("hidden=\"@(!ExpandedInteractions.Contains(item.PublicId))\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-expanded=\"@ShowReservation\"", cardMarkup, StringComparison.Ordinal);
-        Assert.Contains("id=\"item-reservation-@Item.Id\"", cardMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-reservation-@Item.PublicId\"", cardMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-expanded=\"@ShowComments\"", cardMarkup, StringComparison.Ordinal);
-        Assert.Contains("id=\"item-comments-@Item.Id\"", cardMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-comments-@Item.PublicId\"", cardMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -710,8 +710,8 @@ public class InteractiveControlMarkupTests
         var listMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistItemList.razor");
         var dialogMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "WishlistDeleteDialog.razor");
 
-        Assert.Contains("id=\"delete-wishlist-item-@item.Id\"", detailsMarkup, StringComparison.Ordinal);
-        Assert.Contains("id=\"delete-wishlist-item-@item.Id\"", listMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"delete-wishlist-item-@item.PublicId\"", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"delete-wishlist-item-@item.PublicId\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("OnDelete=\"@ShowItemDeleteDialogAsync\"", detailsMarkup, StringComparison.Ordinal);
         Assert.Contains("await _deleteDialog.ShowAsync(", detailsMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("InvokeAsync<bool>(\"confirm\"", detailsMarkup, StringComparison.Ordinal);
@@ -735,7 +735,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("disabled=\"@IsBusy\"", dialogMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@IsBusy\"", dialogMarkup, StringComparison.Ordinal);
         Assert.Contains("Deleting...", dialogMarkup, StringComparison.Ordinal);
-        Assert.Contains("_items.RemoveAll(existingItem => existingItem.Id == item.Id);", detailsMarkup, StringComparison.Ordinal);
+        Assert.Contains("_items.RemoveAll(existingItem => existingItem.PublicId == item.PublicId);", detailsMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("await LoadItems();\n            _feedbackMessage", detailsMarkup, StringComparison.Ordinal);
         Assert.Contains("Check your connection and try again.", detailsMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("Error: {ex.Message}", detailsMarkup, StringComparison.Ordinal);
@@ -775,7 +775,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("ProductImport.Apply(Model, link, product, seed)", importerMarkup, StringComparison.Ordinal);
         var imageErrorHandler = importerMarkup[importerMarkup.IndexOf("private async Task HandleImageError()", StringComparison.Ordinal)..];
         Assert.Contains("@if (RendererInfo.IsInteractive && !string.IsNullOrWhiteSpace(Model.Image) && !_imageFailed)", importerMarkup, StringComparison.Ordinal);
-        Assert.Contains("var isNewItem = Model.Id == 0;", imageErrorHandler, StringComparison.Ordinal);
+        Assert.Contains("var isNewItem = !IsSavedItem;", imageErrorHandler, StringComparison.Ordinal);
         Assert.Contains("if (isNewItem || importedHere)", imageErrorHandler, StringComparison.Ordinal);
         Assert.Contains("Model.Image = null;", imageErrorHandler, StringComparison.Ordinal);
         Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
@@ -809,7 +809,7 @@ public class InteractiveControlMarkupTests
         var quickAdd = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "QuickAdd.razor");
         var addItem = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "AddItem.razor");
         var details = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Wishlists", "WishlistDetails.razor");
-        var home = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var home = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor");
         var app = ReadComponent("OpenWish.Web", "Components", "App.razor");
         var script = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
         var manifest = ReadComponent("OpenWish.Web", "wwwroot", "manifest.webmanifest");
@@ -937,7 +937,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("z-index: 2;", actionStyles, StringComparison.Ordinal);
         Assert.Contains(".wishlist-card:has(.wishlist-card-link:focus-visible)", styles, StringComparison.Ordinal);
         Assert.Contains("return deleteDialog.ShowAsync(", markup, StringComparison.Ordinal);
-        Assert.Contains("$\"dropdownMenu{Wishlist?.Id}\"", markup, StringComparison.Ordinal);
+        Assert.Contains("$\"dropdownMenu{Wishlist?.PublicId}\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
     }
 
@@ -1288,7 +1288,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("aria-label=\"Accept friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Decline friend request from @GetRequesterName(request)\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Resend friend request to @GetReceiverName(request)\"", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId is not null)\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"status\" aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("role=\"alert\"", markup, StringComparison.Ordinal);
         Assert.Contains("await OnFriendshipsChanged.InvokeAsync();", markup, StringComparison.Ordinal);
@@ -1311,17 +1311,17 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Wishlist", "ItemComments.razor");
 
         Assert.Contains("role=\"alertdialog\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-labelledby=\"delete-comment-title-@comment.Id\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"delete-comment-description-@comment.Id\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"delete-comment-title-@comment.PublicId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"delete-comment-description-@comment.PublicId\"", markup, StringComparison.Ordinal);
         Assert.Contains("@ref=\"_keepCommentButton\"", markup, StringComparison.Ordinal);
         Assert.Contains("await _keepCommentButton.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("openWishFocusElement\", elementId", markup, StringComparison.Ordinal);
         Assert.Contains("await _commentComposer.FocusAsync();", markup, StringComparison.Ordinal);
-        Assert.Contains("var removed = await WishlistService.RemoveItemCommentAsync", markup, StringComparison.Ordinal);
+        Assert.Contains("var removed = await WishlistService.RemoveItemCommentByPublicIdAsync", markup, StringComparison.Ordinal);
         Assert.Contains("await _errorAlert.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("Comment deleted.", markup, StringComparison.Ordinal);
-        Assert.Contains("id=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
-        Assert.Contains("for=\"commentText-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"commentText-@ItemPublicId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("for=\"commentText-@ItemPublicId\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("id=\"commentText\"", markup, StringComparison.Ordinal);
         Assert.Contains("Comments could not be loaded. Try again.", markup, StringComparison.Ordinal);
         Assert.Contains("@onclick=\"RetryLoadComments\"", markup, StringComparison.Ordinal);
@@ -1337,8 +1337,8 @@ public class InteractiveControlMarkupTests
         var client = ReadComponent("OpenWish.Web.Client", "Services", "WishlistHttpClientService.cs");
 
         Assert.Contains("role=\"alertdialog\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-labelledby=\"cancel-reservation-title-@ItemId\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"cancel-reservation-description-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-labelledby=\"cancel-reservation-title-@ItemPublicId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"cancel-reservation-description-@ItemPublicId\"", markup, StringComparison.Ordinal);
         Assert.Contains("@ref=\"_keepReservationButton\"", markup, StringComparison.Ordinal);
         Assert.Contains("await _keepReservationButton.FocusAsync();", markup, StringComparison.Ordinal);
         Assert.Contains("await _cancelReservationButton.FocusAsync();", markup, StringComparison.Ordinal);
@@ -1381,7 +1381,7 @@ public class InteractiveControlMarkupTests
         var eventCardMarkup = ReadComponent("OpenWish.Web.Client", "Components", "Event", "EventCard.razor");
         var dialogScript = ReadComponent("OpenWish.Web", "wwwroot", "app.js");
         Assert.Contains("data-dialog-initial-focus", eventCardMarkup, StringComparison.Ordinal);
-        Assert.Contains("ReturnFocusElementId=\"@($\"dropdownMenu{Event?.Id}\")\"", eventCardMarkup, StringComparison.Ordinal);
+        Assert.Contains("ReturnFocusElementId=\"@($\"dropdownMenu{Event?.PublicId}\")\"", eventCardMarkup, StringComparison.Ordinal);
         Assert.Contains("await _cancelDeleteButton.FocusAsync();", eventCardMarkup, StringComparison.Ordinal);
         Assert.Contains("state.previouslyFocused?.isConnected", dialogScript, StringComparison.Ordinal);
         Assert.Contains("document.querySelector(\"main h1, main h2, main h3, main\")", dialogScript, StringComparison.Ordinal);
@@ -1540,9 +1540,9 @@ public class InteractiveControlMarkupTests
 
         Assert.Contains("aria-label=\"Edit @item.Name\"", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Delete @item.Name\"", pageMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-expanded=\"@(_expandedItemId == item.Id)\"", pageMarkup, StringComparison.Ordinal);
-        Assert.Contains("aria-controls=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
-        Assert.Contains("id=\"item-details-@item.Id\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-expanded=\"@(_expandedItemId == item.PublicId)\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-controls=\"item-details-@item.PublicId\"", pageMarkup, StringComparison.Ordinal);
+        Assert.Contains("id=\"item-details-@item.PublicId\"", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Edit @item.Name\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Delete @item.Name\"", listMarkup, StringComparison.Ordinal);
         Assert.Contains("min-width: 2.75rem;", pageStyles, StringComparison.Ordinal);
@@ -1660,7 +1660,7 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void Dashboard_ExposesPersonalizedContentLoadingState()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor");
 
         Assert.Contains("@attribute [StreamRendering]", markup, StringComparison.Ordinal);
         Assert.Contains(
@@ -1676,8 +1676,8 @@ public class InteractiveControlMarkupTests
     [Fact]
     public void Dashboard_ReservesFullWelcomeForFirstRunAndKeepsReturningHeaderCompact()
     {
-        var markup = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor");
-        var styles = ReadComponent("OpenWish.Web", "Components", "Pages", "Home.razor.css");
+        var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor");
+        var styles = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Home.razor.css");
 
         Assert.Contains("DashboardWelcome.Create(", markup, StringComparison.Ordinal);
         Assert.Contains("[PersistentState]\n    public DashboardWelcome? Welcome { get; set; }", markup.ReplaceLineEndings("\n"), StringComparison.Ordinal);

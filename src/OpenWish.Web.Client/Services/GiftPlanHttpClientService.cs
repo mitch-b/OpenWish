@@ -58,4 +58,8 @@ public class GiftPlanHttpClientService(HttpClient httpClient) : IGiftPlanService
     public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId) =>
         await httpClient.GetFromJsonAsync<List<GivenGiftMatchModel>>(
             $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{itemId}/given") ?? [];
+
+    public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, string itemPublicId) =>
+        await httpClient.GetFromJsonAsync<List<GivenGiftMatchModel>>(
+            $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/{Uri.EscapeDataString(itemPublicId)}/given") ?? [];
 }

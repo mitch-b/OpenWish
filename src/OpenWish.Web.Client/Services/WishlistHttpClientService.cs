@@ -203,7 +203,10 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             return null;
         }
 
-        return await response.Content.ReadFromJsonAsync<ItemReservationModel>();
+        // An unreserved item is returned as 204 No Content.
+        return response.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await response.Content.ReadFromJsonAsync<ItemReservationModel>();
     }
 
     public async Task<bool> IsItemReservedAsync(int itemId)
@@ -306,6 +309,80 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
         response.EnsureSuccessStatusCode();
         return true;
     }
+
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
+    {
+        _ = userId;
+        var response = await _httpClient.DeleteAsync(ItemByPublicIdUrl(wishlistPublicId, itemPublicId));
+        response.EnsureSuccessStatusCode();
+        return true;
+    }
+
+    public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, string text)
+    {
+        _ = userId;
+        var response = await _httpClient.PostAsJsonAsync(
+            $"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/comments", new { Text = text });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ItemCommentModel>()
+            ?? throw new InvalidOperationException("Unable to deserialize created comment.");
+    }
+
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
+    {
+        _ = requestingUserId;
+        return await _httpClient.GetFromJsonAsync<IEnumerable<ItemCommentModel>>(
+            $"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/comments")
+            ?? Enumerable.Empty<ItemCommentModel>();
+    }
+
+    public async Task<bool> RemoveItemCommentByPublicIdAsync(string commentPublicId, string userId)
+    {
+        _ = userId;
+        var response = await _httpClient.DeleteAsync($"{BaseUrl}/comments/by-public-id/{Uri.EscapeDataString(commentPublicId)}");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> ReserveItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, bool isAnonymous = false)
+    {
+        _ = userId;
+        var response = await _httpClient.PostAsJsonAsync(
+            $"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/reserve", new { IsAnonymous = isAnonymous });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
+    {
+        _ = userId;
+        var response = await _httpClient.DeleteAsync($"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/reservation");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
+    {
+        _ = requestingUserId;
+        var response = await _httpClient.GetAsync($"{ItemByPublicIdUrl(wishlistPublicId, itemPublicId)}/reservation");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        // An unreserved item is returned as 204 No Content.
+        return response.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await response.Content.ReadFromJsonAsync<ItemReservationModel>();
+    }
+
+    private static string ItemByPublicIdUrl(string wishlistPublicId, string itemPublicId) =>
+        $"{BaseUrl}/{Uri.EscapeDataString(wishlistPublicId)}/items/by-public-id/{Uri.EscapeDataString(itemPublicId)}";
 
     public async Task<WishlistItemModel> UpdateWishlistItemByPublicIdAsync(string wishlistPublicId, int itemId, WishlistItemModel item)
     {
@@ -472,7 +549,10 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             return null;
         }
 
-        return await response.Content.ReadFromJsonAsync<ItemReservationModel>();
+        // An unreserved item is returned as 204 No Content.
+        return response.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await response.Content.ReadFromJsonAsync<ItemReservationModel>();
     }
 
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)

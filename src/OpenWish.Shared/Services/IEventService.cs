@@ -236,6 +236,12 @@ public interface IEventService
     /// <returns>True if the invitation was successfully resent.</returns>
     Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId);
 
+    /// <summary>Cancels an event invitation by its public ID. The caller must be the event organizer.</summary>
+    Task<bool> CancelEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId);
+
+    /// <summary>Resends an event invitation by its public ID. The caller must be the event organizer.</summary>
+    Task<bool> ResendEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId);
+
     /// <summary>Lists all pending invitations (not yet accepted or rejected) for a user.</summary>
     /// <param name="userId">The user ID to fetch pending invitations for.</param>
     /// <returns>Collection of event user models for pending invitations.</returns>
@@ -317,4 +323,7 @@ public interface IEventService
     /// <param name="ownerId">The user ID removing the rule (must be event owner).</param>
     /// <returns>True if the rule was successfully removed.</returns>
     Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId);
+
+    /// <summary>Removes a pairing rule by its public ID. The caller must be the event organizer.</summary>
+    Task<bool> RemovePairingRuleByPublicIdAsync(string rulePublicId, string ownerId);
 }

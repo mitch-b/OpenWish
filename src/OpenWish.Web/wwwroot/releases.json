@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.21.3",
+    "date": "2026-11-22",
+    "title": "Faster interactive pages",
+    "summary": "Pages become interactive sooner, without downloading a browser runtime in the background.",
+    "highlights": [
+      "Every interactive page uses the fastest mode measured on desktop and mobile.",
+      "Reordering, reservations, comments, invitations, and friend requests use public identifiers.",
+      "Event management keeps its data on screen while the page loads."
+    ]
+  },
+  {
     "version": "0.21.2",
     "date": "2026-11-22",
     "title": "Holiday follow-up fixes",

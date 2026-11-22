@@ -54,7 +54,7 @@ public class EventWishlistManagerMarkupTests
     {
         var markup = ReadManager();
 
-        Assert.Contains("disabled=\"@(_isSubmitting || !RendererInfo.IsInteractive)\"\n                                                @onclick=\"() => PromptWishlistRemoval(wishlist.Id)\"", markup.Replace("\r\n", "\n"), StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_isSubmitting || !RendererInfo.IsInteractive)\"\n                                                @onclick=\"() => PromptWishlistRemoval(wishlist.PublicId)\"", markup.Replace("\r\n", "\n"), StringComparison.Ordinal);
         Assert.Contains("disabled=\"@(!RendererInfo.IsInteractive)\" @onclick=\"LoadWishlistsAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("class=\"event-wishlist-refreshing small\" role=\"status\"", markup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(_isLoading ? \"true\" : \"false\")\"", markup, StringComparison.Ordinal);

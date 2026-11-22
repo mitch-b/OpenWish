@@ -637,6 +637,64 @@ public class EventController(IEventService eventService, ApiUserContextService u
         }
     }
 
+    [HttpDelete("invitations/by-public-id/{eventUserPublicId}")]
+    public async Task<IActionResult> CancelEventInvitationByPublicId(string eventUserPublicId)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.CancelEventInvitationByPublicIdAsync(eventUserPublicId, inviterId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("invitations/by-public-id/{eventUserPublicId}/resend")]
+    public async Task<IActionResult> ResendEventInvitationByPublicId(string eventUserPublicId)
+    {
+        var inviterId = await _userContextService.GetUserIdAsync();
+        if (inviterId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.ResendEventInvitationByPublicIdAsync(eventUserPublicId, inviterId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, ex.Message);
+        }
+    }
+
     [HttpPost("invitations/{eventUserId}/resend")]
     public async Task<IActionResult> ResendEventInvitation(int eventUserId)
     {
@@ -911,6 +969,33 @@ public class EventController(IEventService eventService, ApiUserContextService u
         catch (UnauthorizedAccessException ex)
         {
             return Forbid(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("pairing-rules/by-public-id/{rulePublicId}")]
+    public async Task<IActionResult> RemovePairingRuleByPublicId(string rulePublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+        try
+        {
+            var result = await _eventService.RemovePairingRuleByPublicIdAsync(rulePublicId, userId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
         catch (InvalidOperationException ex)
         {

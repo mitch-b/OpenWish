@@ -352,26 +352,23 @@ async function recordDashboardWelcomeStates(page) {
     record();
   });
 
-  // Wrapped so the caller can await setup without waiting for the circuit to connect.
-  return {
-    socket: page.waitForEvent("websocket", {
-      predicate: socket => socket.url().includes("/_blazor"),
-      timeout: 30000
-    }).catch(error => ({ error }))
-  };
+  // Interactive pages may activate through a server circuit or WebAssembly, so track both kinds of traffic.
+  const activity = { lastAt: Date.now() };
+  const touch = () => { activity.lastAt = Date.now(); };
+  page.on("request", touch);
+  page.on("requestfinished", touch);
+  page.on("websocket", socket => socket.on("framereceived", touch));
+  return activity;
 }
 
-async function assertDashboardWelcomeSurvivesHydration(page, circuit) {
-  const socket = await circuit.socket;
-  if (socket.error) {
-    throw new Error(`The dashboard never opened an interactive circuit: ${socket.error.message}`);
-  }
-  let lastFrameAt = Date.now();
-  socket.on("framereceived", () => {
-    lastFrameAt = Date.now();
-  });
+async function assertDashboardWelcomeSurvivesHydration(page, activity) {
+  // The notification bell stays disabled until its renderer is interactive.
+  await page.locator(".notification-bell:not([disabled])").waitFor({ state: "visible", timeout: 60000 })
+    .catch(error => {
+      throw new Error(`The dashboard never became interactive: ${error.message}`);
+    });
   const deadline = Date.now() + 15000;
-  while (Date.now() - lastFrameAt < 1500 && Date.now() < deadline) {
+  while (Date.now() - activity.lastAt < 1500 && Date.now() < deadline) {
     await page.waitForTimeout(100);
   }
 
@@ -400,7 +397,12 @@ async function assertDashboardContentSurvivesHydration(page) {
 }
 
 async function assertMinimumTouchTarget(locator, description) {
-  const bounds = await locator.boundingBox();
+  let bounds = await locator.boundingBox();
+  if (!bounds) {
+    // WebAssembly hydration replaces prerendered nodes, which can detach the element between lookup and measurement.
+    await locator.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    bounds = await locator.boundingBox();
+  }
   const subpixelTolerance = 0.01;
   if (!bounds ||
       bounds.width + subpixelTolerance < 44 ||
@@ -2547,9 +2549,9 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The installed app cannot receive shared product links.");
   }
 
-  const dashboardCircuit = await recordDashboardWelcomeStates(page);
+  const dashboardActivity = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Quick add an idea", visitedRoutes);
-  await assertDashboardWelcomeSurvivesHydration(page, dashboardCircuit);
+  await assertDashboardWelcomeSurvivesHydration(page, dashboardActivity);
   if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
     throw new Error("Pages do not link the web app manifest.");
   }
@@ -3362,10 +3364,20 @@ async function verifyFamilyExchangeJourney(browser, results) {
   const expectedRemovalFailure = `${baseUrl}/api/events/${event.publicId}/wishlists/${myList.publicId}`;
   const unexpectedResponses = diagnostics.failedResponses.filter(response =>
     response !== `404 ${expectedRemovalFailure}`);
+  // In WebAssembly the expected removal failure is a browser request, so Chromium also logs it once to the console.
+  let expectedRemovalConsoleErrors = diagnostics.failedResponses.length - unexpectedResponses.length;
+  const unexpectedBrowserErrors = diagnostics.browserErrors.filter(error => {
+    if (expectedRemovalConsoleErrors > 0 &&
+        error === "Failed to load resource: the server responded with a status of 404 (Not Found)") {
+      expectedRemovalConsoleErrors--;
+      return false;
+    }
+    return true;
+  });
   if (signupDiagnostics.browserErrors.length || signupDiagnostics.failedResponses.length ||
-      diagnostics.browserErrors.length || unexpectedResponses.length) {
+      unexpectedBrowserErrors.length || unexpectedResponses.length) {
     throw new Error(`Family journey browser errors: ${JSON.stringify({
-      signupDiagnostics, browserErrors: diagnostics.browserErrors, unexpectedResponses
+      signupDiagnostics, browserErrors: unexpectedBrowserErrors, unexpectedResponses
     })}`);
   }
   await organizer.close();
@@ -3493,11 +3505,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const visitedRoutes = [];
   const loginStatus = await login(context, "guest", guestEmail);
 
-  const circuit = await recordDashboardWelcomeStates(page);
+  const activity = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Your gift season, together.", visitedRoutes);
   const firstRunWelcome = page.locator(".dashboard-hero[data-welcome='FirstRun']");
   await firstRunWelcome.getByText("Welcome to OpenWish").waitFor({ state: "visible" });
-  await assertDashboardWelcomeSurvivesHydration(page, circuit);
+  await assertDashboardWelcomeSurvivesHydration(page, activity);
   await assertDashboardContentSurvivesHydration(page);
   await firstRunWelcome.getByText("You're invited to Holiday Gift Exchange.", { exact: false })
     .waitFor({ state: "visible" });
@@ -3733,7 +3745,6 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     throw new Error(`A shared wishlist did not name its owner: ${ownerSubtitle}`);
   }
   await screenshot(page, "wishlist-shopper-grid.png");
-  await screenshot(page, "readme-shopper.png", false);
   await guestGridCard.getByRole("button", { name: "Reserve gift" }).click();
   await guestGridCard.locator(".item-coordination").waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Grid view", pressed: true }).waitFor({ state: "visible" });
@@ -4727,13 +4738,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await assertNoHorizontalScroll(ownerPage, "wishlist gift hints");
     await screenshot(ownerPage, "wishlist-gift-hints-mobile.png");
     const ownHints = await ownerContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-family-gift-ideas`);
-    if (ownHints.status() !== 404) {
+    if (ownHints.status() !== 204) {
       throw new Error(`An owner was served their own gift hints panel data (${ownHints.status()}).`);
     }
     const guestContext = await browser.newContext();
     await login(guestContext, "guest", guestEmail);
     const guestHints = await guestContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-jordan-favorites`);
-    if (guestHints.status() !== 404) {
+    if (guestHints.status() !== 204) {
       throw new Error(`A non-friend could read gift hints (${guestHints.status()}).`);
     }
     await guestContext.close();
@@ -5689,7 +5700,6 @@ async function verifyMobileJourney(browser, manifest, results) {
     throw new Error(`The returning mobile dashboard welcome is too tall (${welcomeBox?.height}px).`);
   }
   await screenshot(page, "home-mobile.png");
-  await screenshot(page, "readme-mobile.png", false);
   await assertDashboardWelcomeWrapsLongNames(
     page,
     ".dashboard-welcome",
@@ -6595,33 +6605,6 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await ideaGrid.scrollIntoViewIfNeeded();
   await ideaGrid.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas.png") });
 
-  // Server-only layout components can keep Auto on the server. Select its existing WASM payload in this test only.
-  await page.addInitScript(wishlistPath => {
-    if (location.pathname !== wishlistPath) return;
-    const selectWasm = comment => {
-      if (!comment.textContent.startsWith("Blazor:{")) return;
-      const descriptor = JSON.parse(comment.textContent.slice("Blazor:".length));
-      if (descriptor.type === "auto") {
-        comment.textContent = `Blazor:${JSON.stringify({ ...descriptor, type: "webassembly" })}`;
-      }
-    };
-    new MutationObserver(records => {
-      for (const record of records) {
-        for (const added of record.addedNodes) {
-          if (added.nodeType === Node.COMMENT_NODE) selectWasm(added);
-          const walker = document.createTreeWalker(added, NodeFilter.SHOW_COMMENT);
-          while (walker.nextNode()) selectWasm(walker.currentNode);
-        }
-      }
-    }).observe(document, { childList: true, subtree: true });
-  }, `/wishlists/${allowedList.id}`);
-  const wasmItems = page.waitForResponse(response =>
-    response.url().includes(`/api/wishlists/${allowedList.id}/items`) && response.status() === 200, { timeout: 120000 });
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await wasmItems.catch(error => {
-    throw new Error(`${error.message}; WebAssembly diagnostics: ${JSON.stringify(diagnostics)}`);
-  });
-  await page.getByText("From Studio Notebook").first().waitFor({ state: "visible" });
   for (let attempt = 0; attempt < 100 && !await page.locator("#wishlist-item-dialog").isVisible(); attempt++) {
     await page.getByRole("button", { name: "Edit Camel wool coat" }).first().click();
     await page.waitForTimeout(100);
@@ -6632,20 +6615,16 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   });
   await screenshot(page, "connected-app-edit-note.png");
   if (await dialog.getByTestId("add-another-item").count() !== 0) {
-    throw new Error("A JSON-loaded existing idea was presented as a new item.");
+    throw new Error("An existing idea was presented as a new item.");
   }
-  const savedInWasm = page.waitForResponse(response =>
-    response.request().method() === "PUT" &&
-    response.url().includes(`/items/by-public-id/${coat.json.id}`) && response.status() === 200);
   await dialog.getByRole("button", { name: "Save changes" }).click();
-  await savedInWasm;
   await dialog.waitFor({ state: "detached" });
   const afterOwnerEdit = await connectedAppApi(token.access_token, "GET", "items");
   if (afterOwnerEdit.json.length !== 2 || !afterOwnerEdit.json.some(item => item.id === coat.json.id)) {
-    throw new Error("Editing in WebAssembly duplicated an idea or changed its identity.");
+    throw new Error("Editing an app-added idea duplicated it or changed its identity.");
   }
   assertions.push("ideas show their source app, and editing one explains the sync");
-  assertions.push("WebAssembly editing preserves the sync warning, public identity, and existing idea without duplicating it");
+  assertions.push("editing preserves the sync warning, public identity, and existing idea without duplicating it");
 
   await page.getByRole("link", { name: "Integrations", exact: true }).click();
   await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });

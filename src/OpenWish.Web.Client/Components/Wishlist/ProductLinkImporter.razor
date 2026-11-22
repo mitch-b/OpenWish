@@ -84,6 +84,9 @@
     [Parameter] public string HelpText { get; set; } =
         "Paste a product link or text shared from a shopping app. Existing details won't be replaced.";
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Whether <see cref="Model"/> is an idea that has already been saved.</summary>
+    [Parameter] public bool IsSavedItem { get; set; }
     [Parameter] public bool IsImporting { get; set; }
     [Parameter] public EventCallback<bool> IsImportingChanged { get; set; }
     [Parameter] public EventCallback<ProductImportResult> OnImported { get; set; }
@@ -238,7 +241,7 @@
         _imageFailed = true;
         // A new item's image came from a capture or import, so drop it if the browser can't show it.
         // A saved item keeps its image unless this importer just replaced it.
-        var isNewItem = Model.Id == 0;
+        var isNewItem = !IsSavedItem;
         var importedHere = _importedImage is not null && string.Equals(_importedImage, Model.Image, StringComparison.Ordinal);
         if (isNewItem || importedHere)
         {

@@ -362,6 +362,30 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task UpdateWishlistByPublicIdAsync_AcceptsModelWithoutSerializedInternalId()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var updated = await service.UpdateWishlistByPublicIdAsync(
+            wishlist.PublicId,
+            new WishlistModel { PublicId = wishlist.PublicId, Name = "Shared with some", IsFriendsOnly = true },
+            wishlist.OwnerId);
+
+        Assert.Equal("Shared with some", updated.Name);
+        await using var verify = factory.CreateDbContext();
+        var saved = await verify.Wishlists.SingleAsync(w => w.PublicId == wishlist.PublicId);
+        Assert.Equal(wishlist.Id, saved.Id);
+        Assert.True(saved.IsFriendsOnly);
+    }
+
+    [Fact]
     public async Task GetWishlistItemsByPublicIdAsync_IncludesActiveComments()
     {
         var factory = CreateFactory();
@@ -663,6 +687,36 @@ public class WishlistAuthorizationTests
 
         Assert.True(saved.UpdatedOn > DateTimeOffset.UtcNow.AddMinutes(-1));
         Assert.Empty(WishlistFreshness.GetStaleItems([saved], DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public async Task RemoveItemFromWishlistByPublicIdAsync_RechecksEditAccess()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var item = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist };
+        var permission = new WishlistPermission { Wishlist = wishlist, UserId = "editor", PermissionType = "Edit" };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.WishlistItems.Add(item);
+            context.WishlistPermissions.Add(permission);
+            await context.SaveChangesAsync();
+        }
+
+        await using (var context = factory.CreateDbContext())
+        {
+            (await context.WishlistPermissions.SingleAsync()).Deleted = true;
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.RemoveItemFromWishlistByPublicIdAsync(wishlist.PublicId, item.PublicId, "editor"));
+        await using (var verificationContext = factory.CreateDbContext())
+        {
+            Assert.False((await verificationContext.WishlistItems.SingleAsync()).Deleted);
+        }
+
     }
 
     [Fact]

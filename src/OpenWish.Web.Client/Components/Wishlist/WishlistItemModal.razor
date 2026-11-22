@@ -45,6 +45,7 @@
                                          InputId="product-url-import-modal"
                                          HelpText="Optional: paste a link or text shared from a shopping app and we'll fill in what we can. Existing details won't be replaced."
                                          Disabled="@_isSubmitting"
+                                         IsSavedItem="@_isEditing"
                                          @bind-IsImporting="_isImporting"
                                          InitialLink="@_initialImportText"
                                          OnImported="HandleProductImported"
@@ -217,12 +218,12 @@
     /// </summary>
     public void Show(WishlistItemModel? model = null, string? importText = null)
     {
-        _isEditing = model is not null && (model.Id > 0 || !string.IsNullOrWhiteSpace(model.PublicId));
+        _isEditing = model is not null && !string.IsNullOrWhiteSpace(model.PublicId);
         Model = model ?? new WishlistItemModel();
         _initialImportText = importText;
         _saveError = null;
         _lastAddedName = null;
-        if (Model.Id == 0 && string.IsNullOrWhiteSpace(Model.PublicId))
+        if (string.IsNullOrWhiteSpace(Model.PublicId))
         {
             Model.PublicId = Guid.NewGuid().ToString();
         }
@@ -278,7 +279,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to save wishlist item {WishlistItemId}", Model.Id);
+            Logger.LogError(ex, "Failed to save wishlist item {WishlistItemPublicId}", Model.PublicId);
             _saveError = _isEditing
                 ? "We couldn't save these changes. Review the details and try again."
                 : "We couldn't add this item. Review the details and try again.";

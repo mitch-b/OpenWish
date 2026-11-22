@@ -207,6 +207,96 @@ public class WishlistItemCommentTests
         Assert.True(deleted.Deleted);
     }
 
+    [Fact]
+    public async Task CommentPublicIdOverloads_AddListAndRemoveOnlyForAuthorizedUsers()
+    {
+        var factory = CreateFactory();
+        string wishlistPublicId;
+        string itemPublicId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "owner", UserName = "owner" },
+                new ApplicationUser { Id = "commenter", UserName = "commenter" },
+                new ApplicationUser { Id = "stranger", UserName = "stranger" });
+
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
+            var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
+            context.WishlistItems.Add(item);
+            context.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, UserId = "commenter", PermissionType = "View" });
+
+            await context.SaveChangesAsync();
+            wishlistPublicId = wishlist.PublicId;
+            itemPublicId = item.PublicId;
+        }
+
+        var service = CreateService(factory);
+        var added = await service.AddCommentToItemByPublicIdAsync(wishlistPublicId, itemPublicId, "commenter", "Great pick");
+        var comment = Assert.Single(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId, "commenter"));
+        Assert.Equal(added.PublicId, comment.PublicId);
+
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "stranger"));
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync("missing", "commenter"));
+        Assert.True(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "commenter"));
+        Assert.Empty(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId, "commenter"));
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "commenter"));
+    }
+
+    [Fact]
+    public async Task ItemPublicIdOperations_TreatItemsTheViewerCannotSeeAsMissing()
+    {
+        var factory = CreateFactory();
+        string wishlistPublicId;
+        string privatePublicId;
+        string surprisePublicId;
+        string visiblePublicId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "owner", UserName = "owner" },
+                new ApplicationUser { Id = "shopper", UserName = "shopper" },
+                new ApplicationUser { Id = "stranger", UserName = "stranger" });
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
+            var privateItem = new WishlistItem { Name = "Private", Wishlist = wishlist, IsPrivate = true };
+            var surprise = new WishlistItem { Name = "Surprise", Wishlist = wishlist, IsHiddenFromOwner = true };
+            var visible = new WishlistItem { Name = "Visible", Wishlist = wishlist };
+            context.WishlistItems.AddRange(privateItem, surprise, visible);
+            context.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, UserId = "shopper", PermissionType = "View" });
+            await context.SaveChangesAsync();
+            wishlistPublicId = wishlist.PublicId;
+            privatePublicId = privateItem.PublicId;
+            visiblePublicId = visible.PublicId;
+            surprisePublicId = surprise.PublicId;
+        }
+
+        var service = CreateService(factory);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemCommentsByPublicIdAsync(wishlistPublicId, privatePublicId, "shopper"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.AddCommentToItemByPublicIdAsync(wishlistPublicId, privatePublicId, "shopper", "Hi"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.ReserveItemByPublicIdAsync(wishlistPublicId, privatePublicId, "shopper"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemReservationByPublicIdAsync(wishlistPublicId, privatePublicId, "shopper"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemCommentsByPublicIdAsync(wishlistPublicId, surprisePublicId, "owner"));
+
+        Assert.Empty(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, privatePublicId, "owner"));
+        Assert.True(await service.ReserveItemByPublicIdAsync(wishlistPublicId, surprisePublicId, "shopper"));
+
+        // A caller without list access (for example after access is revoked) can't reach any item.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemCommentsByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.AddCommentToItemByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger", "Hi"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.ReserveItemByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemReservationByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
+    }
+
     private static TestDbContextFactory CreateFactory() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

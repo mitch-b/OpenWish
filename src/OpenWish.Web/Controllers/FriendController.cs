@@ -182,6 +182,62 @@ public class FriendController : ControllerBase
         }
     }
 
+    [HttpPost("request/by-public-id/{requestPublicId}/accept")]
+    public async Task<IActionResult> AcceptRequestByPublicId(string requestPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _friendService.AcceptFriendRequestByPublicIdAsync(requestPublicId, userId));
+    }
+
+    [HttpPost("request/by-public-id/{requestPublicId}/reject")]
+    public async Task<IActionResult> RejectRequestByPublicId(string requestPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _friendService.RejectFriendRequestByPublicIdAsync(requestPublicId, userId));
+    }
+
+    [HttpPost("request/by-public-id/{requestPublicId}/cancel")]
+    public async Task<IActionResult> CancelRequestByPublicId(string requestPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _friendService.CancelFriendRequestByPublicIdAsync(requestPublicId, userId);
+        return result ? Ok(true) : NotFound();
+    }
+
+    [HttpPost("request/by-public-id/{requestPublicId}/resend")]
+    public async Task<IActionResult> ResendRequestByPublicId(string requestPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _friendService.ResendFriendRequestByPublicIdAsync(requestPublicId, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpPost("invite")]
     [EnableRateLimiting("invitations")]
     public async Task<IActionResult> SendFriendInviteByEmail([FromQuery] string email)
@@ -272,6 +328,40 @@ public class FriendController : ControllerBase
 
         var result = await _friendService.CancelPendingFriendInviteAsync(inviteId, userId);
         return result ? Ok(true) : NotFound();
+    }
+
+    [HttpPost("pending-invite/by-public-id/{invitePublicId}/cancel")]
+    public async Task<IActionResult> CancelPendingFriendInviteByPublicId(string invitePublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _friendService.CancelPendingFriendInviteByPublicIdAsync(invitePublicId, userId);
+        return result ? Ok(true) : NotFound();
+    }
+
+    [HttpPost("pending-invite/by-public-id/{invitePublicId}/resend")]
+    public async Task<IActionResult> ResendPendingFriendInviteByPublicId(string invitePublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var result = await _friendService.ResendPendingFriendInviteByPublicIdAsync(invitePublicId, userId);
+            return result ? Ok(true) : NotFound();
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                "Invitation email could not be delivered. Try again later.");
+        }
     }
 
     [HttpPost("pending-invite/{inviteId}/resend")]

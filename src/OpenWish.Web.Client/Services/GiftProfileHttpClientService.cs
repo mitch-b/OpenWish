@@ -26,7 +26,7 @@ public class GiftProfileHttpClientService(HttpClient httpClient) : IGiftProfileS
     public async Task<GiftProfileModel?> GetProfileForWishlistAsync(string wishlistPublicId, string viewerId)
     {
         var response = await httpClient.GetAsync($"{BaseUrl}/wishlists/{Uri.EscapeDataString(wishlistPublicId)}");
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
         {
             return null;
         }

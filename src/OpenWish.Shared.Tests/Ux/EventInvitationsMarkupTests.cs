@@ -49,7 +49,7 @@ public class EventInvitationsMarkupTests
     {
         var markup = ReadComponent(_invitationsPath);
 
-        Assert.Contains("@if (_copiedInvitationId == invitation.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (_copiedInvitationId == invitation.PublicId)", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Link copied</span>", markup, StringComparison.Ordinal);
         Assert.Contains("@implements IDisposable", markup, StringComparison.Ordinal);
     }

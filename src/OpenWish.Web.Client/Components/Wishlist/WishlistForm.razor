@@ -144,11 +144,11 @@
                 @if (IsSubmitting)
                 {
                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                    <span>@(Model.Id == 0 ? "Creating wishlist..." : "Saving changes...")</span>
+                    <span>@(string.IsNullOrEmpty(Model.PublicId) ? "Creating wishlist..." : "Saving changes...")</span>
                 }
                 else
                 {
-                    <span>@(Model.Id == 0 ? "Create wishlist" : "Save changes")</span>
+                    <span>@(string.IsNullOrEmpty(Model.PublicId) ? "Create wishlist" : "Save changes")</span>
                 }
             </button>
             @if (OnCancel.HasDelegate)

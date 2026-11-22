@@ -4,6 +4,22 @@ All notable user-facing changes to OpenWish are documented here.
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-11-22
+
+### Changed
+
+- Interactive pages use a live server connection, the fastest mode in a
+  benchmark of every page on desktop and simulated mobile, and no longer
+  download the browser WebAssembly runtime in the background.
+
+### Fixed
+
+- Reordering ideas, reservations, comments, invitations, friend requests, and
+  gift exchange rules use public identifiers, so they work wherever a page
+  runs.
+- Event management and invitations no longer flash a loading state as the page
+  becomes interactive.
+
 ## [0.21.2] - 2026-11-22
 
 ### Fixed

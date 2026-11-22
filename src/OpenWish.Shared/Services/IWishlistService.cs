@@ -355,4 +355,29 @@ public interface IWishlistService
     /// <param name="itemId">The internal item ID.</param>
     /// <returns>True if the item has an active reservation.</returns>
     Task<bool> IsItemReservedAsync(int itemId);
+
+    // Item operations addressed entirely by public identifiers. Interactive WebAssembly
+    // components never receive internal integer keys, so they must use these overloads.
+
+    /// <summary>Removes an item from a wishlist by public wishlist and item IDs after checking the caller can still edit it.</summary>
+    Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId);
+
+    /// <summary>Adds a comment to a wishlist item by public wishlist and item IDs.</summary>
+    Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId, string text);
+
+    /// <summary>Lists comments on a wishlist item by public wishlist and item IDs.</summary>
+    Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId);
+
+    /// <summary>Removes a comment by its public ID, verifying the user is the author or wishlist owner.</summary>
+    Task<bool> RemoveItemCommentByPublicIdAsync(string commentPublicId, string userId);
+
+    /// <summary>Reserves an item by public wishlist and item IDs.</summary>
+    Task<bool> ReserveItemByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId, bool isAnonymous = false);
+
+    /// <summary>Cancels a user's reservation by public wishlist and item IDs.</summary>
+    Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId);
+
+    /// <summary>Retrieves the reservation on an item by public wishlist and item IDs, filtered by requestor access.</summary>
+    Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(string wishlistPublicId, string itemPublicId, string requestingUserId);
 }

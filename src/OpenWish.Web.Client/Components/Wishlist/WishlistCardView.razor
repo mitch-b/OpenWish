@@ -2,12 +2,13 @@
     @foreach (var item in Items)
     {
         <div class="col-md-6 col-lg-4">
-            @if (EditingItemId == item.Id)
+            @if (EditingItemId == item.PublicId)
             {
                 <div class="card">
                     <div class="card-body">
                         <WishlistItemForm
                             Model="@item"
+                            IsEditing="true"
                             OnSubmit="@HandleEditSubmit"
                             OnCancel="@HandleOnCancel" />
                     </div>
@@ -37,16 +38,16 @@
     [Parameter] public string OwnerId { get; set; } = "";
     [Parameter] public bool IsOwner { get; set; } = false;
     
-    private int? EditingItemId;
+    private string? EditingItemId;
     
-    private void StartEdit(int itemId)
+    private void StartEdit(string itemId)
     {
         EditingItemId = itemId;
     }
     
     private async Task OnEditWithStartEdit(WishlistItemModel item)
     {
-        StartEdit(item.Id);
+        StartEdit(item.PublicId);
         await OnEdit.InvokeAsync(item);
     }
     

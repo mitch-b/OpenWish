@@ -48,6 +48,7 @@ public class GiftProfileController(IGiftProfileService giftProfileService, ApiUs
         }
 
         var profile = await giftProfileService.GetProfileForWishlistAsync(wishlistPublicId, userId);
-        return profile is null ? NotFound() : Ok(profile);
+        // No content covers both hidden and empty hints, so neither is disclosed or logged as a browser error.
+        return profile is null ? NoContent() : Ok(profile);
     }
 }

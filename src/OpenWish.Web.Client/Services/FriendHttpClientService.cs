@@ -136,6 +136,70 @@ public class FriendHttpClientService(HttpClient httpClient) : IFriendService
         return await response.Content.ReadFromJsonAsync<bool>();
     }
 
+    public async Task<bool> AcceptFriendRequestByPublicIdAsync(string requestPublicId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{RequestByPublicIdUrl(requestPublicId)}/accept", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> RejectFriendRequestByPublicIdAsync(string requestPublicId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{RequestByPublicIdUrl(requestPublicId)}/reject", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> CancelFriendRequestByPublicIdAsync(string requestPublicId, string requesterId)
+    {
+        var response = await _httpClient.PostAsync($"{RequestByPublicIdUrl(requestPublicId)}/cancel", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<FriendRequestModel> ResendFriendRequestByPublicIdAsync(string requestPublicId, string requesterId)
+    {
+        var response = await _httpClient.PostAsync($"{RequestByPublicIdUrl(requestPublicId)}/resend", null);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<FriendRequestModel>()
+            ?? throw new HttpRequestException("Failed to resend friend request");
+    }
+
+    public async Task<bool> CancelPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{PendingInviteByPublicIdUrl(invitePublicId)}/cancel", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<bool> ResendPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId)
+    {
+        var response = await _httpClient.PostAsync($"{PendingInviteByPublicIdUrl(invitePublicId)}/resend", null);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    private static string RequestByPublicIdUrl(string requestPublicId) =>
+        $"{BaseUrl}/request/by-public-id/{Uri.EscapeDataString(requestPublicId)}";
+
+    private static string PendingInviteByPublicIdUrl(string invitePublicId) =>
+        $"{BaseUrl}/pending-invite/by-public-id/{Uri.EscapeDataString(invitePublicId)}";
+
     public Task<IEnumerable<ApplicationUserModel>> SearchUsersAsync(string searchTerm, string currentUserId, int maxResults = 10)
     {
         // Username search removed for privacy/security reasons

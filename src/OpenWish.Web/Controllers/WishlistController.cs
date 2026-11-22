@@ -514,6 +514,40 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         }
     }
 
+    [HttpDelete("{wishlistPublicId}/items/by-public-id/{itemPublicId}")]
+    public async Task<IActionResult> RemoveItemFromWishlistByPublicId(string wishlistPublicId, string itemPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var canEdit = await _wishlistService.CanUserEditWishlistByPublicIdAsync(wishlistPublicId, userId);
+            if (!canEdit)
+            {
+                return Forbid();
+            }
+
+            var result = await _wishlistService.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, itemPublicId, userId);
+            if (!result)
+            {
+                return NotFound();
+            }
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
     // Wishlist sharing endpoints
     [HttpPost("{wishlistPublicId}/permissions")]
     public async Task<ActionResult<WishlistPermissionModel>> ShareWishlist(string wishlistPublicId, [FromBody] ShareRequest request)
@@ -787,6 +821,136 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
 
         var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemId, userId);
         return Ok(reservation);
+    }
+
+    [HttpPost("{wishlistPublicId}/items/by-public-id/{itemPublicId}/comments")]
+    public async Task<ActionResult<ItemCommentModel>> AddCommentByPublicId(
+        string wishlistPublicId, string itemPublicId, [FromBody] CommentRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.AddCommentToItemByPublicIdAsync(wishlistPublicId, itemPublicId, userId, request.Text));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("{wishlistPublicId}/items/by-public-id/{itemPublicId}/comments")]
+    public async Task<ActionResult<IEnumerable<ItemCommentModel>>> GetCommentsByPublicId(string wishlistPublicId, string itemPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpDelete("comments/by-public-id/{commentPublicId}")]
+    public async Task<ActionResult<bool>> RemoveCommentByPublicId(string commentPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(await _wishlistService.RemoveItemCommentByPublicIdAsync(commentPublicId, userId));
+    }
+
+    [HttpPost("{wishlistPublicId}/items/by-public-id/{itemPublicId}/reserve")]
+    public async Task<ActionResult<bool>> ReserveItemByPublicId(
+        string wishlistPublicId, string itemPublicId, [FromBody] ReservationRequest request)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+            {
+                return Forbid();
+            }
+
+            return Ok(await _wishlistService.ReserveItemByPublicIdAsync(wishlistPublicId, itemPublicId, userId, request.IsAnonymous));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpDelete("{wishlistPublicId}/items/by-public-id/{itemPublicId}/reservation")]
+    public async Task<ActionResult<bool>> CancelReservationByPublicId(string wishlistPublicId, string itemPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            return Ok(await _wishlistService.CancelReservationByPublicIdAsync(wishlistPublicId, itemPublicId, userId));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpGet("{wishlistPublicId}/items/by-public-id/{itemPublicId}/reservation")]
+    public async Task<ActionResult<ItemReservationModel>> GetReservationByPublicId(string wishlistPublicId, string itemPublicId)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            if (!await _wishlistService.CanUserAccessWishlistByPublicIdAsync(wishlistPublicId, userId))
+            {
+                return Forbid();
+            }
+
+            var reservation = await _wishlistService.GetItemReservationByPublicIdAsync(wishlistPublicId, itemPublicId, userId);
+            return reservation is null ? NoContent() : Ok(reservation);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpGet("{wishlistPublicId}/friends-with-access")]

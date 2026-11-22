@@ -176,10 +176,10 @@
                                 @foreach (var pendingInvite in filteredPendingInvites)
                                 {
                                     var isPendingInviteSelected = _selectedPendingInviteEmails.Contains(pendingInvite.Email);
-                                    <label class="friend-option border-bottom" for="pending-@pendingInvite.Id">
+                                    <label class="friend-option border-bottom" for="pending-@pendingInvite.PublicId">
                                         <input class="form-check-input"
                                                type="checkbox"
-                                               id="pending-@pendingInvite.Id"
+                                               id="pending-@pendingInvite.PublicId"
                                                checked="@isPendingInviteSelected"
                                                disabled="@_isSending"
                                                @onchange="args => TogglePendingInviteSelection(pendingInvite.Email, IsChecked(args.Value))" />
@@ -418,7 +418,7 @@
                                                 disabled="@ActionsDisabled"
                                                 @onclick="() => CopyInvitationLinkAsync(invitation)"
                                                 aria-label="@($"Copy invitation link for {displayName}")">
-                                            @if (_copiedInvitationId == invitation.Id)
+                                            @if (_copiedInvitationId == invitation.PublicId)
                                             {
                                                 <OpenWishIcon Name="check-lg" />
                                                 <span>Link copied</span>
@@ -431,8 +431,8 @@
                                         </button>
                                         <button type="button" class="btn btn-outline-secondary btn-sm"
                                                 disabled="@ActionsDisabled"
-                                                @onclick="() => HandleResendInvitation(invitation.Id)">
-                                            @if (IsProcessingInvitation(invitation.Id, "resend"))
+                                                @onclick="() => HandleResendInvitation(invitation.PublicId)">
+                                            @if (IsProcessingInvitation(invitation.PublicId, "resend"))
                                             {
                                                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                 <span>Resending...</span>
@@ -447,7 +447,7 @@
                                                 id="@($"cancel-invitation-{invitation.PublicId}")"
                                                 disabled="@ActionsDisabled"
                                                 @onclick="() => PromptCancelInvitation(invitation)">
-                                            @if (IsProcessingInvitation(invitation.Id, "cancel"))
+                                            @if (IsProcessingInvitation(invitation.PublicId, "cancel"))
                                             {
                                                 <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                 <span>Canceling...</span>
@@ -486,8 +486,8 @@
                             <div class="invitation-actions">
                                 <button type="button" class="btn btn-primary btn-sm"
                                         disabled="@ActionsDisabled"
-                                        @onclick="() => HandleAcceptInvitation(invitation.Id)">
-                                    @if (IsProcessingInvitation(invitation.Id, "accept"))
+                                        @onclick="() => HandleAcceptInvitation(invitation.PublicId)">
+                                    @if (IsProcessingInvitation(invitation.PublicId, "accept"))
                                     {
                                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                         <span>Accepting...</span>
@@ -500,8 +500,8 @@
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm"
                                         disabled="@ActionsDisabled"
-                                        @onclick="() => HandleRejectInvitation(invitation.Id)">
-                                    @if (IsProcessingInvitation(invitation.Id, "reject"))
+                                        @onclick="() => HandleRejectInvitation(invitation.PublicId)">
+                                    @if (IsProcessingInvitation(invitation.PublicId, "reject"))
                                     {
                                         <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                         <span>Declining...</span>
@@ -541,7 +541,7 @@
         <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@IsInvitationActionBusy"
                 @onclick="CloseCancelInvitation">Keep invitation</button>
         <button type="button" class="btn btn-danger" disabled="@IsInvitationActionBusy" @onclick="ConfirmCancelInvitation">
-            @if (_invitationPendingCancel is not null && IsProcessingInvitation(_invitationPendingCancel.Id, "cancel"))
+            @if (_invitationPendingCancel is not null && IsProcessingInvitation(_invitationPendingCancel.PublicId, "cancel"))
             {
                 <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
                 <span>Canceling...</span>
@@ -689,7 +689,7 @@
     private bool _isSending = false;
     private bool _showRemoveConfirmation = false;
     private bool _isRemovingParticipant;
-    private int? _processingInvitationId;
+    private string? _processingInvitationId;
     private string? _processingInvitationAction;
     private string _filter = "All";
     private string _inviteMode = "email";
@@ -702,10 +702,10 @@
     private string? _loadErrorMessage;
     private string? _friendsLoadError;
     private EventUserModel? _invitationPendingRemoval;
-    private bool IsInvitationActionBusy => _processingInvitationId.HasValue || _isRemovingParticipant || _isMarkingAccepted;
+    private bool IsInvitationActionBusy => _processingInvitationId is not null || _isRemovingParticipant || _isMarkingAccepted;
     private bool ActionsDisabled => IsInvitationActionBusy || !RendererInfo.IsInteractive;
     private bool ComposerDisabled => _isSending || !RendererInfo.IsInteractive;
-    private int? _copiedInvitationId;
+    private string? _copiedInvitationId;
     private CancellationTokenSource? _copiedResetCts;
     private Dialog? _cancelInvitationDialog;
     private EventUserModel? _invitationPendingCancel;
@@ -717,7 +717,7 @@
             : AllowGuests
                 ? "Add people by email. They can accept and see their own match without creating an account."
                 : "Add people by email or from your friends. They'll get an email with a link to join.";
-    private bool IsProcessingInvitation(int invitationId, string action) =>
+    private bool IsProcessingInvitation(string invitationId, string action) =>
         _processingInvitationId == invitationId &&
         string.Equals(_processingInvitationAction, action, StringComparison.Ordinal);
     private IReadOnlyList<string> ParsedEmailAddresses => ParseEmailAddresses(_emailsToInvite);
@@ -756,9 +756,24 @@
             : (_pendingFriendInvites ?? Enumerable.Empty<PendingFriendInviteModel>())
                 .Where(invite => invite.Email.Contains(_friendSearchTerm, StringComparison.OrdinalIgnoreCase));
 
+    // Carried from prerendering so the list doesn't flash back to a busy state while WebAssembly reloads it.
+    [PersistentState]
+    public List<EventUserModel>? PrerenderedInvitations { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        if (PrerenderedInvitations is not null)
+        {
+            _invitations = PrerenderedInvitations;
+            _isLoading = false;
+            return;
+        }
+
         await LoadInvitations();
+        if (_loadErrorMessage is null)
+        {
+            PrerenderedInvitations = _invitations;
+        }
     }
 
     private bool IsCurrentUserInvitee(EventUserModel invitation)
@@ -1303,24 +1318,24 @@
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private async Task HandleAcceptInvitation(int invitationId)
+    private async Task HandleAcceptInvitation(string invitationId)
     {
         await RunInvitationActionAsync(
             invitationId,
             "accept",
             "Invitation accepted.",
             "The invitation couldn't be accepted. Try again.",
-            userId => EventService.AcceptEventInvitationAsync(invitationId, userId));
+            userId => EventService.AcceptEventInvitationByPublicIdAsync(invitationId, userId));
     }
 
-    private async Task HandleRejectInvitation(int invitationId)
+    private async Task HandleRejectInvitation(string invitationId)
     {
         await RunInvitationActionAsync(
             invitationId,
             "reject",
             "Invitation rejected.",
             "The invitation couldn't be rejected. Try again.",
-            userId => EventService.RejectEventInvitationAsync(invitationId, userId));
+            userId => EventService.RejectEventInvitationByPublicIdAsync(invitationId, userId));
     }
 
     private async Task CopyInvitationLinkAsync(EventUserModel invitation)
@@ -1339,7 +1354,7 @@
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", invitationLink);
             _inlineErrorMessage = null;
             _inlineSuccessMessage = $"Invitation link copied for {email}. Paste it anywhere to share.";
-            await ShowCopiedAsync(invitation.Id);
+            await ShowCopiedAsync(invitation.PublicId);
         }
         catch (JSException)
         {
@@ -1348,7 +1363,7 @@
         }
     }
 
-    private async Task ShowCopiedAsync(int invitationId)
+    private async Task ShowCopiedAsync(string invitationId)
     {
         _copiedResetCts?.Cancel();
         _copiedResetCts?.Dispose();
@@ -1372,7 +1387,7 @@
     private static bool IsAccepted(EventUserModel invitation) =>
         !invitation.Deleted && invitation.IsAccepted && HasStatus(invitation, "Accepted");
 
-    private async Task HandleResendInvitation(int invitationId)
+    private async Task HandleResendInvitation(string invitationId)
     {
         var name = GetInvitationName(invitationId);
         await RunInvitationActionAsync(
@@ -1380,7 +1395,7 @@
             "resend",
             $"Invitation resent to {name}.",
             $"The invitation for {name} couldn't be resent. Try again.",
-            userId => EventService.ResendEventInvitationAsync(invitationId, userId));
+            userId => EventService.ResendEventInvitationByPublicIdAsync(invitationId, userId));
     }
 
     private async Task HandleGuestAccess(EventUserModel invitation, bool revoke)
@@ -1393,7 +1408,7 @@
         try
         {
         await RunInvitationActionAsync(
-            invitation.Id, revoke ? "guest-revoke" : "guest-send",
+            invitation.PublicId, revoke ? "guest-revoke" : "guest-send",
             revoke ? "Private guest access revoked." : "A fresh private link was emailed. Previous links and sessions no longer work.",
             revoke ? "Private access couldn't be revoked. Reload and try again." : "Private access couldn't be emailed. Reload and resend.",
             userId => revoke
@@ -1407,7 +1422,7 @@
     }
 
     private bool IsProcessingGuest(EventUserModel invitation, string action) =>
-        _processingGuestPublicId == invitation.PublicId && IsProcessingInvitation(invitation.Id, action);
+        _processingGuestPublicId == invitation.PublicId && IsProcessingInvitation(invitation.PublicId, action);
 
     private void PromptGuestRevoke(EventUserModel invitation, bool remove)
     {
@@ -1425,7 +1440,7 @@
             if (_removeGuest)
             {
                 var invitation = _guestPendingRevoke;
-                await RunInvitationActionAsync(invitation.Id, "guest-remove", "Guest removed from the event.",
+                await RunInvitationActionAsync(invitation.PublicId, "guest-remove", "Guest removed from the event.",
                     "The guest couldn't be removed. Reset a drawn exchange before changing participants.",
                     userId => EventService.RemoveGuestParticipantAsync(EventId, invitation.PublicId, userId));
             }
@@ -1470,7 +1485,7 @@
             return;
         }
 
-        var invitationId = _invitationPendingCancel.Id;
+        var invitationId = _invitationPendingCancel.PublicId;
         await HandleCancelInvitation(invitationId);
         if (_cancelInvitationDialog is not null)
         {
@@ -1479,7 +1494,7 @@
         _invitationPendingCancel = null;
     }
 
-    private async Task HandleCancelInvitation(int invitationId)
+    private async Task HandleCancelInvitation(string invitationId)
     {
         var name = GetInvitationName(invitationId);
         await RunInvitationActionAsync(
@@ -1487,7 +1502,7 @@
             "cancel",
             $"Invitation canceled for {name}.",
             $"The invitation for {name} couldn't be canceled. Try again.",
-            userId => EventService.CancelEventInvitationAsync(invitationId, userId));
+            userId => EventService.CancelEventInvitationByPublicIdAsync(invitationId, userId));
     }
 
     private void PromptRemoveParticipant(EventUserModel invitation)
@@ -1608,14 +1623,14 @@
             : "Guest access revoked or not sent";
     }
 
-    private string GetInvitationName(int invitationId)
+    private string GetInvitationName(string invitationId)
     {
-        var invitation = _invitations.FirstOrDefault(item => item.Id == invitationId);
+        var invitation = _invitations.FirstOrDefault(item => item.PublicId == invitationId);
         return invitation is null ? "this participant" : GetInvitationDisplayName(invitation);
     }
 
     private async Task RunInvitationActionAsync(
-        int invitationId,
+        string invitationId,
         string action,
         string successMessage,
         string errorMessage,
@@ -1655,7 +1670,7 @@
         {
             Logger.LogError(
                 ex,
-                "Failed to {InvitationAction} invitation {InvitationId} for event {EventPublicId}",
+                "Failed to {InvitationAction} invitation {InvitationPublicId} for event {EventPublicId}",
                 action,
                 invitationId,
                 EventId);

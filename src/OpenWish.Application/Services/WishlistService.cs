@@ -1802,6 +1802,98 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await GetItemReservationAsync(wishlist.Id, itemId, requestingUserId);
     }
 
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        // Interactive Server pages call this directly, so recheck edit access in case it was revoked.
+        if (!await CanUserEditWishlistAsync(wishlistId, userId))
+        {
+            throw new UnauthorizedAccessException("You no longer have permission to edit this wishlist.");
+        }
+
+        return await RemoveItemFromWishlistAsync(wishlistId, itemId);
+    }
+
+    public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, string text)
+    {
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, userId);
+        return await AddCommentToItemAsync(wishlistId, itemId, userId, text);
+    }
+
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
+    {
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, requestingUserId);
+        return await GetItemCommentsAsync(wishlistId, itemId);
+    }
+
+    public async Task<bool> RemoveItemCommentByPublicIdAsync(string commentPublicId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var commentId = await context.ItemComments
+            .Where(c => c.PublicId == commentPublicId && !c.Deleted)
+            .Select(c => (int?)c.Id)
+            .SingleOrDefaultAsync();
+
+        return commentId.HasValue && await RemoveItemCommentAsync(commentId.Value, userId);
+    }
+
+    public async Task<bool> ReserveItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, bool isAnonymous = false)
+    {
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, userId);
+        return await ReserveItemAsync(wishlistId, itemId, userId, isAnonymous);
+    }
+
+    public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await CancelReservationAsync(wishlistId, itemId, userId);
+    }
+
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
+    {
+        var (wishlistId, itemId) = await ResolveVisibleItemKeysAsync(wishlistPublicId, itemPublicId, requestingUserId);
+        return await GetItemReservationAsync(wishlistId, itemId, requestingUserId);
+    }
+
+    // Deleted-item handling is left to the internal-key operations so both paths behave identically.
+    private async Task<(int WishlistId, int ItemId)> ResolveItemKeysAsync(string wishlistPublicId, string itemPublicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var keys = await context.WishlistItems
+            .AsNoTracking()
+            .Where(i => i.PublicId == itemPublicId &&
+                i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
+            .Select(i => new { i.WishlistId, i.Id })
+            .SingleOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        return (keys.WishlistId, keys.Id);
+    }
+
+    // Items the viewer can't see (no list access, private, hidden from the owner, or no longer active) are reported as missing.
+    private async Task<(int WishlistId, int ItemId)> ResolveVisibleItemKeysAsync(
+        string wishlistPublicId, string itemPublicId, string viewerId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var item = await context.WishlistItems
+            .AsNoTracking()
+            .Include(i => i.Wishlist)
+            .Where(i => i.PublicId == itemPublicId && !i.Deleted &&
+                i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
+            .SingleOrDefaultAsync();
+        if (item is null || !CanViewerSeeItem(item, item.Wishlist!.OwnerId, viewerId) ||
+            !await CanUserAccessWishlistInternalAsync(context, item.WishlistId, viewerId))
+        {
+            throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+        }
+
+        return (item.WishlistId, item.Id);
+    }
+
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

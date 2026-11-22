@@ -34,14 +34,14 @@ else
                     <div class="dropdown d-inline-block event-card-actions">
                         <button class="btn btn-outline-secondary btn-sm kebab-menu"
                                 type="button"
-                                id="dropdownMenu@(Event.Id)"
+                                id="dropdownMenu@(Event.PublicId)"
                                 data-bs-toggle="dropdown"
                                 aria-label="Actions for @Event.Name"
                                 aria-expanded="false"
                                 @onclick:stopPropagation="true">
                             <OpenWishIcon Name="three-dots-vertical" />
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.Id)">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Event.PublicId)">
                             <li>
                                 <button class="dropdown-item text-danger"
                                         @onclick="ShowDeleteDialog">
@@ -94,7 +94,7 @@ else
 
 <Dialog @ref="_deleteDialog"
         Title="@_deleteDialogTitle"
-        ReturnFocusElementId="@($"dropdownMenu{Event?.Id}")">
+        ReturnFocusElementId="@($"dropdownMenu{Event?.PublicId}")">
     <div class="modal-body">
         <p>@_deleteDialogMessage</p>
         @if (!string.IsNullOrWhiteSpace(_deleteErrorMessage))

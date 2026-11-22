@@ -11,11 +11,11 @@ public class FriendRequestsMarkupTests
     {
         var markup = ReadSocial("FriendRequestList.razor");
 
-        Assert.Equal(6, CountOccurrences(markup, "disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)\""));
-        Assert.Contains("IsBusy(\"accept\", request.Id) ? \"Accepting...\" : \"Accept\"", markup, StringComparison.Ordinal);
-        Assert.Contains("IsBusy(\"decline\", request.Id) ? \"Declining...\" : \"Decline\"", markup, StringComparison.Ordinal);
-        Assert.Contains("IsBusy(\"cancel\", request.Id) ? \"Canceling...\" : \"Cancel\"", markup, StringComparison.Ordinal);
-        Assert.Contains("IsBusy(\"cancel-invite\", invite.Id) ? \"Canceling...\" : \"Cancel\"", markup, StringComparison.Ordinal);
+        Assert.Equal(6, CountOccurrences(markup, "disabled=\"@(!RendererInfo.IsInteractive || _processingRequestId is not null)\""));
+        Assert.Contains("IsBusy(\"accept\", request.PublicId) ? \"Accepting...\" : \"Accept\"", markup, StringComparison.Ordinal);
+        Assert.Contains("IsBusy(\"decline\", request.PublicId) ? \"Declining...\" : \"Decline\"", markup, StringComparison.Ordinal);
+        Assert.Contains("IsBusy(\"cancel\", request.PublicId) ? \"Canceling...\" : \"Cancel\"", markup, StringComparison.Ordinal);
+        Assert.Contains("IsBusy(\"cancel-invite\", invite.PublicId) ? \"Canceling...\" : \"Cancel\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -108,6 +108,48 @@ public class EventServiceOrganizerAcceptTests
             new OrganizerAcceptInvitationRequest { DisplayName = "Grandma" }, "host"));
     }
 
+    [Fact]
+    public async Task CancelInvitationByPublicId_RequiresTheOrganizer()
+    {
+        var (service, database, _) = await CreateServiceAsync();
+
+        Assert.False(await service.CancelEventInvitationByPublicIdAsync("missing", "host"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.CancelEventInvitationByPublicIdAsync("email-invite", "member"));
+        Assert.True(await service.CancelEventInvitationByPublicIdAsync("email-invite", "host"));
+
+        await using var verify = Open(database);
+        Assert.True((await verify.EventUsers.SingleAsync(eu => eu.PublicId == "email-invite")).Deleted);
+    }
+
+    [Fact]
+    public async Task RemovePairingRuleByPublicId_RequiresTheOrganizer()
+    {
+        var (service, database, _) = await CreateServiceAsync();
+        await using (var update = Open(database))
+        {
+            var evt = await update.Events.SingleAsync(e => e.PublicId == "evt");
+            update.CustomPairingRules.Add(new CustomPairingRule
+            {
+                PublicId = "rule",
+                EventId = evt.Id,
+                SourceUserId = "host",
+                TargetUserId = "member",
+                RuleType = "Exclusion",
+                RuleDescription = "Couple"
+            });
+            await update.SaveChangesAsync();
+        }
+
+        Assert.False(await service.RemovePairingRuleByPublicIdAsync("missing", "host"));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.RemovePairingRuleByPublicIdAsync("rule", "member"));
+        Assert.True(await service.RemovePairingRuleByPublicIdAsync("rule", "host"));
+
+        await using var verify = Open(database);
+        Assert.True((await verify.CustomPairingRules.SingleAsync(pr => pr.PublicId == "rule")).Deleted);
+    }
+
     private static ApplicationDbContext Open(string database) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>().UseInMemoryDatabase(database).Options);
 

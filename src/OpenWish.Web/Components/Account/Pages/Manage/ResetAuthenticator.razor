@@ -12,7 +12,7 @@
 <PageTitle>Reset authenticator app</PageTitle>
 
 <StatusMessage />
-<h3>Reset authenticator app</h3>
+<h2>Reset authenticator app</h2>
 <div class="alert alert-warning" role="alert">
     <strong>Your current authenticator codes will stop working immediately.</strong>
     Two-factor authentication will turn off until you connect and verify the new key.
@@ -20,7 +20,7 @@
 <p>Reset the key only if you no longer trust or cannot use the authenticator app connected to OpenWish.</p>
 <form @formname="reset-authenticator" @onsubmit="OnSubmitAsync" method="post">
     <AntiforgeryToken />
-    <div class="d-flex flex-column flex-sm-row gap-2">
+    <div class="d-flex flex-column flex-sm-row gap-2 account-actions">
         <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Keep current authenticator</a>
         <button class="btn btn-danger" type="submit">Reset authenticator app</button>
     </div>

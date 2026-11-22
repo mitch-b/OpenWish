@@ -11,7 +11,7 @@
 <PageTitle>Turn off two-factor authentication (2FA)</PageTitle>
 
 <StatusMessage />
-<h3>Turn off two-factor authentication (2FA)</h3>
+<h2>Turn off two-factor authentication (2FA)</h2>
 
 <div class="alert alert-warning" role="alert">
     <strong>Your account will rely on your password alone when you sign in.</strong>
@@ -21,7 +21,7 @@
 <p>Only turn off 2FA if you understand the reduced account protection.</p>
 <form @formname="disable-2fa" @onsubmit="OnSubmitAsync" method="post">
     <AntiforgeryToken />
-    <div class="d-flex flex-column flex-sm-row gap-2">
+    <div class="d-flex flex-column flex-sm-row gap-2 account-actions">
         <a class="btn btn-outline-secondary" href="Account/Manage/TwoFactorAuthentication">Keep 2FA on</a>
         <button class="btn btn-danger" type="submit">Turn off 2FA</button>
     </div>

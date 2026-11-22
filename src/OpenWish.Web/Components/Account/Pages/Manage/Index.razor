@@ -11,29 +11,31 @@
 
 <PageTitle>Profile</PageTitle>
 
-<h3>Profile</h3>
+<h2>Profile</h2>
 <StatusMessage />
-<p class="text-muted">Review the account name others see and keep an optional phone number for your own records.</p>
+<p class="account-lead">Review the account name others see and keep an optional phone number for your own records.</p>
 
-<div class="row">
-    <div class="col-xl-6">
-        <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
+<div class="account-form">
+    <EditForm Model="Input" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" role="alert" />
+        <div class="account-field">
+            <div class="form-floating">
                 <input type="text" value="@username" id="username" class="form-control" aria-describedby="username-help" readonly />
                 <label for="username" class="form-label">Username</label>
             </div>
-            <div id="username-help" class="form-text mb-3">This sign-in name cannot be edited from your profile.</div>
-            <div class="form-floating mb-3">
+            <div id="username-help" class="form-text">This sign-in name cannot be edited from your profile.</div>
+        </div>
+        <div class="account-field">
+            <div class="form-floating">
                 <InputText @bind-Value="Input.PhoneNumber" id="Input.PhoneNumber" class="form-control" autocomplete="tel" inputmode="tel" aria-describedby="phone-help" autofocus placeholder="Enter your phone number" />
                 <label for="Input.PhoneNumber" class="form-label">Phone number</label>
-                <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
             </div>
-            <div id="phone-help" class="form-text mb-3">Optional. Your phone number is not shown on wishlists or events.</div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save profile</button>
-        </EditForm>
-    </div>
+            <div id="phone-help" class="form-text">Optional. Your phone number is not shown on wishlists or events.</div>
+            <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+        </div>
+        <button type="submit" class="btn btn-lg btn-primary account-submit">Save profile</button>
+    </EditForm>
 </div>
 
 @code {

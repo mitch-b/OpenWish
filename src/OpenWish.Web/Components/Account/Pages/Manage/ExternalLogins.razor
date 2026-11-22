@@ -13,54 +13,53 @@
 <PageTitle>Manage your external logins</PageTitle>
 
 <StatusMessage />
+<h2>External logins</h2>
+<p class="account-lead">Sign in with services you already use. You can connect more than one.</p>
 @if (currentLogins?.Count > 0)
 {
-    <h3>Registered Logins</h3>
-    <table class="table">
-        <tbody>
+    <section class="account-section" aria-labelledby="connected-logins-heading">
+        <h3 id="connected-logins-heading">Connected services</h3>
+        <ul class="list-unstyled external-login-list">
             @foreach (var login in currentLogins)
             {
-                <tr>
-                    <td>@login.ProviderDisplayName</td>
-                    <td>
-                        @if (showRemoveButton)
-                        {
-                            <form @formname="@($"remove-login-{login.LoginProvider}")" @onsubmit="OnSubmitAsync" method="post">
-                                <AntiforgeryToken />
-                                <div>
-                                    <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider" />
-                                    <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey" />
-                                    <button type="submit" class="btn btn-primary" title="Remove this @login.ProviderDisplayName login from your account">Remove</button>
-                                </div>
-                            </form>
-                        }
-                        else
-                        {
-                            @: &nbsp;
-                        }
-                    </td>
-                </tr>
+                <li class="external-login-row">
+                    <span class="external-login-name">@login.ProviderDisplayName</span>
+                    @if (showRemoveButton)
+                    {
+                        <form @formname="@($"remove-login-{login.LoginProvider}")" @onsubmit="OnSubmitAsync" method="post" class="account-actions">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="@nameof(LoginProvider)" value="@login.LoginProvider" />
+                            <input type="hidden" name="@nameof(ProviderKey)" value="@login.ProviderKey" />
+                            <button type="submit" class="btn btn-outline-danger" aria-label="Remove @login.ProviderDisplayName login">Remove</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="form-text m-0">Your only way to sign in</span>
+                    }
+                </li>
             }
-        </tbody>
-    </table>
+        </ul>
+    </section>
 }
 @if (otherLogins?.Count > 0)
 {
-    <h4>Add another service to log in.</h4>
-    <hr />
-    <form class="form-horizontal" action="Account/Manage/LinkExternalLogin" method="post">
-        <AntiforgeryToken />
-        <div>
-            <p>
-                @foreach (var provider in otherLogins)
-                {
-                    <button type="submit" class="btn btn-primary" name="Provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">
-                        @provider.DisplayName
-                    </button>
-                }
-            </p>
-        </div>
-    </form>
+    <section class="account-section" aria-labelledby="add-login-heading">
+        <h3 id="add-login-heading">Add another sign-in service</h3>
+        <form action="Account/Manage/LinkExternalLogin" method="post" class="d-flex flex-column flex-sm-row flex-wrap gap-2 account-actions">
+            <AntiforgeryToken />
+            @foreach (var provider in otherLogins)
+            {
+                <button type="submit" class="btn btn-outline-primary" name="Provider" value="@provider.Name" aria-label="Connect your @provider.DisplayName account">
+                    @provider.DisplayName
+                </button>
+            }
+        </form>
+    </section>
+}
+else if (!(currentLogins?.Count > 0))
+{
+    <p class="form-text">No external sign-in services are available.</p>
 }
 
 @code {

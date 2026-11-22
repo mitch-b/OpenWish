@@ -6489,7 +6489,10 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByRole("link", { name: "Connect OpenWish" }).click();
   await page.waitForURL(url => url.pathname === "/oauth/authorize");
   await page.getByRole("heading", { name: `Connect ${connectedApp.name}` }).waitFor({ state: "visible" });
-  await assertVisible(page, "It never sees reservations, purchases, comments, hidden surprises");
+  await page.getByRole("heading", { name: `${connectedApp.name} never sees` }).waitFor({ state: "visible" });
+  for (const hidden of ["Reservations, purchases, or comments", "Hidden surprises others add for you"]) {
+    await assertVisible(page, hidden);
+  }
   if (await page.getByLabel("Allow all wishlists", { exact: true }).isChecked() ||
       !await page.getByLabel("Manage existing items in allowed lists", { exact: true }).isChecked()) {
     throw new Error("New consent must default to selected lists and managing existing items.");

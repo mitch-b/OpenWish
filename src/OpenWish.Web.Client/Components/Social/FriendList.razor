@@ -10,11 +10,11 @@
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="people" /></span>
         <div>
-            <h2>My friends@(_friends.Count > 0 ? $" ({_friends.Count})" : "")</h2>
+            <h2 @ref="_heading" tabindex="-1">My friends@(_friends.Count > 0 ? $" ({_friends.Count})" : "")</h2>
             <p>People who can share wishlists with you.</p>
         </div>
     </div>
-    
+
     @if (_statusMessage is not null)
     {
         <div class="alert alert-success" role="status" aria-live="polite">
@@ -33,15 +33,24 @@
     {
         <div class="alert alert-danger" role="alert">
             <p class="mb-2">@_errorMessage</p>
-            <button class="btn btn-outline-danger btn-sm" type="button" @onclick="RetryLoadFriends">
+            <button class="btn btn-outline-danger btn-sm" type="button" disabled="@(!RendererInfo.IsInteractive)" @onclick="RetryLoadFriends">
                 Try again
             </button>
         </div>
     }
     else if (!_friends.Any())
     {
-        <div class="alert alert-info">
-            No friends yet. Invite someone by email, or show your code to a person next to you, and they'll appear here.
+        <div class="friend-empty" data-testid="friends-empty">
+            <p class="friend-empty-title">No friends yet</p>
+            <p class="friend-empty-copy">Invite someone by email, or show your code to a person next to you. Once you're connected, they'll appear here with a link to their lists.</p>
+            <div class="friend-empty-actions">
+                <a class="btn btn-primary" href="/friends?section=invite">
+                    <OpenWishIcon Name="person-plus" /> Invite friends
+                </a>
+                <a class="btn btn-outline-secondary" href="/friends?section=in-person">
+                    <OpenWishIcon Name="link-45deg" /> Connect in person
+                </a>
+            </div>
         </div>
     }
     else
@@ -51,18 +60,20 @@
             <div class="circle-filter" role="group" aria-label="Filter friends by circle">
                 <button type="button" class="btn btn-sm @(_circleFilter is null ? "btn-primary" : "btn-outline-secondary")"
                         aria-pressed="@(_circleFilter is null ? "true" : "false")"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="() => _circleFilter = null">All friends</button>
                 @foreach (var circle in _circles)
                 {
                     var selected = _circleFilter == circle.PublicId;
                     <button type="button" class="btn btn-sm @(selected ? "btn-primary" : "btn-outline-secondary")"
                             aria-pressed="@(selected ? "true" : "false")"
+                            disabled="@(!RendererInfo.IsInteractive)"
                             @onclick="() => _circleFilter = circle.PublicId">@circle.Name (@circle.Members.Count)</button>
                 }
             </div>
             @if (_circles.FirstOrDefault(circle => circle.PublicId == _circleFilter) is { Members.Count: > 0 } activeCircle)
             {
-                <p class="mt-2 mb-0" data-testid="circle-filter-lists">
+                <p class="circle-filter-lists" data-testid="circle-filter-lists">
                     <a href="/wishlists?tab=friends&circle=@Uri.EscapeDataString(activeCircle.PublicId)">View lists from @activeCircle.Name</a>
                 </p>
             }
@@ -70,43 +81,49 @@
 
         @if (VisibleFriends.Count == 0)
         {
-            <p class="text-muted mb-0" role="status">No friends in this circle yet. Add some from the Circles section.</p>
+            <p class="friend-filter-empty" role="status">
+                No friends in this circle yet. <a href="/friends?section=circles">Add some from Circles</a>.
+            </p>
         }
-
-        <div class="list-group">
-            @foreach (var friend in VisibleFriends)
-            {
-                <div class="list-group-item friend-row">
-                    <div class="friend-identity">
-                        <span class="friend-avatar"><OpenWishIcon Name="person-circle" /></span>
-                        <div class="friend-name">
-                            <strong>@friend.UserName</strong>
-                            @foreach (var circleName in CircleNamesFor(friend))
-                            {
-                                <span class="badge circle-badge">@circleName</span>
-                            }
+        else
+        {
+            <ul class="list-group friend-rows">
+                @foreach (var friend in VisibleFriends)
+                {
+                    <li class="list-group-item friend-row">
+                        <div class="friend-identity">
+                            <span class="friend-avatar" aria-hidden="true">@GetInitial(friend)</span>
+                            <div class="friend-name">
+                                <strong>@GetFriendName(friend)</strong>
+                                @foreach (var circleName in CircleNamesFor(friend))
+                                {
+                                    <span class="badge circle-badge">@circleName</span>
+                                }
+                            </div>
                         </div>
-                    </div>
-                    <div class="friend-actions">
-                        <a class="btn btn-outline-primary btn-sm"
-                           href="@GetListsHref(friend)"
-                           aria-label="View wishlists shared by @GetFriendName(friend)">
-                            <OpenWishIcon Name="list-ul" /> View lists
-                        </a>
-                        <button class="btn btn-outline-danger btn-sm"
-                                type="button"
-                                aria-label="Remove @GetFriendName(friend) from friends"
-                                @onclick="() => ShowRemoveConfirmation(friend)">
-                            <OpenWishIcon Name="person-dash" /> Remove
-                        </button>
-                    </div>
-                </div>
-            }
-        </div>
+                        <div class="friend-actions">
+                            <a class="btn btn-outline-primary btn-sm friend-lists-link"
+                               href="@GetListsHref(friend)"
+                               aria-label="View wishlists shared by @GetFriendName(friend)">
+                                <OpenWishIcon Name="list-ul" /> View lists
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm friend-remove"
+                                    type="button"
+                                    title="Remove from friends"
+                                    aria-label="Remove @GetFriendName(friend) from friends"
+                                    disabled="@(!RendererInfo.IsInteractive)"
+                                    @onclick="() => ShowRemoveConfirmation(friend)">
+                                <OpenWishIcon Name="person-dash" /> <span class="friend-action-label">Remove</span>
+                            </button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
     }
 </div>
 
-<FriendRemoveConfirmationDialog @ref="_removeConfirmationDialog" OnConfirm="ConfirmRemoveFriend" />
+<FriendRemoveConfirmationDialog @ref="_removeConfirmationDialog" OnConfirm="ConfirmRemoveFriend" OnClosed="HandleRemoveDialogClosed" />
 
 @code {
     private List<ApplicationUserModel> _friends = [];
@@ -117,6 +134,8 @@
     private string? _errorMessage;
     private string? _statusMessage;
     private FriendRemoveConfirmationDialog? _removeConfirmationDialog;
+    private ElementReference _heading;
+    private bool _focusHeadingOnClose;
 
     [Parameter]
     public EventCallback OnFriendRemoved { get; set; }
@@ -125,7 +144,7 @@
     {
         await LoadFriends();
     }
-    
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _errorMessage is not null && _currentUserId == null)
@@ -201,7 +220,7 @@
     private void ShowRemoveConfirmation(ApplicationUserModel friend)
     {
         var friendName = GetFriendName(friend);
-        const string title = "Remove friend";
+        var title = $"Remove {friendName}?";
         var message = $"Remove {friendName} from your friends? You will no longer see each other's friends-only wishlists. Wishlists shared directly may remain available.";
         _removeConfirmationDialog?.Show(title, message, friend.Id);
     }
@@ -220,6 +239,7 @@
                 var friendName = friend is null ? "Friend" : GetFriendName(friend);
                 if (await FriendService.RemoveFriendAsync(_currentUserId, friendId))
                 {
+                    _focusHeadingOnClose = true;
                     _statusMessage = $"{friendName} removed from your friends.";
                     await LoadFriends(silent: true);
                     await OnFriendRemoved.InvokeAsync();
@@ -241,6 +261,27 @@
             StateHasChanged();
         }
     }
+
+    // The removed row's button no longer exists, so keep focus in the list rather than at the page top.
+    private async Task HandleRemoveDialogClosed()
+    {
+        if (!_focusHeadingOnClose)
+        {
+            return;
+        }
+
+        _focusHeadingOnClose = false;
+        try
+        {
+            await _heading.FocusAsync(preventScroll: true);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private static string GetInitial(ApplicationUserModel friend) =>
+        GetFriendName(friend).Trim() is { Length: > 0 } name ? name[..1].ToUpperInvariant() : "?";
 
     private static string GetListsHref(ApplicationUserModel friend) =>
         $"/wishlists?tab=friends&owner={Uri.EscapeDataString(friend.UserName ?? string.Empty)}";

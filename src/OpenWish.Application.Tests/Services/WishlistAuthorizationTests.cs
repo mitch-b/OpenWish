@@ -1,3 +1,4 @@
+using System.Globalization;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -282,6 +283,34 @@ public class WishlistAuthorizationTests
                 new WishlistItemModel { Name = "Tea infuser", Price = 12.345m }));
 
         Assert.Contains("two decimal places", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("", null, "Give the idea a name.")]
+    [InlineData("   ", null, "Give the idea a name.")]
+    [InlineData("Tea infuser", "-0.01", "Price cannot be negative.")]
+    public async Task ItemWrites_RejectBlankNamesAndNegativePrices(string name, string? price, string expectedMessage)
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var invalid = new WishlistItemModel { Name = name, Price = price is null ? null : decimal.Parse(price, CultureInfo.InvariantCulture) };
+        var added = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.AddItemToWishlistByPublicIdAsync(wishlist.PublicId, invalid));
+        Assert.StartsWith(expectedMessage, added.Message, StringComparison.Ordinal);
+
+        var existing = await service.AddItemToWishlistByPublicIdAsync(
+            wishlist.PublicId,
+            new WishlistItemModel { Name = "Valid idea", Price = 0m });
+        var updated = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateWishlistItemAsync(wishlist.Id, existing.Id, invalid));
+        Assert.StartsWith(expectedMessage, updated.Message, StringComparison.Ordinal);
     }
 
     [Fact]

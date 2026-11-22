@@ -264,6 +264,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         ArgumentNullException.ThrowIfNull(itemModel);
 
+        ValidateItemName(itemModel.Name);
         ValidateItemUrls(itemModel);
         ValidateItemPrice(itemModel.Price);
         var creationRequestHash = string.IsNullOrWhiteSpace(itemModel.PublicId)
@@ -487,6 +488,9 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
     public async Task<WishlistItemModel> UpdateWishlistItemAsync(int wishlistId, int itemId, WishlistItemModel itemModel)
     {
+        ArgumentNullException.ThrowIfNull(itemModel);
+
+        ValidateItemName(itemModel.Name);
         ValidateItemUrls(itemModel);
         ValidateItemPrice(itemModel.Price);
         await using var context = await _contextFactory.CreateDbContextAsync();
@@ -1928,8 +1932,21 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         ValidateExternalUrl(item.Image, nameof(item.Image));
     }
 
+    private static void ValidateItemName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Give the idea a name.", nameof(WishlistItemModel.Name));
+        }
+    }
+
     private static void ValidateItemPrice(decimal? price)
     {
+        if (price < 0)
+        {
+            throw new ArgumentException("Price cannot be negative.", nameof(price));
+        }
+
         if (price.HasValue && decimal.Round(price.Value, 2) != price.Value)
         {
             throw new ArgumentException("Price cannot have more than two decimal places.", nameof(price));

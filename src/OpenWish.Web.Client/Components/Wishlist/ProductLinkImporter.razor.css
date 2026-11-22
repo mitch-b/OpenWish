@@ -7,6 +7,7 @@
 .product-import-row .form-control {
     flex: 1 1 auto;
     min-width: 0;
+    min-height: 2.75rem;
 }
 
 .product-import-row .form-control[readonly] {
@@ -19,28 +20,61 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
+    min-width: 7.75rem;
     min-height: 2.75rem;
     border-radius: 0.7rem;
     white-space: nowrap;
 }
 
-.product-import-feedback {
+.product-import-message {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
-    margin: 0.75rem 0 0;
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-info-border);
+    border-radius: 0.75rem;
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.product-import-message.is-pending {
+    border-color: var(--color-border-muted);
+    background: var(--color-surface);
     color: var(--color-text-muted);
 }
 
-.product-import-message {
-    margin: 0.75rem 0 0;
+.product-import-message.is-success {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.product-import-message.is-error {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+}
+
+.product-import-message ::deep .ow-icon {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.14rem;
+}
+
+.product-import-message span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .product-import-preview {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-top: 0.75rem;
+    margin-top: 0.5rem;
     padding: 0.5rem;
     border: 1px solid var(--color-border-muted);
     border-radius: 0.75rem;
@@ -79,12 +113,20 @@
     color: var(--color-link-hover);
 }
 
-@media (max-width: 575.98px) {
-    .product-import-row {
-        flex-direction: column;
+@media (prefers-reduced-motion: no-preference) {
+    .product-import-message.is-pending ::deep .ow-icon {
+        animation: product-import-pulse 1.2s ease-in-out infinite;
     }
+}
 
+@keyframes product-import-pulse {
+    50% {
+        opacity: 0.35;
+    }
+}
+
+@media (max-width: 575.98px) {
     .product-import-row .btn {
-        width: 100%;
+        min-width: 0;
     }
 }

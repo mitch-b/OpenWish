@@ -11,15 +11,24 @@
     container-type: inline-size;
 }
 
+.invitations-guidance {
+    max-width: 38rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
 .invitation-summary {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .invitation-summary-item {
     display: inline-flex;
-    align-items: baseline;
+    align-items: center;
     gap: 0.3rem;
     padding: 0.3rem 0.7rem;
     border: 1px solid var(--color-border-muted);
@@ -51,6 +60,28 @@
 .invitation-summary-pending,
 .invitation-summary-pending strong {
     color: var(--color-warning-text);
+}
+
+.invitation-summary-declined {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-bg);
+}
+
+.invitation-summary-declined,
+.invitation-summary-declined strong {
+    color: var(--color-danger-text);
+}
+
+.invite-validation {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-danger-text);
+    font-size: 0.875rem;
+}
+
+.invite-validation:empty {
+    display: none;
 }
 
 .invite-composer {
@@ -301,6 +332,10 @@
 }
 
 .invitation-filter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
     min-width: 0;
     min-height: 2.75rem;
     padding: 0.5rem 0.75rem;
@@ -312,7 +347,27 @@
     white-space: nowrap;
 }
 
-.invitation-filter:hover:not(.active) {
+.invitation-filter-count {
+    min-width: 1.5rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4rem;
+}
+
+.invitation-filter.active .invitation-filter-count {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+.invitation-filter:disabled {
+    cursor: default;
+}
+
+.invitation-filter:hover:not(.active):not(:disabled) {
     background: var(--color-surface-hover);
     color: var(--color-text);
 }
@@ -336,14 +391,111 @@
     min-width: 0;
 }
 
+.invitation-list {
+    border-radius: 0.8rem;
+}
+
+.invitation-filter-empty {
+    padding: 1rem;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+.invitation-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+}
+
+.invitation-row-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.invitation-name {
+    color: var(--color-text);
+}
+
 .invitation-identity strong,
 .invitation-identity span {
     overflow-wrap: anywhere;
 }
 
-.invitation-identity > span:not(.badge) {
+.invitation-detail {
     color: var(--color-text-muted);
     font-size: 0.875rem;
+}
+
+.invitation-status {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 999px;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.invitation-status-accepted {
+    border-color: var(--color-success-border);
+    background: var(--color-success-bg);
+    color: var(--color-success-text);
+}
+
+.invitation-status-pending {
+    border-color: var(--color-warning-border);
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.invitation-status-declined {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+}
+
+.invitation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.invitation-actions .btn,
+.invitation-actions-menu .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.75rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.invitation-mark-accepted {
+    border-color: var(--color-primary-border);
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+}
+
+.invitation-mark-accepted:hover:not(:disabled) {
+    border-color: var(--color-primary-bg);
+    background: var(--color-primary-bg);
+    color: #ffffff;
+}
+
+.circle-pick {
+    min-height: 2.75rem;
 }
 
 @container (max-width: 520px) {
@@ -369,18 +521,18 @@
         height: 1.1rem;
     }
 
-    .list-group-item > .d-flex {
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .list-group-item .d-flex.justify-content-end {
-        width: 100%;
-        justify-content: stretch !important;
-    }
-
-    .list-group-item .d-flex.justify-content-end .btn {
+    .invitation-actions > .btn,
+    .invitation-actions > .invitation-actions-disclosure {
         flex: 1 1 auto;
+    }
+
+    .invitation-actions-disclosure > summary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .invitation-actions-menu .btn {
+        flex: 1 1 100%;
     }
 
     .modal-footer .btn {

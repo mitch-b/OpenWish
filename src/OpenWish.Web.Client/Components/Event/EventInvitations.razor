@@ -4,6 +4,7 @@
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.RequestModels
 @using OpenWish.Shared.Services
+@implements IDisposable
 
 @inject IEventService EventService
 @inject IUserContextService UserContextService
@@ -18,25 +19,33 @@
     <div class="card-body">
         <div class="invitations-header">
             <div>
-                <h2 id="event-invitations-title" class="h5 mb-1">@(IsOwner ? "Invite people" : "Invitations")</h2>
-                <p class="small text-muted mb-0">@InvitationGuidance</p>
+                <h2 id="event-invitations-title" class="h5 mb-1">@(IsOwner && !NamesDrawn ? "Invite people" : "Invitations")</h2>
+                <p class="invitations-guidance mb-0">@InvitationGuidance</p>
             </div>
             @if (!_isLoading && _invitations.Any())
             {
-                <div class="invitation-summary" aria-label="Invitation status">
-                    <span class="invitation-summary-item invitation-summary-accepted">
-                        <strong>@_invitations.Count(IsAccepted)</strong> accepted
-                    </span>
-                    <span class="invitation-summary-item invitation-summary-pending">
-                        <strong>@_invitations.Count(i => HasStatus(i, "Pending"))</strong> waiting
-                    </span>
-                    @if (_invitations.Any(i => HasStatus(i, "Rejected")))
+                var waitingCount = _invitations.Count(i => HasStatus(i, "Pending"));
+                var declinedCount = _invitations.Count(i => HasStatus(i, "Rejected"));
+                <ul class="invitation-summary" aria-label="Invitation responses" data-testid="invitation-summary">
+                    <li class="invitation-summary-item invitation-summary-accepted">
+                        <OpenWishIcon Name="check-circle-fill" />
+                        <span><strong>@_invitations.Count(IsAccepted)</strong> accepted</span>
+                    </li>
+                    @if (waitingCount > 0)
                     {
-                        <span class="invitation-summary-item">
-                            <strong>@_invitations.Count(i => HasStatus(i, "Rejected"))</strong> declined
-                        </span>
+                        <li class="invitation-summary-item invitation-summary-pending">
+                            <OpenWishIcon Name="hourglass-split" />
+                            <span><strong>@waitingCount</strong> waiting</span>
+                        </li>
                     }
-                </div>
+                    @if (declinedCount > 0)
+                    {
+                        <li class="invitation-summary-item invitation-summary-declined">
+                            <OpenWishIcon Name="x-circle" />
+                            <span><strong>@declinedCount</strong> declined</span>
+                        </li>
+                    }
+                </ul>
             }
         </div>
 
@@ -49,7 +58,7 @@
                             role="tab"
                             aria-selected="@(_inviteMode == "email")"
                             aria-controls="event-invite-email-panel"
-                            disabled="@_isSending"
+                            disabled="@ComposerDisabled"
                             @onclick="SetInviteModeEmailAsync"
                             type="button">
                         <OpenWishIcon Name="envelope" /> By email
@@ -59,7 +68,7 @@
                             role="tab"
                             aria-selected="@(_inviteMode == "friends")"
                             aria-controls="event-invite-friends-panel"
-                            disabled="@_isSending"
+                            disabled="@ComposerDisabled"
                             @onclick="SetInviteModeFriendsAsync"
                             type="button">
                         <OpenWishIcon Name="people" /> From friends
@@ -87,7 +96,7 @@
                         {
                             <div class="alert alert-danger" role="alert">
                                 <p class="mb-2">@_friendsLoadError</p>
-                                <button type="button" class="btn btn-outline-danger" @onclick="RetryFriendsAsync">
+                                <button type="button" class="btn btn-outline-danger" disabled="@ComposerDisabled" @onclick="RetryFriendsAsync">
                                     Try again
                                 </button>
                             </div>
@@ -114,7 +123,7 @@
                                     @foreach (var circle in _circles)
                                     {
                                         var invitable = InvitableCircleMembers(circle).Count;
-                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                        <button type="button" class="btn btn-outline-primary btn-sm circle-pick"
                                                 disabled="@(_isSending || invitable == 0)"
                                                 @onclick="() => SelectCircle(circle)">
                                             <OpenWishIcon Name="people-fill" /> @circle.Name (@(invitable == 0 ? "all invited" : invitable == circle.Members.Count ? invitable.ToString() : $"{invitable} of {circle.Members.Count} not invited"))
@@ -190,7 +199,7 @@
                 </div>
 
                 <div class="invite-composer-actions">
-                    <button type="button" class="btn btn-primary invite-send-button" @onclick="HandleSendInvitation" disabled="@DisableSendButton">
+                    <button type="button" class="btn btn-primary invite-send-button" @onclick="HandleSendInvitation" disabled="@(DisableSendButton || !RendererInfo.IsInteractive)">
                         @if (_isSending)
                         {
                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
@@ -202,10 +211,13 @@
                             <span>@SendButtonLabel</span>
                         }
                     </button>
-                    @if (!_isSending && _inviteMode == "email" && EmailAddressTokens.Count > ParsedEmailAddresses.Count)
-                    {
-                        <span class="small text-danger">@(EmailAddressTokens.Count - ParsedEmailAddresses.Count) address@(EmailAddressTokens.Count - ParsedEmailAddresses.Count == 1 ? " doesn't" : "es don't") look valid yet.</span>
-                    }
+                    <span class="invite-validation" aria-live="polite">
+                        @if (!_isSending && _inviteMode == "email" && EmailAddressTokens.Count > ParsedEmailAddresses.Count)
+                        {
+                            <OpenWishIcon Name="exclamation-circle" />
+                            <span>@(EmailAddressTokens.Count - ParsedEmailAddresses.Count) address@(EmailAddressTokens.Count - ParsedEmailAddresses.Count == 1 ? " doesn't" : "es don't") look valid yet.</span>
+                        }
+                    </span>
                 </div>
 
                 @if (_isSending && _sendTotal > 0)
@@ -287,200 +299,221 @@
                 <button type="button" class="invitation-filter @(_filter == "All" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "All")"
                         aria-controls="event-invitations-list"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="@(() => _filter = "All")">
-                    All (@_invitations.Count())
+                    <span>All</span> <span class="invitation-filter-count">@_invitations.Count()</span>
                 </button>
                 <button type="button" class="invitation-filter @(_filter == "Pending" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Pending")"
                         aria-controls="event-invitations-list"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="@(() => _filter = "Pending")">
-                    Pending (@_invitations.Count(i => HasStatus(i, "Pending")))
+                    <span>Waiting</span> <span class="invitation-filter-count">@_invitations.Count(i => HasStatus(i, "Pending"))</span>
                 </button>
                 <button type="button" class="invitation-filter @(_filter == "Accepted" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Accepted")"
                         aria-controls="event-invitations-list"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="@(() => _filter = "Accepted")">
-                    Accepted (@_invitations.Count(IsAccepted))
+                    <span>Accepted</span> <span class="invitation-filter-count">@_invitations.Count(IsAccepted)</span>
                 </button>
                 <button type="button" class="invitation-filter @(_filter == "Rejected" ? "active" : string.Empty)"
                         aria-pressed="@(_filter == "Rejected")"
                         aria-controls="event-invitations-list"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="@(() => _filter = "Rejected")">
-                    Rejected (@_invitations.Count(i => HasStatus(i, "Rejected")))
+                    <span>Declined</span> <span class="invitation-filter-count">@_invitations.Count(i => HasStatus(i, "Rejected"))</span>
                 </button>
             </div>
 
             <p class="visually-hidden" aria-live="polite">@FilteredInvitationCountMessage</p>
-            <div id="event-invitations-list" class="list-group">
+            <div id="event-invitations-list" class="list-group invitation-list">
+                @if (!FilteredInvitations.Any())
+                {
+                    <p class="invitation-filter-empty mb-0">No @FilterLabel(_filter).ToLowerInvariant() invitations right now.</p>
+                }
                 @foreach (var invitation in FilteredInvitations)
                 {
-                    <div class="list-group-item">
-                        <div class="d-flex flex-column gap-2">
+                    var displayName = GetInvitationDisplayName(invitation);
+                    var contactEmail = invitation.User?.Email ?? invitation.InviteeEmail;
+                    <div class="list-group-item invitation-row" data-status="@StatusKey(invitation.Status)">
+                        <div class="invitation-row-main">
                             <div class="invitation-identity">
-                                @if (invitation.User != null)
+                                <strong class="invitation-name">@displayName</strong>
+                                @if (!string.IsNullOrWhiteSpace(contactEmail) &&
+                                     !string.Equals(contactEmail, displayName, StringComparison.OrdinalIgnoreCase))
                                 {
-                                    <strong>@invitation.User.UserName</strong>
-                                    <span>@invitation.User.Email</span>
+                                    <span class="invitation-detail">@contactEmail</span>
                                 }
-                                else if (!string.IsNullOrEmpty(invitation.InviteeEmail))
+                                @if (invitation.User == null && !string.IsNullOrEmpty(invitation.InviteeEmail))
                                 {
-                                    <strong>@(invitation.GuestDisplayName ?? invitation.InviteeEmail)</strong>
-                                    <span>@invitation.InviteeEmail</span>
-                                    <span>@GuestAccessStatus(invitation)</span>
+                                    <span class="invitation-detail">@GuestAccessStatus(invitation)</span>
                                 }
-                                <div class="mt-1">
-                                    <span class="badge @GetStatusBadgeClass(invitation.Status)">@invitation.Status</span>
-                                    <small class="text-muted ms-2">
-                                        Invited @invitation.InvitationDate.ToString("MMM dd, yyyy")
-                                    </small>
-                                </div>
+                                <span class="invitation-detail invitation-date">Invited @invitation.InvitationDate.ToString("MMM d, yyyy")</span>
                             </div>
-                            @if (IsOwner && (AllowGuests || invitation.GuestDisplayName is not null || HasStatus(invitation, "Rejected")) &&
-                                invitation.UserId is null && invitation.Status is "Pending" or "Accepted" or "Rejected")
-                            {
-                                <div class="d-flex flex-wrap gap-2 invitation-actions">
-                                    @if (CanMarkAccepted(invitation))
-                                    {
-                                        @MarkAcceptedButton(invitation)
-                                    }
-                                    @if ((AllowGuests && !HasStatus(invitation, "Rejected")) ||
-                                         invitation.HasGuestAccess ||
-                                         !NamesDrawn)
-                                    {
-                                        <details class="invitation-actions-disclosure">
-                                            <summary aria-label="@($"More actions for {GetInvitationDisplayName(invitation)}")">More actions</summary>
-                                            <div class="invitation-actions-menu">
-                                                @if (AllowGuests && !HasStatus(invitation, "Rejected"))
-                                                {
-                                                    <button type="button" class="btn btn-outline-secondary btn-sm"
-                                                            disabled="@IsInvitationActionBusy"
-                                                            @onclick="() => HandleGuestAccess(invitation, false)">
-                                                        @(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")
-                                                    </button>
-                                                }
-                                                @if (invitation.HasGuestAccess)
-                                                {
-                                                    <button type="button" class="btn btn-outline-danger btn-sm"
-                                                            id="@($"revoke-guest-{invitation.PublicId}")"
-                                                            disabled="@IsInvitationActionBusy"
-                                                            @onclick="() => PromptGuestRevoke(invitation, false)">
-                                                        @(IsProcessingGuest(invitation, "guest-revoke") ? "Revoking..." : "Revoke private access")
-                                                    </button>
-                                                }
-                                                @if (!NamesDrawn)
-                                                {
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" disabled="@IsInvitationActionBusy"
-                                                            id="@($"remove-guest-{invitation.PublicId}")"
-                                                            @onclick="() => PromptGuestRevoke(invitation, true)">Remove guest</button>
-                                                }
-                                            </div>
-                                        </details>
-                                    }
-                                </div>
-                            }
-                            else if (IsOwner && HasStatus(invitation, "Pending"))
-                            {
-                                <div class="d-flex flex-wrap gap-2 invitation-actions">
-                                    @if (CanMarkAccepted(invitation))
-                                    {
-                                        @MarkAcceptedButton(invitation)
-                                    }
+                            <span class="invitation-status invitation-status-@StatusKey(invitation.Status)">
+                                <OpenWishIcon Name="@StatusIcon(invitation.Status)" />
+                                <span>@StatusLabel(invitation.Status)</span>
+                            </span>
+                        </div>
+                        @if (IsOwner && (AllowGuests || invitation.GuestDisplayName is not null || HasStatus(invitation, "Rejected")) &&
+                            invitation.UserId is null && invitation.Status is "Pending" or "Accepted" or "Rejected")
+                        {
+                            <div class="invitation-actions">
+                                @if (CanMarkAccepted(invitation))
+                                {
+                                    @MarkAcceptedButton(invitation)
+                                }
+                                @if ((AllowGuests && !HasStatus(invitation, "Rejected")) ||
+                                     invitation.HasGuestAccess ||
+                                     !NamesDrawn)
+                                {
                                     <details class="invitation-actions-disclosure">
                                         <summary aria-label="@($"More actions for {GetInvitationDisplayName(invitation)}")">More actions</summary>
                                         <div class="invitation-actions-menu">
-                                            <button class="btn btn-outline-secondary btn-sm"
-                                                    disabled="@IsInvitationActionBusy"
-                                                    @onclick="() => CopyInvitationLinkAsync(invitation)"
-                                                    title="Copy a link to share directly">
-                                                <OpenWishIcon Name="copy" Class="me-1" /> Copy link
-                                            </button>
-                                            <button class="btn btn-outline-secondary btn-sm"
-                                                    disabled="@IsInvitationActionBusy"
-                                                    @onclick="() => HandleResendInvitation(invitation.Id)"
-                                                    title="Resend invitation">
-                                                @if (IsProcessingInvitation(invitation.Id, "resend"))
-                                                {
-                                                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                                                    <span>Resending...</span>
-                                                }
-                                                else
-                                                {
-                                                    <OpenWishIcon Name="arrow-repeat" Class="me-1" />
-                                                    <span>Resend</span>
-                                                }
-                                            </button>
-                                            <button class="btn btn-outline-danger btn-sm"
-                                                    disabled="@IsInvitationActionBusy"
-                                                    @onclick="() => HandleCancelInvitation(invitation.Id)"
-                                                    title="Cancel invitation">
-                                                @if (IsProcessingInvitation(invitation.Id, "cancel"))
-                                                {
-                                                    <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                                                    <span>Canceling...</span>
-                                                }
-                                                else
-                                                {
-                                                    <OpenWishIcon Name="x-lg" Class="me-1" />
-                                                    <span>Cancel</span>
-                                                }
-                                            </button>
+                                            @if (AllowGuests && !HasStatus(invitation, "Rejected"))
+                                            {
+                                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                        disabled="@ActionsDisabled"
+                                                        @onclick="() => HandleGuestAccess(invitation, false)">
+                                                    <OpenWishIcon Name="send" />
+                                                    <span>@(IsProcessingGuest(invitation, "guest-send") ? "Sending..." : "Resend private access")</span>
+                                                </button>
+                                            }
+                                            @if (invitation.HasGuestAccess)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm"
+                                                        id="@($"revoke-guest-{invitation.PublicId}")"
+                                                        disabled="@ActionsDisabled"
+                                                        @onclick="() => PromptGuestRevoke(invitation, false)">
+                                                    <OpenWishIcon Name="lock" />
+                                                    <span>@(IsProcessingGuest(invitation, "guest-revoke") ? "Revoking..." : "Revoke private access")</span>
+                                                </button>
+                                            }
+                                            @if (!NamesDrawn)
+                                            {
+                                                <button type="button" class="btn btn-outline-danger btn-sm" disabled="@ActionsDisabled"
+                                                        id="@($"remove-guest-{invitation.PublicId}")"
+                                                        @onclick="() => PromptGuestRevoke(invitation, true)">
+                                                    <OpenWishIcon Name="person-dash" />
+                                                    <span>Remove guest</span>
+                                                </button>
+                                            }
                                         </div>
                                     </details>
-                                </div>
-                            }
-                            else if (IsOwner &&
-                                     !NamesDrawn &&
-                                     IsAccepted(invitation) &&
-                                     !string.IsNullOrEmpty(invitation.UserId))
-                            {
+                                }
+                            </div>
+                        }
+                        else if (IsOwner && HasStatus(invitation, "Pending"))
+                        {
+                            <div class="invitation-actions">
+                                @if (CanMarkAccepted(invitation))
+                                {
+                                    @MarkAcceptedButton(invitation)
+                                }
                                 <details class="invitation-actions-disclosure">
                                     <summary aria-label="@($"More actions for {GetInvitationDisplayName(invitation)}")">More actions</summary>
                                     <div class="invitation-actions-menu">
-                                        <button class="btn btn-outline-danger btn-sm"
-                                                disabled="@IsInvitationActionBusy"
-                                                @onclick="() => PromptRemoveParticipant(invitation)"
-                                                title="Remove from event">
-                                            <OpenWishIcon Name="person-dash" /> Remove
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@ActionsDisabled"
+                                                @onclick="() => CopyInvitationLinkAsync(invitation)"
+                                                aria-label="@($"Copy invitation link for {displayName}")">
+                                            @if (_copiedInvitationId == invitation.Id)
+                                            {
+                                                <OpenWishIcon Name="check-lg" />
+                                                <span>Link copied</span>
+                                            }
+                                            else
+                                            {
+                                                <OpenWishIcon Name="copy" />
+                                                <span>Copy link</span>
+                                            }
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                disabled="@ActionsDisabled"
+                                                @onclick="() => HandleResendInvitation(invitation.Id)">
+                                            @if (IsProcessingInvitation(invitation.Id, "resend"))
+                                            {
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                <span>Resending...</span>
+                                            }
+                                            else
+                                            {
+                                                <OpenWishIcon Name="arrow-repeat" />
+                                                <span>Resend email</span>
+                                            }
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                                id="@($"cancel-invitation-{invitation.PublicId}")"
+                                                disabled="@ActionsDisabled"
+                                                @onclick="() => PromptCancelInvitation(invitation)">
+                                            @if (IsProcessingInvitation(invitation.Id, "cancel"))
+                                            {
+                                                <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                                <span>Canceling...</span>
+                                            }
+                                            else
+                                            {
+                                                <OpenWishIcon Name="x-lg" />
+                                                <span>Cancel invitation</span>
+                                            }
                                         </button>
                                     </div>
                                 </details>
-                            }
-                            else if (!IsOwner && IsCurrentUserInvitee(invitation) && HasStatus(invitation, "Pending"))
-                            {
-                                <div class="btn-group flex-shrink-0">
-                                    <button class="btn btn-success btn-sm"
-                                            disabled="@IsInvitationActionBusy"
-                                            @onclick="() => HandleAcceptInvitation(invitation.Id)"
-                                            title="Accept invitation">
-                                        @if (IsProcessingInvitation(invitation.Id, "accept"))
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                                            <span>Accepting...</span>
-                                        }
-                                        else
-                                        {
-                                            <OpenWishIcon Name="check-lg" />
-                                            <span>Accept</span>
-                                        }
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-sm"
-                                            disabled="@IsInvitationActionBusy"
-                                            @onclick="() => HandleRejectInvitation(invitation.Id)"
-                                            title="Reject invitation">
-                                        @if (IsProcessingInvitation(invitation.Id, "reject"))
-                                        {
-                                            <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-                                            <span>Rejecting...</span>
-                                        }
-                                        else
-                                        {
-                                            <OpenWishIcon Name="x-lg" />
-                                            <span>Reject</span>
-                                        }
-                                    </button>
-                                </div>
-                            }
-                        </div>
+                            </div>
+                        }
+                        else if (IsOwner &&
+                                 !NamesDrawn &&
+                                 IsAccepted(invitation) &&
+                                 !string.IsNullOrEmpty(invitation.UserId))
+                        {
+                            <div class="invitation-actions">
+                                <details class="invitation-actions-disclosure">
+                                    <summary aria-label="@($"More actions for {GetInvitationDisplayName(invitation)}")">More actions</summary>
+                                    <div class="invitation-actions-menu">
+                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                                disabled="@ActionsDisabled"
+                                                @onclick="() => PromptRemoveParticipant(invitation)">
+                                            <OpenWishIcon Name="person-dash" />
+                                            <span>Remove from event</span>
+                                        </button>
+                                    </div>
+                                </details>
+                            </div>
+                        }
+                        else if (!IsOwner && IsCurrentUserInvitee(invitation) && HasStatus(invitation, "Pending"))
+                        {
+                            <div class="invitation-actions">
+                                <button type="button" class="btn btn-primary btn-sm"
+                                        disabled="@ActionsDisabled"
+                                        @onclick="() => HandleAcceptInvitation(invitation.Id)">
+                                    @if (IsProcessingInvitation(invitation.Id, "accept"))
+                                    {
+                                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                        <span>Accepting...</span>
+                                    }
+                                    else
+                                    {
+                                        <OpenWishIcon Name="check-lg" />
+                                        <span>Accept</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                        disabled="@ActionsDisabled"
+                                        @onclick="() => HandleRejectInvitation(invitation.Id)">
+                                    @if (IsProcessingInvitation(invitation.Id, "reject"))
+                                    {
+                                        <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                                        <span>Declining...</span>
+                                    }
+                                    else
+                                    {
+                                        <OpenWishIcon Name="x-lg" />
+                                        <span>Decline</span>
+                                    }
+                                </button>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -495,6 +528,31 @@
         }
     </div>
 </section>
+
+<Dialog @ref="_cancelInvitationDialog" Title="Cancel invitation?"
+        DescriptionId="cancel-invitation-description"
+        ReturnFocusElementId="@(_invitationPendingCancel is null ? null : $"cancel-invitation-{_invitationPendingCancel.PublicId}")"
+        CanClose="@(!IsInvitationActionBusy)">
+    <p id="cancel-invitation-description">
+        <strong>@(_invitationPendingCancel is null ? "This person" : GetInvitationDisplayName(_invitationPendingCancel))</strong>
+        won't be able to join with their current link. You can invite them again later.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@IsInvitationActionBusy"
+                @onclick="CloseCancelInvitation">Keep invitation</button>
+        <button type="button" class="btn btn-danger" disabled="@IsInvitationActionBusy" @onclick="ConfirmCancelInvitation">
+            @if (_invitationPendingCancel is not null && IsProcessingInvitation(_invitationPendingCancel.Id, "cancel"))
+            {
+                <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                <span>Canceling...</span>
+            }
+            else
+            {
+                <span>Cancel invitation</span>
+            }
+        </button>
+    </div>
+</Dialog>
 
 <Dialog @ref="_guestRevokeDialog" Title="@(_removeGuest ? "Remove guest?" : "Revoke private guest access?")"
         DescriptionId="guest-revoke-description" ReturnFocusElementId="@(_guestPendingRevoke is null ? null : $"{(_removeGuest ? "remove" : "revoke")}-guest-{_guestPendingRevoke.PublicId}")"
@@ -645,11 +703,17 @@
     private string? _friendsLoadError;
     private EventUserModel? _invitationPendingRemoval;
     private bool IsInvitationActionBusy => _processingInvitationId.HasValue || _isRemovingParticipant || _isMarkingAccepted;
+    private bool ActionsDisabled => IsInvitationActionBusy || !RendererInfo.IsInteractive;
+    private bool ComposerDisabled => _isSending || !RendererInfo.IsInteractive;
+    private int? _copiedInvitationId;
+    private CancellationTokenSource? _copiedResetCts;
+    private Dialog? _cancelInvitationDialog;
+    private EventUserModel? _invitationPendingCancel;
     private int SendProgressPercent => _sendTotal == 0 ? 0 : (int)Math.Round(_sendCompleted * 100.0 / _sendTotal);
     private string InvitationGuidance => !IsOwner
         ? "People invited to this event and where they stand."
         : NamesDrawn
-            ? "Everyone below is part of this exchange."
+            ? "Who joined the exchange and who hasn't answered yet."
             : AllowGuests
                 ? "Add people by email. They can accept and see their own match without creating an account."
                 : "Add people by email or from your friends. They'll get an email with a link to join.";
@@ -670,7 +734,7 @@
         get
         {
             var count = FilteredInvitations.Count();
-            return $"{count} {(_filter == "All" ? "total" : _filter.ToLowerInvariant())} " +
+            return $"{count} {(_filter == "All" ? "total" : FilterLabel(_filter).ToLowerInvariant())} " +
                 $"invitation{(count == 1 ? string.Empty : "s")} shown.";
         }
     }
@@ -770,12 +834,13 @@
 
     private RenderFragment MarkAcceptedButton(EventUserModel invitation) => __builder =>
     {
-        <button type="button" class="btn btn-outline-primary btn-sm"
+        <button type="button" class="btn btn-outline-primary btn-sm invitation-mark-accepted"
                 id="@($"mark-accepted-{invitation.PublicId}")"
-                disabled="@IsInvitationActionBusy"
+                disabled="@ActionsDisabled"
                 aria-label="@($"Mark {GetInvitationDisplayName(invitation)} as accepted")"
                 @onclick="() => PromptMarkAccepted(invitation)">
-            <OpenWishIcon Name="person-check" Class="me-1" /> Mark as accepted
+            <OpenWishIcon Name="person-check" />
+            <span>Mark as accepted</span>
         </button>
     };
 
@@ -1273,12 +1338,31 @@
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", invitationLink);
             _inlineErrorMessage = null;
-            _inlineSuccessMessage = $"Invitation link copied for {email}.";
+            _inlineSuccessMessage = $"Invitation link copied for {email}. Paste it anywhere to share.";
+            await ShowCopiedAsync(invitation.Id);
         }
         catch (JSException)
         {
             _inlineErrorMessage = null;
             _inlineSuccessMessage = $"Copy is unavailable in this browser. Share this link: {invitationLink}";
+        }
+    }
+
+    private async Task ShowCopiedAsync(int invitationId)
+    {
+        _copiedResetCts?.Cancel();
+        _copiedResetCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _copiedResetCts = cts;
+        _copiedInvitationId = invitationId;
+        StateHasChanged();
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), cts.Token);
+            _copiedInvitationId = null;
+        }
+        catch (TaskCanceledException)
+        {
         }
     }
 
@@ -1351,6 +1435,48 @@
             }
             await CloseGuestRevoke();
         }
+    }
+
+    private void PromptCancelInvitation(EventUserModel invitation)
+    {
+        if (IsInvitationActionBusy)
+        {
+            return;
+        }
+
+        _inlineErrorMessage = null;
+        _inlineSuccessMessage = null;
+        _invitationPendingCancel = invitation;
+        _cancelInvitationDialog?.Show();
+    }
+
+    private async Task CloseCancelInvitation()
+    {
+        if (IsInvitationActionBusy)
+        {
+            return;
+        }
+
+        if (_cancelInvitationDialog is not null)
+        {
+            await _cancelInvitationDialog.CloseAsync();
+        }
+    }
+
+    private async Task ConfirmCancelInvitation()
+    {
+        if (_invitationPendingCancel is null || IsInvitationActionBusy)
+        {
+            return;
+        }
+
+        var invitationId = _invitationPendingCancel.Id;
+        await HandleCancelInvitation(invitationId);
+        if (_cancelInvitationDialog is not null)
+        {
+            await _cancelInvitationDialog.CloseAsync();
+        }
+        _invitationPendingCancel = null;
     }
 
     private async Task HandleCancelInvitation(int invitationId)
@@ -1471,7 +1597,7 @@
     {
         if (!AllowGuests)
         {
-            return invitation.GuestDisplayName is not null ? "No account; gets their match by email" : "Not registered";
+            return invitation.GuestDisplayName is not null ? "No account; gets their match by email" : "No account yet";
         }
         if (invitation.GuestAccessExpiresOn <= DateTimeOffset.UtcNow)
         {
@@ -1542,11 +1668,35 @@
         }
     }
 
-    private static string GetStatusBadgeClass(string status) => status switch
+    private static string StatusKey(string? status) => status switch
     {
-        "Pending" => "bg-warning text-dark",
-        "Accepted" => "bg-success",
-        "Rejected" => "bg-danger",
-        _ => "bg-secondary"
+        "Pending" => "pending",
+        "Accepted" => "accepted",
+        "Rejected" => "declined",
+        _ => "other"
     };
+
+    private static string StatusLabel(string? status) => status switch
+    {
+        "Pending" => "Waiting",
+        "Accepted" => "Accepted",
+        "Rejected" => "Declined",
+        _ => status ?? "Unknown"
+    };
+
+    private static string StatusIcon(string? status) => status switch
+    {
+        "Pending" => "hourglass-split",
+        "Accepted" => "check-circle-fill",
+        "Rejected" => "x-circle",
+        _ => "info-circle"
+    };
+
+    private static string FilterLabel(string filter) => filter == "All" ? "All" : StatusLabel(filter);
+
+    public void Dispose()
+    {
+        _copiedResetCts?.Cancel();
+        _copiedResetCts?.Dispose();
+    }
 }

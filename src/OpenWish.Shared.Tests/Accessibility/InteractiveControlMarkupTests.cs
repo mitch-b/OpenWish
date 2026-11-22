@@ -1972,7 +1972,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("<PageTitle>Create an event</PageTitle>", markup, StringComparison.Ordinal);
         Assert.Contains("Title=\"Create an event\"", markup, StringComparison.Ordinal);
         Assert.Contains("gift exchange or coordinate wishlists for a celebration", markup, StringComparison.Ordinal);
-        Assert.Contains("class=\"btn btn-outline-secondary\" href=\"/events\"", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary page-header-back\" href=\"/events\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2018,7 +2018,7 @@ public class InteractiveControlMarkupTests
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "NewEvent.razor");
 
         Assert.DoesNotContain("Step 1 of 3", markup, StringComparison.Ordinal);
-        Assert.Contains("<a class=\"btn btn-outline-secondary\" href=\"/events\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<a class=\"btn btn-outline-secondary page-header-back\" href=\"/events\">", markup, StringComparison.Ordinal);
     }
 
     [Fact]

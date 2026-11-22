@@ -1,5 +1,7 @@
 .page {
     --shell-header-height: 4rem;
+    /* Where in-page sticky elements rest: the header scrolls away on wider screens but stays on phones. */
+    --shell-sticky-top: 1rem;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -68,6 +70,10 @@
 }
 
 @media (max-width: 640.98px) {
+    .page {
+        --shell-sticky-top: calc(var(--shell-header-height) + 0.75rem);
+    }
+
     /* One compact header: the sidebar holds the brand and menu, and the bell joins it. */
     .sidebar {
         position: sticky;

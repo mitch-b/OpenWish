@@ -63,12 +63,7 @@
     [Parameter]
     public string ConfirmLabel { get; set; } = "Delete";
 
-    public void Show(string title, string message, string? returnFocusElementId = null)
-    {
-        Configure(title, message, returnFocusElementId);
-        dialog.Show();
-    }
-
+    // Render the new title and message before opening so the dialog never appears unlabeled.
     public async Task ShowAsync(string title, string message, string? returnFocusElementId = null)
     {
         Configure(title, message, returnFocusElementId);
@@ -80,6 +75,7 @@
 
     private void Configure(string title, string message, string? returnFocusElementId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(title);
         Title = title;
         Message = message;
         _returnFocusElementId = returnFocusElementId;

@@ -65,3 +65,26 @@
         width: 100%;
     }
 }
+
+.page-header-actions ::deep .page-header-back {
+    white-space: nowrap;
+}
+
+/* On phones a lone back link sits above the title as a compact link rather than a full-width button. */
+@media (max-width: 767.98px) {
+    .page-header ::deep .page-header-actions:has(> .page-header-back:only-child) {
+        order: -1;
+        margin-bottom: -0.25rem;
+    }
+
+    .page-header-actions ::deep .btn.page-header-back {
+        align-self: flex-start;
+        width: auto;
+        min-height: 2.75rem;
+        margin-left: -0.5rem;
+        padding-inline: 0.5rem 0.75rem;
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-link);
+    }
+}

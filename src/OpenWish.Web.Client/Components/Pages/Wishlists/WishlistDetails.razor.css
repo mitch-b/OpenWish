@@ -42,22 +42,17 @@
 /* Keeps confirmations in view after actions taken far down a long list. */
 .feedback-banner {
     position: sticky;
-    top: 5rem;
+    top: var(--shell-sticky-top, 1rem);
     z-index: 1000;
     box-shadow: 0 6px 18px rgba(13, 15, 26, 0.18);
-}
-
-@media (max-width: 640.98px) {
-    .feedback-banner {
-        top: 0.75rem;
-    }
 }
 
 .paste-hint {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin: -1.25rem 0 1.5rem;
+    margin: -0.75rem 0 1.5rem;
+    padding-inline: 0.25rem;
     color: var(--color-text-muted);
     font-size: 0.9rem;
 }

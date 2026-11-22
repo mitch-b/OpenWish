@@ -59,8 +59,15 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         {
             return Unauthorized();
         }
-        var createdWishlist = await _wishlistService.CreateWishlistAsync(wishlist, userId);
-        return CreatedAtAction(nameof(GetWishlist), new { publicId = createdWishlist.PublicId }, createdWishlist);
+        try
+        {
+            var createdWishlist = await _wishlistService.CreateWishlistAsync(wishlist, userId);
+            return CreatedAtAction(nameof(GetWishlist), new { publicId = createdWishlist.PublicId }, createdWishlist);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{publicId}")]
@@ -80,6 +87,10 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 

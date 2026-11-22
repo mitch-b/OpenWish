@@ -17,13 +17,13 @@
   <PageHeader Title="Create an event"
               Description="Plan a private gift exchange or coordinate wishlists for a celebration.">
       <Actions>
-          <a class="btn btn-outline-secondary" href="/events">
+          <a class="btn btn-outline-secondary page-header-back" href="/events">
               <OpenWishIcon Name="arrow-left" /> Back to events
           </a>
       </Actions>
   </PageHeader>
   <div class="row g-4">
-    <div class="col-md-8">
+    <div class="col-lg-8">
         <div class="event-content view-transition">
             @if (!string.IsNullOrEmpty(_errorMessage))
             {
@@ -35,7 +35,7 @@
                        AutoFocusName="true" />
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-lg-4">
         <aside class="add-item-section" aria-labelledby="new-event-next-steps">
             <h2 id="new-event-next-steps" class="h5">What happens next?</h2>
             <ol class="ps-3 mb-0">

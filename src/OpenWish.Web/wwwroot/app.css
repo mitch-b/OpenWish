@@ -310,11 +310,17 @@ h1:focus {
 :root[data-theme='dark'] .form-control,
 :root[data-theme='dark'] .form-select,
 :root[data-theme='dark'] .form-check-input,
-:root[data-theme='dark'] .input-group-text,
-:root[data-theme='dark'] .btn-outline-secondary {
+:root[data-theme='dark'] .input-group-text {
     background-color: var(--color-surface);
     color: var(--color-text);
     border-color: var(--color-border-muted);
+}
+
+/* Outline buttons stay outlined in dark mode instead of reading as dark filled buttons on raised rows. */
+:root[data-theme='dark'] .btn-outline-secondary {
+    background-color: transparent;
+    color: var(--color-text);
+    border-color: var(--color-border);
 }
 
 :root[data-theme='dark'] .form-control:focus,

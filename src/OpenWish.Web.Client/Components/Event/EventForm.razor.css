@@ -28,6 +28,27 @@
     transform: translateY(-1px);
 }
 
+.event-type-fieldset:disabled .event-type-option {
+    cursor: not-allowed;
+    transform: none;
+}
+
+.event-type-fieldset:disabled .event-type-option:not(.event-type-option-selected) {
+    opacity: 0.6;
+}
+
+.event-type-locked-help {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.event-type-locked-help ::deep svg {
+    flex: 0 0 auto;
+    margin-top: 0.2rem;
+}
+
 .event-type-option-selected {
     border-color: var(--color-primary-bg);
     background: var(--color-primary-soft);
@@ -118,6 +139,8 @@
 
 .exchange-reveal-summary {
     display: inline-flex;
+    flex: 0 0 auto;
+    white-space: nowrap;
     align-items: center;
     gap: 0.5rem;
     color: var(--color-text-muted);
@@ -146,4 +169,37 @@
     margin: 0;
     width: 1.25rem;
     height: 1.25rem;
+}
+
+.event-date-input {
+    min-height: 2.75rem;
+}
+
+.event-date-input::-webkit-date-and-time-value {
+    text-align: left;
+}
+
+.event-budget-input .input-group-text {
+    min-width: 2.75rem;
+    justify-content: center;
+    border-color: var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+.event-budget-input ::deep .form-control {
+    min-height: 2.75rem;
+}
+
+.event-form-actions {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.event-form-actions .btn {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
 }

@@ -476,9 +476,9 @@ public class InteractiveControlMarkupTests
     {
         var markup = ReadComponent("OpenWish.Web.Client", "Components", "Pages", "Events", "ManageEvent.razor");
 
-        Assert.Contains("role=\"dialog\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-labelledby=\"delete-event-dialog-title\"", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"delete-event-dialog-description\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<Dialog @ref=\"_deleteDialog\"", markup, StringComparison.Ordinal);
+        Assert.Contains("Title=\"Delete event\"", markup, StringComparison.Ordinal);
+        Assert.Contains("DescriptionId=\"delete-event-dialog-description\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

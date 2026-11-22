@@ -15,7 +15,13 @@
 
 <div class="container page-shell">
   <PageHeader Title="Create an event"
-              Description="Plan a private gift exchange or coordinate wishlists for a celebration." />
+              Description="Plan a private gift exchange or coordinate wishlists for a celebration.">
+      <Actions>
+          <a class="btn btn-outline-secondary" href="/events">
+              <OpenWishIcon Name="arrow-left" /> Back to events
+          </a>
+      </Actions>
+  </PageHeader>
   <div class="row g-4">
     <div class="col-md-8">
         <div class="event-content view-transition">
@@ -30,17 +36,15 @@
         </div>
     </div>
     <div class="col-md-4">
-        <div class="add-item-section">
-            <h2 class="h4">What happens next?</h2>
-            <ol class="ps-3 mb-4">
+        <aside class="add-item-section" aria-labelledby="new-event-next-steps">
+            <h2 id="new-event-next-steps" class="h5">What happens next?</h2>
+            <ol class="ps-3 mb-0">
                 <li class="mb-2">Invite everyone by email or from your friends.</li>
                 <li class="mb-2">Let people add a few gift ideas.</li>
                 <li>Make private assignments when your group is ready.</li>
             </ol>
-            <a class="btn btn-outline-secondary" href="/events">
-                <OpenWishIcon Name="arrow-left" /> Back to events
-            </a>
-        </div>
+            <p class="form-text mb-0 mt-3">You can change these details later.</p>
+        </aside>
     </div>
   </div>
 </div>

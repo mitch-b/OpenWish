@@ -33,19 +33,6 @@
             background-color: rgba(31, 111, 235, 0.08);
         }
 
-.btn-edit {
-    background: var(--color-primary-bg);
-    color: var(--color-text);
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-    .btn-edit:hover {
-        background: var(--color-link-hover);
-    }
-
 .tooltip-container {
     position: relative;
     display: inline-block;
@@ -138,32 +125,71 @@
     color: var(--color-text-muted);
 }
 
+.item-title-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
 .item-name {
     font-weight: 700;
+    line-height: 1.35;
     overflow-wrap: anywhere;
 }
 
-.most-wanted {
+.item-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.5rem;
+    margin-top: 0.35rem;
+}
+
+.most-wanted,
+.item-store {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    margin-left: 0.5rem;
-    color: var(--color-accent);
     font-size: 0.82rem;
     font-weight: 700;
+    line-height: 1.3;
 }
 
-td ::deep .item-source {
-    display: flex;
-    width: fit-content;
-    margin-top: 0.4rem;
+.most-wanted {
+    color: var(--color-accent);
+}
+
+.item-store {
+    min-width: 0;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.item-price {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.item-description {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.item-placeholder {
+    color: var(--color-text-subtle, var(--color-text-muted));
+    font-size: 0.88rem;
 }
 
 .wishlist-external-link {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    color: var(--bs-secondary-color);
+    margin: -0.15rem 0;
+    color: var(--color-link);
     padding: 0.25rem;
     border-radius: 0.5rem;
     transition: color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
@@ -186,10 +212,6 @@ td ::deep .item-source {
     color: #e6f3ff;
     background-color: rgba(88, 166, 255, 0.28);
     box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
-}
-
-:root[data-theme='dark'] .wishlist-external-link .bi {
-    filter: drop-shadow(0 0 6px rgba(88, 166, 255, 0.6));
 }
 
 .action-buttons {
@@ -234,6 +256,11 @@ td ::deep .item-source {
 .edit-actions {
     display: flex;
     gap: 0.25rem;
+}
+
+.edit-actions .btn {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
 }
 
 .rank-actions {
@@ -290,118 +317,141 @@ td ::deep .item-source {
     }
 }
 
-.bi {
-    display: inline-block;
-    position: relative;
-    width: 1rem;
-    height: 1rem;
-    vertical-align: -0.125em;
-    fill: currentColor;
-}
-
-.bi-box-arrow-up-right {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-box-arrow-up-right' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5'/%3E%3Cpath fill-rule='evenodd' d='M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z'/%3E%3C/svg%3E");
-}
-
-.bi-pencil {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-pencil' viewBox='0 0 16 16'%3E%3Cpath d='M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325'/%3E%3C/svg%3E");
-}
-
-.bi-trash {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-trash' viewBox='0 0 16 16'%3E%3Cpath d='M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z'/%3E%3Cpath d='M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z'/%3E%3C/svg%3E");
-}
-
-.bi-chat-dots {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-chat-dots' viewBox='0 0 16 16'%3E%3Cpath d='M5 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0m4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2'/%3E%3Cpath d='M2.165 15.803l.02-.004c1.83-.363 2.948-.842 3.468-1.105A9 9 0 0 0 8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6a10.4 10.4 0 0 1-.524 2.318l-.003.011a11 11 0 0 1-.244.637c-.079.186.074.394.273.362a22 22 0 0 0 .693-.125m.8-3.108a1 1 0 0 0-.287-.801C1.618 10.83 1 9.468 1 8c0-3.192 2.686-6 7-6s7 2.808 7 6-2.686 6-7 6a8 8 0 0 1-2.088-.272 1 1 0 0 0-.711.074c-.387.196-1.24.57-2.634.893a11 11 0 0 0 .398-2'/%3E%3C/svg%3E");
-}
-
-.bi-gift {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-gift' viewBox='0 0 16 16'%3E%3Cpath d='M3 2.5a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 5 0v.006c0 .07 0 .27-.038.494H15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 14.5V7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.038A3 3 0 0 1 3 2.506zm1.068.5H7v-.5a1.5 1.5 0 1 0-3 0c0 .085.002.274.045.43zM9 3h2.932l.023-.07c.043-.156.045-.345.045-.43a1.5 1.5 0 0 0-3 0zM1 4v2h6V4zm8 0v2h6V4zm5 3H9v8h4.5a.5.5 0 0 0 .5-.5zm-7 8V7H2v7.5a.5.5 0 0 0 .5.5z'/%3E%3C/svg%3E");
-}
-
-/* Mobile responsive improvements */
+/* Phones: each table row becomes a compact idea card. */
 @media (max-width: 767.98px) {
-    /* Make table responsive by converting to card-like layout */
+    .table-responsive {
+        overflow: visible;
+    }
+
     .table {
         display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        background: transparent;
     }
 
     .table thead {
         display: none;
     }
 
-    .table tbody,
-    .table tr,
-    .table td {
+    .table tbody {
         display: block;
-        width: 100%;
     }
 
-    .table tr {
-        margin-bottom: 1rem;
+    .table tbody tr.item-row {
+        display: grid;
+        grid-template-columns: auto auto minmax(0, 1fr);
+        grid-template-areas:
+            "name name name"
+            "price priority budget"
+            "description description description"
+            "actions actions actions";
+        align-items: center;
+        column-gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        padding: 0.85rem 0.9rem 0.75rem;
         border: 1px solid var(--color-border-muted);
-        border-radius: 0.5rem;
-        padding: 0.75rem;
+        border-radius: 0.9rem;
         background: var(--color-surface);
     }
 
+    .table tbody tr.item-row:hover {
+        background: var(--color-surface);
+    }
+
+    .table tbody tr.item-row.is-expanded {
+        margin-bottom: 0;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
     .table td {
-        padding: 0.5rem 0;
+        display: block;
+        min-width: 0;
+        padding: 0;
         border: none;
+        background: transparent;
+        box-shadow: none;
         text-align: left;
     }
 
-    .table td:before {
-        content: attr(data-label);
-        display: block;
-        margin-bottom: 0.25rem;
-        color: var(--color-text-muted);
-        font-size: 0.82rem;
-        font-weight: 700;
+    .item-cell-name {
+        grid-area: name;
     }
 
-    .table td[data-label="Name"]:before {
+    .item-cell-price {
+        grid-area: price;
+        margin-top: 0.4rem;
+    }
+
+    .item-cell-priority {
+        grid-area: priority;
+        margin-top: 0.4rem;
+    }
+
+    .item-cell-budget {
+        grid-area: budget;
+        justify-self: start;
+        margin-top: 0.4rem;
+    }
+
+    .item-cell-description {
+        grid-area: description;
+        margin-top: 0.35rem;
+    }
+
+    .item-cell-actions {
+        grid-area: actions;
+        margin-top: 0.65rem;
+        padding-top: 0.65rem !important;
+        border-top: 1px solid var(--color-border-muted) !important;
+    }
+
+    .table td.item-cell-added,
+    .table td:has(> .item-placeholder),
+    .table td.item-cell-priority:has(.priority-none) {
         display: none;
     }
 
-    .table td[data-label="Name"] {
+    .item-name {
         font-size: 1.05rem;
     }
 
-    .table td[data-label="Actions"] {
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--color-border-muted);
+    .item-price {
+        font-size: 1rem;
     }
 
-    .interaction-row td:before {
-        display: none;
+    .item-description {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
     }
 
-    .action-buttons {
-        flex-direction: column;
-        align-items: stretch;
+    .is-expanded .item-description {
+        display: block;
+        -webkit-line-clamp: unset;
+        line-clamp: none;
     }
 
-    .edit-actions {
-        width: 100%;
+    .table tbody tr.interaction-row-expanded {
+        display: block;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--color-border-muted);
+        border-top: none;
+        border-radius: 0 0 0.9rem 0.9rem;
+        overflow: hidden;
     }
 
-    .edit-actions .btn {
-        flex: 1;
-        min-height: 2.75rem;
-    }
-
-    .action-buttons > .btn {
-        min-height: 2.75rem;
+    .interaction-row {
+        padding: 1rem !important;
     }
 
     .interaction-container {
         flex-direction: column;
+        gap: 1.25rem;
     }
 
     .interaction-section {
-        min-width: 100%;
+        min-width: 0;
     }
 }

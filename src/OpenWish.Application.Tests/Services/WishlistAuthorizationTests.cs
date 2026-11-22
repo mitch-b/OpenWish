@@ -387,6 +387,56 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task GetWishlistItemsByPublicIdAsync_OmitsCommenterEmails()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var commenter = new ApplicationUser { Id = "friend", UserName = "friend@example.com", Email = "friend@example.com" };
+        var item = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(commenter);
+            context.WishlistItems.Add(item);
+            context.ItemComments.Add(new ItemComment { WishlistItem = item, UserId = commenter.Id, Text = "Great pick" });
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var listed = Assert.Single(Assert.Single(await service.GetWishlistItemsByPublicIdAsync(wishlist.PublicId, wishlist.OwnerId)).Comments);
+        var threaded = Assert.Single(await service.GetItemCommentsByPublicIdAsync(wishlist.PublicId, item.Id));
+
+        Assert.Equal("OpenWish member", listed.User?.UserName);
+        Assert.Equal("OpenWish member", threaded.User?.UserName);
+        Assert.Equal(string.Empty, listed.User?.Email);
+        Assert.Equal(string.Empty, threaded.User?.Email);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task EventMembers_SeeSharedEventListsButNotPrivateOnes(bool isPrivate, bool expected)
+    {
+        var factory = CreateFactory();
+        int wishlistId;
+        await using (var context = factory.CreateDbContext())
+        {
+            var organizer = new ApplicationUser { Id = "organizer", UserName = "organizer" };
+            var member = new ApplicationUser { Id = "member", UserName = "member" };
+            var holiday = new Event { Name = "Holiday", CreatedBy = organizer };
+            holiday.EventUsers.Add(new EventUser { User = member, UserId = member.Id, Status = "Accepted" });
+            var wishlist = new Wishlist { Name = "Holiday ideas", OwnerId = organizer.Id, Event = holiday, IsPrivate = isPrivate, IsFriendsOnly = !isPrivate };
+            context.Users.AddRange(organizer, member);
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+            wishlistId = wishlist.Id;
+        }
+
+        Assert.Equal(expected, await CreateService(factory).CanUserAccessWishlistAsync(wishlistId, "member"));
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.Equal(expected, (await WishlistService.GetAccessibleWishlistIdsAsync(verificationContext, "member", [wishlistId])).Contains(wishlistId));
+    }
+
+    [Fact]
     public async Task UpdateWishlistItemAsync_PreservesPublicId()
     {
         var factory = CreateFactory();
@@ -653,8 +703,8 @@ public class WishlistAuthorizationTests
             var pendingEvent = new Event { Name = "Birthday", CreatedBy = organizer };
             pendingEvent.EventUsers.Add(new EventUser { User = member, UserId = member.Id, Status = "Pending" });
 
-            Wishlist createList(string name, string ownerId, Event? eventEntity = null, bool collaborative = false, bool deleted = false) =>
-                new() { Name = name, OwnerId = ownerId, Event = eventEntity, IsCollaborative = collaborative, Deleted = deleted };
+            Wishlist createList(string name, string ownerId, Event? eventEntity = null, bool collaborative = false, bool deleted = false, bool isPrivate = false) =>
+                new() { Name = name, OwnerId = ownerId, Event = eventEntity, IsCollaborative = collaborative, Deleted = deleted, IsPrivate = isPrivate };
             var own = createList("Own", member.Id);
             var deletedOwn = createList("Deleted own", member.Id, deleted: true);
             var sharedEdit = createList("Shared edit", "friend");
@@ -664,11 +714,13 @@ public class WishlistAuthorizationTests
             var eventCollaborative = createList("Event group gift", organizer.Id, acceptedEvent, collaborative: true);
             var eventNotCollaborative = createList("Organizer list", organizer.Id, acceptedEvent);
             var pendingCollaborative = createList("Pending group gift", organizer.Id, pendingEvent, collaborative: true);
+            var privateCollaborative = createList("Private group gift", organizer.Id, acceptedEvent, collaborative: true, isPrivate: true);
+            var privateSharedEdit = createList("Private shared edit", organizer.Id, acceptedEvent, collaborative: true, isPrivate: true);
             var unrelated = createList("Someone else", "stranger");
             Wishlist[] wishlists =
             [
                 own, deletedOwn, sharedEdit, sharedAdmin, sharedView, revokedEdit,
-                eventCollaborative, eventNotCollaborative, pendingCollaborative, unrelated
+                eventCollaborative, eventNotCollaborative, pendingCollaborative, privateCollaborative, privateSharedEdit, unrelated
             ];
             context.Users.AddRange(
                 organizer,
@@ -678,6 +730,7 @@ public class WishlistAuthorizationTests
             context.Wishlists.AddRange(wishlists);
             context.WishlistPermissions.AddRange(
                 new WishlistPermission { Wishlist = sharedEdit, UserId = member.Id, PermissionType = "Edit" },
+                new WishlistPermission { Wishlist = privateSharedEdit, UserId = member.Id, PermissionType = "Edit" },
                 new WishlistPermission { Wishlist = sharedAdmin, UserId = member.Id, PermissionType = "Admin" },
                 new WishlistPermission { Wishlist = sharedView, UserId = member.Id, PermissionType = "View" },
                 new WishlistPermission { Wishlist = revokedEdit, UserId = member.Id, PermissionType = "Edit", Deleted = true });
@@ -689,7 +742,7 @@ public class WishlistAuthorizationTests
         var editable = await service.GetEditableWishlistsAsync("member");
 
         Assert.Equal(
-            ["Event group gift", "Own", "Shared admin", "Shared edit"],
+            ["Event group gift", "Own", "Private shared edit", "Shared admin", "Shared edit"],
             editable.Select(wishlist => wishlist.Name).Order(StringComparer.Ordinal));
         var editableIds = editable.Select(wishlist => wishlist.Id).ToHashSet();
         foreach (var wishlistId in wishlistIds)

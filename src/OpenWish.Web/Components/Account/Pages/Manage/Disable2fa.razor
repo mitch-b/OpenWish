@@ -39,7 +39,7 @@
 
         if (HttpMethods.IsGet(HttpContext.Request.Method) && !await UserManager.GetTwoFactorEnabledAsync(user))
         {
-            throw new InvalidOperationException("Cannot disable 2FA for user as it's not currently enabled.");
+            RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Two-factor authentication is already off.", HttpContext);
         }
     }
 

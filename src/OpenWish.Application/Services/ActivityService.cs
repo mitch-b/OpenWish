@@ -78,7 +78,8 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
                  (!w.IsPrivate &&
                   !w.IsFriendsOnly &&
                   friendIds.Contains(w.OwnerId)) ||
-                 (w.EventId.HasValue &&
+                 (!w.IsPrivate &&
+                  w.EventId.HasValue &&
                   !w.Event.Deleted &&
                   (w.Event.CreatedBy.Id == userId ||
                    w.Event.EventUsers.Any(eventUser =>

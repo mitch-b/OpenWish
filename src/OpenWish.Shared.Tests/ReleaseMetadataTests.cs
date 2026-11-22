@@ -24,6 +24,7 @@ public class ReleaseMetadataTests
         Assert.NotEmpty(releases);
         Assert.Equal(releaseVersion, buildVersion);
         Assert.Equal(releaseVersion, releases[0].Version);
+        Assert.Contains($"## [{releaseVersion}] - ", File.ReadAllText(Path.Combine(repositoryDirectory, "CHANGELOG.md")), StringComparison.Ordinal);
     }
 
     private static string FindRepositoryDirectory()

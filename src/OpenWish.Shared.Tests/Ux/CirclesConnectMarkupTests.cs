@@ -79,6 +79,6 @@ public class CirclesConnectMarkupTests
 
         var root = directory?.FullName
             ?? throw new DirectoryNotFoundException("Could not locate OpenWish.slnx.");
-        return File.ReadAllText(Path.Combine([root, "OpenWish.Web.Client", "Components", .. segments]));
+        return File.ReadAllText(Path.Combine([root, "OpenWish.Web.Client", "Components", .. segments])).ReplaceLineEndings("\n");
     }
 }

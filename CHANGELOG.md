@@ -4,8 +4,33 @@ All notable user-facing changes to OpenWish are documented here.
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-11-22
+
+### Fixed
+
+- Private wishlists attached to an event stay private. Event members see only
+  the event's shared lists, matching the event page and the list's settings.
+  A private group-gift list can no longer be found or edited by event members
+  unless the owner shares it with them.
+- Wishlist pages no longer send commenters' email addresses to the browser,
+  including accounts whose username is their email.
+- Comment counts, badges, and the "Has comments" filter update as soon as a
+  comment is added or deleted.
+- The notifications panel no longer slides under the sidebar on narrow tablets.
+- Opening the replace recovery codes or turn off two-factor pages when
+  two-factor authentication is off returns you to its settings with a message
+  instead of an error page.
+
+## [0.21.1] - 2026-11-22
+
 ### Improved
 
+- Thirty polish passes across every core journey, with phones first: wishlists
+  and the add-idea form fit a 390px screen, gift-exchange organizers see the
+  next step first, and account, friends, and connected-app pages share one
+  layout.
+- Every page is checked automatically on phone and desktop, in light and dark
+  themes.
 - Friends, gift exchanges, event and wishlist settings, and account settings
   now use the same section menu. Each task opens separately, and the menu
   moves above the content on smaller screens. Running an event again is

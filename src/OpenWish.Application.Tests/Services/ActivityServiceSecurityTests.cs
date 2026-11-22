@@ -224,6 +224,30 @@ public class ActivityServiceSecurityTests
         Assert.Equal(expectedCount, activities.Count());
     }
 
+    [Theory]
+    [InlineData(false, 2)]
+    [InlineData(true, 0)]
+    public async Task GetFriendsActivityFeedAsync_HidesPrivateEventListsFromEventMembers(bool isPrivate, int expectedCount)
+    {
+        var factory = CreateFactory();
+        await SeedActivityDataAsync(factory);
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Friends.Add(new Friend { UserId = "viewer", FriendUserId = "actor" });
+            var owner = await context.Users.SingleAsync(user => user.Id == "owner");
+            var holiday = new Event { Name = "Holiday", CreatedBy = owner };
+            holiday.EventUsers.Add(new EventUser { UserId = "viewer", Status = "Accepted" });
+            var wishlist = await context.Wishlists.SingleAsync();
+            wishlist.Event = holiday;
+            wishlist.IsPrivate = isPrivate;
+            await context.SaveChangesAsync();
+        }
+
+        var activities = await new ActivityService(factory, _mapper).GetFriendsActivityFeedAsync("viewer");
+
+        Assert.Equal(expectedCount, activities.Count());
+    }
+
     private static async Task<(int WishlistId, string ActorId)> SeedActivityDataAsync(TestDbContextFactory factory)
     {
         const string actorId = "actor";

@@ -98,14 +98,14 @@ else
 
     private string PrivacyLabel => Wishlist switch
     {
-        { IsPrivate: true } => HasEventAccess ? "Event members" : "Private",
+        { IsPrivate: true } => "Private",
         { IsFriendsOnly: true } => HasEventAccess ? "Specific friends + event" : "Specific friends",
         _ => HasEventAccess ? "All friends + event" : "All friends"
     };
 
     private string PrivacyDescription => Wishlist switch
     {
-        { IsPrivate: true } => HasEventAccess ? "Only you and event members can see it" : "Private: only you can see it",
+        { IsPrivate: true } => "Private: only you and people you share it with can see it",
         { IsFriendsOnly: true } => HasEventAccess ? "Shared with specific friends and event members" : "Shared with specific friends",
         _ => HasEventAccess ? "Shared with all friends and event members" : "Shared with all friends"
     };

@@ -295,7 +295,9 @@ public sealed class ConnectedAppTests(OpenWishAppFactory factory)
         var consent = WebUtility.HtmlDecode(await owner.GetPageAsync(app.BuildAuthorizeUrl()));
         Assert.Contains("Connect Studio Notebook", consent);
         Assert.Contains(list.Name, consent);
-        Assert.Contains("never sees reservations, purchases, comments, hidden surprises", consent);
+        Assert.Contains("Studio Notebook never sees", consent);
+        Assert.Contains("Reservations, purchases, or comments", consent);
+        Assert.Contains("Hidden surprises others add for you", consent);
         Assert.DoesNotContain("already connected", consent);
 
         await app.ConnectAsync(owner, [list.PublicId]);

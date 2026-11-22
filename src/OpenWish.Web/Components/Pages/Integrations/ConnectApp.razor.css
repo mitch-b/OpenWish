@@ -113,26 +113,19 @@
 .consent-new-list {
     display: grid;
     gap: 0.4rem;
-    padding-top: 1rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border-muted);
 }
 
-.consent-new-list .form-check {
-    display: flex;
-    min-height: 2.75rem;
-    align-items: center;
-    gap: 0.6rem;
-    margin: 0;
-    padding: 0;
+.consent-new-list-field {
+    display: grid;
+    gap: 0.4rem;
 }
 
-.consent-new-list .form-check-input {
-    width: 1.25rem;
-    height: 1.25rem;
-    margin: 0;
-}
-
-.consent-new-list .form-check-label {
-    font-weight: 650;
+/* Show the name field only once someone chooses to start a new list. */
+.consent-new-list:has(#consent-new-list:not(:checked)) .consent-new-list-field {
+    display: none;
 }
 
 .consent-new-list .form-label {
@@ -141,12 +134,45 @@
     font-weight: 700;
 }
 
+/* 44px checkbox rows: the label is the touch target, the help text sits under it. */
+.consent-toggle {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: start;
+    margin: 0 0 0.5rem;
+    padding: 0;
+}
+
+.consent-toggle .form-check-input {
+    float: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.75rem 0 0;
+    cursor: pointer;
+}
+
+.consent-toggle .form-check-label {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.consent-toggle .form-text {
+    grid-column: 2;
+    margin-top: 0;
+    font-size: 0.86rem;
+}
+
 .consent-permissions {
     background: var(--color-surface-alt);
     box-shadow: none;
 }
 
-.consent-permissions ul {
+.consent-can,
+.consent-never ul {
     display: grid;
     gap: 0.6rem;
     margin: 0.75rem 0 1rem;
@@ -171,7 +197,41 @@
 }
 
 .consent-permissions ::deep .consent-denied {
-    color: var(--color-text-subtle);
+    color: var(--color-text-muted);
+}
+
+.consent-optional {
+    margin-bottom: 1rem;
+    padding: 0.25rem 0.75rem 0.75rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+}
+
+.consent-never {
+    margin-bottom: 1rem;
+    padding: 0.85rem 1rem 0.1rem;
+    border: 1px solid var(--color-success-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+}
+
+.consent-never h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.consent-never h3 ::deep .ow-icon {
+    color: var(--color-success-text);
+}
+
+.consent-never ul {
+    margin-top: 0.6rem;
+    font-size: 0.95rem;
 }
 
 .consent-actions {

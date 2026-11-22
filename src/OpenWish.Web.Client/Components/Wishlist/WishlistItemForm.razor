@@ -12,17 +12,17 @@
                          InitialLink="@InitialImportLink" />
 </div>
 
-<EditForm @ref="_form" Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
+<EditForm @ref="_form" Model="@Model" OnValidSubmit="@HandleSubmit" OnInvalidSubmit="@RevealFirstProblem" FormName="WishlistItemForm" aria-busy="@(IsBusy ? "true" : "false")">
     <DataAnnotationsValidator />
-    <ValidationSummary />
+    <IdeaFieldsValidator />
 
     <div class="item-fields">
         <div class="item-field-wide">
             <label for="name" class="form-label">Name</label>
-            <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
+            <InputText @ref="_nameInput" id="name" class="form-control" @bind-Value="@Model!.Name" autocomplete="off"
                        aria-describedby="item-name-help" placeholder="e.g., A travel mug" />
+            <ValidationMessage For="@(() => Model.Name)" role="alert" />
             <div id="item-name-help" class="form-text">A name is enough to save an idea. Add other details whenever you like.</div>
-            <ValidationMessage For="@(() => Model.Name)" />
             <DuplicateIdeaNotice Model="@Model" ExistingItems="@ExistingItems" />
         </div>
 
@@ -34,21 +34,26 @@
         </div>
 
         <div>
-            <label for="price" class="form-label">Estimated price <span class="text-muted fw-normal">(optional)</span></label>
-            <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" />
-            <ValidationMessage For="@(() => Model.Price)" />
-        </div>
-
-        <div>
-            <label for="url" class="form-label">Product link <span class="text-muted fw-normal">(optional)</span></label>
-            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" @onblur="SuggestStore" />
+            <label for="url" class="form-label">Product link</label>
+            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url"
+                       placeholder="https://" @onblur="SuggestStore" />
             <ValidationMessage For="@(() => Model.Url)" />
         </div>
 
         <div>
-            <label for="whereToBuy" class="form-label">Where to buy <span class="text-muted fw-normal">(optional)</span></label>
-            <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" />
+            <label for="whereToBuy" class="form-label">Where to buy</label>
+            <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" placeholder="e.g., Target or a local shop" />
             <ValidationMessage For="@(() => Model.WhereToBuy)" />
+        </div>
+
+        <div>
+            <label for="price" class="form-label">Estimated price</label>
+            <div class="input-group price-input">
+                <span class="input-group-text" aria-hidden="true">$</span>
+                <InputNumber @ref="_priceInput" id="price" class="form-control" inputmode="decimal" min="0" step="0.01" placeholder="0.00"
+                             DisplayName="Estimated price" @bind-Value="@Model!.Price" />
+            </div>
+            <ValidationMessage For="@(() => Model.Price)" role="alert" />
         </div>
 
         <div>
@@ -61,16 +66,16 @@
             </InputSelect>
         </div>
 
-        <div class="item-field-wide form-check">
-            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
+        <div class="item-field-wide form-check private-option">
+            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" aria-describedby="item-private-help" />
             <label class="form-check-label" for="isPrivate">Keep this idea private</label>
-            <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
+            <div id="item-private-help" class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
             <ValidationMessage For="@(() => Model.IsPrivate)" />
         </div>
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary" disabled="@IsBusy">
+        <button type="submit" class="btn btn-primary" disabled="@(IsBusy || !RendererInfo.IsInteractive)">
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -83,14 +88,14 @@
         </button>
         @if (OnSubmitAndAddAnother.HasDelegate)
         {
-            <button type="button" class="btn btn-outline-primary" data-testid="add-another-item" disabled="@IsBusy" @onclick="HandleAddAnother">
+            <button type="button" class="btn btn-outline-primary" data-testid="add-another-item" disabled="@(IsBusy || !RendererInfo.IsInteractive)" @onclick="HandleAddAnother">
                 <OpenWishIcon Name="plus-lg" />
                 <span>Add and add another</span>
             </button>
         }
         @if (OnCancel.HasDelegate)
         {
-            <button type="button" class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="HandleCancel">Cancel</button>
+            <button type="button" class="btn btn-outline-secondary" disabled="@(IsSubmitting || !RendererInfo.IsInteractive)" @onclick="HandleCancel">Cancel</button>
         }
     </div>
 </EditForm>
@@ -108,6 +113,8 @@
     [Parameter] public string? InitialImportLink { get; set; }
 
     private EditForm? _form;
+    private InputText? _nameInput;
+    private InputNumber<decimal?>? _priceInput;
     private bool _isImporting;
     private bool IsBusy => IsSubmitting || _isImporting;
 
@@ -128,12 +135,30 @@
 
     private async Task HandleAddAnother()
     {
-        if (IsBusy || _form?.EditContext is not { } editContext || !editContext.Validate())
+        if (IsBusy || _form?.EditContext is not { } editContext)
         {
             return;
         }
 
+        if (!editContext.Validate())
+        {
+            await RevealFirstProblem(editContext);
+            return;
+        }
+
         await OnSubmitAndAddAnother.InvokeAsync(Model);
+    }
+
+    // Move to the first field that needs attention, scrolling it into view on a small screen.
+    private async Task RevealFirstProblem(EditContext editContext)
+    {
+        var field = editContext.GetValidationMessages(editContext.Field(nameof(WishlistItemModel.Name))).Any()
+            ? _nameInput?.Element
+            : _priceInput?.Element;
+        if (field is { } element)
+        {
+            await element.FocusAsync(preventScroll: false);
+        }
     }
 
     private async Task HandleCancel()

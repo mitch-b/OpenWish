@@ -21,7 +21,9 @@
                         data-dialog-close
                         @onclick="Cancel"
                         aria-label="Close"
-                        disabled="@IsBusy"></button>
+                        disabled="@IsBusy">
+                    <OpenWishIcon Name="x-lg" />
+                </button>
             </div>
             <div class="modal-body">
                 @if (_lastAddedName is not null)
@@ -53,78 +55,76 @@
                           @key="_formVersion"
                           Model="@Model"
                           OnValidSubmit="@HandleSubmit"
+                          OnInvalidSubmit="@RevealFirstProblem"
                           FormName="WishlistItemModal"
                           id="wishlist-item-form"
                           aria-busy="@_isSubmitting">
                     <DataAnnotationsValidator />
-                    <ValidationSummary />
+                    <IdeaFieldsValidator />
+
+                    <div class="item-fields">
+                        <div class="item-field-wide" id="wishlist-item-name-field">
+                            <label for="name" class="form-label">Name</label>
+                            <InputText @ref="_nameInput" id="name" class="form-control" @bind-Value="@Model!.Name" autocomplete="off"
+                                       aria-describedby="modal-item-name-help" placeholder="e.g., A travel mug" />
+                            <ValidationMessage For="@(() => Model.Name)" role="alert" />
+                            <div id="modal-item-name-help" class="form-text">A name is enough to save an idea.</div>
+                            <DuplicateIdeaNotice Model="@Model" ExistingItems="@ExistingItems" />
+                        </div>
+
+                        <div class="item-field-wide">
+                            <label for="description" class="form-label">Description</label>
+                            <InputTextArea id="description" class="form-control" rows="2" @bind-Value="@Model!.Description"
+                                           placeholder="Color, size, or anything that would help a gift giver" />
+                            <ValidationMessage For="@(() => Model.Description)" />
+                        </div>
+
+                        <div>
+                            <label for="url" class="form-label">Product link</label>
+                            <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url"
+                                       placeholder="https://" @onblur="SuggestStore" />
+                            <ValidationMessage For="@(() => Model.Url)" />
+                        </div>
+
+                        <div>
+                            <label for="whereToBuy" class="form-label">Where to buy</label>
+                            <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" placeholder="e.g., Target or a local shop" />
+                            <ValidationMessage For="@(() => Model.WhereToBuy)" />
+                        </div>
+
+                        <div id="wishlist-item-price-field">
+                            <label for="price" class="form-label">Estimated price</label>
+                            <div class="input-group price-input">
+                                <span class="input-group-text" aria-hidden="true">$</span>
+                                <InputNumber @ref="_priceInput" id="price" class="form-control" inputmode="decimal" min="0" step="0.01" placeholder="0.00"
+                                             DisplayName="Estimated price" @bind-Value="@Model!.Price" />
+                            </div>
+                            <ValidationMessage For="@(() => Model.Price)" role="alert" />
+                        </div>
+
+                        <div>
+                            <label for="priority" class="form-label">Priority</label>
+                            <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
+                                <option value="">No priority</option>
+                                <option value="1">High</option>
+                                <option value="2">Medium</option>
+                                <option value="3">Low</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="item-field-wide form-check private-option">
+                            <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" aria-describedby="modal-item-private-help" />
+                            <label class="form-check-label" for="isPrivate">Keep this idea private</label>
+                            <div id="modal-item-private-help" class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
+                            <ValidationMessage For="@(() => Model.IsPrivate)" />
+                        </div>
+                    </div>
+
+                    @* Kept beside the actions so it stays in view after scrolling a long form on a phone. *@
                     @if (!string.IsNullOrWhiteSpace(_saveError))
                     {
-                        <div class="alert alert-danger" role="alert">@_saveError</div>
+                        <div class="alert alert-danger save-error" id="wishlist-item-save-error" role="alert">@_saveError</div>
                     }
-
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                                <InputText id="name" class="form-control" @bind-Value="@Model!.Name"
-                                           aria-describedby="modal-item-name-help" placeholder="e.g., A travel mug" />
-                                <div id="modal-item-name-help" class="form-text">A name is enough to save an idea.</div>
-                                <ValidationMessage For="@(() => Model.Name)" />
-                                <DuplicateIdeaNotice Model="@Model" ExistingItems="@ExistingItems" />
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label for="priority" class="form-label">Priority</label>
-                                <InputSelect id="priority" class="form-select" @bind-Value="@Model!.Priority">
-                                    <option value="">None</option>
-                                    <option value="1">High</option>
-                                    <option value="2">Medium</option>
-                                    <option value="3">Low</option>
-                                </InputSelect>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <InputTextArea id="description" class="form-control" rows="2" @bind-Value="@Model!.Description" placeholder="Color, size, or anything that would help a gift giver" />
-                        <ValidationMessage For="@(() => Model.Description)" />
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="price" class="form-label">Estimated price</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <InputNumber id="price" class="form-control" inputmode="decimal" min="0" step="0.01" @bind-Value="@Model!.Price" placeholder="0.00" />
-                                </div>
-                                <ValidationMessage For="@(() => Model.Price)" />
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="whereToBuy" class="form-label">Where to buy</label>
-                                <InputText id="whereToBuy" class="form-control" @bind-Value="@Model!.WhereToBuy" placeholder="e.g., Amazon, Target" />
-                                <ValidationMessage For="@(() => Model.WhereToBuy)" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="url" class="form-label">Product Link</label>
-                        <InputText id="url" class="form-control" type="url" inputmode="url" autocomplete="url" @bind-Value="@Model!.Url" placeholder="https://..." @onblur="SuggestStore" />
-                        <ValidationMessage For="@(() => Model.Url)" />
-                    </div>
-
-                    <div class="mb-3 form-check">
-                        <InputCheckbox id="isPrivate" class="form-check-input" @bind-Value="@Model!.IsPrivate" />
-                        <label class="form-check-label" for="isPrivate">Keep this idea private</label>
-                        <div class="form-text">Only you can see private ideas, even on a shared wishlist.</div>
-                        <ValidationMessage For="@(() => Model.IsPrivate)" />
-                    </div>
                 </EditForm>
             </div>
             <div class="modal-footer">
@@ -176,9 +176,12 @@
     private bool _dialogActive;
     private bool _addAnother;
     private bool _focusImporter;
+    private bool _revealSaveError;
     private int _formVersion;
     private string? _lastAddedName;
     private EditForm? _form;
+    private InputText? _nameInput;
+    private InputNumber<decimal?>? _priceInput;
     private bool IsBusy => _isImporting || _isSubmitting;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -187,6 +190,18 @@
         {
             await JSRuntime.InvokeVoidAsync("openWishActivateDialog", "wishlist-item-dialog");
             _dialogActive = true;
+
+            // Editing starts with the idea itself rather than the link importer.
+            if (_isEditing)
+            {
+                await JSRuntime.InvokeVoidAsync("openWishFocusElement", "name");
+            }
+        }
+
+        if (_revealSaveError && IsVisible && !string.IsNullOrWhiteSpace(_saveError))
+        {
+            _revealSaveError = false;
+            await JSRuntime.InvokeVoidAsync("openWishScrollToElement", "wishlist-item-save-error");
         }
 
         if (_focusImporter && IsVisible)
@@ -267,6 +282,7 @@
             _saveError = _isEditing
                 ? "We couldn't save these changes. Review the details and try again."
                 : "We couldn't add this item. Review the details and try again.";
+            _revealSaveError = true;
         }
         finally
         {
@@ -285,14 +301,14 @@
 
     private async Task AddAnotherAsync()
     {
-        if (IsBusy || _form?.EditContext is not { } editContext || !editContext.Validate())
+        if (IsBusy || _form?.EditContext is not { } editContext)
         {
             return;
         }
 
-        if (Model.Price < 0)
+        if (!editContext.Validate())
         {
-            _saveError = "Estimated price can't be negative.";
+            await RevealFirstProblem(editContext);
             return;
         }
 
@@ -307,6 +323,20 @@
         {
             _addAnother = false;
         }
+    }
+
+    // Bring the first field that needs attention, with its message, above the sticky actions and focus it.
+    private async Task RevealFirstProblem(EditContext editContext)
+    {
+        var nameNeedsAttention = editContext.GetValidationMessages(editContext.Field(nameof(WishlistItemModel.Name))).Any();
+        var input = nameNeedsAttention ? _nameInput?.Element : _priceInput?.Element;
+        if (input is not { } element)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("openWishScrollToElement", nameNeedsAttention ? "wishlist-item-name-field" : "wishlist-item-price-field");
+        await element.FocusAsync(preventScroll: true);
     }
 
     private void PrepareForNextItem()

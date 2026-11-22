@@ -36,10 +36,6 @@
                 <OpenWishIcon Name="check-circle" /> @_lastAddedName was added. Add the next idea whenever you're ready.
             </div>
         }
-        @if (!string.IsNullOrWhiteSpace(_errorMessage))
-        {
-            <div class="alert alert-danger" role="alert">@_errorMessage</div>
-        }
         <WishlistItemForm @key="_formVersion"
                           Model="@_item"
                           ExistingItems="@_existingItems"
@@ -49,6 +45,11 @@
                           AutoFocusImport="true"
                           InitialImportLink="@_initialImportLink"
                           IsSubmitting="@_isSubmitting" />
+        @* Shown beside the actions so the person who just pressed save sees it, even on a long phone form. *@
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert">@_errorMessage</div>
+        }
         </div>
     </div>
 </div>

@@ -4,138 +4,176 @@
     <table class="table table-hover">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Price</th>
+                <th scope="col" class="col-name">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Price</th>
                 @if (Budget.HasValue)
                 {
                     <th>Budget</th>
                 }
-                <th>Priority</th>
-                <th>Added</th>
-                <th>Actions</th>
+                <th scope="col">Priority</th>
+                <th scope="col" class="col-added">Added</th>
+                <th scope="col" class="col-actions">Actions</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in Items)
             {
                 <tr @key="item.PublicId"
+                    class="item-row @(ExpandedInteractions.Contains(item.Id) ? "is-expanded" : string.Empty)"
                     tabindex="-1">
-                    <td data-label="Name">
-                        <span class="item-name">@item.Name</span>
-                        <ReservationBadge Item="item" CurrentUserId="@CurrentUserId" IsOwner="IsOwner" />
-                        @if (item.IsPinned)
+                    <td data-label="Name" class="item-cell-name">
+                        <div class="item-title-line">
+                            <span class="item-name">@item.Name</span>
+                            @if (!string.IsNullOrEmpty(item.Url))
+                            {
+                                <a href="@item.Url"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="wishlist-external-link"
+                                   title="Open product page"
+                                   aria-label="View @item.Name product (opens in a new tab)">
+                                    <OpenWishIcon Name="box-arrow-up-right" />
+                                </a>
+                            }
+                        </div>
+                        @if (item.IsPinned || !string.IsNullOrWhiteSpace(item.WhereToBuy) || !string.IsNullOrWhiteSpace(item.SourceAppName) || (!IsOwner && item.Reservations.Count > 0))
                         {
-                            <span class="most-wanted"><OpenWishIcon Name="star-fill" /> Most wanted</span>
+                            <div class="item-tags">
+                                <ReservationBadge Item="item" CurrentUserId="@CurrentUserId" IsOwner="IsOwner" />
+                                @if (item.IsPinned)
+                                {
+                                    <span class="most-wanted"><OpenWishIcon Name="star" /> Most wanted</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(item.WhereToBuy))
+                                {
+                                    <span class="item-store"><OpenWishIcon Name="shop" /> @item.WhereToBuy</span>
+                                }
+                                <ItemSourceBadge AppName="@item.SourceAppName" />
+                            </div>
                         }
-                        @if (!string.IsNullOrEmpty(item.Url))
-                        {
-                            <a href="@item.Url"
-                               target="_blank"
-                               rel="noopener noreferrer"
-                               class="ms-2 text-decoration-none wishlist-external-link"
-                               aria-label="View @item.Name product (opens in a new tab)">
-                                <OpenWishIcon Name="box-arrow-up-right" />
-                            </a>
-                        }
-                        <ItemSourceBadge AppName="@item.SourceAppName" />
                     </td>
-                    <td data-label="Description">@(string.IsNullOrWhiteSpace(item.Description) ? "Not added" : item.Description)</td>
-                    <td data-label="Price">@(item.Price?.ToString("C") ?? "Not added")</td>
+                    <td data-label="Description" class="item-cell-description">
+                        @if (string.IsNullOrWhiteSpace(item.Description))
+                        {
+                            <span class="item-placeholder">Not added</span>
+                        }
+                        else
+                        {
+                            <span class="item-description">@item.Description</span>
+                        }
+                    </td>
+                    <td data-label="Price" class="item-cell-price">
+                        @if (item.Price is { } price)
+                        {
+                            <span class="item-price">@price.ToString("C")</span>
+                        }
+                        else
+                        {
+                            <span class="item-placeholder">Not added</span>
+                        }
+                    </td>
                     @if (Budget.HasValue)
                     {
-                        <td data-label="Budget">
+                        <td data-label="Budget" class="item-cell-budget">
                             <span class="@GetBudgetStatusClass(item)">@GetBudgetStatusText(item)</span>
                         </td>
                     }
-                    <td data-label="Priority">
+                    <td data-label="Priority" class="item-cell-priority">
                         <span class="priority-badge @GetPriorityClass(item.Priority)">
                             @GetPriorityText(item.Priority)
                         </span>
                     </td>
-                    <td data-label="Added">
+                    <td data-label="Added" class="item-cell-added">
                         <span class="tooltip-container">
                             @item.CreatedOn.ToLocalHumanizedString()
                             <span class="tooltip-text">@item.CreatedOn.ToLocalTime()</span>
                         </span>
                     </td>
-                    <td data-label="Actions">
+                    <td data-label="Actions" class="item-cell-actions">
                         <div class="action-buttons">
                             @if (ShowInteractions)
                             {
                                 <button
-                                    class="btn btn-sm btn-outline-info"
+                                    class="btn btn-sm item-options-toggle @(ExpandedInteractions.Contains(item.Id) ? "is-open" : string.Empty)"
                                     type="button"
+                                    disabled="@(!RendererInfo.IsInteractive)"
                                     @onclick="() => ToggleInteractions(item.Id)"
                                     aria-expanded="@ExpandedInteractions.Contains(item.Id)"
                                     aria-controls="item-interactions-@item.Id"
                                     aria-label="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") gift options for @item.Name">
-                                    <OpenWishIcon Name="chat-dots" />
-                                    @(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")
+                                    <OpenWishIcon Name="@(ExpandedInteractions.Contains(item.Id) ? "x-lg" : "gift")" />
+                                    <span>@(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")</span>
                                 </button>
                             }
-                            <div class="edit-actions">
-                                @if (OnEdit.HasDelegate)
-                                {
-                                    <button
-                                        class="btn btn-sm btn-primary"
-                                        type="button"
-                                        aria-label="Edit @item.Name"
-                                        @onclick="() => HandleEdit(item)"
-                                        title="Edit @item.Name">
-                                        <OpenWishIcon Name="pencil" />
-                                    </button>
-                                }
-                                @if (OnDelete.HasDelegate)
-                                {
-                                    <button
-                                        id="delete-wishlist-item-@item.Id"
-                                        class="btn btn-sm btn-danger"
-                                        type="button"
-                                        aria-label="Delete @item.Name"
-                                        @onclick="() => HandleDelete(item)"
-                                        title="Delete @item.Name">
-                                        <OpenWishIcon Name="trash" />
-                                    </button>
-                                }
-                            </div>
+                            @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
+                            {
+                                <div class="edit-actions">
+                                    @if (OnEdit.HasDelegate)
+                                    {
+                                        <button
+                                            class="btn btn-sm item-icon-action"
+                                            type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
+                                            aria-label="Edit @item.Name"
+                                            @onclick="() => HandleEdit(item)"
+                                            title="Edit">
+                                            <OpenWishIcon Name="pencil" />
+                                        </button>
+                                    }
+                                    @if (OnDelete.HasDelegate)
+                                    {
+                                        <button
+                                            id="delete-wishlist-item-@item.Id"
+                                            class="btn btn-sm item-icon-action item-delete-action"
+                                            type="button"
+                                            disabled="@(!RendererInfo.IsInteractive)"
+                                            aria-label="Delete @item.Name"
+                                            @onclick="() => HandleDelete(item)"
+                                            title="Delete">
+                                            <OpenWishIcon Name="trash" />
+                                        </button>
+                                    }
+                                </div>
+                            }
                             @if (IsOwner)
                             {
-                                <div class="rank-actions" aria-label="Reorder @item.Name">
-                                    <button class="btn btn-sm @(item.IsPinned ? "btn-primary" : "btn-outline-primary")"
+                                <div class="rank-actions" role="group" aria-label="Reorder @item.Name">
+                                    <button class="btn btn-sm item-icon-action @(item.IsPinned ? "is-pinned" : string.Empty)"
                                             type="button"
-                                            disabled="@IsRanking"
+                                            disabled="@(IsRanking || !RendererInfo.IsInteractive)"
                                             aria-pressed="@item.IsPinned"
                                             aria-label="@(item.IsPinned ? $"Remove {item.Name} from most wanted" : $"Mark {item.Name} as most wanted")"
+                                            title="@(item.IsPinned ? "Remove from most wanted" : "Mark as most wanted")"
                                             @onclick="() => HandleTogglePin(item)">
-                                        <OpenWishIcon Name="star-fill" />
-                                        <span class="rank-action-label">Most wanted</span>
+                                        <OpenWishIcon Name="star" />
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary"
+                                    <button class="btn btn-sm item-icon-action"
                                             type="button"
-                                            disabled="@(!CanMoveItem(item, -1))"
+                                            disabled="@(!CanMoveItem(item, -1) || !RendererInfo.IsInteractive)"
                                             aria-label="Move @item.Name up"
+                                            title="Move up"
                                             @onclick="() => HandleMoveUp(item)">
-                                        <OpenWishIcon Name="arrow-up" />
-                                        <span class="rank-action-label">Move up</span>
+                                        <OpenWishIcon Name="chevron-right" Class="icon-up" />
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary"
+                                    <button class="btn btn-sm item-icon-action"
                                             type="button"
-                                            disabled="@(!CanMoveItem(item, 1))"
+                                            disabled="@(!CanMoveItem(item, 1) || !RendererInfo.IsInteractive)"
                                             aria-label="Move @item.Name down"
+                                            title="Move down"
                                             @onclick="() => HandleMoveDown(item)">
-                                        <OpenWishIcon Name="arrow-down" />
-                                        <span class="rank-action-label">Move down</span>
+                                        <OpenWishIcon Name="chevron-right" Class="icon-down" />
                                     </button>
                                     @if (CanMarkReceived)
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary"
+                                        <button class="btn btn-sm item-icon-action"
                                                 type="button"
                                                 data-testid="mark-received"
+                                                disabled="@(!RendererInfo.IsInteractive)"
                                                 aria-label="Mark @item.Name as received"
+                                                title="Mark as received"
                                                 @onclick="() => OnMarkReceived.InvokeAsync(item)">
-                                            <OpenWishIcon Name="gift" />
-                                            <span class="rank-action-label">Received</span>
+                                            <OpenWishIcon Name="check-circle" />
                                         </button>
                                     }
                                 </div>
@@ -161,7 +199,6 @@
                                 @if (ExpandedInteractions.Contains(item.Id))
                                 {
                                     <div class="interaction-section">
-                                        <h6><OpenWishIcon Name="chat-dots" /> Comments</h6>
                                         <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" />
                                     </div>
                                 }

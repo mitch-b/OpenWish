@@ -105,7 +105,7 @@ else
 
     private string PrivacyDescription => Wishlist switch
     {
-        { IsPrivate: true } => "Private: only you can see it",
+        { IsPrivate: true } => "Private: only you and people you share it with can see it",
         { IsFriendsOnly: true } => HasEventAccess ? "Shared with specific friends and event members" : "Shared with specific friends",
         _ => HasEventAccess ? "Shared with all friends and event members" : "Shared with all friends"
     };

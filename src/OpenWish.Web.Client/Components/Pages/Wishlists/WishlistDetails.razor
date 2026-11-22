@@ -70,33 +70,40 @@ else
                     <span class="fab-label">Add item</span>
                 </button>
             }
-            <button id="copy-wishlist-link" class="btn btn-outline-secondary" type="button" @onclick="ShareWishlist">
-                <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
-                <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
-            </button>
-            @if (_items is { Count: > 0 })
-            {
-                <button id="copy-wishlist-text" class="btn btn-outline-secondary" type="button" @onclick="CopyWishlistText">
-                    <OpenWishIcon Name="@(_textCopied ? "check-lg" : "clipboard")" />
-                    <span class="btn-text">@(_textCopied ? "List copied" : "Copy as text")</span>
+            <div class="hero-tools" role="group" aria-label="Share and export">
+                <button id="copy-wishlist-link" class="btn btn-outline-secondary hero-tool" type="button" @onclick="ShareWishlist">
+                    <OpenWishIcon Name="@(_linkCopied ? "check-lg" : "share")" />
+                    <span class="btn-text">@(_linkCopied ? "Link copied" : "Copy link")</span>
+                    <span class="btn-short" aria-hidden="true">@(_linkCopied ? "Copied" : "Link")</span>
                 </button>
-                <button id="print-wishlist" class="btn btn-outline-secondary" type="button" @onclick="PrintWishlist">
-                    <OpenWishIcon Name="list-check" />
-                    <span class="btn-text">Print</span>
-                </button>
-                <button id="download-wishlist-csv" class="btn btn-outline-secondary" type="button"
-                        disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadWishlistCsv">
-                    <OpenWishIcon Name="download" />
-                    <span class="btn-text">Download CSV</span>
-                </button>
-            }
-            @if (_isOwner)
-            {
-                <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary">
-                    <OpenWishIcon Name="gear" />
-                    <span class="btn-text">Manage list</span>
-                </a>
-            }
+                @if (_items is { Count: > 0 })
+                {
+                    <button id="copy-wishlist-text" class="btn btn-outline-secondary hero-tool" type="button" @onclick="CopyWishlistText">
+                        <OpenWishIcon Name="@(_textCopied ? "check-lg" : "clipboard")" />
+                        <span class="btn-text">@(_textCopied ? "List copied" : "Copy as text")</span>
+                        <span class="btn-short" aria-hidden="true">@(_textCopied ? "Copied" : "Text")</span>
+                    </button>
+                    <button id="print-wishlist" class="btn btn-outline-secondary hero-tool" type="button" @onclick="PrintWishlist">
+                        <OpenWishIcon Name="list-check" />
+                        <span class="btn-text">Print</span>
+                        <span class="btn-short" aria-hidden="true">Print</span>
+                    </button>
+                    <button id="download-wishlist-csv" class="btn btn-outline-secondary hero-tool" type="button"
+                            disabled="@(!RendererInfo.IsInteractive)" @onclick="DownloadWishlistCsv">
+                        <OpenWishIcon Name="download" />
+                        <span class="btn-text">Download CSV</span>
+                        <span class="btn-short" aria-hidden="true">CSV</span>
+                    </button>
+                }
+                @if (_isOwner)
+                {
+                    <a href="/wishlists/@WishlistId/manage" class="btn btn-outline-secondary hero-tool">
+                        <OpenWishIcon Name="gear" />
+                        <span class="btn-text">Manage list</span>
+                        <span class="btn-short" aria-hidden="true">Manage</span>
+                    </a>
+                }
+            </div>
         </div>
     </div>
 
@@ -117,7 +124,7 @@ else
                     <span class="event-label">Part of event</span>
                     <span class="event-name">@_wishlist.Event.Name</span>
                 </div>
-                <OpenWishIcon Name="arrow-right" />
+                <OpenWishIcon Name="chevron-right" Class="event-chevron" />
             </a>
         </div>
     }
@@ -187,7 +194,7 @@ else
             <input id="wishlist-item-search"
                    type="search"
                    class="search-input"
-                   placeholder="Search items by name, description, or store..."
+                   placeholder="Search ideas"
                    aria-controls="wishlist-items"
                    @bind="SearchQuery"
                    @bind:event="oninput"
@@ -292,7 +299,7 @@ else
     }
     @if (_isOwner)
     {
-        <p id="wishlist-ranking-help" class="ranking-help" role="status">
+        <p id="wishlist-ranking-help" class="ranking-help @(CanReorder ? "visually-hidden" : string.Empty)" role="status">
             @if (CanReorder)
             {
                 <span>Use the most wanted and move controls to organize your ideas. Pinned ideas stay at the top.</span>

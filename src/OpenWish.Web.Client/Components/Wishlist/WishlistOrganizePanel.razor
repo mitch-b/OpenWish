@@ -4,10 +4,10 @@
 
 @inject IWishlistService WishlistService
 
-<section class="organize" aria-labelledby="organize-title" data-testid="organize-panel">
+<section class="organize @(_isOpen ? "is-open" : string.Empty)" aria-labelledby="organize-title" data-testid="organize-panel">
     <div class="organize-header">
-        <div>
-            <h2 id="organize-title" class="h5">Organize ideas</h2>
+        <div class="organize-heading">
+            <h2 id="organize-title" class="h6">Organize ideas</h2>
             <p class="organize-intro">Select ideas to move or copy them to another list, set a priority, or tidy up in one step.</p>
         </div>
         <button id="organize-toggle"
@@ -15,7 +15,7 @@
                 class="btn @(_isOpen ? "btn-primary" : "btn-outline-primary")"
                 aria-expanded="@(_isOpen ? "true" : "false")"
                 aria-controls="organize-body"
-                disabled="@(Items.Count == 0)"
+                disabled="@(Items.Count == 0 || !RendererInfo.IsInteractive)"
                 @onclick="Toggle">
             <OpenWishIcon Name="list-check" /> @(_isOpen ? "Done" : "Select ideas")
         </button>

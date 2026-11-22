@@ -42,17 +42,33 @@ jobs:
           path: src/TestResults/
           retention-days: 14
 
-  browser:
+  browser-shard:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [core, independent]
     steps:
       - uses: actions/checkout@v7
       - name: Run browser verification
+        env:
+          OPENWISH_BROWSER_SHARD: ${{ matrix.shard }}
         run: scripts/verify-e2e.sh
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: browser-evidence
+          name: browser-evidence-${{ matrix.shard }}
           path: pr-assets/
           retention-days: 14
+
+  browser:
+    if: always()
+    needs: browser-shard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every browser shard
+        env:
+          SHARD_RESULT: ${{ needs.browser-shard.result }}
+        run: test "$SHARD_RESULT" = success

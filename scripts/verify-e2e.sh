@@ -7,7 +7,7 @@ cd "$repository_root"
 run_id="$(date -u +%Y%m%d%H%M%S)-$$"
 project_name="${OPENWISH_VERIFICATION_PROJECT:-openwish-verification-${run_id}}"
 verification_image="${OPENWISH_VERIFICATION_IMAGE:-openwish-verification-app:${run_id}}"
-playwright_image="openwish-playwright:1.64.1-${run_id}"
+playwright_image="openwish-playwright:1.65.1-${run_id}"
 invite_test_image="openwish-invite-tests:${run_id}"
 release_version="${OPENWISH_RELEASE_VERSION:-$(tr -d '[:space:]' < version.txt)}"
 export OPENWISH_VERIFICATION_IMAGE="$verification_image"
@@ -18,6 +18,11 @@ compose=(docker compose -p "$project_name" -f compose.verify.yml)
 evidence_directory="${OPENWISH_EVIDENCE_DIR:-$repository_root/pr-assets/verification}"
 walkthrough_directory="${OPENWISH_WALKTHROUGH_DIR:-$repository_root/pr-assets/walkthrough}"
 docker_repository_root="$repository_root"
+browser_shard="${OPENWISH_BROWSER_SHARD:-}"
+if [[ -n "$browser_shard" && "$browser_shard" != "core" && "$browser_shard" != "independent" ]]; then
+  echo "Unknown browser shard: $browser_shard" >&2
+  exit 1
+fi
 
 # Docker runs on Mate's host, while this script runs in Mate's container. Keep
 # file checks on the mounted workspace path but give Docker host-visible sources.
@@ -69,11 +74,13 @@ if [[ -z "${OPENWISH_PREBUILT_VERIFICATION_IMAGE:-}" ]]; then
   built_verification_image=true
 fi
 
-docker build \
-  --tag "$invite_test_image" \
-  --file .agents/skills/screenshot/Dockerfile.tests \
-  src
-built_invite_test_image=true
+if [[ "$browser_shard" != "independent" ]]; then
+  docker build \
+    --tag "$invite_test_image" \
+    --file .agents/skills/screenshot/Dockerfile.tests \
+    src
+  built_invite_test_image=true
+fi
 
 "${compose[@]}" up --detach --wait
 
@@ -86,16 +93,19 @@ docker run --rm \
   --env OPENWISH_BASE_URL=http://web:8080 \
   --env OPENWISH_MAIL_URL=http://mail:8025 \
   --env "OPENWISH_RELEASE_VERSION=$release_version" \
+  --env "OPENWISH_BROWSER_SHARD=$browser_shard" \
   --env OPENWISH_EVIDENCE_DIR=/evidence \
   --env OPENWISH_WALKTHROUGH_DIR=/walkthrough \
   --volume "$docker_evidence_directory:/evidence" \
   --volume "$docker_walkthrough_directory:/walkthrough" \
   "$playwright_image"
 
-docker run --rm \
-  --network "$network_name" \
-  --env "OPENWISH_TEST_POSTGRES=Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification" \
-  "$invite_test_image" | tee "$evidence_directory/openwish-invite-concurrency-test.log"
+if [[ "$browser_shard" != "independent" ]]; then
+  docker run --rm \
+    --network "$network_name" \
+    --env "OPENWISH_TEST_POSTGRES=Host=db;Port=5432;Database=OpenWish;Username=openwish;Password=openwish-verification" \
+    "$invite_test_image" | tee "$evidence_directory/openwish-invite-concurrency-test.log"
+fi
 
 if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
   docker run --rm --entrypoint tar \
@@ -108,6 +118,7 @@ if [[ ! -s "$evidence_directory/openwish-e2e-result.json" ]]; then
     tar -C "$walkthrough_directory" -xf -
 fi
 
+if [[ "$browser_shard" != "independent" ]]; then
 dependent_cleanup="$("${compose[@]}" exec -T db \
   psql -U openwish -d OpenWish -Atc \
   "SELECT CASE
@@ -172,7 +183,9 @@ jq '(.scenarios[] | select(.scenario == "owner-desktop").assertions) +=
     ["PostgreSQL dependent soft-delete cleanup"]' \
   "$result_file" > "$result_file.tmp"
 mv "$result_file.tmp" "$result_file"
+fi
 
+if [[ "$browser_shard" != "independent" ]]; then
 test -s "$walkthrough_directory/home-dashboard.png"
 test -s "$walkthrough_directory/readme-home.png"
 test -s "$walkthrough_directory/home-mobile.png"
@@ -201,10 +214,6 @@ test -s "$walkthrough_directory/invitation-accepted-mobile.png"
 test -s "$walkthrough_directory/event-invitation-filters-desktop.png"
 test -s "$walkthrough_directory/event-invitation-filters-mobile.png"
 test -s "$walkthrough_directory/invitation-composer.png"
-test -s "$walkthrough_directory/invitation-email-desktop.png"
-test -s "$walkthrough_directory/invitation-email-mobile.png"
-test -s "$walkthrough_directory/invitation-join-choice.png"
-test -s "$walkthrough_directory/register-without-account.png"
 test -s "$walkthrough_directory/event-wishlist-reminder-after-draw.png"
 test -s "$walkthrough_directory/event-wishlist-reminder-after-draw-mobile.png"
 test -s "$walkthrough_directory/friends.png"
@@ -257,21 +266,25 @@ test -s "$walkthrough_directory/connect-in-person.png"
 test -s "$walkthrough_directory/connect-in-person-mobile.png"
 test -s "$walkthrough_directory/friend-join-confirm.png"
 test -s "$walkthrough_directory/friend-join-confirm-mobile.png"
-test -s "$walkthrough_directory/connect-app-consent.png"
-test -s "$walkthrough_directory/connect-app-consent-mobile.png"
-test -s "$walkthrough_directory/connected-app-ideas.png"
-test -s "$walkthrough_directory/connected-app-ideas-mobile.png"
-test -s "$walkthrough_directory/connected-app-edit-note.png"
-test -s "$walkthrough_directory/connected-apps.png"
-test -s "$walkthrough_directory/connected-apps-mobile.png"
-test -s "$walkthrough_directory/connected-apps-mobile-dark.png"
-test -s "$walkthrough_directory/connected-apps-editor.png"
-test -s "$walkthrough_directory/connected-apps-editor-mobile.png"
-test -s "$walkthrough_directory/connected-apps-editor-dark.png"
-test -s "$walkthrough_directory/connected-apps-search-empty.png"
-test -s "$walkthrough_directory/connected-apps-empty.png"
-test -s "$walkthrough_directory/connected-app-disconnect.png"
+fi
+if [[ "$browser_shard" != "core" ]]; then
+  for screenshot in invitation-email-desktop invitation-email-mobile invitation-join-choice register-without-account \
+    connect-app-consent connect-app-consent-mobile connected-app-ideas connected-app-ideas-mobile \
+    connected-app-edit-note connected-apps connected-apps-mobile connected-apps-mobile-dark \
+    connected-apps-editor connected-apps-editor-mobile connected-apps-editor-dark \
+    connected-apps-search-empty connected-apps-empty connected-app-disconnect; do
+    test -s "$walkthrough_directory/$screenshot.png"
+  done
+fi
 jq -e '.passed == true' "$evidence_directory/openwish-e2e-result.json" >/dev/null
+if [[ "$browser_shard" != "independent" ]]; then
+  jq -e '[.scenarios[].scenario] | index("owner-desktop") != null and index("guest-collaboration") != null and index("occasion-reminders") != null' \
+    "$evidence_directory/openwish-e2e-result.json" >/dev/null
+fi
+if [[ "$browser_shard" != "core" ]]; then
+  jq -e '[.scenarios[].scenario] | index("responsive-sweep") != null and index("family-exchange") != null and index("registration-and-first-match") != null and index("account-free-guests") != null and index("connected-app") != null' \
+    "$evidence_directory/openwish-e2e-result.json" >/dev/null
+fi
 
 web_log="$evidence_directory/openwish-e2e-web.log"
 "${compose[@]}" logs web > "$web_log"

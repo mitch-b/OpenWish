@@ -18,68 +18,100 @@
 
 @if (_isLoading && _event == null)
 {
-    <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading event...</span>
+    <div class="event-page" aria-busy="true">
+        <div class="event-header event-header-loading" role="status">
+            <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+            <span>Loading event...</span>
         </div>
     </div>
 }
 else if (_event == null)
 {
-    <div class="container page-shell" aria-busy="@(_isLoading ? "true" : "false")">
+    <div class="event-page" aria-busy="@(_isLoading ? "true" : "false")">
         <PageHeader Title="Event unavailable"
                     Description="We couldn't load this event. It may have been removed, or you may no longer have access." />
-        <div class="alert alert-danger" role="alert">@_loadError</div>
-        <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" type="button" disabled="@_isLoading" @onclick="RetryLoadAsync">
-                @(_isLoading ? "Retrying..." : "Try again")
-            </button>
-            <a class="btn btn-outline-secondary" href="/events">Back to events</a>
+        @if (!string.IsNullOrWhiteSpace(_loadError))
+        {
+            <div class="alert alert-danger" role="alert">@_loadError</div>
+        }
+        <div class="event-unavailable-actions">
+            @if (!_isUnavailable)
+            {
+                <button class="btn btn-primary" type="button" disabled="@_isLoading" @onclick="RetryLoadAsync">
+                    @(_isLoading ? "Retrying..." : "Try again")
+                </button>
+            }
+            <a class="btn @(_isUnavailable ? "btn-primary" : "btn-outline-secondary")" href="/events">Back to events</a>
         </div>
     </div>
 }
 else
 {
-    <div class="event-header">
-        <div class="container">
-            <div class="event-header-content">
-                <div class="event-header-copy">
-                    <h1 class="display-4">@_event.Name</h1>
-                    <p class="event-when mb-2" data-testid="event-countdown">
-                        <OpenWishIcon Name="calendar-event" />
-                        <span>@_event.Date.ToString("dddd, MMM d, yyyy")</span>
-                        <strong>@EventCountdown.Badge(_event.Date, DateTimeOffset.UtcNow)</strong>
-                    </p>
-                    <p class="lead mb-0">@_event.Description</p>
-                    @if (_event.Tags != null)
+    var isPast = EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow);
+    var tags = (_event.Tags ?? []).Where(tag => !string.IsNullOrWhiteSpace(tag)).Select(tag => tag.Trim()).ToList();
+    <div class="event-page" aria-busy="@(_isLoading ? "true" : "false")">
+    <header class="event-header" data-testid="event-header">
+        <div class="event-header-copy">
+            <p class="event-kind">
+                <OpenWishIcon Name="@(_event.IsGiftExchange ? "gift" : "calendar-event")" />
+                <span>@EventTypeLabel</span>
+            </p>
+            <h1>@_event.Name</h1>
+            <ul class="event-meta" aria-label="Event summary">
+                <li class="event-when" data-testid="event-countdown">
+                    <OpenWishIcon Name="calendar-event" />
+                    <span>@_event.Date.ToString("dddd, MMM d, yyyy")</span>
+                    <strong class="event-countdown-badge @(isPast ? "is-past" : null)">@EventCountdown.Badge(_event.Date, DateTimeOffset.UtcNow)</strong>
+                </li>
+                @if (_event.Budget is { } budget)
+                {
+                    <li data-testid="event-header-budget">
+                        <OpenWishIcon Name="cash" />
+                        <span><strong>@budget.ToString("C")</strong> budget</span>
+                    </li>
+                }
+                @if (!_isOwner)
+                {
+                    <li>
+                        <OpenWishIcon Name="person-circle" />
+                        <span>Hosted by <strong>@GetOwnerDisplayName()</strong></span>
+                    </li>
+                }
+            </ul>
+            @if (!string.IsNullOrWhiteSpace(_event.Description))
+            {
+                <p class="event-description">@_event.Description</p>
+            }
+            @if (tags.Count > 0)
+            {
+                <ul class="event-tags" aria-label="Tags">
+                    @foreach (var tag in tags)
                     {
-                        <div class="mt-3">
-                            @foreach (var tag in _event.Tags ?? [])
-                            {
-                                <span class="badge event-tag me-2">@tag.Trim()</span>
-                            }
-                        </div>
+                        <li class="event-tag">@tag</li>
                     }
-                </div>
-                <div class="event-header-actions">
-                    @if (!_isPendingInvitee && !EventCountdown.IsPast(_event.Date, DateTimeOffset.UtcNow))
-                    {
-                        <a href="/api/events/@EventId/calendar.ics" class="btn btn-outline-secondary event-manage-action" data-testid="add-to-calendar" download>
-                            <OpenWishIcon Name="download" Class="me-2" /> Add to calendar
-                        </a>
-                    }
-                    @if (_isOwner)
-                    {
-                        <a href="/events/@EventId/manage" class="btn btn-outline-secondary event-manage-action">
-                            <OpenWishIcon Name="gear" Class="me-2" /> Manage event
-                        </a>
-                    }
-                </div>
-            </div>
+                </ul>
+            }
         </div>
-    </div>
+        @if (_isOwner || (!_isPendingInvitee && !isPast))
+        {
+            <div class="event-header-actions">
+                @if (!_isPendingInvitee && !isPast)
+                {
+                    <a href="/api/events/@EventId/calendar.ics" class="btn btn-outline-secondary event-manage-action" data-testid="add-to-calendar" download>
+                        <OpenWishIcon Name="download" /> Add to calendar
+                    </a>
+                }
+                @if (_isOwner)
+                {
+                    <a href="/events/@EventId/manage" class="btn btn-outline-secondary event-manage-action">
+                        <OpenWishIcon Name="gear" /> Manage event
+                    </a>
+                }
+            </div>
+        }
+    </header>
 
-    <div class="container event-page py-4" aria-busy="@(_isLoading ? "true" : "false")">
+    <div class="event-body">
         @if (!string.IsNullOrWhiteSpace(_loadError))
         {
             <div class="alert alert-danger" role="alert">
@@ -307,19 +339,23 @@ else
         }
         else
         {
-            <div class="alert alert-info" role="status">
-                <h2 class="h4">Accept your invitation to join</h2>
-                <p>Accept before the organizer draws names so you can be included and add gift ideas for your match.</p>
+            <section class="event-invite-callout" aria-labelledby="event-invite-title">
+                <OpenWishIcon Name="envelope" Class="event-invite-icon" />
+                <div class="event-invite-copy">
+                    <h2 class="h5" id="event-invite-title">Accept your invitation to join</h2>
+                    <p>Accept before the organizer draws names so you can be included and add gift ideas for your match.</p>
+                </div>
                 @if (!string.IsNullOrWhiteSpace(PendingInvitationEmail))
                 {
-                    <a class="btn btn-success" href="@PendingInvitationLink">Review invitation</a>
+                    <a class="btn btn-primary" href="@PendingInvitationLink">Review invitation</a>
                 }
                 else
                 {
-                    <a class="btn btn-success" href="/events">Open my invitations</a>
+                    <a class="btn btn-primary" href="/events">Open my invitations</a>
                 }
-            </div>
+            </section>
         }
+    </div>
     </div>
 }
 
@@ -359,6 +395,7 @@ else
     private EventUserModel? _pendingInvitation;
     private string? _loadedEventId;
     private string? _loadError;
+    private bool _isUnavailable; // Removed or not shared with this user; retrying won't help
     private bool _isLoading = true;
     private int _loadVersion;
 
@@ -394,6 +431,7 @@ else
         var loadVersion = ++_loadVersion;
         _isLoading = true;
         _loadError = null;
+        _isUnavailable = false;
 
         try
         {
@@ -443,7 +481,8 @@ else
             Logger.LogError(ex, "Failed to load event {EventId}", eventId);
             if (loadVersion == _loadVersion && string.Equals(EventId, eventId, StringComparison.Ordinal))
             {
-                _loadError = "We couldn't load this event. Check your connection and try again.";
+                _isUnavailable = _event is null && IsUnavailable(ex);
+                _loadError = _isUnavailable ? null : "We couldn't load this event. Check your connection and try again.";
             }
             return false;
         }
@@ -455,6 +494,9 @@ else
             }
         }
     }
+
+    private static bool IsUnavailable(Exception ex) => ex is KeyNotFoundException or UnauthorizedAccessException ||
+        ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.Forbidden };
 
     private async Task RetryLoadAsync()
     {

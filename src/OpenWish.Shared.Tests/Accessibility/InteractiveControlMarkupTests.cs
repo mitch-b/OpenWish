@@ -1327,7 +1327,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"RetryLoadComments\"", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task<bool> LoadComments()", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryLoadComments()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_loading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1351,7 +1351,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("@onclick=\"RetryReservation\"", markup, StringComparison.Ordinal);
         Assert.Contains("else if (!string.IsNullOrWhiteSpace(_loadErrorMessage))", markup, StringComparison.Ordinal);
         Assert.Contains("private async Task RetryReservation()\n    {\n        if (_loading)", markup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@_loading\"", markup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(_loading || !RendererInfo.IsInteractive)\"", markup, StringComparison.Ordinal);
         Assert.Contains("PostAsJsonAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reserve\"", client, StringComparison.Ordinal);
         Assert.Contains("DeleteAsync($\"{BaseUrl}/{wishlistPublicId}/items/{itemId}/reservation\"", client, StringComparison.Ordinal);
         var reservationMethods = client[

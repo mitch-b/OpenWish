@@ -323,6 +323,22 @@ document.addEventListener("change", event => {
 });
 
 document.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || event.defaultPrevented) {
+        return;
+    }
+
+    const navigationToggle = document.querySelector(".navbar-toggler");
+    if (!(navigationToggle instanceof HTMLInputElement) || !navigationToggle.checked ||
+        getComputedStyle(navigationToggle).display === "none") {
+        return;
+    }
+
+    navigationToggle.checked = false;
+    syncNavigationDisclosure(navigationToggle);
+    navigationToggle.focus();
+});
+
+document.addEventListener("keydown", event => {
     if (event.target instanceof Element &&
         event.target.closest("#wishlistTabs [role='tab']") &&
         ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {

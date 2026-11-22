@@ -255,7 +255,7 @@ else
         <section class="applied-filters" aria-labelledby="applied-filters-title">
             <div class="applied-filters-heading">
                 <div>
-                    <h2 id="applied-filters-title">Showing a filtered view</h2>
+                    <h2 id="applied-filters-title" tabindex="-1" @ref="_appliedFiltersHeading">Showing a filtered view</h2>
                     <p>@FilteredItemCountMessage</p>
                 </div>
                 <button class="btn btn-outline-secondary" type="button" @onclick="ClearAllFilters">
@@ -1231,6 +1231,8 @@ else
         _isOwner && (_wishlist?.Event is not { } occasion || occasion.Date <= DateTimeOffset.UtcNow);
 
     private ElementReference _thankYouField;
+    private ElementReference _appliedFiltersHeading;
+    private bool _focusAppliedFilters;
     private bool _focusThankYouField;
 
     private void BeginMarkReceived(WishlistItemModel item)
@@ -1580,8 +1582,18 @@ else
         }
 
         // Keep the comment stat, badges and the "commented" filter in step with the thread.
+        var wasShown = _filteredItems.Contains(item);
         item.Comments = change.Comments.ToList();
         ApplyFiltersAndSort();
+
+        if (wasShown && HasActiveFilters && !_filteredItems.Contains(item))
+        {
+            // The thread the user was in just left the page; say why and keep focus on the page.
+            FeedbackMessage = $"Comments on {item.Name} updated. It isn't shown because of your current filters.";
+            _feedbackIsError = false;
+            _hiddenItemFeedback = FeedbackMessage;
+            _focusAppliedFilters = true;
+        }
     }
 
     private async Task RefreshReservationsAsync()
@@ -2190,6 +2202,12 @@ else
         {
             _focusThankYouField = false;
             await _thankYouField.FocusAsync();
+        }
+
+        if (_focusAppliedFilters && HasActiveFilters)
+        {
+            _focusAppliedFilters = false;
+            await _appliedFiltersHeading.FocusAsync();
         }
 
         if (_canEdit && !_isListeningForPaste)

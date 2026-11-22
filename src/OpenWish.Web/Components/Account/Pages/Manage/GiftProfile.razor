@@ -18,61 +18,66 @@
 
 @if (Input is not null && Hints is not null)
 {
-    @if (ShowBirthday)
-    {
-        <EditForm Model="Input" FormName="birthday" OnValidSubmit="SaveBirthdayAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <p id="birthday-help" class="form-text">Share just the month and day, never the year. Friends see it on their dashboard shortly before.</p>
-            <div class="row g-2 mb-3">
-                <div class="col-8 form-floating">
-                    <InputSelect @bind-Value="Input.Month" id="birthday-month" class="form-select" aria-describedby="birthday-help">
-                        <option value="0">Not shared</option>
-                        @for (var month = 1; month <= 12; month++)
-                        {
-                            <option value="@month">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
-                        }
-                    </InputSelect>
-                    <label for="birthday-month">Month</label>
+    <div class="gift-profile-settings">
+        @if (ShowBirthday)
+        {
+            <EditForm Model="Input" FormName="birthday" OnValidSubmit="SaveBirthdayAsync" method="post">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <p id="birthday-help" class="gift-profile-lead">Share just the month and day, never the year. Friends get a reminder on their dashboard in the month before.</p>
+                <div class="row g-2 mb-3">
+                    <div class="col-8 form-floating">
+                        <InputSelect @bind-Value="Input.Month" id="birthday-month" class="form-select" aria-describedby="birthday-help">
+                            <option value="0">Not shared</option>
+                            @for (var month = 1; month <= 12; month++)
+                            {
+                                <option value="@month">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(month)</option>
+                            }
+                        </InputSelect>
+                        <label for="birthday-month">Month</label>
+                    </div>
+                    <div class="col-4 form-floating">
+                        <InputSelect @bind-Value="Input.Day" id="birthday-day" class="form-select" aria-describedby="birthday-help">
+                            <option value="0">Not set</option>
+                            @for (var day = 1; day <= 31; day++)
+                            {
+                                <option value="@day">@day</option>
+                            }
+                        </InputSelect>
+                        <label for="birthday-day">Day</label>
+                    </div>
                 </div>
-                <div class="col-4 form-floating">
-                    <InputSelect @bind-Value="Input.Day" id="birthday-day" class="form-select" aria-describedby="birthday-help">
-                        <option value="0">-</option>
-                        @for (var day = 1; day <= 31; day++)
-                        {
-                            <option value="@day">@day</option>
-                        }
-                    </InputSelect>
-                    <label for="birthday-day">Day</label>
+                <button type="submit" class="btn btn-lg btn-primary gift-profile-submit" id="save-birthday">Save birthday</button>
+            </EditForm>
+        }
+        else
+        {
+            <EditForm Model="Hints" FormName="gift-hints" OnValidSubmit="SaveHintsAsync" method="post">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <p id="hints-help" class="gift-profile-lead">Optional. Friends see these on your wishlists when they shop for you. Leave a field blank to hide it; each can be up to @GiftProfileModel.MaxLength characters.</p>
+                <div class="gift-hint-field">
+                    <label for="gift-sizes" class="form-label">Sizes</label>
+                    <InputTextArea @bind-Value="Hints.Sizes" id="gift-sizes" class="form-control" rows="3" maxlength="@GiftProfileModel.MaxLength" placeholder="e.g. Shirt M, shoe 10, ring 7" aria-describedby="gift-sizes-help hints-help" />
+                    <p id="gift-sizes-help" class="form-text">Clothing, shoes, rings, anything that needs to fit.</p>
+                    <ValidationMessage For="() => Hints.Sizes" class="text-danger" />
                 </div>
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-birthday">Save birthday</button>
-        </EditForm>
-    }
-    else
-    {
-        <EditForm Model="Hints" FormName="gift-hints" OnValidSubmit="SaveHintsAsync" method="post">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger" role="alert" />
-            <p id="hints-help" class="form-text">Optional. Only friends can see these hints on your wishlists.</p>
-            <div class="form-floating mb-3">
-                <InputTextArea @bind-Value="Hints.Sizes" id="gift-sizes" class="form-control" style="height: 6rem" placeholder="Sizes" aria-describedby="hints-help" />
-                <label for="gift-sizes">Sizes (clothing, shoes, rings)</label>
-                <ValidationMessage For="() => Hints.Sizes" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputTextArea @bind-Value="Hints.Favorites" id="gift-favorites" class="form-control" style="height: 6rem" placeholder="Favorites" aria-describedby="hints-help" />
-                <label for="gift-favorites">Favorite colors, brands, shops</label>
-                <ValidationMessage For="() => Hints.Favorites" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputTextArea @bind-Value="Hints.Avoid" id="gift-avoid" class="form-control" style="height: 6rem" placeholder="Avoid" aria-describedby="hints-help" />
-                <label for="gift-avoid">Please avoid (allergies, duplicates)</label>
-                <ValidationMessage For="() => Hints.Avoid" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary" id="save-gift-hints">Save gift hints</button>
-        </EditForm>
-    }
+                <div class="gift-hint-field">
+                    <label for="gift-favorites" class="form-label">Favorites</label>
+                    <InputTextArea @bind-Value="Hints.Favorites" id="gift-favorites" class="form-control" rows="3" maxlength="@GiftProfileModel.MaxLength" placeholder="e.g. Dark roast coffee, green, local bookshops" aria-describedby="gift-favorites-help hints-help" />
+                    <p id="gift-favorites-help" class="form-text">Colors, brands, shops, or hobbies you love.</p>
+                    <ValidationMessage For="() => Hints.Favorites" class="text-danger" />
+                </div>
+                <div class="gift-hint-field">
+                    <label for="gift-avoid" class="form-label">Please avoid</label>
+                    <InputTextArea @bind-Value="Hints.Avoid" id="gift-avoid" class="form-control" rows="3" maxlength="@GiftProfileModel.MaxLength" placeholder="e.g. Peanuts and scented candles" aria-describedby="gift-avoid-help hints-help" />
+                    <p id="gift-avoid-help" class="form-text">Allergies, dislikes, or things you already have.</p>
+                    <ValidationMessage For="() => Hints.Avoid" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-lg btn-primary gift-profile-submit" id="save-gift-hints">Save gift hints</button>
+            </EditForm>
+        }
+    </div>
 }
 
 @code {

@@ -4,22 +4,31 @@
 @inject IGiftProfileService GiftProfileService
 @inject ILogger<GiftProfilePanel> Logger
 
-@if (_profile is not null)
+@if (_profile is { HasContent: true })
 {
     <section class="gift-profile-panel" aria-labelledby="gift-profile-title" data-testid="gift-profile">
-        <h2 id="gift-profile-title">Gift hints from the owner</h2>
-        <dl>
+        <header class="gift-profile-header">
+            <span class="gift-profile-icon"><OpenWishIcon Name="gift" /></span>
+            <div>
+                <h2 id="gift-profile-title">Gift hints</h2>
+                <p class="gift-profile-intro">Shared by the list owner to help friends choose.</p>
+            </div>
+        </header>
+        <dl class="gift-profile-hints">
             @if (!string.IsNullOrWhiteSpace(_profile.Sizes))
             {
-                <div><dt>Sizes</dt><dd>@_profile.Sizes</dd></div>
+                <div class="gift-profile-hint"><dt>Sizes</dt><dd>@_profile.Sizes</dd></div>
             }
             @if (!string.IsNullOrWhiteSpace(_profile.Favorites))
             {
-                <div><dt>Favorites</dt><dd>@_profile.Favorites</dd></div>
+                <div class="gift-profile-hint"><dt>Favorites</dt><dd>@_profile.Favorites</dd></div>
             }
             @if (!string.IsNullOrWhiteSpace(_profile.Avoid))
             {
-                <div><dt>Please avoid</dt><dd>@_profile.Avoid</dd></div>
+                <div class="gift-profile-hint gift-profile-hint--avoid">
+                    <dt><OpenWishIcon Name="exclamation-circle" />Please avoid</dt>
+                    <dd>@_profile.Avoid</dd>
+                </div>
             }
         </dl>
     </section>

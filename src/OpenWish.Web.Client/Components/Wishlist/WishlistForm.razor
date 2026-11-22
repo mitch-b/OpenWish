@@ -4,7 +4,7 @@
     <FocusOnFirstRender ElementId="name" Enabled="@AutoFocusName" />
     <EditForm Model="@Model" OnValidSubmit="@HandleSubmit" FormName="WishlistForm" aria-busy="@IsSubmitting">
         <DataAnnotationsValidator />
-        <ValidationSummary />
+        <WishlistFormValidator />
 
         <fieldset disabled="@IsSubmitting">
         <div class="mb-3">
@@ -12,8 +12,10 @@
             <InputText id="name"
                        class="form-control"
                        autofocus="@AutoFocusName"
+                       autocomplete="off"
+                       aria-describedby="wishlist-name-help"
                        @bind-Value="@Model!.Name" />
-            <div class="form-text">For example, Birthday ideas or Gifts for our new home.</div>
+            <div id="wishlist-name-help" class="form-text">For example, Birthday ideas or Gifts for our new home.</div>
             <ValidationMessage For="@(() => Model.Name)" />
         </div>
 
@@ -25,13 +27,14 @@
                         class="wishlist-icon-trigger"
                         aria-expanded="@_showIconPicker"
                         aria-controls="wishlist-icon-picker"
+                        disabled="@(!RendererInfo.IsInteractive)"
                         @onclick="ToggleIconPicker">
                     <span class="wishlist-icon-preview" aria-hidden="true">@(Model.Icon ?? "＋")</span>
                     <span>@(Model.Icon is null ? "Choose an icon" : "Change icon")</span>
                 </button>
                 @if (Model.Icon is not null)
                 {
-                    <button type="button" class="btn btn-link wishlist-icon-clear" aria-label="Clear wishlist icon" @onclick="ClearIcon">
+                    <button type="button" class="btn btn-link wishlist-icon-clear" aria-label="Clear wishlist icon" disabled="@(!RendererInfo.IsInteractive)" @onclick="ClearIcon">
                         Clear
                     </button>
                 }
@@ -46,6 +49,7 @@
                                 aria-label="@option.Label"
                                 aria-pressed="@(Model.Icon == option.Value)"
                                 title="@option.Label"
+                                disabled="@(!RendererInfo.IsInteractive)"
                                 @onclick="() => SelectIcon(option.Value)">
                             @option.Value
                         </button>
@@ -73,8 +77,8 @@
             <ValidationMessage For="@(() => Model.IsCollaborative)" />
         </div>
 
-        <fieldset class="mb-4">
-            <legend class="form-label h6 mb-3"><OpenWishIcon Name="lock" /> Who can see this wishlist?</legend>
+        <fieldset class="wishlist-visibility-field">
+            <legend class="form-label wishlist-visibility-legend"><OpenWishIcon Name="lock" /> Who can see this wishlist?</legend>
             <div class="visibility-options">
                 <label class="visibility-option @(!Model.IsPrivate && !Model.IsFriendsOnly ? "selected" : "")">
                     <input class="visually-hidden" type="radio" name="wishlist-visibility"
@@ -131,8 +135,12 @@
         </fieldset>
         }
 
-        <div class="mt-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+        <div class="wishlist-form-actions">
+            @if (StatusContent is not null)
+            {
+                <div class="wishlist-form-status">@StatusContent</div>
+            }
+            <button type="submit" class="btn btn-primary" disabled="@(IsSubmitting || !RendererInfo.IsInteractive)">
                 @if (IsSubmitting)
                 {
                     <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
@@ -145,7 +153,7 @@
             </button>
             @if (OnCancel.HasDelegate)
             {
-                <button type="button" class="btn btn-outline-secondary" disabled="@IsSubmitting" @onclick="HandleCancel">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@(IsSubmitting || !RendererInfo.IsInteractive)" @onclick="HandleCancel">Cancel</button>
             }
         </div>
         </fieldset>
@@ -153,7 +161,10 @@
 }
 else
 {
-    <p>Loading form...</p>
+    <div class="wishlist-form-loading" role="status">
+        <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+        <span>Loading wishlist details...</span>
+    </div>
 }
 
 
@@ -164,6 +175,7 @@ else
     [Parameter] public bool AutoFocusName { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
     [Parameter] public bool IsEventWishlist { get; set; }
+    [Parameter] public RenderFragment? StatusContent { get; set; }
 
     private static readonly (string Value, string Label)[] IconOptions =
     [

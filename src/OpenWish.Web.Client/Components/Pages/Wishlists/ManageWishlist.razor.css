@@ -1,89 +1,93 @@
-/* Friends Access Card Styles */
-.friends-access-card {
-    border: 2px solid var(--color-border-muted);
-    border-radius: 16px;
-    overflow: hidden;
+.page-section-panel {
+    min-width: 0;
+    max-width: 48rem;
 }
 
-.section-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid var(--color-border-muted);
+.page-section-panel > h2 {
+    margin-bottom: 0.35rem;
 }
 
-.section-icon {
-    font-size: 2rem;
-    width: 56px;
-    height: 56px;
+.manage-wishlist-intro {
+    max-width: 40rem;
+    margin-bottom: 1.25rem;
+    color: var(--color-text-muted);
+}
+
+.manage-wishlist-change-link {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.manage-wishlist-feedback {
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
-    border-radius: 14px;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
 }
 
 .loading-state {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    padding: 2rem;
+    gap: 0.6rem;
+    padding: 1rem 0;
     color: var(--color-text-muted);
 }
 
 .empty-state-card {
-    text-align: center;
-    padding: 2rem;
-    background: var(--color-surface-alt);
-    border-radius: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
     margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
 }
 
 .empty-state-card .empty-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    display: grid;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.15rem;
 }
 
-.empty-state-card h5 {
+.empty-state-card h3 {
+    margin-bottom: 0.25rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
     color: var(--color-text);
 }
 
 .empty-state-card p {
+    margin-bottom: 0.75rem;
     color: var(--color-text-muted);
-    margin-bottom: 1rem;
-    max-width: 300px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-.btn-fun {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 12px;
-    font-weight: 600;
-    transition: all 0.2s;
+.empty-state-card p:last-child {
+    margin-bottom: 0;
+}
+
+.empty-state-card .btn {
+    min-height: 2.75rem;
 }
 
 .visibility-status {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
     flex-wrap: wrap;
 }
 
 .status-badge {
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.85rem;
     border-radius: 999px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.875rem;
     display: inline-flex;
     align-items: center;
@@ -92,6 +96,7 @@
 
 .status-private {
     background: var(--color-surface-alt);
+    border: 1px solid var(--color-border-muted);
     color: var(--color-text);
 }
 
@@ -113,44 +118,54 @@
 .friends-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 0.5rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
 }
 
 .friend-chip {
     display: inline-flex;
-    flex-wrap: wrap;
     max-width: 100%;
+    min-height: 3rem;
     align-items: center;
     gap: 0.625rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-surface-alt);
-    border: 2px solid var(--color-border-muted);
+    padding: 0.25rem 0.25rem 0.25rem 0.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-muted);
     border-radius: 999px;
-    transition: all 0.2s;
 }
 
-.friend-chip:hover {
-    border-color: var(--color-primary-bg);
-    background: var(--color-surface);
+.friend-chip:not(:has(.remove-btn)) {
+    padding-right: 1rem;
+}
+
+.friend-chip-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
 }
 
 .friend-avatar {
     width: 32px;
     height: 32px;
+    flex: 0 0 auto;
     border-radius: 50%;
     background: var(--color-primary-bg);
     color: var(--color-nav-icon);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.875rem;
 }
 
 .friend-name {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--color-text);
+    overflow-wrap: anywhere;
 }
 
 .circle-badge {
@@ -164,6 +179,7 @@
 .remove-btn {
     width: 44px;
     height: 44px;
+    flex: 0 0 auto;
     border-radius: 50%;
     border: none;
     background: transparent;
@@ -172,12 +188,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
-    transition: all 0.2s;
-    margin-left: 0.25rem;
+    font-size: 0.8rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.remove-btn:hover {
+.remove-btn:hover,
+.remove-btn:focus-visible {
     background: var(--color-danger-bg);
     color: var(--color-danger-text);
 }
@@ -190,7 +206,7 @@
 .add-friend-section {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 2px dashed var(--color-border-muted);
+    border-top: 1px solid var(--color-border-muted);
 }
 
 .circle-share-list {
@@ -205,14 +221,23 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem 1rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.85rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.circle-share-list .btn {
+    min-height: 2.75rem;
 }
 
 .add-friend-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--color-text);
 }
 
@@ -220,37 +245,26 @@
     display: flex;
     align-items: end;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.5rem 0.75rem;
 }
 
 .add-friend-form .form-label {
     flex-basis: 100%;
-    margin-bottom: -0.25rem;
+    margin-bottom: 0;
 }
 
 .friend-select {
-    flex: 1;
-    border-radius: 12px;
-    border: 2px solid var(--color-border-muted);
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    transition: all 0.2s;
-}
-
-.friend-select:focus {
-    border-color: var(--color-primary-bg);
-    box-shadow: 0 0 0 4px var(--color-primary-soft);
-    outline: none;
+    flex: 1 1 14rem;
+    min-height: 2.75rem;
 }
 
 .btn-add {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    border-radius: 12px;
+    min-height: 2.75rem;
     font-weight: 600;
-    transition: all 0.2s;
 }
 
 .success-toast, .error-toast {
@@ -259,6 +273,90 @@
     gap: 0.75rem;
     border-radius: 12px;
     animation: slideIn 0.3s ease;
+}
+
+.manage-wishlist-event {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.manage-wishlist-event-icon {
+    display: grid;
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+}
+
+.manage-wishlist-event-info {
+    flex: 1 1 12rem;
+    min-width: 0;
+}
+
+.manage-wishlist-event-name {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.manage-wishlist-event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.manage-wishlist-event-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.manage-wishlist-event-actions .btn,
+.manage-wishlist-event-attach .btn {
+    min-height: 2.75rem;
+}
+
+.manage-wishlist-event-attach-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.manage-wishlist-event-attach-row .form-select {
+    flex: 1 1 16rem;
+    min-height: 2.75rem;
+}
+
+.manage-wishlist-note {
+    max-width: 40rem;
+    margin: 1rem 0 0;
+    color: var(--color-text-muted);
+}
+
+.manage-wishlist-note a {
+    font-weight: 700;
+}
+
+.manage-wishlist-danger-zone {
+    max-width: 40rem;
+    padding: 1rem;
+    border: 1px solid var(--bs-danger-border-subtle);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.manage-wishlist-danger-zone .btn {
+    min-height: 2.75rem;
 }
 
 @keyframes slideIn {
@@ -278,65 +376,51 @@
     .error-toast {
         animation: none;
     }
+
+    .remove-btn {
+        transition: none;
+    }
 }
 
-/* Mobile responsive improvements */
 @media (max-width: 767.98px) {
-    .d-flex.justify-content-between.align-items-center {
-        flex-direction: column;
-        align-items: flex-start !important;
-        gap: 1rem;
-    }
-
-    .btn-group {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .btn-group .btn {
-        width: 100%;
-        min-height: 44px;
-        border-radius: 0.375rem !important;
-        margin-bottom: 0.5rem;
-    }
-
-    h3 {
-        font-size: 1.5rem;
-    }
-
-    .card {
-        margin-bottom: 1rem;
-    }
-
-    .card-body {
-        padding: 1rem;
-    }
-
-    .h5 {
-        font-size: 1.25rem;
-    }
-
-    .alert {
-        font-size: 0.9rem;
-        padding: 0.75rem;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .add-friend-form {
-        flex-direction: column;
-    }
-    
-    .btn-add {
-        width: 100%;
-        justify-content: center;
-    }
-    
     .friends-grid {
-        justify-content: center;
+        flex-direction: column;
+    }
+
+    .friend-chip {
+        display: flex;
+        border-radius: 0.8rem;
+    }
+
+    .friend-chip-text {
+        flex: 1 1 auto;
+    }
+
+    .add-friend-form .friend-select,
+    .btn-add {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .manage-wishlist-event-actions {
+        flex: 1 1 100%;
+    }
+
+    .manage-wishlist-event-actions .btn {
+        flex: 1 1 0;
+    }
+
+    .manage-wishlist-event-attach-row .btn {
+        flex: 1 1 100%;
+    }
+
+    .manage-wishlist-details ::deep .wishlist-form-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin-top: 1rem;
+        padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--color-border-muted);
+        background: var(--color-bg);
     }
 }

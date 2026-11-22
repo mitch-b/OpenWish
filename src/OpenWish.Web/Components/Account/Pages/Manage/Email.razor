@@ -16,12 +16,11 @@
 
 <PageTitle>Manage email</PageTitle>
 
-<h3>Email</h3>
+<h2>Email</h2>
 
 <StatusMessage Message="@message"/>
-<p class="text-muted">Use a confirmed address so account recovery and invitations can reach you.</p>
-<div class="row">
-    <div class="col-xl-6">
+<p class="account-lead">Use a confirmed address so account recovery and invitations can reach you.</p>
+<div class="account-form">
         <form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
             <AntiforgeryToken />
         </form>
@@ -45,18 +44,22 @@
                     <input type="email" value="@email" id="email" class="form-control" aria-describedby="email-status" readonly />
                     <label for="email" class="form-label">Email</label>
                 </div>
-                <p id="email-status" class="text-warning mb-2">Confirmation needed</p>
+                <p id="email-status" class="text-warning-emphasis d-flex align-items-center gap-2 mb-2">
+                    <OpenWishIcon Name="exclamation-circle" />
+                    <span>Confirmation needed</span>
+                </p>
                 <button type="submit" class="btn btn-outline-primary mb-3" form="send-verification-form">Send confirmation email</button>
             }
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" aria-describedby="new-email-help" autofocus placeholder="Enter a new email" />
-                <label for="Input.NewEmail" class="form-label">New email</label>
+            <div class="account-field">
+                <div class="form-floating">
+                    <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control" autocomplete="email" aria-required="true" aria-describedby="new-email-help" autofocus placeholder="Enter a new email" />
+                    <label for="Input.NewEmail" class="form-label">New email</label>
+                </div>
+                <div id="new-email-help" class="form-text">We will send a confirmation link before changing your sign-in address.</div>
                 <ValidationMessage For="() => Input.NewEmail" class="text-danger" />
             </div>
-            <div id="new-email-help" class="form-text mb-3">We will send a confirmation link before changing your sign-in address.</div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Change email</button>
+            <button type="submit" class="btn btn-lg btn-primary account-submit">Change email</button>
         </EditForm>
-    </div>
 </div>
 
 @code {

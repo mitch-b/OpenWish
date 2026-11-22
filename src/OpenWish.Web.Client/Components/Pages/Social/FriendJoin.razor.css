@@ -1,0 +1,151 @@
+.friend-join-page {
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1rem 3rem;
+}
+
+.friend-join {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 34rem;
+    padding: 2rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.friend-join-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 1.35rem;
+}
+
+.friend-join-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.friend-join-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.friend-join-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.friend-join-person {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.friend-join-avatar {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.friend-join-lead {
+    min-width: 0;
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.friend-join-muted {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.friend-join-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.friend-join-status ::deep .ow-icon {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+
+.friend-join .alert {
+    margin-bottom: 0;
+}
+
+.friend-join-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding-top: 0.25rem;
+}
+
+.friend-join-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+}
+
+.friend-join-primary {
+    min-width: 11rem;
+    font-weight: 600;
+}
+
+@media (max-width: 576px) {
+    .friend-join-page {
+        padding: 1rem 0 2rem;
+    }
+
+    .friend-join {
+        padding: 1.25rem;
+    }
+
+    .friend-join-title {
+        font-size: 1.5rem;
+    }
+
+    .friend-join-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .friend-join-actions .btn {
+        width: 100%;
+    }
+}

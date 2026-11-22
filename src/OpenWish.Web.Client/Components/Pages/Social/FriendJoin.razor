@@ -12,69 +12,94 @@
 
 <PageTitle>Connect in person</PageTitle>
 
-<div class="container page-shell">
-    <PageHeader Title="Connect in person" Description="Confirm who you're connecting with." />
+<div class="friend-join-page">
+    <section class="friend-join" data-testid="friend-join" aria-labelledby="friend-join-title" aria-busy="@(_loading || _busy ? "true" : "false")">
+        <div class="friend-join-mark" aria-hidden="true">
+            <OpenWishIcon Name="@MarkIcon" />
+        </div>
+        <h1 id="friend-join-title" class="friend-join-title">Connect in person</h1>
 
-    <div class="friend-join" data-testid="friend-join" aria-live="polite">
-        @if (_loading)
-        {
-            <p role="status">Checking the code...</p>
-        }
-        else if (_failed)
-        {
-            <div class="alert alert-danger" role="alert" data-testid="join-error">
-                We couldn't check that code. Try again in a moment.
-            </div>
-            <button class="btn btn-outline-primary" type="button" @onclick="LoadAsync">Try again</button>
-        }
-        else
-        {
-            switch (_preview?.Status)
+        <div class="friend-join-body" aria-live="polite">
+            @if (_loading)
             {
-                case FriendJoinStatus.Valid:
-                    <h2 class="h4" data-testid="join-confirm-title">Connect with @_preview.DisplayName?</h2>
-                    <p>You'll both be able to see what each other shares with friends.</p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <button class="btn btn-primary" type="button" data-testid="join-confirm"
-                                disabled="@_busy" @onclick="ConfirmAsync">
-                            @(_busy ? "Connecting..." : "Connect")
-                        </button>
-                        <a class="btn btn-outline-secondary" href="friends">Not now</a>
-                    </div>
-                    break;
-                case FriendJoinStatus.Connected:
-                    <div class="alert alert-success" role="status" data-testid="join-success">
-                        You're now connected with @_preview.DisplayName.
-                    </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a class="btn btn-primary" href="@ListsHref" data-testid="join-view-lists" @ref="_nextAction">View their lists</a>
-                        <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
-                    </div>
-                    break;
-                case FriendJoinStatus.AlreadyFriends:
-                    <div class="alert alert-info" role="status" data-testid="join-already">
-                        You're already friends with @_preview.DisplayName.
-                    </div>
-                    <div class="d-flex flex-wrap gap-2">
-                        <a class="btn btn-primary" href="@ListsHref">View their lists</a>
-                        <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
-                    </div>
-                    break;
-                case FriendJoinStatus.OwnCode:
-                    <div class="alert alert-info" role="status" data-testid="join-own">
-                        This is your own code. Show it to the person you want to connect with.
-                    </div>
-                    <a class="btn btn-primary" href="friends">Back to friends</a>
-                    break;
-                default:
-                    <div class="alert alert-warning" role="alert" data-testid="join-invalid">
-                        This code has expired or isn't valid. Ask your friend for a new one.
-                    </div>
-                    <a class="btn btn-primary" href="friends">Back to friends</a>
-                    break;
+                <p class="friend-join-loading" role="status">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Checking the code...</span>
+                </p>
             }
-        }
-    </div>
+            else if (_failed)
+            {
+                <div class="alert alert-danger" role="alert" data-testid="join-error">
+                    We couldn't check that code. Try again in a moment.
+                </div>
+                <div class="friend-join-actions">
+                    <button class="btn btn-primary" type="button" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadAsync">
+                        <OpenWishIcon Name="arrow-clockwise" /> Try again
+                    </button>
+                    <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                </div>
+            }
+            else
+            {
+                switch (_preview?.Status)
+                {
+                    case FriendJoinStatus.Valid:
+                        <div class="friend-join-person">
+                            <span class="friend-join-avatar" aria-hidden="true">@Initial</span>
+                            <h2 class="friend-join-lead" data-testid="join-confirm-title">Connect with @_preview.DisplayName?</h2>
+                        </div>
+                        <p class="friend-join-muted">You'll both be able to see what each other shares with friends. Nothing else changes, and you can remove each other later.</p>
+                        <div class="friend-join-actions">
+                            <button class="btn btn-primary friend-join-primary" type="button" data-testid="join-confirm"
+                                    disabled="@(_busy || !RendererInfo.IsInteractive)" @onclick="ConfirmAsync">
+                                <OpenWishIcon Name="person-plus" /> @(_busy ? "Connecting..." : "Connect")
+                            </button>
+                            <a class="btn btn-outline-secondary" href="friends">Not now</a>
+                        </div>
+                        break;
+                    case FriendJoinStatus.Connected:
+                        <div class="alert alert-success friend-join-status" role="status" data-testid="join-success">
+                            <OpenWishIcon Name="check-circle-fill" />
+                            <span>You're now connected with <strong>@_preview.DisplayName</strong>.</span>
+                        </div>
+                        <div class="friend-join-actions">
+                            <a class="btn btn-primary friend-join-primary" href="@ListsHref" data-testid="join-view-lists" @ref="_nextAction">View their lists</a>
+                            <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                        </div>
+                        break;
+                    case FriendJoinStatus.AlreadyFriends:
+                        <div class="alert alert-info friend-join-status" role="status" data-testid="join-already">
+                            <OpenWishIcon Name="person-check" />
+                            <span>You're already friends with <strong>@_preview.DisplayName</strong>.</span>
+                        </div>
+                        <div class="friend-join-actions">
+                            <a class="btn btn-primary friend-join-primary" href="@ListsHref">View their lists</a>
+                            <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                        </div>
+                        break;
+                    case FriendJoinStatus.OwnCode:
+                        <div class="alert alert-info friend-join-status" role="status" data-testid="join-own">
+                            <OpenWishIcon Name="info-circle" />
+                            <span>This is your own code. Show it to the person you want to connect with.</span>
+                        </div>
+                        <div class="friend-join-actions">
+                            <a class="btn btn-primary friend-join-primary" href="friends?section=in-person">Show my code</a>
+                        </div>
+                        break;
+                    default:
+                        <div class="alert alert-warning friend-join-status" role="alert" data-testid="join-invalid">
+                            <OpenWishIcon Name="exclamation-triangle" />
+                            <span>This code has expired or isn't valid. Ask your friend for a new one.</span>
+                        </div>
+                        <div class="friend-join-actions">
+                            <a class="btn btn-primary friend-join-primary" href="friends?section=in-person">Enter another code</a>
+                            <a class="btn btn-outline-secondary" href="friends">Back to friends</a>
+                        </div>
+                        break;
+                }
+            }
+        </div>
+    </section>
 </div>
 
 @code {
@@ -88,6 +113,16 @@
     private bool _busy;
     private bool _focusNextAction;
     private ElementReference _nextAction;
+
+    private string MarkIcon => _preview?.Status switch
+    {
+        FriendJoinStatus.Connected or FriendJoinStatus.AlreadyFriends => "person-check",
+        _ => "people",
+    };
+
+    private string Initial => string.IsNullOrWhiteSpace(_preview?.DisplayName)
+        ? "?"
+        : _preview.DisplayName.Trim()[..1].ToUpperInvariant();
 
     private string ListsHref => string.IsNullOrWhiteSpace(_preview?.FriendUserName)
         ? "wishlists?tab=friends"

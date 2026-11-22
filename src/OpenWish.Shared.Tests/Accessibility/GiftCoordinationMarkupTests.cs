@@ -23,6 +23,11 @@ public class GiftCoordinationMarkupTests
     {
         var list = ReadComponent("WishlistItemList.razor");
         var details = ReadComponent(Path.Combine("..", "Pages", "Wishlists", "WishlistDetails.razor"));
+        // Deleting the last comment under "Has comments" removes the thread; explain why and keep focus on the page.
+        Assert.Contains("if (wasShown && HasActiveFilters && !_filteredItems.Contains(item))", details, StringComparison.Ordinal);
+        Assert.Contains("It isn't shown because of your current filters.", details, StringComparison.Ordinal);
+        Assert.Contains("tabindex=\"-1\" @ref=\"_appliedFiltersHeading\"", details, StringComparison.Ordinal);
+        Assert.Contains("await _appliedFiltersHeading.FocusAsync();", details, StringComparison.Ordinal);
 
         Assert.Contains("OnCommentsChanged=\"OnCommentsChanged\"", list, StringComparison.Ordinal);
         Assert.Equal(3, details.Split("OnCommentsChanged=\"@HandleCommentsChanged\"").Length - 1);

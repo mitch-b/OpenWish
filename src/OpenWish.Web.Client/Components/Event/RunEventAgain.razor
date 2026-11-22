@@ -1,3 +1,5 @@
+@using System.Globalization
+@using System.Text.RegularExpressions
 @using OpenWish.Shared.Models
 @using OpenWish.Shared.RequestModels
 @using OpenWish.Shared.Services
@@ -8,51 +10,80 @@
 
 <section class="@(IsPast ? "run-again run-again-emphasis" : "run-again") card shadow-sm mb-4" aria-labelledby="run-again-title" aria-busy="@(_busy ? "true" : "false")" data-testid="run-again">
     <div class="card-body">
-        <h2 id="run-again-title" class="h4"><OpenWishIcon Name="arrow-repeat" /> Run it again</h2>
+        <h2 id="run-again-title" class="h4 run-again-title"><OpenWishIcon Name="arrow-repeat" /> Run it again</h2>
         @if (!_open)
         {
-            <p class="text-muted">
+            <p class="text-muted run-again-lead">
                 @(IsPast
                     ? "This event has passed. Start next year's version with the same details, people, and pairing rules."
                     : "Plan another round with the same details, people, and pairing rules. Everyone gets a fresh invitation.")
             </p>
-            <button type="button" class="btn @(IsPast ? "btn-primary" : "btn-outline-primary") run-again-button" data-testid="run-again-open" aria-expanded="false" @onclick="Open">
-                Run it again
+            <button type="button" class="btn @(IsPast ? "btn-primary" : "btn-outline-primary") run-again-button" data-testid="run-again-open"
+                    disabled="@(!RendererInfo.IsInteractive)" @ref="_openButton" @onclick="Open">
+                <OpenWishIcon Name="arrow-repeat" />
+                <span>Run it again</span>
             </button>
         }
         else
         {
             <EditForm Model="_form" OnValidSubmit="Submit" FormName="run-event-again">
-                <div class="mb-3">
-                    <label for="run-again-name" class="form-label">New event name</label>
-                    <input id="run-again-name" class="form-control run-again-field" data-testid="run-again-name" maxlength="200" autocomplete="off"
-                           @bind="_form.Name" @bind:event="oninput" disabled="@_busy" required aria-describedby="run-again-help" />
+                <div class="run-again-fields">
+                    <div class="run-again-name-field">
+                        <label for="run-again-name" class="form-label">New event name</label>
+                        <input id="run-again-name" class="form-control run-again-field @(_nameError ? "is-invalid" : null)"
+                               data-testid="run-again-name" maxlength="200" autocomplete="off"
+                               @ref="_nameInput" @bind="_form.Name" @bind:event="oninput" disabled="@_busy" required
+                               aria-invalid="@(_nameError ? "true" : null)"
+                               aria-describedby="@(_nameError ? "run-again-error" : null)" />
+                        @if (_nameError)
+                        {
+                            <div id="run-again-error" class="invalid-feedback d-block" role="alert" data-testid="run-again-error">@_errorMessage</div>
+                        }
+                    </div>
+                    <div>
+                        <label for="run-again-date" class="form-label">New date</label>
+                        <input id="run-again-date" type="date" class="form-control run-again-field" data-testid="run-again-date"
+                               @bind="_form.Date" disabled="@_busy" required aria-describedby="run-again-date-help" />
+                        <p id="run-again-date-help" class="form-text">Same time of day as before, @EventDate.ToLocalTime().ToString("t", CultureInfo.CurrentCulture).</p>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label for="run-again-date" class="form-label">New date</label>
-                    <input id="run-again-date" type="date" class="form-control run-again-field" data-testid="run-again-date"
-                           @bind="_form.Date" disabled="@_busy" required />
+                <div class="run-again-summary">
+                    <div>
+                        <h3 class="run-again-summary-title">Carries over</h3>
+                        <ul>
+                            <li><OpenWishIcon Name="check" /><span>Description, budget, and exchange settings</span></li>
+                            <li><OpenWishIcon Name="check" /><span>Everyone who didn't decline, as fresh pending invitations</span></li>
+                            <li><OpenWishIcon Name="check" /><span>Pairing rules</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="run-again-summary-title">Starts fresh</h3>
+                        <ul>
+                            <li><OpenWishIcon Name="arrow-clockwise" /><span>Names aren't drawn yet</span></li>
+                            <li><OpenWishIcon Name="arrow-clockwise" /><span>No wishlists are attached, including yours</span></li>
+                        </ul>
+                    </div>
                 </div>
-                <p id="run-again-help" class="text-muted small">
-                    The new event is a fresh start: names aren't drawn, and invitations go out as pending. You won't be attached to a wishlist automatically.
-                </p>
-                @if (_errorMessage is not null)
+                @if (_errorMessage is not null && !_nameError)
                 {
-                    <div class="alert alert-danger" role="alert" data-testid="run-again-error">@_errorMessage</div>
+                    <div class="alert alert-danger run-again-error" role="alert" data-testid="run-again-error">@_errorMessage</div>
                 }
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" class="btn btn-primary run-again-button" data-testid="run-again-submit" disabled="@_busy">
+                <div class="run-again-actions">
+                    <button type="submit" class="btn btn-primary run-again-button" data-testid="run-again-submit" disabled="@(_busy || !RendererInfo.IsInteractive)">
                         @if (_busy)
                         {
                             <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
-                            <span>Creating...</span>
+                            <span>Creating the new event...</span>
                         }
                         else
                         {
                             <span>Create the new event</span>
                         }
                     </button>
-                    <button type="button" class="btn btn-outline-secondary run-again-button" data-testid="run-again-cancel" disabled="@_busy" @onclick="Close">Cancel</button>
+                    <button type="button" class="btn btn-outline-secondary run-again-button" data-testid="run-again-cancel"
+                            disabled="@(_busy || !RendererInfo.IsInteractive)" @onclick="Close">
+                        Cancel
+                    </button>
                 </div>
             </EditForm>
         }
@@ -66,19 +97,34 @@
     [Parameter] public string CurrentUserId { get; set; } = string.Empty;
 
     private readonly RunAgainForm _form = new();
+    private ElementReference _nameInput;
+    private ElementReference _openButton;
     private bool _open;
     private bool _busy;
+    private bool _focusName;
+    private bool _focusOpenButton;
     private string? _errorMessage;
+    private bool _nameError;
 
     private bool IsPast => EventDate <= DateTimeOffset.UtcNow;
+
+    private static string SuggestName(string name, int fromYear, int toYear)
+    {
+        var year = new Regex($@"\b{fromYear}\b");
+        var next = toYear.ToString(CultureInfo.InvariantCulture);
+        var suggestion = year.IsMatch(name) ? year.Replace(name, next) : $"{name.TrimEnd()} {next}";
+        return suggestion.Length <= 200 ? suggestion : name;
+    }
 
     private void Open()
     {
         var baseDate = EventDate.ToLocalTime().DateTime;
-        _form.Name = $"{EventName} (copy)";
         _form.Date = baseDate.AddYears(1).Date;
+        _form.Name = SuggestName(EventName, baseDate.Year, _form.Date.Year);
         _errorMessage = null;
+        _nameError = false;
         _open = true;
+        _focusName = true;
     }
 
     private void Close()
@@ -86,6 +132,21 @@
         if (!_busy)
         {
             _open = false;
+            _focusOpenButton = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusName)
+        {
+            _focusName = false;
+            await _nameInput.FocusAsync();
+        }
+        else if (_focusOpenButton)
+        {
+            _focusOpenButton = false;
+            await _openButton.FocusAsync();
         }
     }
 
@@ -99,11 +160,14 @@
         if (string.IsNullOrWhiteSpace(_form.Name))
         {
             _errorMessage = "Give the new event a name.";
+            _nameError = true;
+            _focusName = true;
             return;
         }
 
         _busy = true;
         _errorMessage = null;
+        _nameError = false;
         try
         {
             // Keep the original time of day on the new date.

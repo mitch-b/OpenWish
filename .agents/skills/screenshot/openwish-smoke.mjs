@@ -520,7 +520,7 @@ async function verifyCompactEventForm(page) {
     const height = await page.locator("main form").evaluate(element => element.getBoundingClientRect().height);
     const columns = await page.locator(".event-type-options").evaluate(element =>
       getComputedStyle(element).gridTemplateColumns.split(" ").length);
-    if (columns !== (name === "desktop" ? 2 : 1)) {
+    if (columns !== (name === "mobile" ? 1 : 2)) {
       throw new Error(`${name} event choices use ${columns} columns instead of fitting the available form width.`);
     }
     if (height > maximumHeight) {

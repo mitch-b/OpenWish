@@ -14,7 +14,13 @@
 
 .add-item-section {
     position: sticky;
-    top: 5.5rem;
+    top: var(--shell-sticky-top, 1rem);
+}
+
+@media (max-width: 991.98px) {
+    .add-item-section {
+        position: static;
+    }
 }
 
 .add-item-section h2 {

@@ -107,7 +107,7 @@ else
         </div>
     </div>
 
-    @if (_canEdit)
+    @if (_canEdit && _items.Count > 0)
     {
         <p class="paste-hint">
             <OpenWishIcon Name="clipboard" />
@@ -146,105 +146,109 @@ else
         <GiftProfilePanel WishlistPublicId="@_wishlist.PublicId" ViewerId="@_currentUserId" />
     }
 
-    <div class="stats-dashboard">
-        <div class="stat-card">
-            <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
-            <div class="stat-content">
-                <div class="stat-value">@_items.Count</div>
-                <div class="stat-label">Total items</div>
-            </div>
-        </div>
-        @if (!_isOwner)
-        {
+    @* Stats, search and view controls have nothing to act on until the list has an idea. *@
+    @if (_items.Count > 0)
+    {
+        <div class="stats-dashboard">
             <div class="stat-card">
-                <div class="stat-icon"><OpenWishIcon Name="check-circle" /></div>
+                <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
                 <div class="stat-content">
-                    <div class="stat-value">@GetReservedCount()</div>
-                    <div class="stat-label">Reserved</div>
+                    <div class="stat-value">@_items.Count</div>
+                    <div class="stat-label">Total items</div>
                 </div>
             </div>
-            <button class="stat-card stat-action"
-                    type="button"
-                    aria-label="Show items reserved by you"
-                    aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
-                    @onclick='() => ToggleFilter(StatusFilters, "mine")'>
-                <div class="stat-icon"><OpenWishIcon Name="gift" /></div>
-                <div class="stat-content">
-                    <div class="stat-value">@GetMyReservedCount()</div>
-                    <div class="stat-label">Reserved by you</div>
-                </div>
-            </button>
-        }
-        <button class="stat-card stat-action"
-                type="button"
-                aria-label="Show items with comments"
-                @onclick="FocusCommentsAsync">
-            <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
-            <div class="stat-content">
-                <div class="stat-value">@GetCommentCount()</div>
-                <div class="stat-label">Comments</div>
-            </div>
-        </button>
-    </div>
-
-    <div class="search-filter-bar">
-        <div class="search-container">
-            <OpenWishIcon Name="search" Class="search-icon" />
-            <label for="wishlist-item-search" class="visually-hidden">Search wishlist items</label>
-            <input id="wishlist-item-search"
-                   type="search"
-                   class="search-input"
-                   placeholder="Search ideas"
-                   aria-controls="wishlist-items"
-                   @bind="SearchQuery"
-                   @bind:event="oninput"
-                   @bind:after="ApplyFiltersAndSort"
-                   @onkeydown="HandleSearchKeyDown" />
-            @if (!string.IsNullOrEmpty(SearchQuery))
+            @if (!_isOwner)
             {
-                <button class="search-clear"
+                <div class="stat-card">
+                    <div class="stat-icon"><OpenWishIcon Name="check-circle" /></div>
+                    <div class="stat-content">
+                        <div class="stat-value">@GetReservedCount()</div>
+                        <div class="stat-label">Reserved</div>
+                    </div>
+                </div>
+                <button class="stat-card stat-action"
                         type="button"
-                        aria-label="Clear wishlist item search"
-                        @onclick="ClearSearch">
-                    <OpenWishIcon Name="x-lg" />
+                        aria-label="Show items reserved by you"
+                        aria-pressed="@(StatusFilters.Contains("mine") ? "true" : "false")"
+                        @onclick='() => ToggleFilter(StatusFilters, "mine")'>
+                    <div class="stat-icon"><OpenWishIcon Name="gift" /></div>
+                    <div class="stat-content">
+                        <div class="stat-value">@GetMyReservedCount()</div>
+                        <div class="stat-label">Reserved by you</div>
+                    </div>
                 </button>
             }
-        </div>
-
-        <button class="btn btn-filter @(_showFilters ? "active" : "")"
-                type="button"
-                aria-expanded="@(_showFilters ? "true" : "false")"
-                aria-controls="wishlist-filters"
-                @onclick="ToggleFilters">
-            <OpenWishIcon Name="funnel" />
-            <span class="btn-text">Filters</span>
-            @if (GetActiveFilterCount() > 0)
-            {
-                <span class="filter-count">@GetActiveFilterCount()</span>
-            }
-        </button>
-
-        <div class="btn-group view-toggle" role="group" aria-label="Wishlist view">
-            <button type="button"
-                    class="btn @(ViewMode == "grid" ? "active" : "")"
-                    aria-label="Grid view"
-                    aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
-                    aria-controls="wishlist-items"
-                    disabled="@(!RendererInfo.IsInteractive)"
-                    @onclick="@(() => SetViewMode("grid"))">
-                <OpenWishIcon Name="grid-3x3-gap" />
-            </button>
-            <button type="button"
-                    class="btn @(ViewMode == "list" ? "active" : "")"
-                    aria-label="List view"
-                    aria-pressed="@(ViewMode == "list" ? "true" : "false")"
-                    aria-controls="wishlist-items"
-                    disabled="@(!RendererInfo.IsInteractive)"
-                    @onclick="@(() => SetViewMode("list"))">
-                <OpenWishIcon Name="list-ul" />
+            <button class="stat-card stat-action"
+                    type="button"
+                    aria-label="Show items with comments"
+                    @onclick="FocusCommentsAsync">
+                <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
+                <div class="stat-content">
+                    <div class="stat-value">@GetCommentCount()</div>
+                    <div class="stat-label">Comments</div>
+                </div>
             </button>
         </div>
-    </div>
+
+        <div class="search-filter-bar">
+            <div class="search-container">
+                <OpenWishIcon Name="search" Class="search-icon" />
+                <label for="wishlist-item-search" class="visually-hidden">Search wishlist items</label>
+                <input id="wishlist-item-search"
+                       type="search"
+                       class="search-input"
+                       placeholder="Search ideas"
+                       aria-controls="wishlist-items"
+                       @bind="SearchQuery"
+                       @bind:event="oninput"
+                       @bind:after="ApplyFiltersAndSort"
+                       @onkeydown="HandleSearchKeyDown" />
+                @if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    <button class="search-clear"
+                            type="button"
+                            aria-label="Clear wishlist item search"
+                            @onclick="ClearSearch">
+                        <OpenWishIcon Name="x-lg" />
+                    </button>
+                }
+            </div>
+
+            <button class="btn btn-filter @(_showFilters ? "active" : "")"
+                    type="button"
+                    aria-expanded="@(_showFilters ? "true" : "false")"
+                    aria-controls="wishlist-filters"
+                    @onclick="ToggleFilters">
+                <OpenWishIcon Name="funnel" />
+                <span class="btn-text">Filters</span>
+                @if (GetActiveFilterCount() > 0)
+                {
+                    <span class="filter-count">@GetActiveFilterCount()</span>
+                }
+            </button>
+
+            <div class="btn-group view-toggle" role="group" aria-label="Wishlist view">
+                <button type="button"
+                        class="btn @(ViewMode == "grid" ? "active" : "")"
+                        aria-label="Grid view"
+                        aria-pressed="@(ViewMode == "grid" ? "true" : "false")"
+                        aria-controls="wishlist-items"
+                        disabled="@(!RendererInfo.IsInteractive)"
+                        @onclick="@(() => SetViewMode("grid"))">
+                    <OpenWishIcon Name="grid-3x3-gap" />
+                </button>
+                <button type="button"
+                        class="btn @(ViewMode == "list" ? "active" : "")"
+                        aria-label="List view"
+                        aria-pressed="@(ViewMode == "list" ? "true" : "false")"
+                        aria-controls="wishlist-items"
+                        disabled="@(!RendererInfo.IsInteractive)"
+                        @onclick="@(() => SetViewMode("list"))">
+                    <OpenWishIcon Name="list-ul" />
+                </button>
+            </div>
+        </div>
+    }
     <p class="visually-hidden" role="status" aria-live="polite">@FilteredItemCountMessage</p>
     @if (HasActiveFilters)
     {
@@ -599,10 +603,7 @@ else
                         @if (_canEdit)
                         {
                             <h2>No ideas in this wishlist yet</h2>
-                            <p>Add a name now, or paste a product link and we'll fill in what we can.</p>
-                            <button class="btn btn-primary btn-lg" @onclick="ShowAddItemModal">
-                                <OpenWishIcon Name="plus-lg" /> Add item
-                            </button>
+                            <p>Choose <strong>Add item</strong> above, or paste a product link anywhere on this page and we'll fill in what we can.</p>
                         }
                         else
                         {

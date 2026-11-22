@@ -271,9 +271,9 @@
 }
 
 .event-wishlist-manager .event-participant-badge-you {
-    border-color: var(--color-info-border);
-    background: var(--color-info-bg);
-    color: var(--color-info-text);
+    border-color: var(--color-border);
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
 }
 
 .event-wishlist-manager .event-participant-wishlists {

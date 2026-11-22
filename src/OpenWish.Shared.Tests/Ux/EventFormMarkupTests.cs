@@ -53,7 +53,7 @@ public class EventFormMarkupTests
         Assert.Contains("CanClose=\"@(!_isDeleting)\"", markup, StringComparison.Ordinal);
         Assert.Contains("<span>Deleting event...</span>", markup, StringComparison.Ordinal);
         Assert.Contains("We couldn't delete the event.", markup, StringComparison.Ordinal);
-        Assert.Contains("<a class=\"btn btn-outline-secondary\" href=\"/events/@EventId\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<a class=\"btn btn-outline-secondary page-header-back\" href=\"/events/@EventId\">", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("ShowValidationSummary=\"true\"", markup, StringComparison.Ordinal);
     }
 

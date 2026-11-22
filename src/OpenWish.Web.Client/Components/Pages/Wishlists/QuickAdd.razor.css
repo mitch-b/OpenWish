@@ -84,13 +84,14 @@
     padding: 0.9rem;
     border: 1px solid var(--color-border-muted);
     border-radius: 0.8rem;
-    background: var(--color-surface-alt);
+    background: var(--color-surface);
     color: var(--color-text);
     text-decoration: none;
     transition: border-color .16s ease, background-color .16s ease;
 }
 
-.wishlist-choice:hover {
+.wishlist-choice:hover,
+.wishlist-choice:focus-visible {
     border-color: color-mix(in srgb, var(--color-primary-bg) 44%, var(--color-border));
     background: var(--color-primary-soft);
     color: var(--color-text);
@@ -136,38 +137,91 @@
 }
 
 .quick-add-row {
-    display: flex;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "field action"
+        "help help"
+        "message message";
+    gap: 0 0.5rem;
 }
 
 .quick-add-row .form-control {
+    grid-area: field;
     min-height: 2.75rem;
 }
 
 .quick-add-row .btn {
     display: inline-flex;
+    grid-area: action;
     min-height: 2.75rem;
-    flex: 0 0 auto;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
 }
 
+.quick-add-row .form-text {
+    grid-area: help;
+}
+
 .quick-add-message {
-    margin: 0.75rem 0 0;
+    display: flex;
+    grid-area: message;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-danger-border);
+    border-radius: 0.75rem;
+    background: var(--color-danger-bg);
+    color: var(--color-danger-text);
+    font-size: 0.88rem;
+}
+
+.quick-add-message ::deep .ow-icon {
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.14rem;
+}
+
+.quick-add-reset {
+    margin: 1rem 0 0;
+}
+
+.quick-add-reset .btn-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.4rem;
+    padding-inline: 0;
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+.quick-add-reset .btn-link:hover,
+.quick-add-reset .btn-link:focus-visible {
+    color: var(--color-link-hover);
+    text-decoration: underline;
 }
 
 .way-list {
-    display: grid;
-    gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    overflow: hidden;
 }
 
 .way {
     display: flex;
     gap: 1rem;
-    padding: 1rem;
-    border: 1px solid var(--color-border-muted);
-    border-radius: 1rem;
-    background: var(--color-surface);
+    padding: 1.25rem;
+}
+
+.way + .way {
+    border-top: 1px solid var(--color-border-muted);
 }
 
 .way-copy {
@@ -175,7 +229,7 @@
 }
 
 .way-copy h3 {
-    margin: 0.3rem 0 0.35rem;
+    margin: 0.55rem 0 0.35rem;
     font-size: 1rem;
 }
 
@@ -216,12 +270,76 @@
 
 @media (max-width: 575.98px) {
     .quick-add-row {
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "field"
+            "help"
+            "message"
+            "action";
+    }
+
+    .quick-add-row .btn {
+        margin-top: 0.75rem;
+    }
+
+    .quick-add-form {
+        margin-bottom: 2rem;
+    }
+
+    /* Phones can't use a bookmarks-bar shortcut, so lead with sharing from the phone. */
+    .way-phone {
+        order: -1;
     }
 
     .way {
-        flex-direction: column;
-        gap: 0.5rem;
+        display: grid;
+        grid-template-columns: 2.25rem minmax(0, 1fr);
+        align-items: center;
+        gap: 0 0.75rem;
+        padding: 1rem;
+        border-top: 1px solid var(--color-border-muted);
+    }
+
+    .way.way-phone {
+        border-top: 0;
+    }
+
+    .way-copy {
+        display: contents;
+    }
+
+    .way-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 1rem;
+    }
+
+    .way-copy h3 {
+        margin: 0;
+    }
+
+    .way-copy h3 + p {
+        margin-top: 0.5rem;
+    }
+
+    .way-copy > :not(h3) {
+        grid-column: 1 / -1;
+    }
+
+    .way-actions .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .capture-preview {
+        align-items: flex-start;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .capture-image {
+        width: 3.5rem;
+        height: 3.5rem;
     }
 }
 

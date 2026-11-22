@@ -15,16 +15,7 @@
 <PageTitle>Add to a wishlist</PageTitle>
 
 <div class="container page-shell quick-add">
-    <PageHeader Title="Add to a wishlist" Description="@PageDescription">
-        <Actions>
-            @if (!_capture.IsEmpty)
-            {
-                <a href="/add" class="btn btn-outline-secondary">
-                    <OpenWishIcon Name="arrow-left" /> Start over
-                </a>
-            }
-        </Actions>
-    </PageHeader>
+    <PageHeader Title="Add to a wishlist" Description="@PageDescription" />
 
     @if (!_capture.IsEmpty)
     {
@@ -106,39 +97,49 @@
                 </ul>
             }
         </section>
+
+        <p class="quick-add-reset">
+            <a href="/add" class="btn btn-link">
+                <OpenWishIcon Name="arrow-left" /> Start over with a different idea
+            </a>
+        </p>
     }
     else
     {
         <form class="quick-add-form" method="get" action="/add" @onsubmit="Continue" @onsubmit:preventDefault="true">
             <label for="quick-add-text" class="form-label">Link or gift idea</label>
+            @* A plain text keyboard keeps the space bar for typed ideas; links paste either way. *@
             <div class="quick-add-row">
                 <input id="quick-add-text"
                        name="text"
                        class="form-control"
                        type="text"
-                       inputmode="url"
                        autocomplete="off"
                        enterkeyhint="go"
                        spellcheck="false"
                        aria-describedby="quick-add-help"
-                       placeholder="Paste a link from any store"
+                       aria-invalid="@(_formError is null ? null : "true")"
+                       placeholder="Paste a link or name an idea"
                        @bind="_text"
                        @bind:event="oninput" />
                 <button type="submit" class="btn btn-primary">
                     <OpenWishIcon Name="arrow-right" /> Continue
                 </button>
+                <div id="quick-add-help" class="form-text">Store links, text shared from shopping apps, or just the name of an idea all work.</div>
+                @if (_formError is not null)
+                {
+                    <p class="quick-add-message" role="alert">
+                        <OpenWishIcon Name="exclamation-circle" />
+                        <span>@_formError</span>
+                    </p>
+                }
             </div>
-            <div id="quick-add-help" class="form-text">Store links, text shared from shopping apps, or just the name of an idea all work.</div>
-            @if (_formError is not null)
-            {
-                <div class="alert alert-danger quick-add-message" role="alert">@_formError</div>
-            }
         </form>
 
         <section class="add-anywhere" aria-labelledby="add-anywhere-title">
             <h2 id="add-anywhere-title">Add ideas from anywhere</h2>
             <div class="way-list">
-                <article class="way">
+                <article class="way way-computer">
                     <span class="way-icon" aria-hidden="true"><OpenWishIcon Name="bookmark-plus" /></span>
                     <div class="way-copy">
                         <h3>From your computer</h3>
@@ -159,7 +160,7 @@
                         <p class="way-feedback" role="status">@_bookmarkletMessage</p>
                     </div>
                 </article>
-                <article class="way">
+                <article class="way way-phone">
                     <span class="way-icon" aria-hidden="true"><OpenWishIcon Name="phone" /></span>
                     <div class="way-copy">
                         <h3>From your phone</h3>

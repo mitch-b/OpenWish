@@ -283,7 +283,10 @@
             return;
         }
 
-        await LoadComments();
+        if (await LoadComments())
+        {
+            await NotifyCommentsChangedAsync();
+        }
     }
 
     private async Task HandleComposerKeyDown(KeyboardEventArgs args)

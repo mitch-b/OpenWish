@@ -3,10 +3,12 @@
 Fixes from an independent review of the holiday polish release.
 
 - **Private lists stay private.** A private wishlist attached to an event is no
-  longer visible to event members who open its link. The event page, the list's
-  settings, and its privacy label now agree.
+  longer visible to event members who open its link, and a private group-gift
+  list can't be edited by them unless the owner shares it. The event page, the
+  list's settings, and its privacy label now agree.
 - **Commenters' emails stay private.** Wishlist pages no longer send comment
-  authors' email addresses to the browser.
+  authors' email addresses to the browser. Accounts that use their email as a
+  username appear as "OpenWish member".
 - **Comment counts keep up.** Adding or deleting a comment updates the comment
   count, item badges, and the "Has comments" filter right away.
 - **Notifications on tablets.** The notifications panel fits beside the sidebar

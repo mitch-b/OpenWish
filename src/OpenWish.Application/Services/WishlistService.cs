@@ -708,6 +708,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
                      !wp.Deleted &&
                      (wp.PermissionType == "Edit" || wp.PermissionType == "Admin")) ||
                  (w.IsCollaborative &&
+                  !w.IsPrivate &&
                   w.Event != null &&
                   !w.Event.Deleted &&
                   (w.Event.CreatedBy.Id == userId ||
@@ -868,7 +869,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
             .Where(w => w.Id == wishlistId && !w.Deleted)
-            .Select(w => new { w.OwnerId, w.IsCollaborative, w.EventId })
+            .Select(w => new { w.OwnerId, w.IsCollaborative, w.IsPrivate, w.EventId })
             .FirstOrDefaultAsync();
 
         if (wishlist == null)
@@ -881,7 +882,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             return true;
         }
 
-        if (wishlist.IsCollaborative)
+        // A private list stays owner-only for event members; explicit permissions still apply below.
+        if (wishlist.IsCollaborative && !wishlist.IsPrivate)
         {
             if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
             {
@@ -1920,6 +1922,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         foreach (var comment in comments.Where(c => c.User is not null))
         {
             comment.User!.Email = string.Empty;
+            // Sign-up stores the email as the username, so it must not leak through the author name either.
+            comment.User.UserName = PublicDisplayName.From(comment.User.UserName, "OpenWish member");
         }
 
         return comments;

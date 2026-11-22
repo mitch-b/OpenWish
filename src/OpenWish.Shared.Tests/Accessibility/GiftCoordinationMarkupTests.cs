@@ -15,7 +15,7 @@ public class GiftCoordinationMarkupTests
         Assert.Contains("_hasLoaded = true;", markup, StringComparison.Ordinal);
         Assert.Contains("string.IsNullOrWhiteSpace(commentText) || _loading || _isAdding", markup, StringComparison.Ordinal);
         Assert.Contains("_pendingDeleteComment is null || _loading", markup, StringComparison.Ordinal);
-        Assert.Equal(2, markup.Split("await NotifyCommentsChangedAsync();").Length - 1);
+        Assert.Equal(3, markup.Split("await NotifyCommentsChangedAsync();").Length - 1);
     }
 
     [Fact]

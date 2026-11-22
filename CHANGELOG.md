@@ -10,7 +10,10 @@ All notable user-facing changes to OpenWish are documented here.
 
 - Private wishlists attached to an event stay private. Event members see only
   the event's shared lists, matching the event page and the list's settings.
-- Wishlist pages no longer send commenters' email addresses to the browser.
+  A private group-gift list can no longer be found or edited by event members
+  unless the owner shares it with them.
+- Wishlist pages no longer send commenters' email addresses to the browser,
+  including accounts whose username is their email.
 - Comment counts, badges, and the "Has comments" filter update as soon as a
   comment is added or deleted.
 - The notifications panel no longer slides under the sidebar on narrow tablets.

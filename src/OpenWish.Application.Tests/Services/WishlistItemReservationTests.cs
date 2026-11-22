@@ -246,6 +246,7 @@ public class WishlistItemReservationTests
             var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner", IsPrivate = false };
             var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
             context.WishlistItems.Add(item);
+            context.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, UserId = "reserver", PermissionType = "View" });
 
             await context.SaveChangesAsync();
             wishlistPublicId = wishlist.PublicId;

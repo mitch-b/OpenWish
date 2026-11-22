@@ -18,9 +18,10 @@ profile.
 
 **Surprises stay surprises**
 
-- Reservations, purchases, and shopper comments are never shown to the person
-  receiving the gift. Shoppers can also reserve anonymously, hiding their name
-  from other shoppers.
+- Reservations and purchases are never shown to the person receiving the
+  gift. Shoppers can also reserve anonymously, hiding their name from other
+  shoppers. Item comments are visible to everyone who can see the item,
+  including the list owner.
 - A private gift history gently warns you before you give someone the same
   gift twice.
 - Viewer-specific privacy protects private lists, sharing choices, and

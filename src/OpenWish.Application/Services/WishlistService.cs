@@ -1868,7 +1868,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return (keys.WishlistId, keys.Id);
     }
 
-    // Items the viewer can't see (private, hidden from the owner, or no longer active) are reported as missing.
+    // Items the viewer can't see (no list access, private, hidden from the owner, or no longer active) are reported as missing.
     private async Task<(int WishlistId, int ItemId)> ResolveVisibleItemKeysAsync(
         string wishlistPublicId, string itemPublicId, string viewerId)
     {
@@ -1879,7 +1879,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(i => i.PublicId == itemPublicId && !i.Deleted &&
                 i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
             .SingleOrDefaultAsync();
-        if (item is null || !CanViewerSeeItem(item, item.Wishlist!.OwnerId, viewerId))
+        if (item is null || !CanViewerSeeItem(item, item.Wishlist!.OwnerId, viewerId) ||
+            !await CanUserAccessWishlistInternalAsync(context, item.WishlistId, viewerId))
         {
             throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
         }

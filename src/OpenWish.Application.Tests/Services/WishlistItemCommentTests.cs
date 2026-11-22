@@ -224,6 +224,7 @@ public class WishlistItemCommentTests
             var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
             var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
             context.WishlistItems.Add(item);
+            context.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, UserId = "commenter", PermissionType = "View" });
 
             await context.SaveChangesAsync();
             wishlistPublicId = wishlist.PublicId;
@@ -249,19 +250,24 @@ public class WishlistItemCommentTests
         string wishlistPublicId;
         string privatePublicId;
         string surprisePublicId;
+        string visiblePublicId;
 
         await using (var context = factory.CreateDbContext())
         {
             context.Users.AddRange(
                 new ApplicationUser { Id = "owner", UserName = "owner" },
-                new ApplicationUser { Id = "shopper", UserName = "shopper" });
+                new ApplicationUser { Id = "shopper", UserName = "shopper" },
+                new ApplicationUser { Id = "stranger", UserName = "stranger" });
             var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
             var privateItem = new WishlistItem { Name = "Private", Wishlist = wishlist, IsPrivate = true };
             var surprise = new WishlistItem { Name = "Surprise", Wishlist = wishlist, IsHiddenFromOwner = true };
-            context.WishlistItems.AddRange(privateItem, surprise);
+            var visible = new WishlistItem { Name = "Visible", Wishlist = wishlist };
+            context.WishlistItems.AddRange(privateItem, surprise, visible);
+            context.WishlistPermissions.Add(new WishlistPermission { Wishlist = wishlist, UserId = "shopper", PermissionType = "View" });
             await context.SaveChangesAsync();
             wishlistPublicId = wishlist.PublicId;
             privatePublicId = privateItem.PublicId;
+            visiblePublicId = visible.PublicId;
             surprisePublicId = surprise.PublicId;
         }
 
@@ -279,6 +285,16 @@ public class WishlistItemCommentTests
 
         Assert.Empty(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, privatePublicId, "owner"));
         Assert.True(await service.ReserveItemByPublicIdAsync(wishlistPublicId, surprisePublicId, "shopper"));
+
+        // A caller without list access (for example after access is revoked) can't reach any item.
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemCommentsByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.AddCommentToItemByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger", "Hi"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.ReserveItemByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            service.GetItemReservationByPublicIdAsync(wishlistPublicId, visiblePublicId, "stranger"));
     }
 
     private static TestDbContextFactory CreateFactory() =>

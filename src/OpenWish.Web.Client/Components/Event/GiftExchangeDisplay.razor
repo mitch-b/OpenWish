@@ -19,7 +19,7 @@
     {
         <div class="alert alert-danger mb-0" role="alert">
             <p>@_errorMessage</p>
-            <button type="button" class="btn btn-outline-danger" disabled="@_loading" @onclick="LoadGiftExchange">
+            <button type="button" class="btn btn-outline-danger" disabled="@(_loading || !RendererInfo.IsInteractive)" @onclick="LoadGiftExchange">
                 Try again
             </button>
         </div>
@@ -27,29 +27,29 @@
     else if (_giftExchange == null)
     {
         <div class="alert alert-info mb-0" role="status">
-            Your assignment isn't available yet. Ask the organizer to check the draw.
+            Your assignment isn't available yet. If you joined after the names were drawn, ask the organizer to draw again.
         </div>
     }
     else
     {
         @if (NeedsFirstOpen)
         {
-            <div class="gift-match-unopened" data-testid="gift-match-unopened" aria-busy="@_opening">
+            <div class="gift-match-unopened @(_opening ? "gift-match-opening" : string.Empty)" data-testid="gift-match-unopened" aria-busy="@_opening">
                 <div class="gift-match-invitation">
                     <h3>A little surprise, just for you</h3>
                     <p>The names are drawn. Open your gift to see who you're shopping for.</p>
-                    <p class="gift-match-privacy"><OpenWishIcon Name="eye-slash" /><span>Only your match is shown here. The rest stays a surprise.</span></p>
                 </div>
-                <button type="button" class="gift-box-button" disabled="@_opening" @onclick="OpenMatch" aria-describedby="gift-box-help">
+                <button type="button" class="gift-box-button" disabled="@(_opening || !RendererInfo.IsInteractive)" @onclick="OpenMatch" aria-describedby="gift-box-help">
                     <GiftBoxArt />
                     <span class="gift-box-label">@(_opening ? "Opening your gift..." : "Open my gift")</span>
                 </button>
-                <p id="gift-box-help" class="gift-box-help">Tap, click, or press Enter. This is only for your first visit.</p>
+                <p id="gift-box-help" class="gift-box-help">You'll only unwrap it once. After that, your match waits here.</p>
+                <p class="gift-match-privacy"><OpenWishIcon Name="eye-slash" /><span>Only you can see your match. Everyone else's stays a surprise.</span></p>
                 @if (_openError is not null)
                 {
                     <div class="alert alert-danger" role="alert">
-                        @_openError
-                        <button type="button" class="btn btn-outline-danger mt-2" @onclick="LoadGiftExchange">Reload my match</button>
+                        <p class="mb-2">@_openError</p>
+                        <button type="button" class="btn btn-outline-danger" disabled="@(!RendererInfo.IsInteractive)" @onclick="LoadGiftExchange">Reload my match</button>
                     </div>
                 }
             </div>
@@ -75,10 +75,10 @@
                 <div>
                     <dt>Exchange date</dt>
                     <dd>
-                        @ExchangeDate.ToString("ddd, MMM d, yyyy")
+                        <span>@ExchangeDate.ToString("ddd, MMM d, yyyy")</span>
                         @if (EventCountdown.Describe(ExchangeDate, DateTimeOffset.Now, TimeZoneInfo.Local) is { } countdown)
                         {
-                            <span class="text-muted" data-testid="exchange-countdown">· @countdown</span>
+                            <span class="gift-match-countdown" data-testid="exchange-countdown">@(char.ToUpperInvariant(countdown[0]) + countdown[1..])</span>
                         }
                     </dd>
                 </div>

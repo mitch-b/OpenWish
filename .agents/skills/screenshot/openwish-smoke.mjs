@@ -3956,7 +3956,7 @@ async function verifyFriendJourney(browser, manifest, results) {
   await assertVisible(page, "My reserved items");
   await assertVisible(page, "Noise-Cancelling Headphones");
   const countdown = (await friendMatch.getByTestId("exchange-countdown").textContent())?.trim() ?? "";
-  if (!/^· (today|tomorrow|in \d+ days)$/.test(countdown)) {
+  if (!/^(today|tomorrow|in \d+ days)$/i.test(countdown)) {
     throw new Error(`The match did not show how soon the exchange is: ${countdown}`);
   }
   const reservedSpend = (await page.getByTestId("reserved-spend").textContent())?.replace(/\s+/g, " ").trim() ?? "";
@@ -4142,6 +4142,7 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await reveal.waitFor({ state: "visible" });
     await screenshot(ownerPage, "exchange-reveal-ready.png");
     await reveal.getByRole("button", { name: "Reveal assignments" }).click();
+    await reveal.getByRole("button", { name: "Reveal to everyone" }).click();
     await reveal.getByText("AlexDemo").first().waitFor({ state: "visible" });
     await reveal.getByText("JordanDemo").first().waitFor({ state: "visible" });
     if ((await reveal.textContent()).includes("@")) {

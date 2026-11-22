@@ -1,0 +1,194 @@
+.accept-invite-page {
+    display: flex;
+    justify-content: center;
+    padding: 2.5rem 1rem 3rem;
+}
+
+.accept-invite {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 36rem;
+    padding: 2rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 1rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.accept-invite-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid var(--color-primary-border);
+    border-radius: 999px;
+    background: var(--color-primary-soft);
+    color: var(--color-link);
+    font-size: 1.35rem;
+}
+
+.accept-invite-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.accept-invite-loading {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+}
+
+.accept-invite-lead {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--color-text);
+}
+
+.accept-invite-muted {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.accept-invite-email {
+    overflow-wrap: anywhere;
+}
+
+.accept-invite-event {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+}
+
+.accept-invite-event-name {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.accept-invite-facts,
+.accept-invite-reassurance {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.accept-invite-facts li,
+.accept-invite-reassurance li,
+.accept-invite-invited-as {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.accept-invite-facts li {
+    color: var(--color-text-muted);
+    font-size: 0.925rem;
+}
+
+.accept-invite-facts li strong {
+    color: var(--color-text);
+}
+
+.accept-invite-facts ::deep .ow-icon,
+.accept-invite-reassurance ::deep .ow-icon,
+.accept-invite-invited-as ::deep .ow-icon {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+
+.accept-invite-invited-as {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.925rem;
+}
+
+.accept-invite-invited-as strong {
+    color: var(--color-text);
+}
+
+.accept-invite-reassurance li {
+    color: var(--color-text);
+}
+
+.accept-invite-reassurance ::deep .ow-icon {
+    color: var(--color-success-text);
+}
+
+.accept-invite-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding-top: 0.25rem;
+}
+
+.accept-invite-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+}
+
+.accept-invite-primary {
+    min-width: 12rem;
+    font-weight: 600;
+}
+
+.accept-invite-decline {
+    color: var(--color-text-muted);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.accept-invite-decline:hover:not(:disabled) {
+    color: var(--color-danger-text);
+}
+
+.accept-invite-alt {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.accept-invite .alert {
+    margin-bottom: 0;
+}
+
+@media (max-width: 576px) {
+    .accept-invite-page {
+        padding: 1rem 0.75rem 2rem;
+    }
+
+    .accept-invite {
+        padding: 1.25rem;
+    }
+
+    .accept-invite-title {
+        font-size: 1.5rem;
+    }
+
+    .accept-invite-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .accept-invite-actions .btn,
+    .accept-invite-alt .btn {
+        width: 100%;
+    }
+}

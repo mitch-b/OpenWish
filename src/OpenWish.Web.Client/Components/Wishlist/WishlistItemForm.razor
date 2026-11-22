@@ -8,6 +8,7 @@
                          InputId="product-url-import"
                          HelpText="Links and text shared from shopping apps both work. Existing details won't be replaced."
                          Disabled="@IsSubmitting"
+                         IsSavedItem="@IsEditing"
                          @bind-IsImporting="_isImporting"
                          InitialLink="@InitialImportLink" />
 </div>
@@ -79,11 +80,11 @@
             @if (IsSubmitting)
             {
                 <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                <span>@(Model.Id > 0 ? "Saving changes..." : "Adding item...")</span>
+                <span>@(IsEditing ? "Saving changes..." : "Adding item...")</span>
             }
             else
             {
-                <span>@(Model.Id > 0 ? "Save changes" : "Add item")</span>
+                <span>@(IsEditing ? "Save changes" : "Add item")</span>
             }
         </button>
         @if (OnSubmitAndAddAnother.HasDelegate)
@@ -107,6 +108,7 @@
     [Parameter] public EventCallback<WishlistItemModel> OnCancel { get; set; }
     [Parameter] public bool AutoFocusImport { get; set; }
     [Parameter] public bool IsSubmitting { get; set; }
+    [Parameter] public bool IsEditing { get; set; }
     [Parameter] public IEnumerable<WishlistItemModel>? ExistingItems { get; set; }
 
     /// <summary>A product link, or text containing one, to import once the form is interactive.</summary>

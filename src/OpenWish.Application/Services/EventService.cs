@@ -971,6 +971,28 @@ public class EventService(
         return true;
     }
 
+    public async Task<bool> CancelEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId)
+    {
+        var eventUserId = await FindEventUserIdByPublicIdAsync(eventUserPublicId);
+        return eventUserId.HasValue && await CancelEventInvitationAsync(eventUserId.Value, inviterId);
+    }
+
+    public async Task<bool> ResendEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId)
+    {
+        var eventUserId = await FindEventUserIdByPublicIdAsync(eventUserPublicId);
+        return eventUserId.HasValue && await ResendEventInvitationAsync(eventUserId.Value, inviterId);
+    }
+
+    private async Task<int?> FindEventUserIdByPublicIdAsync(string eventUserPublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await context.EventUsers
+            .Where(eu => eu.PublicId == eventUserPublicId && !eu.Deleted)
+            .Select(eu => (int?)eu.Id)
+            .SingleOrDefaultAsync();
+    }
+
     public async Task<bool> ResendEventInvitationAsync(int eventUserId, string inviterId)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -2584,6 +2606,18 @@ public class EventService(
             ?? throw new KeyNotFoundException($"Event with publicId {eventPublicId} not found");
 
         return await AddPairingRuleAsync(eventEntity.Id, rule, ownerId);
+    }
+
+    public async Task<bool> RemovePairingRuleByPublicIdAsync(string rulePublicId, string ownerId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var ruleId = await context.CustomPairingRules
+            .Where(pr => pr.PublicId == rulePublicId && !pr.Deleted)
+            .Select(pr => (int?)pr.Id)
+            .SingleOrDefaultAsync();
+
+        return ruleId.HasValue && await RemovePairingRuleAsync(ruleId.Value, ownerId);
     }
 
     public async Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId)

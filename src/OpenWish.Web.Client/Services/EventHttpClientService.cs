@@ -183,6 +183,21 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
         return response.IsSuccessStatusCode;
     }
 
+    public async Task<bool> CancelEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId)
+    {
+        var response = await httpClient.DeleteAsync(
+            $"api/events/invitations/by-public-id/{Uri.EscapeDataString(eventUserPublicId)}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> ResendEventInvitationByPublicIdAsync(string eventUserPublicId, string inviterId)
+    {
+        var response = await httpClient.PostAsync(
+            $"api/events/invitations/by-public-id/{Uri.EscapeDataString(eventUserPublicId)}/resend",
+            null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<IEnumerable<EventUserModel>> GetPendingInvitationsForUserAsync(string userId)
     {
         // Server uses authenticated user, so userId parameter is not needed in the API call
@@ -398,6 +413,13 @@ public class EventHttpClientService(HttpClient httpClient) : IEventService
     public async Task<bool> RemovePairingRuleAsync(int ruleId, string ownerId)
     {
         var response = await httpClient.DeleteAsync($"api/events/pairing-rules/{ruleId}");
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> RemovePairingRuleByPublicIdAsync(string rulePublicId, string ownerId)
+    {
+        var response = await httpClient.DeleteAsync(
+            $"api/events/pairing-rules/by-public-id/{Uri.EscapeDataString(rulePublicId)}");
         return response.IsSuccessStatusCode;
     }
     public async Task<bool> SendGuestAccessAsync(string eventPublicId, string participantPublicId, string ownerId)

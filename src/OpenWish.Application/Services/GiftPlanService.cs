@@ -126,6 +126,21 @@ public class GiftPlanService(IDbContextFactory<ApplicationDbContext> contextFact
         return new GiftPlanModel { Recipients = recipients, History = history };
     }
 
+    public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, string itemPublicId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var itemId = await context.WishlistItems
+            .AsNoTracking()
+            .Where(i => i.PublicId == itemPublicId && !i.Deleted &&
+                        i.Wishlist != null && !i.Wishlist.Deleted && i.Wishlist.PublicId == wishlistPublicId)
+            .Select(i => (int?)i.Id)
+            .FirstOrDefaultAsync();
+
+        return itemId is null ? [] : await GetPreviouslyGivenMatchesAsync(userId, wishlistPublicId, itemId.Value);
+    }
+
     public async Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId);

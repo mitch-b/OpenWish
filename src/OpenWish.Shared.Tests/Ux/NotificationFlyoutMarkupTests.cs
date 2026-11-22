@@ -5,8 +5,8 @@ namespace OpenWish.Shared.Tests.Ux;
 
 public class NotificationFlyoutMarkupTests
 {
-    private static readonly string[] _flyoutPath = ["OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor"];
-    private static readonly string[] _stylesPath = ["OpenWish.Web", "Components", "Shared", "NotificationFlyout.razor.css"];
+    private static readonly string[] _flyoutPath = ["OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor"];
+    private static readonly string[] _stylesPath = ["OpenWish.Web.Client", "Components", "Shared", "NotificationFlyout.razor.css"];
 
     [Fact]
     public void Bell_WaitsForInteractivityAndKeepsTheBadgeOutOfTheAccessibleName()

@@ -5,7 +5,7 @@
 @inject IUserContextService UserContextService
 @inject ILogger<FriendRequestList> Logger
 
-<div class="friend-requests" aria-busy="@(_loading || _processingRequestId.HasValue)">
+<div class="friend-requests" aria-busy="@(_loading || _processingRequestId is not null)">
     <div class="social-heading">
         <span class="social-heading-icon"><OpenWishIcon Name="person-check" /></span>
         <div>
@@ -62,19 +62,19 @@
                     <div class="request-actions">
                         <button class="btn btn-primary"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Accept friend request from @GetRequesterName(request)"
                                 @onclick="() => AcceptRequest(request)">
                             <OpenWishIcon Name="check" />
-                            <span>@(IsBusy("accept", request.Id) ? "Accepting..." : "Accept")</span>
+                            <span>@(IsBusy("accept", request.PublicId) ? "Accepting..." : "Accept")</span>
                         </button>
                         <button class="btn btn-outline-secondary"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Decline friend request from @GetRequesterName(request)"
                                 @onclick="() => RejectRequest(request)">
                             <OpenWishIcon Name="x" />
-                            <span>@(IsBusy("decline", request.Id) ? "Declining..." : "Decline")</span>
+                            <span>@(IsBusy("decline", request.PublicId) ? "Declining..." : "Decline")</span>
                         </button>
                     </div>
                 </li>
@@ -102,19 +102,19 @@
                     <div class="sent-actions" role="group" aria-label="Email invitation actions">
                         <button class="btn btn-outline-secondary"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Resend invitation to @invite.Email"
                                 @onclick="() => ResendInvite(invite)">
                             <OpenWishIcon Name="arrow-clockwise" />
-                            <span>@(IsBusy("resend-invite", invite.Id) ? "Resending..." : "Resend")</span>
+                            <span>@(IsBusy("resend-invite", invite.PublicId) ? "Resending..." : "Resend")</span>
                         </button>
                         <button class="btn btn-outline-danger"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Cancel invitation to @invite.Email"
                                 @onclick="() => CancelInvite(invite)">
                             <OpenWishIcon Name="x" />
-                            <span>@(IsBusy("cancel-invite", invite.Id) ? "Canceling..." : "Cancel")</span>
+                            <span>@(IsBusy("cancel-invite", invite.PublicId) ? "Canceling..." : "Cancel")</span>
                         </button>
                     </div>
                 </li>
@@ -132,19 +132,19 @@
                     <div class="sent-actions" role="group" aria-label="Sent request actions">
                         <button class="btn btn-outline-secondary"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Resend friend request to @GetReceiverName(request)"
                                 @onclick="() => ResendSentRequest(request)">
                             <OpenWishIcon Name="arrow-clockwise" />
-                            <span>@(IsBusy("resend", request.Id) ? "Resending..." : "Resend")</span>
+                            <span>@(IsBusy("resend", request.PublicId) ? "Resending..." : "Resend")</span>
                         </button>
                         <button class="btn btn-outline-danger"
                                 type="button"
-                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId.HasValue)"
+                                disabled="@(!RendererInfo.IsInteractive || _processingRequestId is not null)"
                                 aria-label="Cancel friend request to @GetReceiverName(request)"
                                 @onclick="() => CancelSentRequest(request)">
                             <OpenWishIcon Name="x" />
-                            <span>@(IsBusy("cancel", request.Id) ? "Canceling..." : "Cancel")</span>
+                            <span>@(IsBusy("cancel", request.PublicId) ? "Canceling..." : "Cancel")</span>
                         </button>
                     </div>
                 </li>
@@ -180,7 +180,7 @@
     private List<PendingFriendInviteModel> _pendingInvites = [];
     private bool _loading = true;
     private string? _currentUserId;
-    private int? _processingRequestId;
+    private string? _processingRequestId;
     private string? _processingAction;
     private string? _statusMessage;
     private string? _errorMessage;
@@ -253,12 +253,12 @@
         var requesterName = GetRequesterName(request);
         try
         {
-            BeginRequestAction("accept", request.Id);
+            BeginRequestAction("accept", request.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                if (await FriendService.AcceptFriendRequestAsync(request.Id, _currentUserId))
+                if (await FriendService.AcceptFriendRequestByPublicIdAsync(request.PublicId, _currentUserId))
                 {
                     await LoadRequests(clearFeedback: false, silent: true);
                     await OnFriendshipsChanged.InvokeAsync();
@@ -277,7 +277,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to accept friend request {FriendRequestId}", request.Id);
+            Logger.LogError(ex, "Failed to accept friend request {FriendRequestPublicId}", request.PublicId);
             _errorMessage = $"The friend request from {requesterName} could not be accepted. Try again.";
         }
         finally
@@ -291,12 +291,12 @@
         var requesterName = GetRequesterName(request);
         try
         {
-            BeginRequestAction("decline", request.Id);
+            BeginRequestAction("decline", request.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                if (await FriendService.RejectFriendRequestAsync(request.Id, _currentUserId))
+                if (await FriendService.RejectFriendRequestByPublicIdAsync(request.PublicId, _currentUserId))
                 {
                     await LoadRequests(clearFeedback: false, silent: true);
                     _statusMessage = $"Friend request from {requesterName} declined.";
@@ -313,7 +313,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to reject friend request {FriendRequestId}", request.Id);
+            Logger.LogError(ex, "Failed to reject friend request {FriendRequestPublicId}", request.PublicId);
             _errorMessage = $"The friend request from {requesterName} could not be declined. Try again.";
         }
         finally
@@ -327,12 +327,12 @@
         var receiverName = GetReceiverName(request);
         try
         {
-            BeginRequestAction("cancel", request.Id);
+            BeginRequestAction("cancel", request.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                if (await FriendService.CancelFriendRequestAsync(request.Id, _currentUserId))
+                if (await FriendService.CancelFriendRequestByPublicIdAsync(request.PublicId, _currentUserId))
                 {
                     await LoadRequests(clearFeedback: false, silent: true);
                     _statusMessage = $"Friend request to {receiverName} canceled.";
@@ -349,7 +349,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to cancel friend request {FriendRequestId}", request.Id);
+            Logger.LogError(ex, "Failed to cancel friend request {FriendRequestPublicId}", request.PublicId);
             _errorMessage = $"The friend request to {receiverName} could not be canceled. Try again.";
         }
         finally
@@ -363,12 +363,12 @@
         var receiverName = GetReceiverName(request);
         try
         {
-            BeginRequestAction("resend", request.Id);
+            BeginRequestAction("resend", request.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.ResendFriendRequestAsync(request.Id, _currentUserId);
+                await FriendService.ResendFriendRequestByPublicIdAsync(request.PublicId, _currentUserId);
                 await LoadRequests(clearFeedback: false, silent: true);
                 _statusMessage = $"Friend request sent to {receiverName} again.";
             }
@@ -379,7 +379,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to resend friend request {FriendRequestId}", request.Id);
+            Logger.LogError(ex, "Failed to resend friend request {FriendRequestPublicId}", request.PublicId);
             _errorMessage = $"The friend request to {receiverName} could not be resent. Try again.";
         }
         finally
@@ -392,12 +392,12 @@
     {
         try
         {
-            BeginRequestAction("resend-invite", invite.Id);
+            BeginRequestAction("resend-invite", invite.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                await FriendService.ResendPendingFriendInviteAsync(invite.Id, _currentUserId);
+                await FriendService.ResendPendingFriendInviteByPublicIdAsync(invite.PublicId, _currentUserId);
                 await LoadRequests(clearFeedback: false, silent: true);
                 _statusMessage = $"Invitation sent to {invite.Email} again.";
             }
@@ -408,7 +408,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to resend friend invitation {InviteId}", invite.Id);
+            Logger.LogError(ex, "Failed to resend friend invitation {InvitePublicId}", invite.PublicId);
             _errorMessage = $"The invitation to {invite.Email} could not be resent. Try again.";
         }
         finally
@@ -421,12 +421,12 @@
     {
         try
         {
-            BeginRequestAction("cancel-invite", invite.Id);
+            BeginRequestAction("cancel-invite", invite.PublicId);
             _currentUserId ??= await UserContextService.GetUserIdAsync();
 
             if (_currentUserId != null)
             {
-                if (await FriendService.CancelPendingFriendInviteAsync(invite.Id, _currentUserId))
+                if (await FriendService.CancelPendingFriendInviteByPublicIdAsync(invite.PublicId, _currentUserId))
                 {
                     await LoadRequests(clearFeedback: false, silent: true);
                     _statusMessage = $"Invitation to {invite.Email} canceled.";
@@ -443,7 +443,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to cancel friend invitation {InviteId}", invite.Id);
+            Logger.LogError(ex, "Failed to cancel friend invitation {InvitePublicId}", invite.PublicId);
             _errorMessage = $"The invitation to {invite.Email} could not be canceled. Try again.";
         }
         finally
@@ -452,7 +452,7 @@
         }
     }
 
-    private void BeginRequestAction(string action, int requestId)
+    private void BeginRequestAction(string action, string requestId)
     {
         _processingAction = action;
         _processingRequestId = requestId;
@@ -461,7 +461,7 @@
         _errorMessage = null;
     }
 
-    private bool IsBusy(string action, int id) => _processingAction == action && _processingRequestId == id;
+    private bool IsBusy(string action, string id) => _processingAction == action && _processingRequestId == id;
 
     private static string GetInitial(string name) =>
         string.IsNullOrWhiteSpace(name) ? "?" : name.Trim()[..1].ToUpperInvariant();

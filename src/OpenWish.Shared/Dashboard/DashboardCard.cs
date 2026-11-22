@@ -3,7 +3,6 @@ using OpenWish.Shared.Models;
 namespace OpenWish.Shared.Dashboard;
 
 public sealed record DashboardWishlistCard(
-    int Id,
     string PublicId,
     string Name,
     string? Icon,
@@ -14,7 +13,6 @@ public sealed record DashboardWishlistCard(
     bool IsPrivate)
 {
     public static DashboardWishlistCard From(WishlistModel wishlist) => new(
-        wishlist.Id,
         wishlist.PublicId,
         wishlist.Name,
         wishlist.Icon,
@@ -26,7 +24,6 @@ public sealed record DashboardWishlistCard(
 
     public WishlistModel ToWishlistModel() => new()
     {
-        Id = Id,
         PublicId = PublicId,
         Name = Name,
         Icon = Icon,
@@ -39,7 +36,6 @@ public sealed record DashboardWishlistCard(
 }
 
 public sealed record DashboardEventCard(
-    int Id,
     string PublicId,
     string Name,
     DateTimeOffset Date,
@@ -69,7 +65,6 @@ public sealed record DashboardEventCard(
         }
 
         return new DashboardEventCard(
-            evt.Id,
             evt.PublicId,
             evt.Name,
             evt.Date,
@@ -86,7 +81,6 @@ public sealed record DashboardEventCard(
 
     public EventModel ToEventModel() => new()
     {
-        Id = Id,
         PublicId = PublicId,
         Name = Name,
         Date = Date,

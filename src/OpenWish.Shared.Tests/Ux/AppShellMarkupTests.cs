@@ -45,6 +45,30 @@ public class AppShellMarkupTests
         Assert.Contains("<span>Version @AppVersionService.GetAppVersion()</span>", navMenu, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void InteractiveComponents_UseAutoSoTheyCanMoveToWebAssembly()
+    {
+        var solutionDirectory = FindSolutionDirectory();
+        var components = Directory
+            .EnumerateFiles(Path.Combine(solutionDirectory, "OpenWish.Web"), "*.razor", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(solutionDirectory, "OpenWish.Web.Client"), "*.razor", SearchOption.AllDirectories))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+        var serverModes = components
+            .Where(path => Regex.IsMatch(File.ReadAllText(path), @"\b(InteractiveServer|InteractiveWebAssembly)\b"))
+            .Select(path => Path.GetRelativePath(solutionDirectory, path))
+            .ToList();
+        var serverComponents = Directory
+            .EnumerateFiles(Path.Combine(solutionDirectory, "OpenWish.Web"), "*.razor", SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains("@rendermode", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(solutionDirectory, path))
+            .ToList();
+
+        // A server-only component opens a circuit that keeps every Auto component on the server.
+        Assert.Empty(serverModes);
+        Assert.Empty(serverComponents);
+    }
+
     private static string ReadComponent(params string[] pathParts)
     {
         var solutionDirectory = FindSolutionDirectory();

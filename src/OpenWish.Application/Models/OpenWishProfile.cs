@@ -11,6 +11,7 @@ public class OpenWishProfile : Profile
         CreateMap<ApplicationUserModel, ApplicationUser>()
             .ReverseMap();
         CreateMap<WishlistModel, Wishlist>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.PublicId, opt => opt.Ignore())
             .ForMember(dest => dest.OwnerId, opt => opt.Ignore())
             .ForMember(dest => dest.Deleted, opt => opt.Ignore())

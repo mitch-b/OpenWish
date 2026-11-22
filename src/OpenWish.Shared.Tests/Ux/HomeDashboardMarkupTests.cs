@@ -66,7 +66,7 @@ public class HomeDashboardMarkupTests
     [Fact]
     public void DashboardStyles_StackShortcutsAndQuickAddOnPhones()
     {
-        var styles = File.ReadAllText(Path.Combine(FindSolutionDirectory(), "OpenWish.Web", "Components", "Pages", "Home.razor.css"));
+        var styles = File.ReadAllText(Path.Combine(FindSolutionDirectory(), "OpenWish.Web.Client", "Components", "Pages", "Home.razor.css"));
 
         Assert.Contains(".action-tile ::deep .action-arrow", styles, StringComparison.Ordinal);
         Assert.Contains("grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));", styles, StringComparison.Ordinal);
@@ -76,7 +76,7 @@ public class HomeDashboardMarkupTests
     private static EventModel Event(string name, DateTimeOffset date) => new() { Name = name, Date = date };
 
     private static string ReadHome() =>
-        File.ReadAllText(Path.Combine(FindSolutionDirectory(), "OpenWish.Web", "Components", "Pages", "Home.razor"));
+        File.ReadAllText(Path.Combine(FindSolutionDirectory(), "OpenWish.Web.Client", "Components", "Pages", "Home.razor"));
 
     private static string FindSolutionDirectory()
     {

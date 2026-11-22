@@ -93,8 +93,12 @@ and startup migration execution. It registers application services for
 server-rendered components and maps the client assembly for interactive
 WebAssembly.
 
-`OpenWish.Web.Client` contains the `InteractiveAuto` UI and HTTP
-implementations of shared service interfaces. The client uses the named
+`OpenWish.Web.Client` contains the interactive UI and HTTP
+implementations of shared service interfaces. Interactive components use
+`@rendermode InteractiveAuto` and live in `OpenWish.Web.Client`, so they run
+in WebAssembly once its runtime is cached. Do not add `InteractiveServer`
+components: Auto reuses an existing circuit, so one server-only component
+keeps every Auto component on the server. The client uses the named
 `OpenWish.API` `HttpClient`, whose base address is the hosting application.
 
 `OpenWish.Shared` is the server/client boundary: DTOs, request models, and

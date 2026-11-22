@@ -336,10 +336,28 @@ else
     private int _loadVersion;
     private int _invitationsVersion;
 
+    // Carried from prerendering so the settings don't collapse to a loading placeholder while WebAssembly reloads them.
+    [PersistentState]
+    public EventModel? PrerenderedEvent { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         _currentUserId = await UserContextService.GetUserIdAsync();
-        await LoadEvent();
+        if (PrerenderedEvent is not null &&
+            string.Equals(PrerenderedEvent.PublicId, EventId, StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(_currentUserId) &&
+            PrerenderedEvent.CreatedBy?.Id == _currentUserId)
+        {
+            _event = PrerenderedEvent;
+            _isOwner = true;
+            _isLoading = false;
+            return;
+        }
+
+        if (await LoadEvent() && _isOwner)
+        {
+            PrerenderedEvent = _event;
+        }
     }
 
     private async Task<bool> LoadEvent()
@@ -593,7 +611,7 @@ else
         _participantPendingRemoval is null ? null : GetParticipantRemoveButtonId(_participantPendingRemoval);
 
     private static string GetParticipantRemoveButtonId(EventUserModel participant) =>
-        $"remove-event-participant-{participant.Id}";
+        $"remove-event-participant-{participant.PublicId}";
 
     private IEnumerable<EventUserModel> GetParticipantList() =>
         _event?.EventUsers?

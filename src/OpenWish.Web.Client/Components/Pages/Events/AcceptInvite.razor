@@ -378,7 +378,7 @@
 
         try
         {
-            var accepted = await EventService.AcceptEventInvitationAsync(_invitation.Id, _currentUserId);
+            var accepted = await EventService.AcceptEventInvitationByPublicIdAsync(_invitation.PublicId, _currentUserId);
             if (accepted)
             {
                 _invitation.Status = "Accepted";
@@ -395,7 +395,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Unable to accept invitation {InvitationId} for event {EventId}", _invitation.Id, EventId);
+            Logger.LogError(ex, "Unable to accept invitation {InvitationPublicId} for event {EventId}", _invitation.PublicId, EventId);
             _errorMessage = "We couldn't accept the invitation. Check your connection and try again.";
         }
         finally
@@ -420,7 +420,7 @@
 
         try
         {
-            var rejected = await EventService.RejectEventInvitationAsync(_invitation.Id, _currentUserId);
+            var rejected = await EventService.RejectEventInvitationByPublicIdAsync(_invitation.PublicId, _currentUserId);
             if (rejected)
             {
                 _invitation.Status = "Rejected";
@@ -435,7 +435,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Unable to decline invitation {InvitationId} for event {EventId}", _invitation.Id, EventId);
+            Logger.LogError(ex, "Unable to decline invitation {InvitationPublicId} for event {EventId}", _invitation.PublicId, EventId);
             _rejectErrorMessage = "We couldn't decline the invitation. Check your connection and try again.";
         }
         finally

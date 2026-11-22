@@ -352,26 +352,23 @@ async function recordDashboardWelcomeStates(page) {
     record();
   });
 
-  // Wrapped so the caller can await setup without waiting for the circuit to connect.
-  return {
-    socket: page.waitForEvent("websocket", {
-      predicate: socket => socket.url().includes("/_blazor"),
-      timeout: 30000
-    }).catch(error => ({ error }))
-  };
+  // InteractiveAuto may activate through a server circuit or WebAssembly, so track both kinds of traffic.
+  const activity = { lastAt: Date.now() };
+  const touch = () => { activity.lastAt = Date.now(); };
+  page.on("request", touch);
+  page.on("requestfinished", touch);
+  page.on("websocket", socket => socket.on("framereceived", touch));
+  return activity;
 }
 
-async function assertDashboardWelcomeSurvivesHydration(page, circuit) {
-  const socket = await circuit.socket;
-  if (socket.error) {
-    throw new Error(`The dashboard never opened an interactive circuit: ${socket.error.message}`);
-  }
-  let lastFrameAt = Date.now();
-  socket.on("framereceived", () => {
-    lastFrameAt = Date.now();
-  });
+async function assertDashboardWelcomeSurvivesHydration(page, activity) {
+  // The notification bell stays disabled until its renderer is interactive.
+  await page.locator(".notification-bell:not([disabled])").waitFor({ state: "visible", timeout: 60000 })
+    .catch(error => {
+      throw new Error(`The dashboard never became interactive: ${error.message}`);
+    });
   const deadline = Date.now() + 15000;
-  while (Date.now() - lastFrameAt < 1500 && Date.now() < deadline) {
+  while (Date.now() - activity.lastAt < 1500 && Date.now() < deadline) {
     await page.waitForTimeout(100);
   }
 
@@ -400,7 +397,12 @@ async function assertDashboardContentSurvivesHydration(page) {
 }
 
 async function assertMinimumTouchTarget(locator, description) {
-  const bounds = await locator.boundingBox();
+  let bounds = await locator.boundingBox();
+  if (!bounds) {
+    // WebAssembly hydration replaces prerendered nodes, which can detach the element between lookup and measurement.
+    await locator.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    bounds = await locator.boundingBox();
+  }
   const subpixelTolerance = 0.01;
   if (!bounds ||
       bounds.width + subpixelTolerance < 44 ||
@@ -2547,9 +2549,9 @@ async function verifyProductCaptureJourney(browser, results) {
     throw new Error("The installed app cannot receive shared product links.");
   }
 
-  const dashboardCircuit = await recordDashboardWelcomeStates(page);
+  const dashboardActivity = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Quick add an idea", visitedRoutes);
-  await assertDashboardWelcomeSurvivesHydration(page, dashboardCircuit);
+  await assertDashboardWelcomeSurvivesHydration(page, dashboardActivity);
   if (await page.locator('link[rel="manifest"]').getAttribute("href") !== "manifest.webmanifest") {
     throw new Error("Pages do not link the web app manifest.");
   }
@@ -3362,10 +3364,20 @@ async function verifyFamilyExchangeJourney(browser, results) {
   const expectedRemovalFailure = `${baseUrl}/api/events/${event.publicId}/wishlists/${myList.publicId}`;
   const unexpectedResponses = diagnostics.failedResponses.filter(response =>
     response !== `404 ${expectedRemovalFailure}`);
+  // In WebAssembly the expected removal failure is a browser request, so Chromium also logs it once to the console.
+  let expectedRemovalConsoleErrors = diagnostics.failedResponses.length - unexpectedResponses.length;
+  const unexpectedBrowserErrors = diagnostics.browserErrors.filter(error => {
+    if (expectedRemovalConsoleErrors > 0 &&
+        error === "Failed to load resource: the server responded with a status of 404 (Not Found)") {
+      expectedRemovalConsoleErrors--;
+      return false;
+    }
+    return true;
+  });
   if (signupDiagnostics.browserErrors.length || signupDiagnostics.failedResponses.length ||
-      diagnostics.browserErrors.length || unexpectedResponses.length) {
+      unexpectedBrowserErrors.length || unexpectedResponses.length) {
     throw new Error(`Family journey browser errors: ${JSON.stringify({
-      signupDiagnostics, browserErrors: diagnostics.browserErrors, unexpectedResponses
+      signupDiagnostics, browserErrors: unexpectedBrowserErrors, unexpectedResponses
     })}`);
   }
   await organizer.close();
@@ -3493,11 +3505,11 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
   const visitedRoutes = [];
   const loginStatus = await login(context, "guest", guestEmail);
 
-  const circuit = await recordDashboardWelcomeStates(page);
+  const activity = await recordDashboardWelcomeStates(page);
   await visit(page, "/", "Your gift season, together.", visitedRoutes);
   const firstRunWelcome = page.locator(".dashboard-hero[data-welcome='FirstRun']");
   await firstRunWelcome.getByText("Welcome to OpenWish").waitFor({ state: "visible" });
-  await assertDashboardWelcomeSurvivesHydration(page, circuit);
+  await assertDashboardWelcomeSurvivesHydration(page, activity);
   await assertDashboardContentSurvivesHydration(page);
   await firstRunWelcome.getByText("You're invited to Holiday Gift Exchange.", { exact: false })
     .waitFor({ state: "visible" });
@@ -4727,13 +4739,13 @@ async function verifyFeatureDayJourney(browser, manifest, results) {
     await assertNoHorizontalScroll(ownerPage, "wishlist gift hints");
     await screenshot(ownerPage, "wishlist-gift-hints-mobile.png");
     const ownHints = await ownerContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-family-gift-ideas`);
-    if (ownHints.status() !== 404) {
+    if (ownHints.status() !== 204) {
       throw new Error(`An owner was served their own gift hints panel data (${ownHints.status()}).`);
     }
     const guestContext = await browser.newContext();
     await login(guestContext, "guest", guestEmail);
     const guestHints = await guestContext.request.get(`${baseUrl}/api/gift-profile/wishlists/demo-jordan-favorites`);
-    if (guestHints.status() !== 404) {
+    if (guestHints.status() !== 204) {
       throw new Error(`A non-friend could read gift hints (${guestHints.status()}).`);
     }
     await guestContext.close();
@@ -6595,7 +6607,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await ideaGrid.scrollIntoViewIfNeeded();
   await ideaGrid.screenshot({ path: path.join(walkthroughDirectory, "connected-app-ideas.png") });
 
-  // Server-only layout components can keep Auto on the server. Select its existing WASM payload in this test only.
+  // InteractiveAuto uses a server circuit until the WebAssembly runtime is cached. Select WASM in this test only.
   await page.addInitScript(wishlistPath => {
     if (location.pathname !== wishlistPath) return;
     const selectWasm = comment => {

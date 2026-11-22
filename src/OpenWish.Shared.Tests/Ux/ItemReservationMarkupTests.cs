@@ -10,7 +10,7 @@ public class ItemReservationMarkupTests
         var markup = ReadWishlistComponent("ItemReservation.razor");
 
         Assert.Contains("The list owner never sees reservations.", markup, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"anonymousHelp-@ItemId\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"anonymousHelp-@ItemPublicId\"", markup, StringComparison.Ordinal);
         Assert.Contains("Hide your name from other shoppers.", markup, StringComparison.Ordinal);
 
         var ownerBranch = markup.IndexOf("else if (_currentUserId == OwnerId)", StringComparison.Ordinal);
@@ -57,9 +57,9 @@ public class ItemReservationMarkupTests
         var markup = ReadWishlistComponent("ItemComments.razor");
 
         Assert.DoesNotContain("form-floating", markup, StringComparison.Ordinal);
-        Assert.Contains("<label class=\"form-label comment-label\" for=\"commentText-@ItemId\">Add a comment</label>", markup, StringComparison.Ordinal);
+        Assert.Contains("<label class=\"form-label comment-label\" for=\"commentText-@ItemPublicId\">Add a comment</label>", markup, StringComparison.Ordinal);
         Assert.Contains("including the list owner.", markup, StringComparison.Ordinal);
-        Assert.Contains("<ul class=\"comment-list\" aria-labelledby=\"comments-title-@ItemId\">", markup, StringComparison.Ordinal);
+        Assert.Contains("<ul class=\"comment-list\" aria-labelledby=\"comments-title-@ItemPublicId\">", markup, StringComparison.Ordinal);
         Assert.Contains("<time class=\"comment-time\"", markup, StringComparison.Ordinal);
         Assert.Contains("No comments yet. Ask a question", markup, StringComparison.Ordinal);
     }

@@ -9,7 +9,7 @@ public class GiftCoordinationMarkupTests
     {
         var markup = ReadComponent("ItemComments.razor");
 
-        Assert.Contains("var key = $\"{WishlistId}/{ItemId}\";", markup, StringComparison.Ordinal);
+        Assert.Contains("var key = $\"{WishlistId}/{ItemPublicId}\";", markup, StringComparison.Ordinal);
         Assert.Contains("if (key == _loadedKey)", markup, StringComparison.Ordinal);
         Assert.Contains("@if (_loading && !_hasLoaded)", markup, StringComparison.Ordinal);
         Assert.Contains("_hasLoaded = true;", markup, StringComparison.Ordinal);

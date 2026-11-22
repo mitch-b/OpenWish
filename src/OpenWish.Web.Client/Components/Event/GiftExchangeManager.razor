@@ -250,11 +250,11 @@
 
                     @if (_pairingRules.Any())
                     {
-                        var renderedRuleIds = new HashSet<int>();
+                        var renderedRuleIds = new HashSet<string>();
                         <div class="list-group mb-3 pairing-rule-list">
                             @foreach (var rule in _pairingRules)
                             {
-                                if (!renderedRuleIds.Add(rule.Id))
+                                if (!renderedRuleIds.Add(rule.PublicId))
                                 {
                                     continue;
                                 }
@@ -264,7 +264,7 @@
 
                                 if (reciprocalRule is not null)
                                 {
-                                    renderedRuleIds.Add(reciprocalRule.Id);
+                                    renderedRuleIds.Add(reciprocalRule.PublicId);
                                 }
 
                                 <div class="list-group-item pairing-rule-item">
@@ -282,7 +282,7 @@
                                                     title="@(isBidirectional ? "Limit the rule to only this direction" : "Apply the exclusion in both directions")"
                                                     disabled="@_updatingPairingRules"
                                                     @onclick="() => ToggleBidirectionalRuleAsync(rule)">
-                                                @if (_updatingRuleId == rule.Id && _updatingRuleAction == PairingRuleAction.Toggle)
+                                                @if (_updatingRuleId == rule.PublicId && _updatingRuleAction == PairingRuleAction.Toggle)
                                                 {
                                                     <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                     <span>Updating...</span>
@@ -297,8 +297,8 @@
                                                     class="btn btn-sm btn-outline-danger text-nowrap d-flex align-items-center gap-1"
                                                     title="Remove this exclusion rule"
                                                     disabled="@_updatingPairingRules"
-                                                    @onclick="() => RemoveRule(rule.Id)">
-                                                @if (_updatingRuleId == rule.Id && _updatingRuleAction == PairingRuleAction.Remove)
+                                                    @onclick="() => RemoveRule(rule.PublicId)">
+                                                @if (_updatingRuleId == rule.PublicId && _updatingRuleAction == PairingRuleAction.Remove)
                                                 {
                                                     <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
                                                     <span>Removing...</span>
@@ -405,7 +405,7 @@
     private bool _updatingPairingRules;
     private bool _eventStateChanged;
     private string? _loadedEventPublicId;
-    private int? _updatingRuleId;
+    private string? _updatingRuleId;
     private PairingRuleAction? _updatingRuleAction;
     private int _participantCount = 0;
     private int _pendingParticipantCount;
@@ -634,7 +634,7 @@
 
     private CustomPairingRuleModel? FindReciprocalRule(CustomPairingRuleModel rule) =>
         _pairingRules.FirstOrDefault(other =>
-            other.Id != rule.Id &&
+            other.PublicId != rule.PublicId &&
             ParticipantsMatch(rule, other) &&
             string.Equals(other.RuleType, rule.RuleType, StringComparison.OrdinalIgnoreCase));
 
@@ -667,7 +667,7 @@
         _pairingRuleError = null;
         _pairingRuleMessage = null;
         _updatingPairingRules = true;
-        _updatingRuleId = rule.Id;
+        _updatingRuleId = rule.PublicId;
         _updatingRuleAction = PairingRuleAction.Toggle;
         try
         {
@@ -676,7 +676,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to make pairing rule {PairingRuleId} bidirectional", rule.Id);
+            Logger.LogError(ex, "Failed to make pairing rule {PairingRulePublicId} bidirectional", rule.PublicId);
             await ReconcilePairingRuleAddAsync(
                 reciprocalRule,
                 "Exclusion now applies both ways.",
@@ -711,11 +711,11 @@
         _pairingRuleError = null;
         _pairingRuleMessage = null;
         _updatingPairingRules = true;
-        _updatingRuleId = rule.Id;
+        _updatingRuleId = rule.PublicId;
         _updatingRuleAction = PairingRuleAction.Toggle;
         try
         {
-            var removed = await EventService.RemovePairingRuleAsync(reciprocalRule.Id, CurrentUserId);
+            var removed = await EventService.RemovePairingRuleByPublicIdAsync(reciprocalRule.PublicId, CurrentUserId);
             if (!removed)
             {
                 _pairingRuleError = "The exclusion rule is no longer available. Reload the rules and try again.";
@@ -726,7 +726,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to update pairing rule {PairingRuleId}", rule.Id);
+            Logger.LogError(ex, "Failed to update pairing rule {PairingRulePublicId}", rule.PublicId);
             _pairingRuleError = "The exclusion rule couldn't be updated. Try again.";
         }
         finally
@@ -737,7 +737,7 @@
         }
     }
 
-    private async Task RemoveRule(int ruleId)
+    private async Task RemoveRule(string ruleId)
     {
         if (_updatingPairingRules)
         {
@@ -751,7 +751,7 @@
         _updatingRuleAction = PairingRuleAction.Remove;
         try
         {
-            var removed = await EventService.RemovePairingRuleAsync(ruleId, CurrentUserId);
+            var removed = await EventService.RemovePairingRuleByPublicIdAsync(ruleId, CurrentUserId);
             if (!removed)
             {
                 _pairingRuleError = "The exclusion rule is no longer available. Reload the rules and try again.";
@@ -762,7 +762,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to remove pairing rule {PairingRuleId}", ruleId);
+            Logger.LogError(ex, "Failed to remove pairing rule {PairingRulePublicId}", ruleId);
             _pairingRuleError = "The exclusion rule couldn't be removed. Try again.";
         }
         finally

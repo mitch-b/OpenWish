@@ -37,4 +37,7 @@ public interface IGiftPlanService
     /// wishlists the caller cannot open.
     /// </summary>
     Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, int itemId);
+
+    /// <summary>Same as the internal-key overload, addressing the item by its public ID.</summary>
+    Task<IReadOnlyList<GivenGiftMatchModel>> GetPreviouslyGivenMatchesAsync(string userId, string wishlistPublicId, string itemPublicId);
 }

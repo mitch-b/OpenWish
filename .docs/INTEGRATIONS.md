@@ -455,9 +455,9 @@ confidential registrations, and the disabled server.
 `scripts/verify-e2e.sh` registers a synthetic app named Studio Notebook and
 walks the same journey in a browser, including screenshots of the consent
 screen, source badges, settings, and disconnecting.
-Server-only layout components can keep InteractiveAuto on server rendering, so
-the browser test explicitly selects the existing Auto marker's WebAssembly
-payload before Blazor starts. It then requires a real client-side
+InteractiveAuto uses a server circuit until the WebAssembly runtime is cached,
+so the browser test explicitly selects the Auto marker's WebAssembly payload
+before Blazor starts. It then requires a real client-side
 wishlist API response, checks the edit sync warning, and saves through the
 cookie-authenticated public-item-ID update route without creating a duplicate.
 List rendering keys and edit reconciliation use public identities rather than

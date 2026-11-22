@@ -572,6 +572,28 @@ public class FriendServiceRequestTests
         Assert.Empty(await service.GetFriendSuggestionsAsync("stranger"));
     }
 
+    [Fact]
+    public async Task FriendRequestPublicIdOverloads_OnlyLetTheReceiverAccept()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        await using (var seedContext = CreateContext(databaseName))
+        {
+            seedContext.Users.AddRange(
+                new ApplicationUser { Id = "requester", UserName = "requester" },
+                new ApplicationUser { Id = "receiver", UserName = "receiver" });
+            await seedContext.SaveChangesAsync();
+        }
+
+        using var provider = BuildServiceProvider(databaseName);
+        var service = CreateFriendService(provider);
+        var request = await service.SendFriendRequestAsync("requester", "receiver");
+
+        Assert.False(await service.AcceptFriendRequestByPublicIdAsync("missing", "receiver"));
+        Assert.False(await service.AcceptFriendRequestByPublicIdAsync(request.PublicId, "requester"));
+        Assert.True(await service.AcceptFriendRequestByPublicIdAsync(request.PublicId, "receiver"));
+        Assert.True(await service.AreFriendsAsync("requester", "receiver"));
+    }
+
     private static ApplicationDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName)

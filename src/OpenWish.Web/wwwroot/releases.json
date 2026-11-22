@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.21.3",
+    "date": "2026-11-22",
+    "title": "Faster in your browser",
+    "summary": "Pages run in your browser once OpenWish is cached, with the same behavior as before.",
+    "highlights": [
+      "The dashboard and notifications no longer keep every page on the server.",
+      "Reordering, reservations, comments, invitations, and friend requests work in the browser.",
+      "Event management keeps its data on screen while the page loads."
+    ]
+  },
+  {
     "version": "0.21.2",
     "date": "2026-11-22",
     "title": "Holiday follow-up fixes",

@@ -1802,6 +1802,71 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return await GetItemReservationAsync(wishlist.Id, itemId, requestingUserId);
     }
 
+    public async Task<bool> RemoveItemFromWishlistByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await RemoveItemFromWishlistAsync(wishlistId, itemId);
+    }
+
+    public async Task<ItemCommentModel> AddCommentToItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, string text)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await AddCommentToItemAsync(wishlistId, itemId, userId, text);
+    }
+
+    public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsByPublicIdAsync(string wishlistPublicId, string itemPublicId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await GetItemCommentsAsync(wishlistId, itemId);
+    }
+
+    public async Task<bool> RemoveItemCommentByPublicIdAsync(string commentPublicId, string userId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var commentId = await context.ItemComments
+            .Where(c => c.PublicId == commentPublicId && !c.Deleted)
+            .Select(c => (int?)c.Id)
+            .SingleOrDefaultAsync();
+
+        return commentId.HasValue && await RemoveItemCommentAsync(commentId.Value, userId);
+    }
+
+    public async Task<bool> ReserveItemByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string userId, bool isAnonymous = false)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await ReserveItemAsync(wishlistId, itemId, userId, isAnonymous);
+    }
+
+    public async Task<bool> CancelReservationByPublicIdAsync(string wishlistPublicId, string itemPublicId, string userId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await CancelReservationAsync(wishlistId, itemId, userId);
+    }
+
+    public async Task<ItemReservationModel?> GetItemReservationByPublicIdAsync(
+        string wishlistPublicId, string itemPublicId, string requestingUserId)
+    {
+        var (wishlistId, itemId) = await ResolveItemKeysAsync(wishlistPublicId, itemPublicId);
+        return await GetItemReservationAsync(wishlistId, itemId, requestingUserId);
+    }
+
+    // Deleted-item handling is left to the internal-key operations so both paths behave identically.
+    private async Task<(int WishlistId, int ItemId)> ResolveItemKeysAsync(string wishlistPublicId, string itemPublicId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var keys = await context.WishlistItems
+            .AsNoTracking()
+            .Where(i => i.PublicId == itemPublicId &&
+                i.Wishlist!.PublicId == wishlistPublicId && !i.Wishlist.Deleted)
+            .Select(i => new { i.WishlistId, i.Id })
+            .SingleOrDefaultAsync()
+            ?? throw new KeyNotFoundException($"Item {itemPublicId} not found in wishlist {wishlistPublicId}");
+
+        return (keys.WishlistId, keys.Id);
+    }
+
     public async Task<IEnumerable<ApplicationUserModel>> GetFriendsWithAccessAsync(int wishlistId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

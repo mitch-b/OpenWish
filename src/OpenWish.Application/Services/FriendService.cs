@@ -741,6 +741,64 @@ public class FriendService(IServiceScopeFactory scopeFactory,
         return _mapper.Map<IEnumerable<PendingFriendInviteModel>>(pendingInvites);
     }
 
+    public async Task<bool> AcceptFriendRequestByPublicIdAsync(string requestPublicId, string userId)
+    {
+        var requestId = await FindFriendRequestIdAsync(requestPublicId);
+        return requestId.HasValue && await AcceptFriendRequestAsync(requestId.Value, userId);
+    }
+
+    public async Task<bool> RejectFriendRequestByPublicIdAsync(string requestPublicId, string userId)
+    {
+        var requestId = await FindFriendRequestIdAsync(requestPublicId);
+        return requestId.HasValue && await RejectFriendRequestAsync(requestId.Value, userId);
+    }
+
+    public async Task<bool> CancelFriendRequestByPublicIdAsync(string requestPublicId, string requesterId)
+    {
+        var requestId = await FindFriendRequestIdAsync(requestPublicId);
+        return requestId.HasValue && await CancelFriendRequestAsync(requestId.Value, requesterId);
+    }
+
+    public async Task<FriendRequestModel> ResendFriendRequestByPublicIdAsync(string requestPublicId, string requesterId)
+    {
+        var requestId = await FindFriendRequestIdAsync(requestPublicId)
+            ?? throw new KeyNotFoundException($"Friend request {requestPublicId} not found or cannot be resent");
+        return await ResendFriendRequestAsync(requestId, requesterId);
+    }
+
+    public async Task<bool> CancelPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId)
+    {
+        var inviteId = await FindPendingFriendInviteIdAsync(invitePublicId);
+        return inviteId.HasValue && await CancelPendingFriendInviteAsync(inviteId.Value, userId);
+    }
+
+    public async Task<bool> ResendPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId)
+    {
+        var inviteId = await FindPendingFriendInviteIdAsync(invitePublicId);
+        return inviteId.HasValue && await ResendPendingFriendInviteAsync(inviteId.Value, userId);
+    }
+
+    // Ownership and state checks stay in the internal-key operations these lookups delegate to.
+    private async Task<int?> FindFriendRequestIdAsync(string requestPublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await context.FriendRequests
+            .Where(fr => fr.PublicId == requestPublicId && !fr.Deleted)
+            .Select(fr => (int?)fr.Id)
+            .SingleOrDefaultAsync();
+    }
+
+    private async Task<int?> FindPendingFriendInviteIdAsync(string invitePublicId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return await context.PendingFriendInvites
+            .Where(pfi => pfi.PublicId == invitePublicId && !pfi.Deleted)
+            .Select(pfi => (int?)pfi.Id)
+            .SingleOrDefaultAsync();
+    }
+
     public async Task<bool> CancelPendingFriendInviteAsync(int inviteId, string userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));

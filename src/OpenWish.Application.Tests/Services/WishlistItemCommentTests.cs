@@ -207,6 +207,41 @@ public class WishlistItemCommentTests
         Assert.True(deleted.Deleted);
     }
 
+    [Fact]
+    public async Task CommentPublicIdOverloads_AddListAndRemoveOnlyForAuthorizedUsers()
+    {
+        var factory = CreateFactory();
+        string wishlistPublicId;
+        string itemPublicId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "owner", UserName = "owner" },
+                new ApplicationUser { Id = "commenter", UserName = "commenter" },
+                new ApplicationUser { Id = "stranger", UserName = "stranger" });
+
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner" };
+            var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
+            context.WishlistItems.Add(item);
+
+            await context.SaveChangesAsync();
+            wishlistPublicId = wishlist.PublicId;
+            itemPublicId = item.PublicId;
+        }
+
+        var service = CreateService(factory);
+        var added = await service.AddCommentToItemByPublicIdAsync(wishlistPublicId, itemPublicId, "commenter", "Great pick");
+        var comment = Assert.Single(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId));
+        Assert.Equal(added.PublicId, comment.PublicId);
+
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "stranger"));
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync("missing", "commenter"));
+        Assert.True(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "commenter"));
+        Assert.Empty(await service.GetItemCommentsByPublicIdAsync(wishlistPublicId, itemPublicId));
+        Assert.False(await service.RemoveItemCommentByPublicIdAsync(comment.PublicId, "commenter"));
+    }
+
     private static TestDbContextFactory CreateFactory() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

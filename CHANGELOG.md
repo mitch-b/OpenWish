@@ -4,6 +4,21 @@ All notable user-facing changes to OpenWish are documented here.
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-11-22
+
+### Changed
+
+- Pages run in the browser with WebAssembly once OpenWish is cached. The
+  dashboard and notifications panel no longer keep every page on a server
+  connection.
+
+### Fixed
+
+- Reordering ideas, reservations, comments, invitations, friend requests, and
+  gift exchange rules work the same in the browser as on the server.
+- Event management and invitations no longer flash a loading state as the page
+  becomes interactive.
+
 ## [0.21.2] - 2026-11-22
 
 ### Fixed

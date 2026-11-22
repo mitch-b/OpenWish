@@ -634,7 +634,7 @@ else
                 <div class="items-grid">
                     @foreach (var item in _filteredItems)
                     {
-                        <div @key="item.PublicId" class="wishlist-item-card @(_gridCoordinationItemId == item.Id ? "is-coordinating" : string.Empty)">
+                        <div @key="item.PublicId" class="wishlist-item-card @(_gridCoordinationItemId == item.PublicId ? "is-coordinating" : string.Empty)">
                             @if (!string.IsNullOrEmpty(item.Image))
                             {
                                 <div class="item-image">
@@ -734,10 +734,10 @@ else
                                     <button class="btn-icon coordination-action"
                                             type="button"
                                             disabled="@(!RendererInfo.IsInteractive)"
-                                            aria-expanded="@(_gridCoordinationItemId == item.Id ? "true" : "false")"
-                                            aria-controls="item-coordination-@item.Id"
-                                            @onclick="() => ToggleGridCoordination(item.Id)">
-                                        <OpenWishIcon Name="@(_gridCoordinationItemId == item.Id ? "x-lg" : "gift")" /> @(_gridCoordinationItemId == item.Id ? "Hide gift details" : GetCoordinationLabel(item))
+                                            aria-expanded="@(_gridCoordinationItemId == item.PublicId ? "true" : "false")"
+                                            aria-controls="item-coordination-@item.PublicId"
+                                            @onclick="() => ToggleGridCoordination(item.PublicId)">
+                                        <OpenWishIcon Name="@(_gridCoordinationItemId == item.PublicId ? "x-lg" : "gift")" /> @(_gridCoordinationItemId == item.PublicId ? "Hide gift details" : GetCoordinationLabel(item))
                                     </button>
                                 }
                                 @if (_isOwner)
@@ -796,7 +796,7 @@ else
                                             <OpenWishIcon Name="pencil" />
                                         </button>
                                         <button class="btn-icon btn-danger"
-                                                id="delete-wishlist-item-@item.Id"
+                                                id="delete-wishlist-item-@item.PublicId"
                                                 type="button"
                                                 disabled="@(!RendererInfo.IsInteractive)"
                                                 aria-label="Delete @item.Name"
@@ -808,34 +808,34 @@ else
                                     <button class="btn-icon"
                                             type="button"
                                             disabled="@(!RendererInfo.IsInteractive)"
-                                            aria-label="@(_expandedItemId == item.Id ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
-                                            aria-expanded="@(_expandedItemId == item.Id)"
-                                            aria-controls="item-details-@item.Id"
+                                            aria-label="@(_expandedItemId == item.PublicId ? $"Hide details for {item.Name}" : $"Show details for {item.Name}")"
+                                            aria-expanded="@(_expandedItemId == item.PublicId)"
+                                            aria-controls="item-details-@item.PublicId"
                                             title="Details"
-                                            @onclick="() => ToggleItemDetails(item.Id)">
+                                            @onclick="() => ToggleItemDetails(item.PublicId)">
                                         <OpenWishIcon Name="three-dots" />
                                     </button>
                                 </div>
                             </div>
 
-                            @if (!_isOwner && _gridCoordinationItemId == item.Id)
+                            @if (!_isOwner && _gridCoordinationItemId == item.PublicId)
                             {
-                                <div id="item-coordination-@item.Id"
+                                <div id="item-coordination-@item.PublicId"
                                      class="item-coordination"
                                      role="region"
                                      aria-label="Reservation and comments for @item.Name">
                                     <ItemReservation WishlistId="@WishlistId"
-                                                     ItemId="@item.Id"
+                                                     ItemPublicId="@item.PublicId"
                                                      OwnerId="@(_wishlist?.OwnerId ?? string.Empty)"
                                                      ReservationVersion="@(item.Reservations.FirstOrDefault()?.PublicId ?? string.Empty)"
                                                      OnReservationChanged="@RefreshReservationsAsync" />
-                                    <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="false" OnCommentsChanged="@HandleCommentsChanged" />
+                                    <ItemComments WishlistId="@WishlistId" ItemPublicId="@item.PublicId" IsWishlistOwner="false" OnCommentsChanged="@HandleCommentsChanged" />
                                 </div>
                             }
 
-                            @if (_expandedItemId == item.Id)
+                            @if (_expandedItemId == item.PublicId)
                             {
-                                <div id="item-details-@item.Id" class="item-details-expanded">
+                                <div id="item-details-@item.PublicId" class="item-details-expanded">
                                     <div class="details-section">
                                         <h4><OpenWishIcon Name="info-circle" /> Details</h4>
                                         <div class="details-grid">
@@ -1034,10 +1034,10 @@ else
     private int WithinBudgetItemCount => HasBudget
         ? _items.Count(item => item.Price is { } price && price <= ValidBudget.GetValueOrDefault())
         : 0;
-    private int? _expandedItemId = null;
+    private string? _expandedItemId;
     private WishlistItemList? _itemListRef;
-    private int? _pendingInteractionItemId;
-    private int? _gridCoordinationItemId;
+    private string? _pendingInteractionItemId;
+    private string? _gridCoordinationItemId;
     private static readonly TimeSpan FeedbackDisplayDuration = TimeSpan.FromSeconds(8);
     private string _feedbackText = string.Empty;
     private int _feedbackGeneration;
@@ -1163,7 +1163,7 @@ else
         var matchingItems = _filteredItems
             .Where(candidate => candidate.IsPinned == item.IsPinned)
             .ToList();
-        var itemIndex = matchingItems.FindIndex(candidate => candidate.Id == item.Id);
+        var itemIndex = matchingItems.FindIndex(candidate => candidate.PublicId == item.PublicId);
         return itemIndex + direction >= 0 && itemIndex + direction < matchingItems.Count;
     }
 
@@ -1183,7 +1183,7 @@ else
             .Where(entry => entry.candidate.IsPinned == item.IsPinned)
             .Select(entry => entry.index)
             .ToList();
-        var currentIndex = orderedItems.FindIndex(candidate => candidate.Id == item.Id);
+        var currentIndex = orderedItems.FindIndex(candidate => candidate.PublicId == item.PublicId);
         var matchingIndex = matchingIndexes.IndexOf(currentIndex);
         var targetIndex = matchingIndexes[matchingIndex + direction];
 
@@ -1369,7 +1369,7 @@ else
         try
         {
             var savedItem = await WishlistService.ConfirmWishlistItemStillWantedByPublicIdAsync(WishlistId, item.PublicId, _currentUserId);
-            var itemIndex = _items.FindIndex(candidate => candidate.Id == item.Id);
+            var itemIndex = _items.FindIndex(candidate => candidate.PublicId == item.PublicId);
             if (itemIndex >= 0)
             {
                 savedItem.Comments = _items[itemIndex].Comments;
@@ -1433,7 +1433,7 @@ else
                 WishlistId,
                 item.PublicId,
                 !item.IsPinned);
-            var itemIndex = _items.FindIndex(candidate => candidate.Id == item.Id);
+            var itemIndex = _items.FindIndex(candidate => candidate.PublicId == item.PublicId);
             if (itemIndex >= 0)
             {
                 savedItem.Comments = _items[itemIndex].Comments;
@@ -1575,7 +1575,7 @@ else
 
     private void HandleCommentsChanged(ItemComments.CommentsChange change)
     {
-        var item = _items.FirstOrDefault(i => i.Id == change.ItemId);
+        var item = _items.FirstOrDefault(i => i.PublicId == change.ItemPublicId);
         if (item is null)
         {
             return;
@@ -1601,10 +1601,10 @@ else
         try
         {
             var fresh = await WishlistService.GetWishlistItemsByPublicIdAsync(WishlistId, _currentUserId);
-            var reservationsById = fresh.ToDictionary(i => i.Id, i => i.Reservations);
+            var reservationsById = fresh.ToDictionary(i => i.PublicId, i => i.Reservations);
             foreach (var item in _items)
             {
-                item.Reservations = reservationsById.TryGetValue(item.Id, out var reservations) ? reservations : [];
+                item.Reservations = reservationsById.TryGetValue(item.PublicId, out var reservations) ? reservations : [];
             }
 
             ApplyFiltersAndSort();
@@ -1816,7 +1816,6 @@ else
     {
         _modalItem = new WishlistItemModel
         {
-            Id = item.Id,
             PublicId = item.PublicId,
             Name = item.Name,
             Description = item.Description,
@@ -1826,8 +1825,7 @@ else
             Priority = item.Priority,
             IsPrivate = item.IsPrivate,
             Image = item.Image,
-            SourceAppName = item.SourceAppName,
-            WishlistId = _wishlist?.Id ?? 0 // Keep the integer ID for the model
+            SourceAppName = item.SourceAppName
         };
         _itemModal?.Show(_modalItem);
     }
@@ -1907,7 +1905,7 @@ else
         await _deleteDialog.ShowAsync(
             "Delete item",
             $"Delete {itemName} and its gift coordination? This cannot be undone.",
-            $"delete-wishlist-item-{item.Id}");
+            $"delete-wishlist-item-{item.PublicId}");
     }
 
     private async Task ConfirmItemDeleteAsync()
@@ -1923,14 +1921,14 @@ else
         _deleteItemError = null;
         try
         {
-            var deleted = await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.Id);
+            var deleted = await WishlistService.RemoveItemFromWishlistByPublicIdAsync(WishlistId, item.PublicId);
             if (!deleted)
             {
                 throw new InvalidOperationException("The delete request was not completed.");
             }
 
-            _items.RemoveAll(existingItem => existingItem.Id == item.Id);
-            if (_expandedItemId == item.Id)
+            _items.RemoveAll(existingItem => existingItem.PublicId == item.PublicId);
+            if (_expandedItemId == item.PublicId)
             {
                 _expandedItemId = null;
             }
@@ -2094,7 +2092,7 @@ else
         StateHasChanged();
     }
 
-    private void ToggleItemDetails(int itemId)
+    private void ToggleItemDetails(string itemId)
     {
         _expandedItemId = _expandedItemId == itemId ? null : itemId;
     }
@@ -2139,7 +2137,7 @@ else
 
         ViewMode = "list";
         _showFilters = false;
-        _pendingInteractionItemId = targetItem.Id;
+        _pendingInteractionItemId = targetItem.PublicId;
 
         await InvokeAsync(StateHasChanged);
     }
@@ -2189,7 +2187,7 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleGridCoordination(int itemId) =>
+    private void ToggleGridCoordination(string itemId) =>
         _gridCoordinationItemId = _gridCoordinationItemId == itemId ? null : itemId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -2217,9 +2215,9 @@ else
             _isListeningForPaste = true;
         }
 
-        if (_pendingInteractionItemId.HasValue && ViewMode == "list" && _itemListRef is not null)
+        if (_pendingInteractionItemId is not null && ViewMode == "list" && _itemListRef is not null)
         {
-            var targetId = _pendingInteractionItemId.Value;
+            var targetId = _pendingInteractionItemId;
             _pendingInteractionItemId = null;
             await _itemListRef.ExpandItemAsync(targetId);
         }

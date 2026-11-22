@@ -230,6 +230,69 @@ public class WishlistItemReservationTests
         Assert.True(reservation.IsAnonymous);
     }
 
+    [Fact]
+    public async Task ItemPublicIdOverloads_ReserveReadAndCancelWithoutInternalKeys()
+    {
+        var factory = CreateFactory();
+        string wishlistPublicId;
+        string itemPublicId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.AddRange(
+                new ApplicationUser { Id = "owner", UserName = "owner" },
+                new ApplicationUser { Id = "reserver", UserName = "reserver" });
+
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner", IsPrivate = false };
+            var item = new WishlistItem { Name = "Gift", Wishlist = wishlist };
+            context.WishlistItems.Add(item);
+
+            await context.SaveChangesAsync();
+            wishlistPublicId = wishlist.PublicId;
+            itemPublicId = item.PublicId;
+        }
+
+        var service = CreateService(factory);
+
+        Assert.True(await service.ReserveItemByPublicIdAsync(wishlistPublicId, itemPublicId, "reserver"));
+        var reservation = await service.GetItemReservationByPublicIdAsync(wishlistPublicId, itemPublicId, "reserver");
+        Assert.NotNull(reservation);
+        Assert.Null(await service.GetItemReservationByPublicIdAsync(wishlistPublicId, itemPublicId, "owner"));
+
+        Assert.True(await service.CancelReservationByPublicIdAsync(wishlistPublicId, itemPublicId, "reserver"));
+        Assert.Null(await service.GetItemReservationByPublicIdAsync(wishlistPublicId, itemPublicId, "reserver"));
+    }
+
+    [Fact]
+    public async Task ItemPublicIdOverloads_RejectItemFromAnotherWishlist()
+    {
+        var factory = CreateFactory();
+        string wishlistPublicId;
+        string otherItemPublicId;
+
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(new ApplicationUser { Id = "owner", UserName = "owner" });
+
+            var wishlist = new Wishlist { Name = "Wishlist", OwnerId = "owner", IsPrivate = false };
+            var otherWishlist = new Wishlist { Name = "Other", OwnerId = "owner", IsPrivate = false };
+            context.Wishlists.Add(wishlist);
+            var otherItem = new WishlistItem { Name = "Gift", Wishlist = otherWishlist };
+            context.WishlistItems.Add(otherItem);
+
+            await context.SaveChangesAsync();
+            wishlistPublicId = wishlist.PublicId;
+            otherItemPublicId = otherItem.PublicId;
+        }
+
+        var service = CreateService(factory);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.ReserveItemByPublicIdAsync(wishlistPublicId, otherItemPublicId, "owner"));
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.RemoveItemFromWishlistByPublicIdAsync(wishlistPublicId, otherItemPublicId));
+    }
+
     private static TestDbContextFactory CreateFactory() =>
         new(new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

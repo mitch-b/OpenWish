@@ -368,7 +368,9 @@ public class DashboardWelcomeTests
     public void DashboardCards_SurvivePrerenderStatePersistence()
     {
         var wishlist = Wishlist(1);
+        wishlist.Id = 41;
         var evt = Event("Cookie Swap", _now.AddDays(3), isGiftExchange: true, namesDrawn: true);
+        evt.Id = 42;
         evt.EventUsers = [new EventUserModel { UserId = "guest", Status = "Pending" }];
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
@@ -376,6 +378,9 @@ public class DashboardWelcomeTests
         var events = new[] { DashboardEventCard.From(evt) };
         var json = JsonSerializer.Serialize(new { wishlists, events }, options);
         var restored = JsonSerializer.Deserialize<DashboardCardState>(json, options);
+
+        // Prerendered state is embedded in the page, so internal keys must not travel with it.
+        Assert.DoesNotContain("\"id\":", json, StringComparison.Ordinal);
 
         Assert.Equal(wishlists, restored!.Wishlists);
         Assert.Equal(events, restored.Events);

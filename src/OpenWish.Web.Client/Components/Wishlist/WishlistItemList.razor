@@ -20,7 +20,7 @@
             @foreach (var item in Items)
             {
                 <tr @key="item.PublicId"
-                    class="item-row @(ExpandedInteractions.Contains(item.Id) ? "is-expanded" : string.Empty)"
+                    class="item-row @(ExpandedInteractions.Contains(item.PublicId) ? "is-expanded" : string.Empty)"
                     tabindex="-1">
                     <td data-label="Name" class="item-cell-name">
                         <div class="item-title-line">
@@ -95,15 +95,15 @@
                             @if (ShowInteractions)
                             {
                                 <button
-                                    class="btn btn-sm item-options-toggle @(ExpandedInteractions.Contains(item.Id) ? "is-open" : string.Empty)"
+                                    class="btn btn-sm item-options-toggle @(ExpandedInteractions.Contains(item.PublicId) ? "is-open" : string.Empty)"
                                     type="button"
                                     disabled="@(!RendererInfo.IsInteractive)"
-                                    @onclick="() => ToggleInteractions(item.Id)"
-                                    aria-expanded="@ExpandedInteractions.Contains(item.Id)"
-                                    aria-controls="item-interactions-@item.Id"
-                                    aria-label="@(ExpandedInteractions.Contains(item.Id) ? "Hide" : "Show") gift options for @item.Name">
-                                    <OpenWishIcon Name="@(ExpandedInteractions.Contains(item.Id) ? "x-lg" : "gift")" />
-                                    <span>@(ExpandedInteractions.Contains(item.Id) ? "Hide options" : "Gift options")</span>
+                                    @onclick="() => ToggleInteractions(item.PublicId)"
+                                    aria-expanded="@ExpandedInteractions.Contains(item.PublicId)"
+                                    aria-controls="item-interactions-@item.PublicId"
+                                    aria-label="@(ExpandedInteractions.Contains(item.PublicId) ? "Hide" : "Show") gift options for @item.Name">
+                                    <OpenWishIcon Name="@(ExpandedInteractions.Contains(item.PublicId) ? "x-lg" : "gift")" />
+                                    <span>@(ExpandedInteractions.Contains(item.PublicId) ? "Hide options" : "Gift options")</span>
                                 </button>
                             }
                             @if (OnEdit.HasDelegate || OnDelete.HasDelegate)
@@ -124,7 +124,7 @@
                                     @if (OnDelete.HasDelegate)
                                     {
                                         <button
-                                            id="delete-wishlist-item-@item.Id"
+                                            id="delete-wishlist-item-@item.PublicId"
                                             class="btn btn-sm item-icon-action item-delete-action"
                                             type="button"
                                             disabled="@(!RendererInfo.IsInteractive)"
@@ -183,23 +183,23 @@
                 </tr>
                 @if (ShowInteractions)
                 {
-                    <tr class="interaction-row-expanded" hidden="@(!ExpandedInteractions.Contains(item.Id))">
+                    <tr class="interaction-row-expanded" hidden="@(!ExpandedInteractions.Contains(item.PublicId))">
                         <td colspan="@(Budget.HasValue ? 7 : 6)" class="interaction-row">
                             <div class="interaction-container"
-                                 id="item-interactions-@item.Id"
+                                 id="item-interactions-@item.PublicId"
                                  role="region"
                                  aria-label="Gift coordination for @item.Name">
-                                @if (ExpandedInteractions.Contains(item.Id) && !IsOwner)
+                                @if (ExpandedInteractions.Contains(item.PublicId) && !IsOwner)
                                 {
                                     <div class="interaction-section">
                                         <h6><OpenWishIcon Name="gift" /> Reservation</h6>
-                                        <ItemReservation WishlistId="@WishlistId" ItemId="@item.Id" OwnerId="@OwnerId" ReservationVersion="@GetReservationVersion(item)" OnReservationChanged="OnReservationChanged" />
+                                        <ItemReservation WishlistId="@WishlistId" ItemPublicId="@item.PublicId" OwnerId="@OwnerId" ReservationVersion="@GetReservationVersion(item)" OnReservationChanged="OnReservationChanged" />
                                     </div>
                                 }
-                                @if (ExpandedInteractions.Contains(item.Id))
+                                @if (ExpandedInteractions.Contains(item.PublicId))
                                 {
                                     <div class="interaction-section">
-                                        <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" OnCommentsChanged="OnCommentsChanged" />
+                                        <ItemComments WishlistId="@WishlistId" ItemPublicId="@item.PublicId" IsWishlistOwner="@IsOwner" OnCommentsChanged="OnCommentsChanged" />
                                     </div>
                                 }
                             </div>
@@ -236,9 +236,9 @@
 
     [Parameter] public EventCallback<ItemComments.CommentsChange> OnCommentsChanged { get; set; }
 
-    private HashSet<int> ExpandedInteractions = new();
+    private HashSet<string> ExpandedInteractions = new();
 
-    private void ToggleInteractions(int itemId)
+    private void ToggleInteractions(string itemId)
     {
         if (ExpandedInteractions.Contains(itemId))
         {
@@ -274,7 +274,7 @@
         }
 
         var matchingItems = Items.Where(candidate => candidate.IsPinned == item.IsPinned).ToList();
-        var itemIndex = matchingItems.FindIndex(candidate => candidate.Id == item.Id);
+        var itemIndex = matchingItems.FindIndex(candidate => candidate.PublicId == item.PublicId);
         return itemIndex + direction >= 0 && itemIndex + direction < matchingItems.Count;
     }
 
@@ -302,7 +302,7 @@
         }
     }
 
-    public Task ExpandItemAsync(int itemId)
+    public Task ExpandItemAsync(string itemId)
     {
         if (!ShowInteractions)
         {

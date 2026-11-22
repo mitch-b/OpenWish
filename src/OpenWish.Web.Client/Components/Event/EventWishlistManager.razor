@@ -119,9 +119,9 @@ else
                                     {
                                         <button class="btn btn-outline-secondary btn-sm"
                                                 type="button"
-                                                id="@($"remove-my-event-wishlist-{wishlist.Id}")"
+                                                id="@($"remove-my-event-wishlist-{wishlist.PublicId}")"
                                                 disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
-                                                @onclick="() => PromptWishlistRemoval(wishlist.Id)">
+                                                @onclick="() => PromptWishlistRemoval(wishlist.PublicId)">
                                             Remove
                                         </button>
                                     }
@@ -175,12 +175,12 @@ else
                                         <option value="">Select a wishlist</option>
                                         @foreach (var option in attachableWishlists)
                                         {
-                                            <option value="@option.Id">@option.Name</option>
+                                            <option value="@option.PublicId">@option.Name</option>
                                         }
                                     </select>
                                     <button class="btn @(hasOwnWishlist ? "btn-outline-primary" : "btn-primary")"
                                             type="button"
-                                            disabled="@(!_selectedWishlistId.HasValue || _isSubmitting || !RendererInfo.IsInteractive)"
+                                            disabled="@(string.IsNullOrEmpty(_selectedWishlistId) || _isSubmitting || !RendererInfo.IsInteractive)"
                                             @onclick="AttachSelectedWishlistAsync">
                                         <OpenWishIcon Name="link-45deg" />
                                         <span>@(_isSubmitting ? "Sharing..." : "Share wishlist")</span>
@@ -274,9 +274,9 @@ else
                                                     {
                                                         <button class="btn btn-outline-secondary btn-sm"
                                                                 type="button"
-                                                                id="@($"remove-participant-event-wishlist-{wishlist.Id}")"
+                                                                id="@($"remove-participant-event-wishlist-{wishlist.PublicId}")"
                                                                 disabled="@(_isSubmitting || !RendererInfo.IsInteractive)"
-                                                                @onclick="() => PromptWishlistRemoval(wishlist.Id)">
+                                                                @onclick="() => PromptWishlistRemoval(wishlist.PublicId)">
                                                             Remove
                                                         </button>
                                                     }
@@ -342,7 +342,7 @@ else
     private readonly List<WishlistModel> _eventWishlists = [];
     private readonly List<WishlistModel> _userWishlists = [];
     private WishlistModel _draftWishlist = new() { Name = "My gift ideas" };
-    private int? _selectedWishlistId;
+    private string? _selectedWishlistId;
     private string? _statusMessage;
     private string? _errorMessage;
     private string? _loadErrorMessage;
@@ -479,10 +479,10 @@ else
             return Enumerable.Empty<WishlistModel>();
         }
 
-        var attachedIds = _eventWishlists.Select(w => w.Id).ToHashSet();
+        var attachedIds = _eventWishlists.Select(w => w.PublicId).ToHashSet();
 
         return _userWishlists
-            .Where(w => !w.IsPrivate && !w.EventId.HasValue && !attachedIds.Contains(w.Id))
+            .Where(w => !w.IsPrivate && !IsAttachedToAnEvent(w) && !attachedIds.Contains(w.PublicId))
             .OrderBy(w => w.Name, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -490,17 +490,21 @@ else
     {
         get
         {
-            var attachedIds = _eventWishlists.Select(wishlist => wishlist.Id).ToHashSet();
+            var attachedIds = _eventWishlists.Select(wishlist => wishlist.PublicId).ToHashSet();
             return _userWishlists.Any(wishlist =>
                 wishlist.IsPrivate &&
-                !wishlist.EventId.HasValue &&
-                !attachedIds.Contains(wishlist.Id));
+                !IsAttachedToAnEvent(wishlist) &&
+                !attachedIds.Contains(wishlist.PublicId));
         }
     }
 
+    // EventId is not serialized, so a wishlist loaded over HTTP only reveals its event through Event.
+    private static bool IsAttachedToAnEvent(WishlistModel wishlist) =>
+        wishlist.EventId.HasValue || wishlist.Event is not null;
+
     private async Task AttachSelectedWishlistAsync()
     {
-        if (!_selectedWishlistId.HasValue || string.IsNullOrEmpty(_currentUserId))
+        if (string.IsNullOrEmpty(_selectedWishlistId) || string.IsNullOrEmpty(_currentUserId))
         {
             return;
         }
@@ -508,7 +512,7 @@ else
         await ExecuteWithFeedback(async () =>
         {
             // Find the wishlist to get its PublicId
-            var selectedWishlist = _userWishlists.FirstOrDefault(w => w.Id == _selectedWishlistId.Value);
+            var selectedWishlist = _userWishlists.FirstOrDefault(w => w.PublicId == _selectedWishlistId);
             if (selectedWishlist != null)
             {
                 var attached = await EventService.AttachWishlistByPublicIdAsync(EventId, selectedWishlist.PublicId, _currentUserId);
@@ -521,7 +525,7 @@ else
 
     private async Task AttachWishlistAsync(WishlistModel wishlist)
     {
-        _selectedWishlistId = wishlist.Id;
+        _selectedWishlistId = wishlist.PublicId;
         await AttachSelectedWishlistAsync();
     }
 
@@ -530,14 +534,14 @@ else
     private string GetShareWishlistAccessibleName(WishlistModel wishlist) =>
         $"{GetShareWishlistButtonText()} {wishlist.Name}";
 
-    private void PromptWishlistRemoval(int wishlistId)
+    private void PromptWishlistRemoval(string wishlistId)
     {
         if (_isSubmitting)
         {
             return;
         }
 
-        var wishlist = _eventWishlists.FirstOrDefault(w => w.Id == wishlistId);
+        var wishlist = _eventWishlists.FirstOrDefault(w => w.PublicId == wishlistId);
         if (wishlist == null)
         {
             return;
@@ -567,13 +571,13 @@ else
             return;
         }
 
-        if (await HandleDetachWishlistAsync(_wishlistPendingRemoval.Id))
+        if (await HandleDetachWishlistAsync(_wishlistPendingRemoval.PublicId))
         {
             await _removeDialog.CloseAsync();
         }
     }
 
-    private async Task<bool> HandleDetachWishlistAsync(int wishlistId)
+    private async Task<bool> HandleDetachWishlistAsync(string wishlistId)
     {
         if (string.IsNullOrEmpty(_currentUserId))
         {
@@ -584,7 +588,7 @@ else
         return await ExecuteWithFeedback(async () =>
         {
             // Find the wishlist to get its PublicId
-            var wishlist = _eventWishlists.FirstOrDefault(w => w.Id == wishlistId);
+            var wishlist = _eventWishlists.FirstOrDefault(w => w.PublicId == wishlistId);
             if (wishlist != null)
             {
                 var removed = await EventService.DetachWishlistByPublicIdAsync(EventId, wishlist.PublicId, _currentUserId);
@@ -620,7 +624,6 @@ else
         var createdSuccessfully = false;
         await ExecuteWithFeedback(async () =>
         {
-            model.EventId = Event?.Id; // Use the integer ID from the Event model
             var created = await EventService.CreateEventWishlistByPublicIdAsync(EventId, model, _currentUserId);
             _createdWishlistPublicId = created.PublicId;
             _statusMessage = $"Your wishlist '{created.Name}' is shared with this event.";

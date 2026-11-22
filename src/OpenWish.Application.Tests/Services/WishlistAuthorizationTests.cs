@@ -362,6 +362,30 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task UpdateWishlistByPublicIdAsync_AcceptsModelWithoutSerializedInternalId()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var updated = await service.UpdateWishlistByPublicIdAsync(
+            wishlist.PublicId,
+            new WishlistModel { PublicId = wishlist.PublicId, Name = "Shared with some", IsFriendsOnly = true },
+            wishlist.OwnerId);
+
+        Assert.Equal("Shared with some", updated.Name);
+        await using var verify = factory.CreateDbContext();
+        var saved = await verify.Wishlists.SingleAsync(w => w.PublicId == wishlist.PublicId);
+        Assert.Equal(wishlist.Id, saved.Id);
+        Assert.True(saved.IsFriendsOnly);
+    }
+
+    [Fact]
     public async Task GetWishlistItemsByPublicIdAsync_IncludesActiveComments()
     {
         var factory = CreateFactory();

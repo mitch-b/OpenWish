@@ -100,6 +100,26 @@ public interface IFriendService
     /// <returns>True if the invitation email was successfully resent.</returns>
     Task<bool> ResendPendingFriendInviteAsync(int inviteId, string userId);
 
+    // Public-ID overloads for interactive WebAssembly callers, which never receive internal keys.
+
+    /// <summary>Accepts a friend request by its public ID. The caller must be the receiver.</summary>
+    Task<bool> AcceptFriendRequestByPublicIdAsync(string requestPublicId, string userId);
+
+    /// <summary>Rejects a friend request by its public ID. The caller must be the receiver.</summary>
+    Task<bool> RejectFriendRequestByPublicIdAsync(string requestPublicId, string userId);
+
+    /// <summary>Cancels a sent friend request by its public ID. The caller must be the requester.</summary>
+    Task<bool> CancelFriendRequestByPublicIdAsync(string requestPublicId, string requesterId);
+
+    /// <summary>Resends a friend request by its public ID. The caller must be the requester.</summary>
+    Task<FriendRequestModel> ResendFriendRequestByPublicIdAsync(string requestPublicId, string requesterId);
+
+    /// <summary>Cancels a pending email invitation by its public ID. The caller must be the sender.</summary>
+    Task<bool> CancelPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId);
+
+    /// <summary>Resends a pending email invitation by its public ID. The caller must be the sender.</summary>
+    Task<bool> ResendPendingFriendInviteByPublicIdAsync(string invitePublicId, string userId);
+
     /// <summary>Searches for registered users by username or display name to facilitate adding friends.</summary>
     /// <param name="searchTerm">The search term (partial username or name).</param>
     /// <param name="currentUserId">The user ID performing the search (to exclude from results).</param>

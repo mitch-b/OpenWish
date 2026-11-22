@@ -404,12 +404,12 @@ else
                             <option value="">Choose an event...</option>
                             @foreach (var evt in _availableEvents)
                             {
-                                <option value="@evt.Id">@GetEventOptionLabel(evt)</option>
+                                <option value="@evt.PublicId">@GetEventOptionLabel(evt)</option>
                             }
                         </select>
                         <button class="btn btn-primary"
                                 type="button"
-                                disabled="@(!_selectedEventId.HasValue || _eventBusy || !RendererInfo.IsInteractive)"
+                                disabled="@(string.IsNullOrEmpty(_selectedEventId) || _eventBusy || !RendererInfo.IsInteractive)"
                                 @onclick="AttachToSelectedEventAsync">
                             @(_eventBusy ? "Attaching..." : "Attach")
                         </button>
@@ -483,7 +483,7 @@ else
     private string? _loadErrorMessage;
     private List<EventModel> _availableEvents = [];
     private EventModel? _attachedEvent;
-    private int? _selectedEventId;
+    private string? _selectedEventId;
     private bool _eventBusy;
     private bool _loadingEvents;
     private string? _eventLoadErrorMessage;
@@ -898,14 +898,15 @@ else
         try
         {
             var events = (await EventService.GetUserEventsAsync(_currentUserId)).ToList();
+            var attachedEventPublicId = AttachedEventPublicId;
             _availableEvents = events
-                .Where(e => _wishlist?.EventId == null || e.Id != _wishlist.EventId)
+                .Where(e => attachedEventPublicId is null || e.PublicId != attachedEventPublicId)
                 .OrderBy(e => e.Date)
                 .ToList();
 
-            if (_wishlist?.EventId is int eventId)
+            if (attachedEventPublicId is not null)
             {
-                _attachedEvent = await EventService.GetEventAsync(eventId);
+                _attachedEvent = await EventService.GetEventByPublicIdAsync(attachedEventPublicId, _currentUserId);
             }
             else
             {
@@ -918,15 +919,15 @@ else
             _availableEvents.Clear();
             _eventLoadErrorMessage = "We couldn't load event connections. Try again.";
 
-            if (_wishlist?.EventId is int eventId)
+            if (AttachedEventPublicId is string eventPublicId)
             {
                 try
                 {
-                    _attachedEvent = await EventService.GetEventAsync(eventId);
+                    _attachedEvent = await EventService.GetEventByPublicIdAsync(eventPublicId, _currentUserId);
                 }
                 catch (Exception innerEx)
                 {
-                    Logger.LogWarning(innerEx, "Failed to fetch event {EventId} for wishlist {WishlistId}", eventId, WishlistId);
+                    Logger.LogWarning(innerEx, "Failed to fetch event {EventId} for wishlist {WishlistId}", eventPublicId, WishlistId);
                     _attachedEvent = null;
                 }
             }
@@ -937,21 +938,24 @@ else
         }
     }
 
+    // EventId is not serialized, so the attached event is identified by the event summary's public id.
+    private string? AttachedEventPublicId =>
+        _wishlist?.Event?.PublicId is { Length: > 0 } eventPublicId ? eventPublicId : null;
+
     private async Task AttachToSelectedEventAsync()
     {
-        if (!_selectedEventId.HasValue || _wishlist == null || string.IsNullOrEmpty(_currentUserId))
+        if (string.IsNullOrEmpty(_selectedEventId) || _wishlist == null || string.IsNullOrEmpty(_currentUserId))
         {
             return;
         }
 
-        var eventId = _selectedEventId.Value;
+        var eventPublicId = _selectedEventId;
 
         await ExecuteEventAction(async () =>
         {
-            // Get the event to get its PublicId
-            var selectedEvent = await EventService.GetEventAsync(eventId);
+            var selectedEvent = await EventService.GetEventByPublicIdAsync(eventPublicId, _currentUserId);
             await EventService.AttachWishlistByPublicIdAsync(selectedEvent.PublicId, WishlistId, _currentUserId);
-            _wishlist.EventId = eventId;
+            _wishlist.Event = selectedEvent;
             _attachedEvent = selectedEvent;
             _eventStatusMessage = $"Attached to '{_attachedEvent.Name}'.";
             _selectedEventId = null;
@@ -974,6 +978,7 @@ else
             if (removed)
             {
                 _wishlist.EventId = null;
+                _wishlist.Event = null;
                 _attachedEvent = null;
                 _eventStatusMessage = $"Removed this wishlist from '{eventName}'.";
             }

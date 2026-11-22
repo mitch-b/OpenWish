@@ -14,19 +14,50 @@
     max-width: 38rem;
 }
 
-.form-control,
-.form-select {
+.item-fields ::deep .form-control,
+.item-fields ::deep .form-select {
     min-height: 2.75rem;
     border: 1px solid var(--color-border);
     border-radius: 0.75rem;
-    background: var(--color-surface);
+    background-color: var(--color-surface);
     color: var(--color-text);
 }
 
-.form-control:focus,
-.form-select:focus {
+.item-fields ::deep .form-control:focus,
+.item-fields ::deep .form-select:focus {
     border-color: var(--color-primary-bg);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-bg) 18%, transparent);
+}
+
+/* Only problems are highlighted; a field the user edited correctly stays calm. */
+.item-fields ::deep .valid.modified {
+    outline: none;
+}
+
+.item-fields ::deep .form-control.invalid {
+    outline: none;
+    border-color: var(--color-danger-text);
+}
+
+.item-fields ::deep .validation-message {
+    margin-top: 0.375rem;
+    color: var(--color-danger-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.price-input .input-group-text {
+    min-width: 2.75rem;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem 0 0 0.75rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+.item-fields .price-input ::deep .form-control {
+    border-radius: 0 0.75rem 0.75rem 0;
 }
 
 .form-label {
@@ -38,15 +69,23 @@
     color: var(--color-text-muted);
 }
 
+.private-option {
+    padding-top: 0.25rem;
+}
+
 .form-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
-    padding-top: 1rem;
+    padding-top: 1.5rem;
 }
 
 .form-actions .btn {
     min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .item-fields {
@@ -71,4 +110,17 @@
     .form-actions .btn {
         flex: 1 1 100%;
     }
+}
+
+.form-actions .btn-outline-primary {
+    --bs-btn-color: var(--color-link);
+    --bs-btn-border-color: var(--color-primary-border);
+    --bs-btn-hover-color: var(--color-link);
+    --bs-btn-hover-bg: var(--color-primary-soft);
+    --bs-btn-hover-border-color: var(--color-primary-border);
+    --bs-btn-active-color: var(--color-link);
+    --bs-btn-active-bg: var(--color-primary-soft);
+    --bs-btn-active-border-color: var(--color-primary-border);
+    --bs-btn-disabled-color: var(--color-link);
+    --bs-btn-disabled-border-color: var(--color-primary-border);
 }

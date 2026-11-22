@@ -781,7 +781,7 @@ public class InteractiveControlMarkupTests
         Assert.Contains("InputId=\"product-url-import\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("Disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("<button type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\">", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("<button type=\"submit\" class=\"btn btn-primary\" disabled=\"@(IsBusy || !RendererInfo.IsInteractive)\">", formMarkup, StringComparison.Ordinal);
         Assert.Contains("private bool IsBusy => IsSubmitting || _isImporting;", formMarkup, StringComparison.Ordinal);
         Assert.Contains("role=\"dialog\"", modalMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-modal=\"true\"", modalMarkup, StringComparison.Ordinal);
@@ -1436,8 +1436,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("We couldn't add this item.", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("await Task.Yield();", pageMarkup, StringComparison.Ordinal);
         Assert.Contains("new() { PublicId = Guid.NewGuid().ToString() }", pageMarkup, StringComparison.Ordinal);
-        Assert.Contains("disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@IsSubmitting\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("disabled=\"@(IsSubmitting || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-outline-secondary\" disabled=\"@(IsSubmitting || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
         var cancelHandler = pageMarkup[pageMarkup.IndexOf("private void HandleCancel()", StringComparison.Ordinal)..];
         Assert.Contains("if (_isSubmitting)", cancelHandler, StringComparison.Ordinal);
         Assert.True(
@@ -1445,7 +1445,7 @@ public class InteractiveControlMarkupTests
             cancelHandler.IndexOf("NavigationManager.NavigateTo", StringComparison.Ordinal));
         Assert.Contains("Adding item...", formMarkup, StringComparison.Ordinal);
         Assert.Contains("aria-busy=\"@(IsBusy ? \"true\" : \"false\")\"", formMarkup, StringComparison.Ordinal);
-        Assert.Contains("type=\"submit\" class=\"btn btn-primary\" disabled=\"@IsBusy\"", formMarkup, StringComparison.Ordinal);
+        Assert.Contains("type=\"submit\" class=\"btn btn-primary\" disabled=\"@(IsBusy || !RendererInfo.IsInteractive)\"", formMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("<EditForm Enhance", formMarkup, StringComparison.Ordinal);
     }
 

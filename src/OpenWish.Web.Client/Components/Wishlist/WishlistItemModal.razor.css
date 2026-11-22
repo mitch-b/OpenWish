@@ -1,9 +1,6 @@
 .modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(13, 15, 26, 0.62);
     z-index: 1040;
     backdrop-filter: blur(8px);
@@ -19,8 +16,9 @@
     width: 90%;
     max-width: 700px;
     max-height: 95vh;
+    max-height: 95dvh;
     overflow: hidden;
-    animation: slideIn 0.3s ease;
+    animation: slideIn 0.24s ease;
 }
 
 .modal-content {
@@ -31,188 +29,217 @@
     display: flex;
     flex-direction: column;
     max-height: 95vh;
+    max-height: 95dvh;
     color: var(--color-text);
 }
 
 .modal-header {
-    padding: 0.75rem 1rem;
+    flex-shrink: 0;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
     border-bottom: 1px solid var(--color-border-muted);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.75rem;
     background: var(--color-surface);
     border-radius: 1.1rem 1.1rem 0 0;
 }
 
 .modal-title {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 1.3rem;
+    font-weight: 700;
     color: var(--color-text);
 }
 
 .btn-close {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--color-text);
-    opacity: 0.6;
-    transition: opacity 0.2s;
-    padding: 0;
+    flex-shrink: 0;
     width: 2.75rem;
     height: 2.75rem;
-    display: flex;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    opacity: 1;
+    cursor: pointer;
+    transition: background-color 0.16s ease, color 0.16s ease;
 }
 
 .btn-close:hover {
-    opacity: 1;
+    background: var(--color-surface-hover);
+    color: var(--color-text);
 }
 
-.btn-close::before {
-    content: "×";
-    font-size: 2rem;
-    line-height: 1;
+.btn-close:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.btn-close:disabled {
+    opacity: 0.5;
 }
 
 .modal-body {
     padding: 1rem;
     overflow-y: auto;
+    overscroll-behavior: contain;
     flex: 1;
     min-height: 0;
 }
 
 .modal-footer {
+    flex-shrink: 0;
     padding: 0.75rem 1rem;
     border-top: 1px solid var(--color-border-muted);
     display: flex;
+    flex-wrap: nowrap;
     justify-content: flex-end;
     gap: 0.75rem;
     background: var(--color-surface);
     border-radius: 0 0 1.1rem 1.1rem;
 }
 
+.modal-footer .btn {
+    margin: 0;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.modal-footer .btn-outline-primary {
+    --bs-btn-color: var(--color-link);
+    --bs-btn-border-color: var(--color-primary-border);
+    --bs-btn-hover-color: var(--color-link);
+    --bs-btn-hover-bg: var(--color-primary-soft);
+    --bs-btn-hover-border-color: var(--color-primary-border);
+    --bs-btn-active-color: var(--color-link);
+    --bs-btn-active-bg: var(--color-primary-soft);
+    --bs-btn-active-border-color: var(--color-primary-border);
+    --bs-btn-disabled-color: var(--color-link);
+    --bs-btn-disabled-border-color: var(--color-primary-border);
+}
+
 .url-import-section {
-    padding: 1rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
     background: var(--color-surface-alt);
-    border-radius: 8px;
-    border-left: 4px solid var(--color-primary-bg);
+}
+
+.item-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.item-fields > div {
+    min-width: 0;
+}
+
+.item-field-wide {
+    grid-column: 1 / -1;
 }
 
 .form-label {
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-text);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
     display: block;
 }
 
-.form-control,
-.form-select {
-    border: 1px solid var(--color-border-muted);
-    border-radius: 0.7rem;
-    padding: 0.625rem;
-    transition: border-color 0.2s, background-color 0.25s ease, color 0.25s ease;
-    background: var(--color-surface);
+.form-text {
+    color: var(--color-text-muted);
+}
+
+.item-fields ::deep .form-control,
+.item-fields ::deep .form-select {
+    min-height: 2.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background-color: var(--color-surface);
     color: var(--color-text);
 }
 
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--color-link-hover);
-    box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+.item-fields ::deep .form-control:focus,
+.item-fields ::deep .form-select:focus {
+    border-color: var(--color-primary-bg);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-bg) 18%, transparent);
+}
+
+/* Only problems are highlighted; a field the user edited correctly stays calm. */
+.item-fields ::deep .valid.modified {
     outline: none;
 }
 
-.text-danger {
-    color: #dc3545;
+.item-fields ::deep .form-control.invalid {
+    outline: none;
+    border-color: var(--color-danger-text);
 }
 
-.text-muted {
-    color: var(--bs-secondary-color);
+.item-fields ::deep .validation-message {
+    margin-top: 0.375rem;
+    color: var(--color-danger-text);
     font-size: 0.875rem;
-}
-
-.input-group-text {
-    background: var(--color-surface-alt);
-    border: 2px solid var(--color-border-muted);
-    border-right: none;
-    color: var(--color-text);
-}
-
-.input-group .form-control {
-    border-left: none;
-}
-
-.form-check-input {
-    cursor: pointer;
-    width: 1.25rem;
-    height: 1.25rem;
-    margin-top: 0.125rem;
-}
-
-.form-check-label {
-    cursor: pointer;
-    margin-left: 0.5rem;
-    user-select: none;
-}
-
-.btn {
-    padding: 0.625rem 1.25rem;
-    border-radius: 6px;
     font-weight: 600;
-    transition: all 0.2s;
-    cursor: pointer;
-    border: none;
-    display: inline-flex;
+}
+
+.price-input .input-group-text {
+    min-width: 2.75rem;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem 0 0 0.75rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+
+.item-fields .price-input ::deep .form-control {
+    border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.private-option {
+    padding-top: 0.25rem;
+}
+
+.save-error {
+    margin: 1rem 0 0;
+}
+
+.item-source-note {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.65rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.added-another-note {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-height: 2.75rem;
-}
-
-.btn-primary {
-    background: var(--color-primary-bg);
-    color: #fff;
-}
-
-.btn-primary:hover {
-    background: var(--color-link-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(31, 111, 235, 0.3);
-}
-
-.btn-outline-secondary {
-    background: transparent;
-    border: 2px solid var(--color-border-muted);
-    color: var(--color-text);
-}
-
-.btn-outline-secondary:hover {
-    background: var(--color-surface-alt);
-}
-
-.alert-info {
-    background: rgba(13, 110, 253, 0.1);
-    border: 1px solid rgba(13, 110, 253, 0.3);
-    border-radius: 6px;
-    padding: 0.75rem;
-    color: var(--color-text);
-}
-
-.spinner-border {
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 2px solid currentColor;
-    border-right-color: transparent;
-    border-radius: 50%;
-    animation: spinner 0.75s linear infinite;
-}
-
-.spinner-border-sm {
-    width: 1rem;
-    height: 1rem;
-    border-width: 2px;
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 0.75rem;
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+    color: var(--color-success-text);
+    font-size: 0.95rem;
 }
 
 @keyframes fadeIn {
@@ -235,70 +262,73 @@
     }
 }
 
-@keyframes spinner {
+@keyframes sheetIn {
+    from {
+        transform: translateY(1.5rem);
+        opacity: 0;
+    }
     to {
-        transform: rotate(360deg);
+        transform: none;
+        opacity: 1;
     }
 }
 
-.item-source-note {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem 0.65rem;
-    margin-bottom: 1rem;
-    padding: 0.75rem 0.9rem;
-    border: 1px solid var(--color-border-muted);
-    border-radius: 0.8rem;
-    background: var(--color-surface-alt);
-    color: var(--color-text-muted);
-    font-size: 0.88rem;
-}
-
-/* Mobile responsive */
 @media (max-width: 767.98px) {
     .modal-dialog-container {
-        width: 95%;
-        max-height: 95vh;
+        width: calc(100% - 1.5rem);
+    }
+
+    .item-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Phones: a bottom sheet that uses the whole screen height and keeps its actions within thumb reach. */
+@media (max-width: 575.98px) {
+    .modal-dialog-container {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: none;
+        max-height: calc(100vh - 0.5rem);
+        max-height: calc(100dvh - 0.5rem);
+        transform: none;
+        animation-name: sheetIn;
+    }
+
+    .modal-content {
+        max-height: inherit;
+        border-bottom: 0;
+        border-radius: 1.1rem 1.1rem 0 0;
     }
 
     .modal-title {
-        font-size: 1.25rem;
-    }
-
-    .modal-body {
-        padding: 1rem;
+        font-size: 1.2rem;
     }
 
     .modal-footer {
-        padding: 0.75rem 1rem;
-        flex-direction: column-reverse;
+        flex-wrap: wrap;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
     }
 
     .modal-footer .btn {
-        width: 100%;
+        flex: 1 1 0;
     }
 
-    .row {
-        margin-left: 0;
-        margin-right: 0;
+    .modal-footer:has([data-testid="add-another-item"]) .btn {
+        flex: 1 1 auto;
     }
 
-    .row > [class*="col-"] {
-        padding-left: 0;
-        padding-right: 0;
+    .modal-footer:has([data-testid="add-another-item"]) .btn-primary {
+        flex-basis: 100%;
     }
 }
 
-.added-another-note {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 0 1rem;
-    padding: 0.6rem 0.8rem;
-    border-radius: 0.5rem;
-    background: var(--color-success-bg);
-    border: 1px solid var(--color-success-border);
-    color: var(--color-success-text);
-    font-size: 0.95rem;
+@media (prefers-reduced-motion: reduce) {
+    .modal-backdrop,
+    .modal-dialog-container {
+        animation: none;
+    }
 }

@@ -19,6 +19,16 @@ const expectedManifest = {
   eventPublicId: "demo-holiday-gift-exchange"
 };
 
+async function runJourney(name, action) {
+  const started = Date.now();
+  console.log(`Starting browser journey: ${name}`);
+  try {
+    return await action();
+  } finally {
+    console.log(`Finished browser journey: ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+  }
+}
+
 async function waitUntilReady(request) {
   let lastError;
 
@@ -7243,38 +7253,53 @@ try {
   }
 
   const selectedScenario = process.env.OPENWISH_BROWSER_SCENARIO;
+  const shard = process.env.OPENWISH_BROWSER_SHARD;
   if (selectedScenario && !["connected-app", "family-exchange", "first-match", "account-free-guests"].includes(selectedScenario)) {
     throw new Error(`Unknown browser scenario: ${selectedScenario}`);
   }
-  if (!selectedScenario) {
-    results.push(await verifyResponsiveSweep(browser, { baseUrl, manifest, outputDirectory: evidenceDirectory }));
-    await verifyAppInstall(browser, results);
-    await verifyPageSections(browser, manifest, results);
-    await verifyDevelopmentLoginJourney(browser, results);
-    await verifyExternalLogin(browser, results);
-    const securityFixture = await verifyOwnerJourney(browser, manifest, results);
-    await verifyProductCaptureJourney(browser, results);
-    await verifyGuestJourney(browser, manifest, securityFixture, results);
-    await verifyFriendJourney(browser, manifest, results);
-    await verifyFeatureDayJourney(browser, manifest, results);
-    await verifyOccasionsJourney(browser, manifest, results);
-    await verifyOccasionRemindersJourney(browser, manifest, results);
-    await verifyMobileJourney(browser, manifest, results);
-    await verifyCirclesJourney(browser, manifest, results);
-    await verifyDataPortabilityJourney(browser, results);
-    await verifyUnsharedMatchWishlist(browser, manifest, results);
-    await verifyFamilyExchangeJourney(browser, results);
-    await verifyFirstMatchOpening(browser, results);
-    await verifyAccountFreeGuests(browser, results);
+  if (shard && !["core", "independent"].includes(shard)) {
+    throw new Error(`Unknown browser shard: ${shard}`);
+  }
+  if (shard && selectedScenario) {
+    throw new Error("OPENWISH_BROWSER_SHARD and OPENWISH_BROWSER_SCENARIO cannot be combined.");
+  }
+  if (!selectedScenario && shard !== "core") {
+    results.push(await runJourney("responsive-sweep", () => verifyResponsiveSweep(browser, { baseUrl, manifest, outputDirectory: evidenceDirectory })));
+  }
+  if (!selectedScenario && shard !== "independent") {
+    await runJourney("app-install", () => verifyAppInstall(browser, results));
+    await runJourney("section-navigation", () => verifyPageSections(browser, manifest, results));
+    await runJourney("development-login", () => verifyDevelopmentLoginJourney(browser, results));
+    await runJourney("external-login", () => verifyExternalLogin(browser, results));
+    const securityFixture = await runJourney("owner-desktop", () => verifyOwnerJourney(browser, manifest, results));
+    await runJourney("product-capture", () => verifyProductCaptureJourney(browser, results));
+    await runJourney("guest-collaboration", () => verifyGuestJourney(browser, manifest, securityFixture, results));
+    await runJourney("friend-gift-exchange", () => verifyFriendJourney(browser, manifest, results));
+  }
+  if (!selectedScenario && shard !== "core") {
+    await runJourney("feature-day-outcomes", () => verifyFeatureDayJourney(browser, manifest, results));
+    await runJourney("occasions-outcomes", () => verifyOccasionsJourney(browser, manifest, results));
+    await runJourney("occasion-reminders", () => verifyOccasionRemindersJourney(browser, manifest, results));
+  }
+  if (!selectedScenario && shard !== "independent") {
+    await runJourney("owner-mobile", () => verifyMobileJourney(browser, manifest, results));
+    await runJourney("friend-circles", () => verifyCirclesJourney(browser, manifest, results));
+    await runJourney("data-portability", () => verifyDataPortabilityJourney(browser, results));
+    await runJourney("match-without-wishlist", () => verifyUnsharedMatchWishlist(browser, manifest, results));
+  }
+  if (!selectedScenario && shard !== "core") {
+    await runJourney("family-exchange", () => verifyFamilyExchangeJourney(browser, results));
+    await runJourney("registration-and-first-match", () => verifyFirstMatchOpening(browser, results));
+    await runJourney("account-free-guests", () => verifyAccountFreeGuests(browser, results));
   }
   if (selectedScenario === "account-free-guests") {
-    await verifyAccountFreeGuests(browser, results);
+    await runJourney("account-free-guests", () => verifyAccountFreeGuests(browser, results));
   } else if (selectedScenario === "first-match") {
-    await verifyFirstMatchOpening(browser, results);
+    await runJourney("registration-and-first-match", () => verifyFirstMatchOpening(browser, results));
   } else if (selectedScenario === "family-exchange") {
-    await verifyFamilyExchangeJourney(browser, results);
-  } else {
-    await verifyConnectedAppJourney(browser, results);
+    await runJourney("family-exchange", () => verifyFamilyExchangeJourney(browser, results));
+  } else if (shard !== "core") {
+    await runJourney("connected-app", () => verifyConnectedAppJourney(browser, results));
   }
 
   await fs.writeFile(

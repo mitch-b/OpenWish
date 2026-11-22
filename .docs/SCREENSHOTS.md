@@ -86,8 +86,9 @@ uses run-specific app and browser-verifier image tags so concurrent checkouts
 cannot overwrite one another's test scripts,
 runs committed multi-user Playwright assertions, writes machine-readable
 results to ignored `pr-assets/verification/`, and generates walkthrough
-captures in ignored `pr-assets/walkthrough/`. The `browser-evidence` Actions
-artifact contains both directories and is retained for 14 days; uploaded PR
+captures in ignored `pr-assets/walkthrough/`. The `browser-evidence-core` and
+`browser-evidence-independent` Actions artifacts each contain their shard's
+captures and are retained for 14 days; uploaded PR
 images remain with the review independently of that retention.
 
 To intentionally refresh permanent documentation instead:

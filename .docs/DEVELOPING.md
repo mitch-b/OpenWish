@@ -227,6 +227,16 @@ default staging area. Only set `OPENWISH_WALKTHROUGH_DIR` to
 `"$PWD/.docs/images/walkthrough"` when intentionally refreshing the committed
 README walkthrough.
 
+CI runs the same journey in two isolated shards, `core` and `independent`,
+then reports the required `browser` check only if both succeed. Each shard
+retains its own evidence artifact. To reproduce a shard locally, set
+`OPENWISH_BROWSER_SHARD=core` or `OPENWISH_BROWSER_SHARD=independent`;
+without it the script runs the complete gate. The core shard also runs the
+PostgreSQL concurrency and dependent-cleanup checks; the independent shard
+includes the responsive sweep, feature and occasion journeys, and separately
+seedable journeys. Logs include
+per-journey durations to help identify future bottlenecks.
+
 See [SCREENSHOTS.md](SCREENSHOTS.md) for where permanent documentation,
 pull-request evidence, and release assets belong.
 

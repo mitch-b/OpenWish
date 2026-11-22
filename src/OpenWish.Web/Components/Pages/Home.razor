@@ -95,30 +95,68 @@
 
         @if (_userId != null)
         {
-            <form class="quick-add-panel" method="get" action="/add" @onsubmit="SubmitQuickAdd" @onsubmit:preventDefault="true">
-                <label for="dashboard-quick-add" class="quick-add-label">
-                    <span class="quick-add-icon" aria-hidden="true"><OpenWishIcon Name="plus-lg" /></span>
-                    Quick add an idea
-                </label>
-                <div class="quick-add-row">
-                    <input id="dashboard-quick-add"
-                           name="text"
-                           class="form-control"
-                           type="text"
-                           inputmode="url"
-                           autocomplete="off"
-                           enterkeyhint="go"
-                           spellcheck="false"
-                           aria-describedby="dashboard-quick-add-help"
-                           placeholder="Paste a store link or type an idea"
-                           @bind="_quickAddText"
-                           @bind:event="oninput" />
-                    <button type="submit" class="btn btn-primary">Add</button>
-                </div>
-                <p id="dashboard-quick-add-help" class="quick-add-help">
-                    Then choose a wishlist. <a href="/add">More ways to add, like sharing from your phone</a>
-                </p>
-            </form>
+            <aside class="attention-panel" aria-labelledby="attention-title">
+                <h2 id="attention-title">Needs attention</h2>
+                @if (PendingEventInvitationCount > 0 ||
+                     PendingFriendRequestCount > 0 ||
+                     GiftsToBuyCount > 0 ||
+                     Reminders is { Count: > 0 })
+                {
+                    <div class="attention-list">
+                        @if (PendingEventInvitationCount > 0)
+                        {
+                            <a href="/events" class="attention-item">
+                                <span class="attention-icon attention-warm" aria-hidden="true"><OpenWishIcon Name="envelope" /></span>
+                                <span class="attention-copy">
+                                    <strong>Event invitations</strong>
+                                    <small>@PendingEventInvitationCount waiting for you</small>
+                                </span>
+                                <span class="count-pill" aria-hidden="true">@PendingEventInvitationCount</span>
+                            </a>
+                        }
+                        @if (PendingFriendRequestCount > 0)
+                        {
+                            <a href="/friends?section=requests" class="attention-item">
+                                <span class="attention-icon attention-warm" aria-hidden="true"><OpenWishIcon Name="person-plus" /></span>
+                                <span class="attention-copy">
+                                    <strong>Friend requests</strong>
+                                    <small>@PendingFriendRequestCount waiting for you</small>
+                                </span>
+                                <span class="count-pill" aria-hidden="true">@PendingFriendRequestCount</span>
+                            </a>
+                        }
+                        @foreach (var reminder in Reminders ?? [])
+                        {
+                            <a href="@reminder.Href" class="attention-item" data-testid="occasion-reminder">
+                                <span class="attention-icon attention-warm" aria-hidden="true"><OpenWishIcon Name="@reminder.Icon" /></span>
+                                <span class="attention-copy">
+                                    <strong>@reminder.Title</strong>
+                                    <small>@reminder.Detail</small>
+                                </span>
+                                <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
+                            </a>
+                        }
+                        @if (GiftsToBuyCount > 0)
+                        {
+                            <a href="/gift-plan" class="attention-item" data-testid="attention-gifts-to-buy">
+                                <span class="attention-icon attention-cool" aria-hidden="true"><OpenWishIcon Name="card-checklist" /></span>
+                                <span class="attention-copy">
+                                    <strong>Gifts still to buy</strong>
+                                    <small>@GiftsToBuyCount @(GiftsToBuyCount == 1 ? "gift" : "gifts") on your gift plan</small>
+                                </span>
+                                <span class="count-pill" aria-hidden="true">@GiftsToBuyCount</span>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="attention-empty">
+                        <OpenWishIcon Name="check-circle" />
+                        <span>You're all caught up. No invitations, requests, or gifts are waiting on you.</span>
+                    </p>
+                }
+            </aside>
 
             @if (Checklist is { IsVisible: true } checklist)
             {
@@ -130,10 +168,10 @@
                         </div>
                         <button type="button"
                                 class="btn btn-quiet btn-sm"
-                                disabled="@_isDismissingChecklist"
+                                disabled="@(_isDismissingChecklist || !RendererInfo.IsInteractive)"
                                 aria-label="Dismiss the get started checklist"
                                 @onclick="DismissChecklist">
-                            Dismiss
+                            @(_isDismissingChecklist ? "Dismissing..." : "Dismiss")
                         </button>
                     </div>
                     <ol class="checklist-steps">
@@ -147,7 +185,7 @@
                                 </span>
                                 @if (!step.IsDone)
                                 {
-                                    <a href="@step.Href" class="btn btn-outline-primary btn-sm">@step.ActionText</a>
+                                    <a href="@step.Href" class="btn btn-outline-secondary btn-sm">@step.ActionText</a>
                                 }
                             </li>
                         }
@@ -155,199 +193,88 @@
                 </section>
             }
 
-            @if (UpcomingBirthdays is { Count: 0 } && BirthdayCalendarCount > 0)
-            {
-                <section class="birthday-panel" aria-labelledby="birthday-calendar-title" data-testid="birthday-calendar-panel">
-                    <h2 id="birthday-calendar-title">Friends' birthdays</h2>
-                    <p class="mb-0">None in the next 30 days.</p>
-                    <a class="btn btn-outline-secondary btn-sm birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
-                        Add friends' birthdays to your calendar
-                    </a>
-                </section>
-            }
+            <div class="dashboard-tools @(HasBirthdayPanel ? "dashboard-tools-split" : string.Empty)">
+                <form class="quick-add-panel" method="get" action="/add" @onsubmit="SubmitQuickAdd" @onsubmit:preventDefault="true">
+                    <label for="dashboard-quick-add" class="quick-add-label">
+                        <span class="quick-add-icon" aria-hidden="true"><OpenWishIcon Name="plus-lg" /></span>
+                        Quick add an idea
+                    </label>
+                    <div class="quick-add-row">
+                        <input id="dashboard-quick-add"
+                               name="text"
+                               class="form-control"
+                               type="text"
+                               inputmode="url"
+                               autocomplete="off"
+                               enterkeyhint="go"
+                               spellcheck="false"
+                               aria-describedby="dashboard-quick-add-help"
+                               placeholder="Paste a link or type an idea"
+                               @bind="_quickAddText"
+                               @bind:event="oninput" />
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                    <p id="dashboard-quick-add-help" class="quick-add-help">
+                        Then choose a wishlist. <a href="/add">More ways to add</a>
+                    </p>
+                </form>
 
-            @if (UpcomingBirthdays is { Count: > 0 })
-            {
-                <section class="birthday-panel" aria-labelledby="birthday-title" data-testid="upcoming-birthdays">
-                    <h2 id="birthday-title">Birthdays coming up</h2>
-                    <ul class="birthday-list">
-                        @foreach (var birthday in UpcomingBirthdays)
-                        {
-                            <li data-testid="upcoming-birthday">
-                                <span class="birthday-copy">
-                                    <strong>@birthday.UserName</strong>
-                                    <small>@BirthdayCalendar.Format(birthday.Month, birthday.Day) &middot; @BirthdayCountdown(birthday.DaysUntil)</small>
-                                    @if (BirthdayGiftsToBuy is not null && BirthdayGiftsToBuy.TryGetValue(birthday.FriendKey, out var toBuy))
+                @if (UpcomingBirthdays is { Count: 0 } && BirthdayCalendarCount > 0)
+                {
+                    <section class="birthday-panel" aria-labelledby="birthday-calendar-title" data-testid="birthday-calendar-panel">
+                        <h2 id="birthday-calendar-title">Friends' birthdays</h2>
+                        <p class="birthday-none">None in the next 30 days.</p>
+                        <a class="birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
+                            <OpenWishIcon Name="calendar-event" /> Add friends' birthdays to your calendar
+                        </a>
+                    </section>
+                }
+
+                @if (UpcomingBirthdays is { Count: > 0 })
+                {
+                    <section class="birthday-panel" aria-labelledby="birthday-title" data-testid="upcoming-birthdays">
+                        <h2 id="birthday-title">Birthdays coming up</h2>
+                        <ul class="birthday-list">
+                            @foreach (var birthday in UpcomingBirthdays)
+                            {
+                                <li data-testid="upcoming-birthday">
+                                    <span class="birthday-copy">
+                                        <strong>@birthday.UserName</strong>
+                                        <small>@BirthdayCalendar.Format(birthday.Month, birthday.Day) &middot; @BirthdayCountdown(birthday.DaysUntil)</small>
+                                        @if (BirthdayGiftsToBuy is not null && BirthdayGiftsToBuy.TryGetValue(birthday.FriendKey, out var toBuy))
+                                        {
+                                            <small class="birthday-gift-nudge" data-testid="birthday-gift-nudge">
+                                                <a href="/gift-plan">@BirthdayGiftNudge.Describe(toBuy)</a>
+                                            </small>
+                                        }
+                                    </span>
+                                    @if (birthday.WishlistPublicId is not null)
                                     {
-                                        <small class="birthday-gift-nudge" data-testid="birthday-gift-nudge">
-                                            <a href="/gift-plan">@BirthdayGiftNudge.Describe(toBuy)</a>
-                                        </small>
+                                        <a class="btn btn-outline-secondary btn-sm" href="/wishlists/@birthday.WishlistPublicId">
+                                            View list<span class="visually-hidden"> for @birthday.UserName</span>
+                                        </a>
                                     }
-                                </span>
-                                @if (birthday.WishlistPublicId is not null)
-                                {
-                                    <a class="btn btn-outline-primary btn-sm" href="/wishlists/@birthday.WishlistPublicId">
-                                        View list<span class="visually-hidden"> for @birthday.UserName</span>
-                                    </a>
-                                }
-                            </li>
-                        }
-                    </ul>
-                    <a class="btn btn-outline-secondary btn-sm birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
-                        Add friends' birthdays to your calendar
-                    </a>
-                </section>
-            }
-
-            <div class="dashboard-grid">
-                <section class="action-panel">
-                    <div class="section-intro">
-                        <div>
-                            <h2>Pick your next step</h2>
-                            <p>Start with the plan your group needs today.</p>
-                        </div>
-                    </div>
-                    <div class="action-grid">
-                        <a href="/wishlists/new" class="action-tile @(IsFirstWishlist ? "action-tile-primary" : string.Empty)">
-                            <span class="action-icon"><OpenWishIcon Name="plus-lg" /></span>
-                            <span><strong>@(IsFirstWishlist ? "Create your first wishlist" : "New wishlist")</strong><small>Capture gift ideas</small></span>
-                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                                </li>
+                            }
+                        </ul>
+                        <a class="birthday-calendar-link" href="/api/birthdays/calendar.ics" download="openwish-birthdays.ics" data-testid="birthday-calendar-download">
+                            <OpenWishIcon Name="calendar-event" /> Add friends' birthdays to your calendar
                         </a>
-                        <a href="/events/new" class="action-tile @(IsFirstWishlist ? string.Empty : "action-tile-primary")">
-                            <span class="action-icon"><OpenWishIcon Name="gift" /></span>
-                            <span><strong>Gift exchange</strong><small>Set up private assignments</small></span>
-                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
-                        </a>
-                        <a href="/friends" class="action-tile">
-                            <span class="action-icon"><OpenWishIcon Name="people" /></span>
-                            <span><strong>Friends</strong><small>Manage your circle</small></span>
-                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
-                        </a>
-                        <a href="/wishlists" class="action-tile">
-                            <span class="action-icon"><OpenWishIcon Name="list-ul" /></span>
-                            <span><strong>All wishlists</strong><small>Browse and organize</small></span>
-                            <OpenWishIcon Name="arrow-right" Class="action-arrow" />
-                        </a>
-                    </div>
-                </section>
-
-                <aside class="attention-panel">
-                    <div class="section-intro">
-                        <div>
-                            <h2>Needs attention</h2>
-                            <p>Invitations and plans waiting for you.</p>
-                        </div>
-                    </div>
-                    <div class="attention-list">
-                        @if (PendingEventInvitationCount > 0)
-                        {
-                            <a href="/events" class="attention-item">
-                                <span class="attention-icon attention-warm"><OpenWishIcon Name="envelope" /></span>
-                                <span class="attention-copy">
-                                    <strong>Event invitations</strong>
-                                    <small>@PendingEventInvitationCount waiting for you</small>
-                                </span>
-                                <span class="count-pill">@PendingEventInvitationCount</span>
-                            </a>
-                        }
-                        @if (PendingFriendRequestCount > 0)
-                        {
-                            <a href="/friends?section=requests" class="attention-item">
-                                <span class="attention-icon attention-warm"><OpenWishIcon Name="person-plus" /></span>
-                                <span class="attention-copy">
-                                    <strong>Friend requests</strong>
-                                    <small>@PendingFriendRequestCount waiting for you</small>
-                                </span>
-                                <span class="count-pill">@PendingFriendRequestCount</span>
-                            </a>
-                        }
-                        @if (UpcomingEventCount > 0)
-                        {
-                            <a href="/events" class="attention-item">
-                                <span class="attention-icon attention-cool"><OpenWishIcon Name="calendar-event" /></span>
-                                <span class="attention-copy">
-                                    <strong>Upcoming events</strong>
-                                    <small>@UpcomingEventCount in the next 30 days</small>
-                                </span>
-                                <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
-                            </a>
-                        }
-                        @if (GiftsToBuyCount > 0)
-                        {
-                            <a href="/gift-plan" class="attention-item" data-testid="attention-gifts-to-buy">
-                                <span class="attention-icon attention-cool"><OpenWishIcon Name="card-checklist" /></span>
-                                <span class="attention-copy">
-                                    <strong>Gifts still to buy</strong>
-                                    <small>@GiftsToBuyCount @(GiftsToBuyCount == 1 ? "gift" : "gifts") on your gift plan</small>
-                                </span>
-                                <span class="count-pill">@GiftsToBuyCount</span>
-                            </a>
-                        }
-                        @foreach (var reminder in Reminders ?? [])
-                        {
-                            <a href="@reminder.Href" class="attention-item" data-testid="occasion-reminder">
-                                <span class="attention-icon attention-warm"><OpenWishIcon Name="@reminder.Icon" /></span>
-                                <span class="attention-copy">
-                                    <strong>@reminder.Title</strong>
-                                    <small>@reminder.Detail</small>
-                                </span>
-                                <OpenWishIcon Name="chevron-right" Class="attention-arrow" />
-                            </a>
-                        }
-                        @if (PendingEventInvitationCount == 0 &&
-                             PendingFriendRequestCount == 0 &&
-                             UpcomingEventCount == 0 &&
-                             GiftsToBuyCount == 0 &&
-                             Reminders is not { Count: > 0 })
-                        {
-                            <div class="attention-empty">
-                                <span class="attention-icon attention-cool"><OpenWishIcon Name="check-circle" /></span>
-                                <span><strong>You're all caught up</strong><small>No invitations or events need attention.</small></span>
-                            </div>
-                        }
-                    </div>
-                </aside>
+                    </section>
+                }
             </div>
         }
 
         @if (FeaturedWishlists != null || Events != null)
         {
             <div class="collection-grid">
-                <section class="collection-section">
+                <section class="collection-section collection-events" aria-labelledby="coming-up-title">
                     <div class="section-intro section-intro-row">
                         <div>
-                            <h2>Recently updated</h2>
-                            <p>Wishlists with new ideas or activity.</p>
+                            <h2 id="coming-up-title">@(ShowsOnlyPastEvents ? "Recent events" : "Coming up")</h2>
+                            <p>@ComingUpSummary</p>
                         </div>
-                        <a href="/wishlists">View all <OpenWishIcon Name="arrow-right" /></a>
-                    </div>
-                    @if (FeaturedWishlists?.Any() == true)
-                    {
-                        <div class="collection-list">
-                            @foreach (var wishlist in FeaturedWishlists.Take(3))
-                            {
-                                <WishlistCard Wishlist="@wishlist.ToWishlistModel()" ItemCount="@wishlist.ItemCount" OnDelete="@HandleWishlistDeleted" />
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="empty-state compact">
-                            <OpenWishIcon Name="gift" />
-                            <h3>Your first wishlist starts here</h3>
-                            <p>Save a few ideas now and make gifting easier later.</p>
-                            <a href="/wishlists/new" class="btn btn-primary">Create a wishlist</a>
-                        </div>
-                    }
-                </section>
-
-                <section class="collection-section">
-                    <div class="section-intro section-intro-row">
-                        <div>
-                            <h2>Coming up</h2>
-                            <p>Events and exchanges on your calendar.</p>
-                        </div>
-                        <a href="/events">View all <OpenWishIcon Name="arrow-right" /></a>
+                        <a href="/events">All events <OpenWishIcon Name="arrow-right" /></a>
                     </div>
                     @if (Events?.Any() == true)
                     {
@@ -365,13 +292,76 @@
                     {
                         <div class="empty-state compact">
                             <OpenWishIcon Name="calendar-event" />
-                            <h3>Bring everyone together</h3>
-                            <p>Create an event, invite your people, and let OpenWish handle the details.</p>
-                            <a href="/events/new" class="btn btn-primary">Create an event</a>
+                            <h3>No events yet</h3>
+                            <p>Exchanges and occasions you join or plan show up here.</p>
+                            @if (!IsChecklistVisible)
+                            {
+                                <a href="/events/new" class="btn btn-outline-secondary">Create an event</a>
+                            }
+                        </div>
+                    }
+                </section>
+
+                <section class="collection-section collection-wishlists" aria-labelledby="recent-wishlists-title">
+                    <div class="section-intro section-intro-row">
+                        <div>
+                            <h2 id="recent-wishlists-title">Recently updated</h2>
+                            <p>Wishlists with new ideas or activity.</p>
+                        </div>
+                        <a href="/wishlists">All wishlists <OpenWishIcon Name="arrow-right" /></a>
+                    </div>
+                    @if (FeaturedWishlists?.Any() == true)
+                    {
+                        <div class="collection-list">
+                            @foreach (var wishlist in FeaturedWishlists.Take(3))
+                            {
+                                <WishlistCard Wishlist="@wishlist.ToWishlistModel()" ItemCount="@wishlist.ItemCount" OnDelete="@HandleWishlistDeleted" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state compact">
+                            <OpenWishIcon Name="gift" />
+                            <h3>No wishlists yet</h3>
+                            <p>Save a few ideas so your people know what you'd love.</p>
+                            @if (!IsChecklistVisible)
+                            {
+                                <a href="/wishlists/new" class="btn btn-outline-secondary">Create a wishlist</a>
+                            }
                         </div>
                     }
                 </section>
             </div>
+        }
+
+        @if (_userId != null)
+        {
+            <nav class="action-panel" aria-labelledby="shortcuts-title">
+                <h2 id="shortcuts-title">Shortcuts</h2>
+                <div class="action-grid">
+                    <a href="/wishlists/new" class="action-tile @(IsFirstWishlist ? "action-tile-primary" : string.Empty)">
+                        <span class="action-icon" aria-hidden="true"><OpenWishIcon Name="plus-lg" /></span>
+                        <span><strong>@(IsFirstWishlist ? "Create your first wishlist" : "New wishlist")</strong><small>Capture gift ideas</small></span>
+                        <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                    </a>
+                    <a href="/events/new" class="action-tile @(IsFirstWishlist ? string.Empty : "action-tile-primary")">
+                        <span class="action-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
+                        <span><strong>Gift exchange</strong><small>Set up private assignments</small></span>
+                        <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                    </a>
+                    <a href="/friends" class="action-tile">
+                        <span class="action-icon" aria-hidden="true"><OpenWishIcon Name="people" /></span>
+                        <span><strong>Friends</strong><small>Manage your circle</small></span>
+                        <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                    </a>
+                    <a href="/gift-plan" class="action-tile">
+                        <span class="action-icon" aria-hidden="true"><OpenWishIcon Name="card-checklist" /></span>
+                        <span><strong>Gift plan</strong><small>Track what you're buying</small></span>
+                        <OpenWishIcon Name="arrow-right" Class="action-arrow" />
+                    </a>
+                </div>
+            </nav>
         }
         }
         </div>
@@ -474,6 +464,16 @@
         BirthdayCalendarCount is not null;
 
     private bool IsFirstWishlist => FeaturedWishlists?.Count == 0;
+
+    private bool HasBirthdayPanel =>
+        UpcomingBirthdays is { Count: > 0 } ||
+        (UpcomingBirthdays is { Count: 0 } && BirthdayCalendarCount > 0);
+
+    private bool IsChecklistVisible => Checklist is { IsVisible: true };
+
+    private bool ShowsOnlyPastEvents => Events is { Count: > 0 } && Events.All(evt => DashboardWelcome.GetDaysUntil(evt.Date, DateTimeOffset.UtcNow) < 0);
+
+    private string ComingUpSummary => DashboardEventOrder.DescribeUpcoming(UpcomingEventCount ?? 0);
 
     private void SubmitQuickAdd()
     {
@@ -617,7 +617,10 @@
             _eventsForWelcome = allEvents
                 .OrderByDescending(GetEventActivityTimestamp)
                 .ToList();
-            Events = _eventsForWelcome.Take(3).Select(DashboardEventCard.From).ToList();
+            Events = DashboardEventOrder.ForDashboard(allEvents, DateTimeOffset.UtcNow)
+                .Take(3)
+                .Select(DashboardEventCard.From)
+                .ToList();
 
             UpcomingEventCount = DashboardWelcome.GetUpcomingEvents(allEvents, DateTimeOffset.UtcNow).Count();
             Reminders = DashboardReminders.For(allEvents, _userId, DateTimeOffset.UtcNow).ToList();

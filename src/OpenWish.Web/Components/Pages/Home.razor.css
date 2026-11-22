@@ -237,132 +237,121 @@
     }
 }
 
-.quick-add-panel {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.5rem 1rem;
+/* Needs attention: the first thing after the welcome, laid out as inset rows. */
+.attention-panel {
     margin-bottom: 1.5rem;
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--color-border-muted);
-    border-radius: 1rem;
-    background: var(--color-surface);
-    box-shadow: var(--shadow-sm);
 }
 
-.quick-add-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin: 0;
-    font-weight: 700;
+.attention-panel h2,
+.action-panel h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.2rem;
 }
 
-.quick-add-icon {
+.attention-list {
     display: grid;
-    width: 2.25rem;
-    height: 2.25rem;
-    place-items: center;
-    border-radius: 0.7rem;
-    background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: 0.75rem;
 }
 
-.quick-add-row {
+.attention-item {
     display: flex;
-    gap: 0.5rem;
-}
-
-.quick-add-row .form-control,
-.quick-add-row .btn {
-    min-height: 2.75rem;
-}
-
-.quick-add-row .btn {
-    flex: 0 0 auto;
-    padding-inline: 1.25rem;
-}
-
-.quick-add-help {
-    grid-column: 2;
-    margin: 0;
-    color: var(--color-text-muted);
-    font-size: 0.86rem;
-}
-
-.quick-add-help a {
-    font-weight: 700;
-}
-
-@media (max-width: 767.98px) {
-    .quick-add-panel {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .quick-add-help {
-        grid-column: 1;
-    }
-}
-
-.birthday-panel {
-    margin-bottom: 1.5rem;
-    padding: 1.1rem 1.25rem;
+    min-height: 4rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
     border: 1px solid var(--color-border-muted);
-    border-radius: 1rem;
+    border-radius: 0.8rem;
     background: var(--color-surface);
-    box-shadow: var(--shadow-sm);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: border-color .16s ease, background-color .16s ease;
 }
 
-.birthday-panel h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15rem;
+.attention-item:hover {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 44%, var(--color-border));
+    background: var(--color-surface-hover);
+    color: var(--color-text);
 }
 
-.birthday-list {
-    display: grid;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.birthday-list li {
+.attention-copy {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.birthday-gift-nudge a {
-    font-weight: 600;
-}
-
-.birthday-calendar-link {
-    margin-top: 0.75rem;
-    min-height: 2.75rem;
-    display: inline-flex;
-    align-items: center;
-}
-
-.birthday-copy {
-    display: grid;
     min-width: 0;
-}
-
-.birthday-copy strong {
+    flex: 1;
+    flex-direction: column;
     overflow-wrap: anywhere;
 }
 
-.birthday-copy small {
+.attention-item small {
+    margin-top: 0.15rem;
     color: var(--color-text-muted);
+    font-size: 0.84rem;
 }
 
-.birthday-list .btn {
-    min-height: 2.75rem;
-    display: inline-flex;
+.attention-empty {
+    display: flex;
     align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface-alt);
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
 }
 
+.attention-empty ::deep .ow-icon {
+    flex: 0 0 auto;
+    color: var(--color-success-text);
+    font-size: 1.1rem;
+}
+
+.attention-item ::deep .attention-arrow {
+    width: 0.9rem;
+    flex: 0 0 auto;
+    color: var(--color-text-subtle);
+}
+
+.attention-icon,
+.action-icon,
+.feature-icon {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+    font-size: 1.1rem;
+}
+
+.attention-warm {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.attention-cool {
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.count-pill {
+    display: grid;
+    flex: 0 0 auto;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding-inline: 0.4rem;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--color-primary-bg);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+/* First-run checklist */
 .checklist-panel {
     margin-bottom: 1.5rem;
     padding: 1.1rem 1.25rem;
@@ -412,6 +401,7 @@
     padding: 0.7rem 0.85rem;
     border: 1px solid var(--color-border-muted);
     border-radius: 0.8rem;
+    background: var(--color-surface-alt);
 }
 
 .checklist-check {
@@ -430,11 +420,12 @@
     display: grid;
     flex: 1 1 auto;
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 .checklist-copy small {
     color: var(--color-text-muted);
+    font-size: 0.84rem;
 }
 
 .checklist-step .btn {
@@ -442,30 +433,156 @@
     min-height: 2.75rem;
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
 }
 
-@media (max-width: 767.98px) {
-    .checklist-steps {
-        grid-template-columns: minmax(0, 1fr);
-    }
-}
-
-.dashboard-grid {
+/* Quick add and birthdays share a row on wide screens. */
+.dashboard-tools {
     display: grid;
-    grid-template-columns: minmax(0, 1.55fr) minmax(20rem, .75fr);
-    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
     margin-bottom: 2.5rem;
 }
 
-.action-panel,
-.attention-panel {
-    padding: 1.35rem;
+.dashboard-tools-split {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    align-items: start;
+}
+
+.quick-add-panel,
+.birthday-panel {
+    padding: 1rem 1.25rem;
     border: 1px solid var(--color-border-muted);
     border-radius: 1rem;
     background: var(--color-surface);
     box-shadow: var(--shadow-sm);
 }
 
+.quick-add-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem 1rem;
+}
+
+.dashboard-tools-split .quick-add-panel {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.quick-add-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    font-weight: 700;
+}
+
+.quick-add-icon {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border-radius: 0.7rem;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+}
+
+.quick-add-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.quick-add-row .form-control,
+.quick-add-row .btn {
+    min-height: 2.75rem;
+}
+
+.quick-add-row .btn {
+    flex: 0 0 auto;
+    padding-inline: 1.25rem;
+}
+
+.quick-add-help {
+    grid-column: 2;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.dashboard-tools-split .quick-add-help {
+    grid-column: 1;
+}
+
+.quick-add-help a {
+    font-weight: 700;
+}
+
+.birthday-panel h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+}
+
+.birthday-none {
+    margin: 0;
+    color: var(--color-text-muted);
+}
+
+.birthday-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.birthday-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.birthday-gift-nudge a {
+    font-weight: 600;
+}
+
+.birthday-calendar-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.birthday-calendar-link:hover {
+    text-decoration: underline;
+}
+
+.birthday-copy {
+    display: grid;
+    min-width: 0;
+}
+
+.birthday-copy strong {
+    overflow-wrap: anywhere;
+}
+
+.birthday-copy small {
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.birthday-list .btn {
+    flex: 0 0 auto;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Events and wishlists */
 .section-intro h2 {
     margin: 0;
     font-size: 1.2rem;
@@ -487,134 +604,19 @@
 .section-intro-row > a {
     display: inline-flex;
     flex: 0 0 auto;
+    min-height: 2.75rem;
     align-items: center;
     gap: 0.35rem;
-    font-size: 0.86rem;
+    font-size: 0.88rem;
     font-weight: 700;
     text-decoration: none;
-}
-
-.action-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-    margin-top: 1rem;
-}
-
-.action-tile {
-    display: flex;
-    min-height: 5rem;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 0.9rem;
-    border: 1px solid var(--color-border-muted);
-    border-radius: 0.8rem;
-    background: var(--color-surface-alt);
-    color: var(--color-text);
-    text-decoration: none;
-    transition: border-color .16s ease, background-color .16s ease, transform .16s ease;
-}
-
-.action-tile:hover {
-    border-color: color-mix(in srgb, var(--color-primary-bg) 44%, var(--color-border));
-    background: var(--color-primary-soft);
-    color: var(--color-text);
-    transform: translateY(-2px);
-}
-
-.action-icon,
-.attention-icon,
-.feature-icon {
-    display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 0.75rem;
-    background: var(--color-primary-soft);
-    color: var(--color-primary-bg);
-    font-size: 1.15rem;
-}
-
-.action-tile > span:nth-child(2),
-.attention-copy,
-.attention-empty > span:last-child {
-    display: flex;
-    min-width: 0;
-    flex: 1;
-    flex-direction: column;
-}
-
-.action-tile small,
-.attention-item small,
-.attention-empty small {
-    margin-top: 0.18rem;
-    color: var(--color-text-muted);
-    font-size: 0.78rem;
-}
-
-.action-arrow,
-.attention-arrow {
-    width: 0.9rem;
-    color: var(--color-text-subtle);
-}
-
-.action-tile-primary .action-icon {
-    background: var(--color-accent-soft);
-    color: var(--color-accent);
-}
-
-.attention-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    margin-top: 1rem;
-}
-
-.attention-item,
-.attention-empty {
-    display: flex;
-    min-height: 4.5rem;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 0.8rem;
-    background: var(--color-surface-alt);
-    color: var(--color-text);
-    text-decoration: none;
-}
-
-.attention-item:hover {
-    background: var(--color-surface-hover);
-    color: var(--color-text);
-}
-
-.attention-warm {
-    background: var(--color-warning-bg);
-    color: var(--color-warning-text);
-}
-
-.attention-cool {
-    background: var(--color-info-bg);
-    color: var(--color-info-text);
-}
-
-.count-pill {
-    display: grid;
-    min-width: 1.7rem;
-    height: 1.7rem;
-    place-items: center;
-    border-radius: 999px;
-    background: var(--color-text);
-    color: var(--color-bg);
-    font-size: 0.75rem;
-    font-weight: 800;
 }
 
 .collection-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem;
+    margin-bottom: 2.5rem;
 }
 
 .collection-section {
@@ -624,15 +626,15 @@
 .collection-list {
     display: grid;
     gap: 0.8rem;
-    margin-top: 1rem;
+    margin-top: 0.75rem;
 }
 
 .compact {
-    margin-top: 1rem;
-    padding: 2rem;
+    margin-top: 0.75rem;
+    padding: 1.75rem 1.25rem;
 }
 
-.compact > .ow-icon {
+.compact ::deep .ow-icon {
     width: 2rem;
     height: 2rem;
     margin-bottom: 0.75rem;
@@ -641,6 +643,62 @@
 
 .compact h3 {
     font-size: 1.05rem;
+}
+
+/* Shortcuts: quiet, compact links at the end of the page. */
+.action-panel {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border-muted);
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.action-tile {
+    display: flex;
+    min-height: 4rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border-muted);
+    border-radius: 0.8rem;
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+    transition: border-color .16s ease, background-color .16s ease;
+}
+
+.action-tile:hover {
+    border-color: color-mix(in srgb, var(--color-primary-bg) 44%, var(--color-border));
+    background: var(--color-primary-soft);
+    color: var(--color-text);
+}
+
+.action-tile > span:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+}
+
+.action-tile small {
+    margin-top: 0.15rem;
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
+
+.action-tile ::deep .action-arrow {
+    width: 0.9rem;
+    flex: 0 0 auto;
+    color: var(--color-text-subtle);
+}
+
+.action-tile-primary .action-icon {
+    background: var(--color-accent-soft);
+    color: var(--color-accent);
 }
 
 .marketing-hero {
@@ -668,10 +726,30 @@
     color: var(--color-text-muted);
 }
 
+@media (max-width: 1199.98px) {
+    .action-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 991.98px) {
-    .dashboard-grid,
-    .collection-grid {
-        grid-template-columns: 1fr;
+    .collection-grid,
+    .dashboard-tools-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .quick-add-panel {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .quick-add-help {
+        grid-column: 1;
+    }
+
+    .checklist-steps {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -723,8 +801,46 @@
         width: 100%;
     }
 
-    .action-grid {
-        grid-template-columns: 1fr;
+    .attention-panel {
+        margin-bottom: 1.25rem;
+    }
+
+    .dashboard-tools,
+    .collection-grid {
+        margin-bottom: 2rem;
+    }
+
+    .quick-add-panel,
+    .birthday-panel,
+    .checklist-panel {
+        padding: 1rem;
+    }
+
+    .checklist-step {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.5rem 0.75rem;
+        padding: 0.65rem 0.75rem;
+    }
+
+    .checklist-step .btn {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .action-tile {
+        gap: 0.6rem;
+        padding: 0.65rem 0.75rem;
+    }
+
+    .action-tile small,
+    .action-tile ::deep .action-arrow {
+        display: none;
+    }
+
+    .action-icon {
+        width: 2.25rem;
+        height: 2.25rem;
     }
 
     .section-intro-row {

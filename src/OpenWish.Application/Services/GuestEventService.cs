@@ -148,6 +148,7 @@ public sealed class GuestEventService(
             return null;
         }
         var evt = participant.Event!;
+        await context.Entry(evt).Reference(e => e.CreatedBy).LoadAsync();
         var assignment = participant.IsAccepted
             ? await context.GiftExchanges.AsNoTracking().Include(g => g.Receiver).Include(g => g.ReceiverParticipant)
                 .SingleOrDefaultAsync(g => g.EventId == evt.Id && g.GiverParticipantId == participant.Id && !g.Deleted)
@@ -158,7 +159,8 @@ public sealed class GuestEventService(
             participant.IsAccepted, evt.NamesDrawnOn is null, assignment is not null, needsOpening,
             assignment?.PublicId,
             assignment is null || needsOpening ? null :
-                PublicDisplayName.ForGiftRecipient(assignment.Receiver?.UserName, assignment.ReceiverParticipant?.GuestDisplayName));
+                PublicDisplayName.ForGiftRecipient(assignment.Receiver?.UserName, assignment.ReceiverParticipant?.GuestDisplayName),
+            PublicDisplayName.From(evt.CreatedBy?.UserName, string.Empty) is { Length: > 0 } organizer ? organizer : null);
         if (transaction is not null)
         {
             await transaction.CommitAsync();
@@ -261,4 +263,5 @@ public sealed class GuestEventService(
 public sealed record GuestEventSession(string ParticipantPublicId, string TokenHash);
 public sealed record GuestEventView(
     string EventName, DateTimeOffset Date, decimal? Budget, string? Guidance, string? DisplayName,
-    bool Accepted, bool CanRespond, bool HasMatch, bool NeedsOpening, string? AssignmentPublicId, string? RecipientName);
+    bool Accepted, bool CanRespond, bool HasMatch, bool NeedsOpening, string? AssignmentPublicId, string? RecipientName,
+    string? OrganizerName = null);

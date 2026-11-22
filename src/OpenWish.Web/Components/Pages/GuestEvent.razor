@@ -7,103 +7,159 @@
 <PageTitle>Your private gift exchange - OpenWish</PageTitle>
 
 <div class="guest-event">
-    @if (ErrorMessage is not null)
-    {
-        <div class="alert alert-danger" role="alert">@ErrorMessage</div>
-    }
     @if (Declined)
     {
-        <h1>Invitation declined</h1>
-        <p>The organizer can see your response. Ask them for a new invitation if your plans change.</p>
+        <section class="guest-state" aria-labelledby="guest-declined-title">
+            <div class="guest-state-mark" aria-hidden="true"><OpenWishIcon Name="envelope" /></div>
+            <h1 id="guest-declined-title">Invitation declined</h1>
+            <p class="guest-lead">The organizer can see your response. Ask them for a new invitation if your plans change.</p>
+        </section>
     }
     else if (_view is null)
     {
-        <div class="guest-intro-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></div>
-        <h1>A private invitation, just for you</h1>
-        <p>No account is needed. Open the private link from your invitation email to join and see your own match.</p>
-        <noscript><p>Enable JavaScript to safely open the link from your email. Once connected, joining and viewing your match work without JavaScript.</p></noscript>
-        <p class="guest-privacy">Keep your invitation link private. Anyone you forward it to can use it. If it expires or stops working, ask the organizer to resend it.</p>
+        @if (Error == "unavailable")
+        {
+            <section class="guest-state" aria-labelledby="guest-unavailable-title" data-guest-idle>
+                <div class="guest-state-mark guest-state-mark-warning" aria-hidden="true"><OpenWishIcon Name="hourglass-split" /></div>
+                <h1 id="guest-unavailable-title">This link isn't working anymore</h1>
+                <p class="guest-lead" role="alert">@ErrorMessage</p>
+                <p>Links are replaced when names are drawn or access is resent, so check for a newer email about this exchange first.</p>
+            </section>
+        }
+        <section class="@(Error == "unavailable" ? "guest-state guest-connect-only" : "guest-state")" aria-labelledby="guest-intro-title">
+            <div class="guest-state-mark" aria-hidden="true"><OpenWishIcon Name="gift" /></div>
+            <h1 id="guest-intro-title">A private invitation, just for you</h1>
+            <p class="guest-lead">No account needed. Continue to see the gift exchange you're invited to and, once names are drawn, who you're shopping for.</p>
+            @if (ErrorMessage is not null && Error != "unavailable")
+            {
+                <div class="alert alert-danger" role="alert">@ErrorMessage</div>
+            }
+            @AccessForm(false)
+            <p class="guest-hint" data-guest-idle>Open the private link from your invitation email to continue.</p>
+            <noscript><p class="guest-hint">Enable JavaScript to safely open the link from your email. Once connected, joining and viewing your match work without JavaScript.</p></noscript>
+            <p class="guest-privacy"><OpenWishIcon Name="lock" /><span>Keep your invitation link private. Anyone you forward it to can use it. If it expires or stops working, ask the organizer to resend it.</span></p>
+            <p class="guest-account-hint" data-guest-idle>Have an OpenWish account? <a href="/Account/Login">Sign in</a> to see your events.</p>
+        </section>
     }
     else
     {
-        <h1>@_view.EventName</h1>
-        @if (!_view.Accepted && !_view.CanRespond)
-        {
-            <h2>The draw has already started</h2>
-            <p>You weren't included because this invitation wasn't accepted before the draw. Ask the organizer to reset the exchange if you want to join.</p>
-        }
-        else if (!_view.Accepted)
-        {
-            <p>Join this gift exchange without creating an account. Only accepted participants enter the draw.</p>
-            <form method="post" action="/guest/respond" class="guest-response">
-                <AntiforgeryToken />
-                <label for="guest-display-name" class="form-label fw-bold">Your name for the group</label>
-                <input id="guest-display-name" name="displayName" class="form-control" maxlength="80" autocomplete="nickname" aria-describedby="guest-name-help" />
-                <p id="guest-name-help" class="form-text">Use a name your group will recognize. Your email address is not your public name.</p>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" name="response" value="accept" class="btn btn-primary">Accept invitation</button>
-                    <button type="submit" name="response" value="decline" class="btn btn-outline-secondary">Decline</button>
+        @AccessForm(true)
+        <header class="guest-header">
+            <p class="guest-eyebrow"><OpenWishIcon Name="gift" /><span>Private gift exchange</span></p>
+            <h1>@_view.EventName</h1>
+            <p class="guest-invited-by">
+                @(_view.OrganizerName is { } organizer
+                    ? $"{organizer} invited you to this gift exchange."
+                    : "You're invited to this gift exchange.")
+            </p>
+            <dl class="guest-facts">
+                <div>
+                    <dt><OpenWishIcon Name="calendar-event" /><span>Exchange date</span></dt>
+                    <dd><time datetime="@_view.Date.ToString("O")" data-guest-event-date>@_view.Date.UtcDateTime.ToString("MMMM d, yyyy 'at' HH:mm 'UTC'")</time></dd>
                 </div>
-            </form>
-        }
-        else if (!_view.HasMatch)
-        {
-            <h2>You're in, @_view.DisplayName</h2>
-            <p role="status">Your invitation is accepted. The organizer will email a fresh private link when names are drawn.</p>
-        }
-        else if (_view.NeedsOpening)
-        {
-            <h2>A little surprise, just for you</h2>
-            <p>The names are drawn. Open your gift to see who you're shopping for.</p>
-            <form method="post" action="/guest/open">
-                <AntiforgeryToken />
-                <input type="hidden" name="assignmentPublicId" value="@_view.AssignmentPublicId" />
-                <button type="submit" class="guest-gift">
-                    <GiftBoxArt />
-                    <strong>Open my gift</strong>
-                </button>
-            </form>
-        }
-        else
-        {
-            <p class="guest-match-label">You're shopping for</p>
-            <h2 id="guest-match-name" tabindex="-1" class="guest-match-name @(Opened ? "guest-match-opened" : null)">@_view.RecipientName</h2>
-            @if (Opened)
+                @if (_view.Budget.HasValue)
+                {
+                    <div>
+                        <dt><OpenWishIcon Name="cash" /><span>Suggested budget</span></dt>
+                        <dd>@_view.Budget.Value.ToString("C")</dd>
+                    </div>
+                }
+            </dl>
+        </header>
+
+        <section class="guest-step" aria-labelledby="guest-step-title">
+            @if (ErrorMessage is not null)
             {
-                <p role="status">Your match is opened and remembered. Later visits show the name directly.</p>
+                <div class="alert alert-danger" role="alert">@ErrorMessage</div>
             }
-        }
-        <dl class="guest-facts">
-            <div><dt>Gift exchange date</dt><dd><time datetime="@_view.Date.ToString("O")" data-guest-event-date>@_view.Date.UtcDateTime.ToString("MMMM d, yyyy 'at' HH:mm 'UTC'")</time></dd></div>
-            @if (_view.Budget.HasValue)
+            @if (!_view.Accepted && !_view.CanRespond)
             {
-                <div><dt>Suggested budget</dt><dd>@_view.Budget.Value.ToString("C")</dd></div>
+                <h2 id="guest-step-title">The draw has already started</h2>
+                <p>You weren't included because this invitation wasn't accepted before the draw. Ask the organizer to reset the exchange if you want to join.</p>
             }
-        </dl>
+            else if (!_view.Accepted)
+            {
+                <h2 id="guest-step-title">Join the exchange</h2>
+                <p>No account needed. Only people who join are included when names are drawn.</p>
+                <form method="post" action="/guest/respond" class="guest-response">
+                    <AntiforgeryToken />
+                    <label for="guest-display-name" class="form-label fw-bold">Your name for the group</label>
+                    <input id="guest-display-name" name="displayName" class="form-control" maxlength="80" autocomplete="nickname"
+                           aria-describedby="guest-name-help" aria-invalid="@(Error == "name" ? "true" : null)" />
+                    <p id="guest-name-help" class="form-text">Use a name your group will recognize. Your email address is not your public name.</p>
+                    <div class="guest-response-actions">
+                        <button type="submit" name="response" value="accept" class="btn btn-primary">Accept invitation</button>
+                        <button type="submit" name="response" value="decline" class="btn btn-outline-secondary">Decline</button>
+                    </div>
+                </form>
+            }
+            else if (!_view.HasMatch)
+            {
+                <div class="guest-step-mark" aria-hidden="true"><OpenWishIcon Name="check-circle" /></div>
+                <h2 id="guest-step-title">You're in, @_view.DisplayName</h2>
+                <p role="status">Your invitation is accepted. When names are drawn, the organizer will email you a fresh private link to see who you're shopping for.</p>
+                <p class="guest-hint">Nothing else to do for now.</p>
+            }
+            else if (_view.NeedsOpening)
+            {
+                <h2 id="guest-step-title">A little surprise, just for you</h2>
+                <p>The names are drawn. Open your gift to see who you're shopping for.</p>
+                <form method="post" action="/guest/open">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="assignmentPublicId" value="@_view.AssignmentPublicId" />
+                    <button type="submit" class="guest-gift">
+                        <GiftBoxArt />
+                        <strong>Open my gift</strong>
+                    </button>
+                </form>
+            }
+            else
+            {
+                <p class="guest-match-label" id="guest-step-title">You're shopping for</p>
+                <h2 id="guest-match-name" tabindex="-1" class="guest-match-name @(Opened ? "guest-match-opened" : null)">@_view.RecipientName</h2>
+                @if (Opened)
+                {
+                    <p role="status">Your match is opened and remembered. Later visits show the name directly.</p>
+                }
+                else
+                {
+                    <p class="guest-hint">Keep it a surprise until the exchange.</p>
+                }
+            }
+        </section>
+
         @if (!string.IsNullOrWhiteSpace(_view.Guidance))
         {
-            <h2 class="h5">From your organizer</h2>
-            <p class="guest-guidance">@_view.Guidance</p>
+            <section class="guest-guidance" aria-labelledby="guest-guidance-title">
+                <h2 id="guest-guidance-title">From your organizer</h2>
+                <p>@_view.Guidance</p>
+            </section>
         }
-        <p class="guest-privacy">Only your own match is shown here. Guest access does not include wishlists, reservations, comments, or the group's other pairings.</p>
-        <details class="mb-3">
-            <summary>Want to share gift ideas? <span class="text-muted">(optional)</span></summary>
-            <p class="mt-2">Create an account with your invited email to use wishlists. After confirming that email, your participation and opened match carry over.</p>
-            <form method="post" action="/guest/account">
+
+        <p class="guest-privacy">
+            <OpenWishIcon Name="shield-check" />
+            <span>
+                @(_view.Accepted
+                    ? "Only your own match is shown here. Guest access does not include wishlists, reservations, comments, or the group's other pairings."
+                    : "Your email address stays private. The group sees only the name you choose, and you'll only ever see your own match.")
+            </span>
+        </p>
+
+        <footer class="guest-footer">
+            <details class="guest-account">
+                <summary>Want to share gift ideas? <span class="guest-optional">(optional)</span></summary>
+                <p>Create an account with your invited email to use wishlists. After confirming that email, your participation and opened match carry over.</p>
+                <form method="post" action="/guest/account">
+                    <AntiforgeryToken />
+                    <button type="submit" class="btn btn-outline-secondary">Continue with an account</button>
+                </form>
+            </details>
+            <form method="post" action="/guest/leave">
                 <AntiforgeryToken />
-                <button type="submit" class="btn btn-outline-secondary">Continue with an account</button>
+                <button type="submit" class="btn btn-link guest-leave"><OpenWishIcon Name="box-arrow-left" /><span>Close private access on this device</span></button>
             </form>
-        </details>
-        <form method="post" action="/guest/leave">
-            <AntiforgeryToken />
-            <button type="submit" class="btn btn-outline-secondary">Close private access on this device</button>
-        </form>
+        </footer>
     }
-    <form method="post" action="/guest/access" data-guest-access hidden>
-        <AntiforgeryToken />
-        <input type="hidden" name="token" value="" />
-        <button type="submit" class="btn btn-primary btn-lg">Continue with my private invitation</button>
-    </form>
 </div>
 
 @code {
@@ -121,6 +177,20 @@
         "changed" => "The invitation or draw has changed. Open your latest invitation email.",
         "retry" => "Your gift couldn't be opened. Reload this page to check your match before trying again.",
         _ => null
+    };
+
+    // app.js reveals this form only when the page was opened from a private link; the token stays in the URL fragment.
+    private RenderFragment AccessForm(bool switching) => __builder =>
+    {
+        <form method="post" action="/guest/access" class="@(switching ? "guest-access guest-access-switch" : "guest-access")" data-guest-access hidden>
+            <AntiforgeryToken />
+            @if (switching)
+            {
+                <p>You opened a new private link. Continue to switch to that invitation.</p>
+            }
+            <input type="hidden" name="token" value="" />
+            <button type="submit" class="btn btn-primary btn-lg">Continue with my private invitation</button>
+        </form>
     };
 
     protected override async Task OnInitializedAsync()

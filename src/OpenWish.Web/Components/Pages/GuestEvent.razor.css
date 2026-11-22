@@ -6,29 +6,156 @@
 }
 
 .guest-event h1 {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(2rem, 5vw, 2.75rem);
     font-weight: 700;
     line-height: 1.15;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .guest-event h2 {
-    margin-top: 24px;
+    font-size: 1.3rem;
     font-weight: 700;
+    margin: 0 0 8px;
 }
 
 .guest-event p {
-    line-height: 1.65;
+    line-height: 1.6;
 }
 
-.guest-intro-icon {
-    color: var(--color-primary-bg);
+.guest-event .btn {
+    min-height: 44px;
 }
 
-.guest-intro-icon ::deep svg {
+.guest-event ::deep .ow-icon {
+    flex: 0 0 auto;
+}
+
+/* Landing, unavailable and declined states */
+.guest-state-mark {
+    display: inline-grid;
+    place-items: center;
     width: 64px;
     height: 64px;
     margin-bottom: 24px;
+    border-radius: 16px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary-bg);
+}
+
+.guest-state-mark ::deep svg {
+    width: 32px;
+    height: 32px;
+}
+
+.guest-state-mark-warning {
+    background: var(--color-warning-bg);
+    color: var(--color-warning-text);
+}
+
+.guest-lead {
+    font-size: 1.05rem;
+}
+
+.guest-hint {
+    color: var(--color-text-muted);
+}
+
+.guest-account-hint {
+    margin-top: 24px;
+    color: var(--color-text-muted);
+    font-size: .9rem;
+}
+
+.guest-account-hint a {
+    font-weight: 700;
+}
+
+.guest-access {
+    margin: 24px 0;
+}
+
+/* Opened from a private link: app.js reveals the access form, so swap the idle copy for the continue step. */
+.guest-event:has(form[data-guest-access]:not([hidden])) [data-guest-idle] {
+    display: none;
+}
+
+.guest-event:not(:has(form[data-guest-access]:not([hidden]))) .guest-connect-only {
+    display: none;
+}
+
+/* Signed-in guest view */
+.guest-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    color: var(--color-primary-bg);
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.guest-invited-by {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+}
+
+.guest-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 32px;
+    margin: 16px 0 0;
+}
+
+.guest-facts dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-size: .85rem;
+    font-weight: 700;
+}
+
+.guest-facts dd {
+    margin: 2px 0 0;
+    font-weight: 600;
+}
+
+.guest-step {
+    margin: 32px 0 24px;
+    padding: 24px;
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.guest-step > :last-child {
+    margin-bottom: 0;
+}
+
+.guest-step-mark {
+    color: var(--color-success-text);
+    margin-bottom: 8px;
+}
+
+.guest-step-mark ::deep svg {
+    width: 32px;
+    height: 32px;
+}
+
+.guest-response {
+    margin-top: 16px;
+}
+
+.guest-response .form-text {
+    margin: 6px 0 16px;
+}
+
+.guest-response-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .guest-gift {
@@ -37,7 +164,7 @@
     align-items: center;
     gap: 24px;
     padding: 32px;
-    margin: 24px 0;
+    margin: 16px 0 0;
     min-width: 220px;
     border: 1px solid var(--color-border);
     border-radius: 16px;
@@ -74,48 +201,120 @@
     outline-offset: 4px;
 }
 
-.guest-match-name {
-    font-size: clamp(2rem, 6vw, 3.4rem);
-    margin-top: 8px !important;
+.guest-event .guest-match-name {
+    font-size: clamp(2rem, 6vw, 3rem);
+    margin: 4px 0 8px;
 }
 
 .guest-match-label {
-    margin: 24px 0 0;
+    margin: 0;
     color: var(--color-text-muted);
+    font-weight: 700;
 }
 
-.guest-facts {
+.guest-guidance {
+    margin: 0 0 24px;
+    padding: 16px 20px;
+    border-left: 3px solid var(--color-accent);
+    border-radius: 13px;
+    background: var(--color-surface-alt);
+}
+
+.guest-event .guest-guidance h2 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.guest-guidance p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.guest-privacy {
     display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    padding: 24px 0;
+    align-items: flex-start;
+    gap: 8px;
     margin: 24px 0;
-    border-block: 1px solid var(--color-border);
-}
-
-.guest-facts dt, .guest-privacy {
     font-size: .9rem;
     color: var(--color-text-muted);
 }
 
-.guest-facts dd {
-    margin: 8px 0 0;
+.guest-privacy ::deep .ow-icon {
+    margin-top: .2rem;
+    color: var(--color-success-text);
 }
 
-.guest-privacy {
-    margin-top: 24px;
+.guest-footer {
+    display: grid;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--color-border);
 }
 
-.guest-guidance {
-    white-space: pre-wrap;
-}
-
-.guest-response {
-    margin-top: 24px;
-}
-
-.guest-event .btn {
+.guest-account summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     min-height: 44px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guest-account summary::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 150ms ease;
+}
+
+.guest-account[open] summary::before {
+    transform: rotate(45deg);
+}
+
+.guest-account summary::-webkit-details-marker {
+    display: none;
+}
+
+.guest-account summary:focus-visible {
+    outline: 3px solid var(--color-primary-bg);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+.guest-optional {
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+.guest-account > p {
+    margin: 4px 0 12px;
+}
+
+.guest-account > form {
+    margin-bottom: 8px;
+}
+
+.guest-leave {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 0;
+    color: var(--color-text-muted);
+    text-decoration: none;
+}
+
+.guest-leave:hover,
+.guest-leave:focus-visible {
+    color: var(--color-text);
+    text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .guest-account summary::before { transition: none; }
 }
 
 @media (max-width: 640px) {
@@ -123,7 +322,30 @@
         margin: 16px auto;
     }
 
-    .guest-gift {
+    .guest-step {
+        padding: 20px 16px;
+    }
+
+    .guest-gift,
+    .guest-access .btn,
+    .guest-response-actions .btn {
         width: 100%;
     }
+
+    .guest-leave {
+        width: auto;
+    }
+}
+
+.guest-access-switch {
+    margin: 0 0 32px;
+    padding: 16px;
+    border: 1px solid var(--color-info-border);
+    border-radius: 13px;
+    background: var(--color-info-bg);
+    color: var(--color-info-text);
+}
+
+.guest-access-switch p {
+    margin: 0 0 12px;
 }

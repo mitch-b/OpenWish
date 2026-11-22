@@ -154,7 +154,7 @@ else
                 <div class="stat-icon"><OpenWishIcon Name="box-seam" /></div>
                 <div class="stat-content">
                     <div class="stat-value">@_items.Count</div>
-                    <div class="stat-label">Total items</div>
+                    <div class="stat-label">@(_items.Count == 1 ? "Item" : "Items")</div>
                 </div>
             </div>
             @if (!_isOwner)
@@ -185,7 +185,7 @@ else
                 <div class="stat-icon"><OpenWishIcon Name="chat" /></div>
                 <div class="stat-content">
                     <div class="stat-value">@GetCommentCount()</div>
-                    <div class="stat-label">Comments</div>
+                    <div class="stat-label">@(GetCommentCount() == 1 ? "Comment" : "Comments")</div>
                 </div>
             </button>
         </div>

@@ -387,6 +387,55 @@ public class WishlistAuthorizationTests
     }
 
     [Fact]
+    public async Task GetWishlistItemsByPublicIdAsync_OmitsCommenterEmails()
+    {
+        var factory = CreateFactory();
+        var wishlist = CreateWishlist();
+        var commenter = new ApplicationUser { Id = "friend", UserName = "friend", Email = "friend@example.com" };
+        var item = new WishlistItem { Name = "Tea infuser", Wishlist = wishlist };
+        await using (var context = factory.CreateDbContext())
+        {
+            context.Users.Add(commenter);
+            context.WishlistItems.Add(item);
+            context.ItemComments.Add(new ItemComment { WishlistItem = item, UserId = commenter.Id, Text = "Great pick" });
+            await context.SaveChangesAsync();
+        }
+
+        var service = CreateService(factory);
+        var listed = Assert.Single(Assert.Single(await service.GetWishlistItemsByPublicIdAsync(wishlist.PublicId, wishlist.OwnerId)).Comments);
+        var threaded = Assert.Single(await service.GetItemCommentsByPublicIdAsync(wishlist.PublicId, item.Id));
+
+        Assert.Equal("friend", listed.User?.UserName);
+        Assert.Equal(string.Empty, listed.User?.Email);
+        Assert.Equal(string.Empty, threaded.User?.Email);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task EventMembers_SeeSharedEventListsButNotPrivateOnes(bool isPrivate, bool expected)
+    {
+        var factory = CreateFactory();
+        int wishlistId;
+        await using (var context = factory.CreateDbContext())
+        {
+            var organizer = new ApplicationUser { Id = "organizer", UserName = "organizer" };
+            var member = new ApplicationUser { Id = "member", UserName = "member" };
+            var holiday = new Event { Name = "Holiday", CreatedBy = organizer };
+            holiday.EventUsers.Add(new EventUser { User = member, UserId = member.Id, Status = "Accepted" });
+            var wishlist = new Wishlist { Name = "Holiday ideas", OwnerId = organizer.Id, Event = holiday, IsPrivate = isPrivate, IsFriendsOnly = !isPrivate };
+            context.Users.AddRange(organizer, member);
+            context.Wishlists.Add(wishlist);
+            await context.SaveChangesAsync();
+            wishlistId = wishlist.Id;
+        }
+
+        Assert.Equal(expected, await CreateService(factory).CanUserAccessWishlistAsync(wishlistId, "member"));
+        await using var verificationContext = factory.CreateDbContext();
+        Assert.Equal(expected, (await WishlistService.GetAccessibleWishlistIdsAsync(verificationContext, "member", [wishlistId])).Contains(wishlistId));
+    }
+
+    [Fact]
     public async Task UpdateWishlistItemAsync_PreservesPublicId()
     {
         var factory = CreateFactory();

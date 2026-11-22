@@ -15,6 +15,18 @@ public class GiftCoordinationMarkupTests
         Assert.Contains("_hasLoaded = true;", markup, StringComparison.Ordinal);
         Assert.Contains("string.IsNullOrWhiteSpace(commentText) || _loading || _isAdding", markup, StringComparison.Ordinal);
         Assert.Contains("_pendingDeleteComment is null || _loading", markup, StringComparison.Ordinal);
+        Assert.Equal(2, markup.Split("await NotifyCommentsChangedAsync();").Length - 1);
+    }
+
+    [Fact]
+    public void Comments_UpdateTheWishlistCountsAfterAddingOrDeleting()
+    {
+        var list = ReadComponent("WishlistItemList.razor");
+        var details = ReadComponent(Path.Combine("..", "Pages", "Wishlists", "WishlistDetails.razor"));
+
+        Assert.Contains("OnCommentsChanged=\"OnCommentsChanged\"", list, StringComparison.Ordinal);
+        Assert.Equal(3, details.Split("OnCommentsChanged=\"@HandleCommentsChanged\"").Length - 1);
+        Assert.Contains("item.Comments = change.Comments.ToList();", details, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,5 +1,17 @@
 [
   {
+    "version": "0.21.2",
+    "date": "2026-11-22",
+    "title": "Holiday follow-up fixes",
+    "summary": "Private lists on events stay private, and comments and notifications behave as expected.",
+    "highlights": [
+      "Private wishlists attached to an event stay hidden from event members.",
+      "Comment counts and filters update as soon as you comment.",
+      "The notifications panel fits beside the menu on tablets.",
+      "Two-factor settings pages return you to settings instead of an error."
+    ]
+  },
+  {
     "version": "0.21.1",
     "date": "2026-11-22",
     "title": "Ready for the holidays",

@@ -46,7 +46,7 @@ else
         var isTwoFactorEnabled = await UserManager.GetTwoFactorEnabledAsync(user);
         if (!isTwoFactorEnabled)
         {
-            throw new InvalidOperationException("Cannot generate recovery codes for user because they do not have 2FA enabled.");
+            RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", "Error: Turn on two-factor authentication before replacing recovery codes.", HttpContext);
         }
     }
 

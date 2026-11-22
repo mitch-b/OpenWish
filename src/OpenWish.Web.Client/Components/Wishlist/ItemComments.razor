@@ -167,6 +167,11 @@
     [Parameter]
     public bool IsWishlistOwner { get; set; }
 
+    [Parameter]
+    public EventCallback<CommentsChange> OnCommentsChanged { get; set; }
+
+    public sealed record CommentsChange(int ItemId, IReadOnlyList<ItemCommentModel> Comments);
+
     private List<ItemCommentModel> _comments = [];
     private string commentText = "";
     private bool _loading = true;
@@ -266,6 +271,11 @@
         }
     }
 
+    private Task NotifyCommentsChangedAsync() =>
+        OnCommentsChanged.HasDelegate
+            ? OnCommentsChanged.InvokeAsync(new CommentsChange(ItemId, _comments.ToList()))
+            : Task.CompletedTask;
+
     private async Task RetryLoadComments()
     {
         if (_loading)
@@ -302,6 +312,7 @@
                 commentText = "";
                 if (await LoadComments())
                 {
+                    await NotifyCommentsChangedAsync();
                     _statusMessage = "Comment added.";
                     _focusCommentComposer = true;
                 }
@@ -358,6 +369,10 @@
                 var removed = await WishlistService.RemoveItemCommentAsync(commentId, _currentUserId);
                 _pendingDeleteComment = null;
                 var refreshed = await LoadComments();
+                if (refreshed)
+                {
+                    await NotifyCommentsChangedAsync();
+                }
                 if (removed && refreshed)
                 {
                     _statusMessage = "Comment deleted.";

@@ -29,6 +29,16 @@ public class NotificationFlyoutMarkupTests
     }
 
     [Fact]
+    public void Tablet_KeepsTheSheetClearOfTheSidebar()
+    {
+        var css = ReadComponent(_stylesPath);
+
+        Assert.Matches(
+            new Regex(@"@media \(min-width: 641px\) \{\s*\.notification-flyout \{\s*width: min\(26rem, calc\(100vw - 232px - 3rem\)\);", RegexOptions.Singleline),
+            css);
+    }
+
+    [Fact]
     public void Phone_ShowsAFullWidthScrollingSheetBelowTheHeader()
     {
         var css = ReadComponent(_stylesPath);

@@ -805,7 +805,8 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             }
         }
 
-        if (wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
+        // Private lists stay private even when attached to an event; the event only lists shared ones.
+        if (!wishlist.IsPrivate && wishlist.EventId.HasValue && await IsEventMemberAsync(context, wishlist.EventId.Value, userId))
         {
             return true;
         }
@@ -857,7 +858,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Where(w => w.OwnerId == userId ||
                 permitted.Contains(w.Id) ||
                 (!w.IsPrivate && !w.IsFriendsOnly && friendOwners.Contains(w.OwnerId)) ||
-                (w.EventId.HasValue && memberEvents.Contains(w.EventId.Value)))
+                (!w.IsPrivate && w.EventId.HasValue && memberEvents.Contains(w.EventId.Value)))
             .Select(w => w.Id)
             .ToHashSet();
     }
@@ -935,7 +936,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             wishlistId,
             itemId);
 
-        return _mapper.Map<ItemCommentModel>(comment);
+        return SanitizeComments([_mapper.Map<ItemCommentModel>(comment)])[0];
     }
 
     public async Task<IEnumerable<ItemCommentModel>> GetItemCommentsAsync(int wishlistId, int itemId)
@@ -952,7 +953,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .OrderBy(c => c.CreatedOn)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<ItemCommentModel>>(comments);
+        return SanitizeComments(_mapper.Map<List<ItemCommentModel>>(comments));
     }
 
     public async Task<bool> RemoveItemCommentAsync(int commentId, string userId)
@@ -1864,7 +1865,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .ToListAsync();
         var commentsByItem = commentEntities
             .GroupBy(c => c.WishlistItemId)
-            .ToDictionary(g => g.Key, g => _mapper.Map<List<ItemCommentModel>>(g.ToList()));
+            .ToDictionary(g => g.Key, g => SanitizeComments(_mapper.Map<List<ItemCommentModel>>(g.ToList())));
         foreach (var item in itemModels)
         {
             item.Comments = commentsByItem.TryGetValue(item.Id, out var comments) ? comments : [];
@@ -1912,6 +1913,16 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         return itemModels;
+    }
+
+    private static List<ItemCommentModel> SanitizeComments(List<ItemCommentModel> comments)
+    {
+        foreach (var comment in comments.Where(c => c.User is not null))
+        {
+            comment.User!.Email = string.Empty;
+        }
+
+        return comments;
     }
 
     private static void SanitizeReservation(ItemReservationModel reservation, string requestingUserId)

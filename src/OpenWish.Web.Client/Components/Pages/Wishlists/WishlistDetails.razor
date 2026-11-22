@@ -829,7 +829,7 @@ else
                                                      OwnerId="@(_wishlist?.OwnerId ?? string.Empty)"
                                                      ReservationVersion="@(item.Reservations.FirstOrDefault()?.PublicId ?? string.Empty)"
                                                      OnReservationChanged="@RefreshReservationsAsync" />
-                                    <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="false" />
+                                    <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="false" OnCommentsChanged="@HandleCommentsChanged" />
                                 </div>
                             }
 
@@ -893,6 +893,7 @@ else
                                     Budget="ValidBudget"
                                     CurrentUserId="@_currentUserId"
                                     OnReservationChanged="@RefreshReservationsAsync"
+                                    OnCommentsChanged="@HandleCommentsChanged"
                                     @ref="_itemListRef" />
                 }
                 else
@@ -907,6 +908,7 @@ else
                                     Budget="ValidBudget"
                                     CurrentUserId="@_currentUserId"
                                     OnReservationChanged="@RefreshReservationsAsync"
+                                    OnCommentsChanged="@HandleCommentsChanged"
                                     @ref="_itemListRef" />
                 }
             }
@@ -1568,6 +1570,19 @@ else
         !string.IsNullOrEmpty(_currentUserId) && item.Reservations.Any(r => r.UserId == _currentUserId);
 
     private int GetMyReservedCount() => _items.Count(IsReservedByCurrentUser);
+
+    private void HandleCommentsChanged(ItemComments.CommentsChange change)
+    {
+        var item = _items.FirstOrDefault(i => i.Id == change.ItemId);
+        if (item is null)
+        {
+            return;
+        }
+
+        // Keep the comment stat, badges and the "commented" filter in step with the thread.
+        item.Comments = change.Comments.ToList();
+        ApplyFiltersAndSort();
+    }
 
     private async Task RefreshReservationsAsync()
     {

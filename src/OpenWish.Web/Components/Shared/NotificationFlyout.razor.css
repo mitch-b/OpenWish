@@ -55,6 +55,13 @@
     margin-top: 0.5rem;
 }
 
+/* Beside the 232px sidebar, keep the sheet from sliding under it on narrow tablets. */
+@media (min-width: 641px) {
+    .notification-flyout {
+        width: min(26rem, calc(100vw - 232px - 3rem));
+    }
+}
+
 .notification-flyout-backdrop {
     position: fixed;
     inset: 0;

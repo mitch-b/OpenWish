@@ -199,7 +199,7 @@
                                 @if (ExpandedInteractions.Contains(item.Id))
                                 {
                                     <div class="interaction-section">
-                                        <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" />
+                                        <ItemComments WishlistId="@WishlistId" ItemId="@item.Id" IsWishlistOwner="@IsOwner" OnCommentsChanged="OnCommentsChanged" />
                                     </div>
                                 }
                             </div>
@@ -233,6 +233,8 @@
         item.Reservations.FirstOrDefault()?.PublicId ?? string.Empty;
 
     [Parameter] public EventCallback OnReservationChanged { get; set; }
+
+    [Parameter] public EventCallback<ItemComments.CommentsChange> OnCommentsChanged { get; set; }
 
     private HashSet<int> ExpandedInteractions = new();
 

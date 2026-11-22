@@ -140,7 +140,7 @@
                     @if (available.Count > 0)
                     {
                         <div class="circle-add">
-                            <label class="form-label" for="add-@circle.PublicId">Add a friend</label>
+                            <label class="form-label" for="add-@circle.PublicId">Add a friend<span class="visually-hidden"> to @circle.Name</span></label>
                             <div class="circle-add__row">
                                 <select id="add-@circle.PublicId" class="form-select" @onchange="args => _selectedFriend[circle.PublicId] = args.Value?.ToString() ?? string.Empty">
                                     <option value="">Choose a friend...</option>

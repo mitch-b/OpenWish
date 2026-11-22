@@ -6659,7 +6659,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.getByText("Address copied. Paste it into your assistant.", { exact: true }).waitFor({ state: "visible" });
   assertions.push("MCP address copy reports success and actionable clipboard failure");
   const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
-  await connection.getByText("2 ideas added").waitFor({ state: "visible" });
+  await connection.locator(".connected-app-count").getByText("2", { exact: true }).waitFor({ state: "visible" });
   await connection.getByRole("link", { name: listName, exact: true }).first().waitFor({ state: "visible" });
   if (await page.locator('[data-integration-picker]').count() !== 0) {
     throw new Error("The overview must not render permission forms for every connection.");
@@ -6692,7 +6692,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
     if (result.status !== 201) throw new Error(`Scale idea creation failed: ${result.text}`);
   }
   await page.reload({ waitUntil: "domcontentloaded" });
-  await connection.getByText("102 ideas added").waitFor({ state: "visible" });
+  await connection.locator(".connected-app-count").getByText("102", { exact: true }).waitFor({ state: "visible" });
   if (await connection.evaluate(element => element.getBoundingClientRect().height) > compactHeight + 4) {
     throw new Error("A hundred more ideas inflated the connection summary.");
   }

@@ -69,7 +69,7 @@ public class ActivityService(IDbContextFactory<ApplicationDbContext> contextFact
             .ToListAsync();
 
         var accessibleWishlistIds = context.Wishlists
-            .Where(w => !w.Deleted &&
+            .Where(w => !w.Deleted && (!w.IsArchived || w.OwnerId == userId) &&
                 (w.OwnerId == userId ||
                  context.WishlistPermissions.Any(permission =>
                      permission.WishlistId == w.Id &&

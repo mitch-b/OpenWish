@@ -1,9 +1,4 @@
-.integrations-page {
-    max-width: 960px;
-}
-
 .connected-apps-mcp {
-    margin-top: 1rem;
     padding: 1rem;
     border: 1px solid var(--color-primary-border);
     border-radius: 1rem;

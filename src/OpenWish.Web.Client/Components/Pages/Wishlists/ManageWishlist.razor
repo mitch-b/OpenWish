@@ -452,7 +452,14 @@ else
                       IsBusy="@_isDeleting"
                       ErrorMessage="@_deleteErrorMessage"
                       CloseOnConfirm="false"
-                      ConfirmLabel="Delete wishlist" />
+                      ConfirmLabel="Delete wishlist">
+    <Preview>
+        @if (_wishlist is not null)
+        {
+            <DeleteGiftPreview Wishlists="@((WishlistModel[])[_wishlist])" Heading="Gift ideas that will be deleted" IncludeOwnerHistory="true" />
+        }
+    </Preview>
+</WishlistDeleteDialog>
 
 
 @code {

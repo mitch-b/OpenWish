@@ -16,7 +16,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261117013441_AddFriendCircles";
+    public override string LastMigrationId => "20261123124551_AddWishlistArchive";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -1633,6 +1633,9 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
                 b.Property<string>("Icon")
                     .HasColumnType("text");
+
+                b.Property<bool>("IsArchived")
+                    .HasColumnType("boolean");
 
                 b.Property<bool>("IsCollaborative")
                     .HasColumnType("boolean");

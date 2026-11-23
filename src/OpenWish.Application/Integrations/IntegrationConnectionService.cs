@@ -32,7 +32,7 @@ public class IntegrationConnectionService(
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlists = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.OwnerId == userId && !w.Deleted)
+            .Where(w => w.OwnerId == userId && !w.Deleted && !w.IsArchived)
             .OrderByDescending(w => w.UpdatedOn)
             .Select(w => new
             {
@@ -101,7 +101,7 @@ public class IntegrationConnectionService(
         await using var transaction = await LockConnectionAsync(context, userId, approval.ClientId);
         var selected = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.OwnerId == userId && !w.Deleted && (approval.AllowAllWishlists || requestedIds.Contains(w.PublicId)))
+            .Where(w => w.OwnerId == userId && !w.Deleted && !w.IsArchived && (approval.AllowAllWishlists || requestedIds.Contains(w.PublicId)))
             .OrderBy(w => w.Id)
             .Select(w => new { w.Id, w.PublicId })
             .ToListAsync();
@@ -505,7 +505,7 @@ public class IntegrationConnectionService(
 
         var allOwnedWishlists = connections.Any(c => c.AllowAllWishlists)
             ? await context.Wishlists.AsNoTracking()
-                .Where(w => w.OwnerId == userId && !w.Deleted).OrderBy(w => w.Id).ToListAsync()
+                .Where(w => w.OwnerId == userId && !w.Deleted && !w.IsArchived).OrderBy(w => w.Id).ToListAsync()
             : [];
 
         return connections
@@ -513,7 +513,7 @@ public class IntegrationConnectionService(
             {
                 var app = apps[connection.ClientId];
                 var activeAllowed = connection.AllowAllWishlists ? allOwnedWishlists : connection.AllowedWishlists
-                    .Where(a => a.Wishlist is { Deleted: false } wishlist && wishlist.OwnerId == userId)
+                    .Where(a => a.Wishlist is { Deleted: false, IsArchived: false } wishlist && wishlist.OwnerId == userId)
                     .Select(a => a.Wishlist!).OrderBy(w => w.Id).ToList();
                 var effectiveDefaultId = IntegrationWishlistDefaults.Resolve(
                     connection.DefaultWishlistId, activeAllowed.Select(w => w.Id).ToList());
@@ -591,7 +591,7 @@ public class IntegrationConnectionService(
         }
 
         var selected = await context.Wishlists
-            .Where(w => w.OwnerId == userId && !w.Deleted && (allowAllWishlists || requestedIds.Contains(w.PublicId)))
+            .Where(w => w.OwnerId == userId && !w.Deleted && !w.IsArchived && (allowAllWishlists || requestedIds.Contains(w.PublicId)))
             .OrderBy(w => w.Id)
             .Select(w => new { w.Id, w.PublicId })
             .ToListAsync();

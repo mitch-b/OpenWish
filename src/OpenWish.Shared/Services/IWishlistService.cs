@@ -30,7 +30,8 @@ public interface IWishlistService
     /// <summary>Lists all wishlists owned by the specified user.</summary>
     /// <param name="userId">The owner's user ID.</param>
     /// <returns>Collection of wishlist models owned by the user.</returns>
-    Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId);
+    Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId, bool archived = false);
+    Task SetWishlistArchivedAsync(string publicId, string userId, bool archived);
 
     /// <summary>Updates a wishlist by its internal ID.</summary>
     /// <param name="id">The internal wishlist ID.</param>

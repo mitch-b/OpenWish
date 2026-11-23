@@ -73,7 +73,7 @@ public class BirthdayService(IDbContextFactory<ApplicationDbContext> contextFact
         var shown = upcoming.Select(e => e.Friend.Id).ToList();
         var candidates = await context.Wishlists
             .AsNoTracking()
-            .Where(w => !w.Deleted && shown.Contains(w.OwnerId))
+            .Where(w => !w.Deleted && !w.IsArchived && shown.Contains(w.OwnerId))
             .OrderBy(w => w.CreatedOn)
             .Select(w => new { w.Id, w.PublicId, w.OwnerId })
             .ToListAsync();

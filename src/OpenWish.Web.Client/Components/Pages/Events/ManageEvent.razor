@@ -263,9 +263,9 @@ else
         }
         else
         {
-            <p>This is your final confirmation. Once you delete <strong>@_event?.Name</strong>, it cannot be restored.</p>
-            <p class="text-danger mb-0">Permanently delete this event?</p>
+            <p>Permanently delete <strong>@_event?.Name</strong>? Its linked wishlists and gift ideas won't be deleted.</p>
         }
+        <EventDeleteGiftPreview EventPublicId="@_event?.PublicId" />
         @if (!string.IsNullOrWhiteSpace(_deleteError))
         {
             <div class="alert alert-danger mt-3 mb-0" role="alert">@_deleteError</div>

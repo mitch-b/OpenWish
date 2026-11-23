@@ -15,6 +15,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.PublicId, opt => opt.Ignore())
             .ForMember(dest => dest.OwnerId, opt => opt.Ignore())
             .ForMember(dest => dest.Deleted, opt => opt.Ignore())
+            .ForMember(dest => dest.IsArchived, opt => opt.Ignore())
             .ForMember(dest => dest.CreatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedOn, opt => opt.Ignore())
             .ForMember(dest => dest.Items, opt => opt.Ignore()) // do not map from DtoModel to EF entity
@@ -22,6 +23,7 @@ public class OpenWishProfile : Profile
             .ForMember(dest => dest.Event, opt => opt.Ignore())
             .ForMember(dest => dest.EventId, opt => opt.Ignore())
             .ReverseMap()
+            .ForMember(dest => dest.IsArchived, opt => opt.MapFrom(src => src.IsArchived))
             .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))  // map from EF entity to DtoModel
             .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Owner))  // map from EF entity to DtoModel
             .ForMember(dest => dest.Event, opt => opt.Ignore());

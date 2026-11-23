@@ -134,13 +134,13 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         return wishlistModel;
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
+    public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId, bool archived = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
 
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlistEntities = await context.Wishlists
-            .Where(w => !w.Deleted && w.OwnerId == userId)
+            .Where(w => !w.Deleted && w.OwnerId == userId && w.IsArchived == archived)
             .Include(w => w.Items.Where(i => !i.Deleted))
             .Include(w => w.Owner)
             .Include(w => w.Event)
@@ -158,6 +158,26 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         }
 
         return wishlistModels;
+    }
+
+    public async Task SetWishlistArchivedAsync(string publicId, string userId, bool archived)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var wishlist = await context.Wishlists
+            .FirstOrDefaultAsync(w => w.PublicId == publicId && !w.Deleted)
+            ?? throw new KeyNotFoundException($"Wishlist {publicId} not found");
+
+        if (wishlist.OwnerId != userId)
+        {
+            throw new UnauthorizedAccessException("Only the wishlist owner can archive or restore it.");
+        }
+
+        if (wishlist.IsArchived != archived)
+        {
+            wishlist.IsArchived = archived;
+            wishlist.UpdatedOn = DateTimeOffset.UtcNow;
+            await context.SaveChangesAsync();
+        }
     }
 
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlistModel)
@@ -607,7 +627,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var permission = await context.WishlistPermissions
-            .FirstOrDefaultAsync(wp => wp.InvitationToken == token && !wp.Deleted);
+            .FirstOrDefaultAsync(wp => wp.InvitationToken == token && !wp.Deleted && !wp.Wishlist.Deleted && !wp.Wishlist.IsArchived);
 
         if (permission == null)
         {
@@ -681,7 +701,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
             .Include(wp => wp.Wishlist)
                 .ThenInclude(w => w.Items.Where(i => !i.Deleted))
             .Select(wp => wp.Wishlist)
-            .Where(w => !w.Deleted)
+            .Where(w => !w.Deleted && !w.IsArchived)
             .ToListAsync();
 
         var sharedModels = _mapper.Map<List<WishlistModel>>(wishlists);
@@ -700,7 +720,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         await using var context = await _contextFactory.CreateDbContextAsync();
         // Applies the CanUserEditWishlistAsync rules in one query, so wishlist pickers don't check each list separately.
         var wishlistEntities = await context.Wishlists
-            .Where(w => !w.Deleted &&
+            .Where(w => !w.Deleted && !w.IsArchived &&
                 (w.OwnerId == userId ||
                  context.WishlistPermissions.Any(wp =>
                      wp.WishlistId == w.Id &&
@@ -746,7 +766,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         // Get public wishlists (non-private, not friends-only) from friends OR wishlists with explicit permissions
         var wishlists = await context.Wishlists
-            .Where(w => !w.Deleted && !w.IsPrivate &&
+            .Where(w => !w.Deleted && !w.IsArchived && !w.IsPrivate &&
                 ((friendIds.Contains(w.OwnerId) && !w.IsFriendsOnly) ||
                  permittedWishlistIds.Contains(w.Id)))
             .Include(w => w.Owner)
@@ -781,6 +801,11 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
         if (wishlist.OwnerId == userId)
         {
             return true;
+        }
+
+        if (wishlist.IsArchived)
+        {
+            return false;
         }
 
         var hasPermission = await context.WishlistPermissions
@@ -826,7 +851,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
 
         var wishlists = await context.Wishlists
             .AsNoTracking()
-            .Where(w => wishlistIds.Contains(w.Id) && !w.Deleted)
+            .Where(w => wishlistIds.Contains(w.Id) && !w.Deleted && (!w.IsArchived || w.OwnerId == userId))
             .Select(w => new { w.Id, w.OwnerId, w.IsPrivate, w.IsFriendsOnly, w.EventId })
             .ToListAsync();
         var ids = wishlists.Select(w => w.Id).ToList();
@@ -868,7 +893,7 @@ public class WishlistService(IDbContextFactory<ApplicationDbContext> contextFact
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         var wishlist = await context.Wishlists
-            .Where(w => w.Id == wishlistId && !w.Deleted)
+            .Where(w => w.Id == wishlistId && !w.Deleted && (!w.IsArchived || w.OwnerId == userId))
             .Select(w => new { w.OwnerId, w.IsCollaborative, w.IsPrivate, w.EventId })
             .FirstOrDefaultAsync();
 

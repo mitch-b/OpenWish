@@ -265,7 +265,7 @@ public class EventService(
                     .Include(e => e.EventUsers)
                         .ThenInclude(eu => eu.User)
                     .Include(e => e.EventWishlists
-                        .Where(w => !w.Deleted && !w.IsPrivate))
+                        .Where(w => !w.Deleted && !w.IsArchived && !w.IsPrivate))
                         .ThenInclude(ew => ew.Owner)
                     .Include(e => e.GiftExchanges)
                         .ThenInclude(ge => ge.Receiver)
@@ -292,10 +292,10 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted && !w.IsPrivate))
+                .Where(w => !w.Deleted && !w.IsArchived && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted && !w.IsPrivate))
+                .Where(w => !w.Deleted && !w.IsArchived && !w.IsPrivate))
                 .ThenInclude(ew => ew.Items.Where(i => !i.Deleted))
             .Where(e => !e.Deleted &&
                 (e.CreatedBy.Id == userId ||
@@ -342,7 +342,7 @@ public class EventService(
 
         var wishlistEntities = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.EventId == eventId && !w.Deleted && !w.IsPrivate)
+            .Where(w => w.EventId == eventId && !w.Deleted && !w.IsArchived && !w.IsPrivate)
             .Include(w => w.Owner)
             .Include(w => w.Items.Where(i => !i.Deleted))
             .OrderBy(w => w.Name)
@@ -1123,7 +1123,7 @@ public class EventService(
             .Include(e => e.EventUsers)
                 .ThenInclude(eu => eu.User)
             .Include(e => e.EventWishlists
-                .Where(w => !w.Deleted && !w.IsPrivate))
+                .Where(w => !w.Deleted && !w.IsArchived && !w.IsPrivate))
                 .ThenInclude(ew => ew.Owner)
             .Include(e => e.GiftExchanges)
                 .ThenInclude(ge => ge.Receiver)
@@ -1444,6 +1444,7 @@ public class EventService(
                         !r.WishlistItem.Deleted &&
                         r.WishlistItem.Wishlist != null &&
                         !r.WishlistItem.Wishlist.Deleted &&
+                        !r.WishlistItem.Wishlist.IsArchived &&
                         r.WishlistItem.Wishlist.EventId == eventEntity.Id)
             .OrderBy(r => r.ReservationDate)
             .ThenBy(r => r.WishlistItem!.Wishlist!.Name)

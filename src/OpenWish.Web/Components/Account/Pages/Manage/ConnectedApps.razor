@@ -17,10 +17,13 @@
 
 <PageTitle>Integrations</PageTitle>
 
-<div class="container page-shell integrations-page">
-<StatusMessage Message="@errorMessage" />
+<div class="container page-shell">
 <PageHeader Title="Integrations" Description="Send gift ideas from apps and AI assistants straight to the lists you choose." />
+<StatusMessage Message="@errorMessage" />
 
+<PageSections Label="Integration sections" Items="@Sections" Active="@ActiveSection">
+@if (IsMcpSection)
+{
 @if (mcpUrl is not null)
 {
     <section class="connected-apps-mcp" aria-labelledby="mcp-title">
@@ -47,32 +50,29 @@ else
         <p>AI connections are turned off on this OpenWish.</p>
         <details class="connected-apps-help">
             <summary>How to enable AI connections</summary>
-            <p>Ask the person who runs it to enable <code>OpenWishSettings__Integrations__Mcp__Enabled</code>. Add this site's <code>/mcp</code> address to your assistant, then sign in and choose which lists it can use.</p>
+            <p>Ask the person who runs OpenWish to set <code>OpenWishSettings__Integrations__Mcp__Enabled=true</code> and restart OpenWish. Then return here for the connection address.</p>
             <a href="https://github.com/mitch-b/OpenWish/blob/main/.docs/INTEGRATIONS.md#ai-assistants-mcp">MCP setup and supported assistants</a>
         </details>
     </section>
 }
+}
 
+<h2 class="connected-apps-section-title">@(IsMcpSection ? "Connected assistants" : "Connected apps") <span>@visibleConnections.Count</span></h2>
 <p class="connected-apps-privacy"><OpenWishIcon Name="shield-check" /> Choose which lists and ideas each app can use. Reservations, purchases, comments, friends, and hidden surprises stay private.</p>
-
-<h2 class="connected-apps-section-title">Your connections <span>@connections.Count</span></h2>
-@if (connections.Count == 0)
+@if (visibleConnections.Count == 0)
 {
     <section class="connected-apps-empty" aria-labelledby="connected-apps-empty-title">
         <span class="connected-apps-empty-mark" aria-hidden="true"><OpenWishIcon Name="link-45deg" /></span>
         <div>
-            <h3 id="connected-apps-empty-title">No apps are connected</h3>
-            @if (mcpUrl is not null && !Registry.IsEnabled)
+            <h3 id="connected-apps-empty-title">@(IsMcpSection ? "No assistants are connected" : "No apps are connected")</h3>
+            @if (IsMcpSection)
             {
-                <p>Copy the address above into your assistant to get started.</p>
-            }
-            else if (Registry.IsEnabled)
-            {
-                <p>Start from inside one of the apps below. It brings you back here to choose which lists it can use.</p>
+                <p>@(mcpUrl is not null ? "Copy the address above to connect an assistant." : "Enable MCP to connect an assistant.")</p>
             }
             else
             {
-                <p>This OpenWish doesn't have any apps set up yet. The person who runs it can register apps in its settings.</p>
+                <p>@(Registry.IsEnabled ? "Start in one of the apps below to connect it." : "No apps are set up on this OpenWish yet.")</p>
+                <a href="@McpPath">@(mcpUrl is not null ? "Connect an AI assistant with MCP" : "See how to enable MCP")</a>
             }
         </div>
     </section>
@@ -80,7 +80,7 @@ else
 else
 {
     <ul class="connected-apps" role="list">
-        @foreach (var connection in connections)
+        @foreach (var connection in visibleConnections)
         {
             var confirming = string.Equals(DisconnectConnectionId, connection.ConnectionId, StringComparison.Ordinal);
             var editing = string.Equals(EditConnectionId, connection.ConnectionId, StringComparison.Ordinal);
@@ -160,7 +160,7 @@ else
                         <h4 id="disconnect-title-@connection.ConnectionId">Disconnect @connection.AppName?</h4>
                         <p>@connection.AppName will stop adding or changing ideas right away. The @(connection.IdeasAdded == 1 ? "idea" : "ideas") it added stay on your lists, and you can reconnect from the app later.</p>
                         <div class="connected-app-actions">
-                            <a class="btn btn-outline-secondary" href="Account/Manage/ConnectedApps">Keep connected</a>
+                            <a class="btn btn-outline-secondary" href="@SectionPath(connection)">Keep connected</a>
                             <button type="submit" class="btn btn-danger" autofocus>Disconnect @connection.AppName</button>
                         </div>
                     </form>
@@ -199,7 +199,7 @@ else
                             <p class="connected-app-never"><OpenWishIcon Name="shield-check" /> <span>@connection.AppName never sees reservations, purchases, comments, hidden surprises, or lists you haven't allowed.</span></p>
                         </fieldset>
                         <div class="connected-app-actions">
-                            <a class="btn btn-outline-secondary" href="@($"Account/Manage/ConnectedApps#connection-{connection.ConnectionId}")">Cancel</a>
+                            <a class="btn btn-outline-secondary" href="@($"{SectionPath(connection)}#connection-{connection.ConnectionId}")">Cancel</a>
                             <a class="btn btn-outline-danger" href="@($"Account/Manage/ConnectedApps?disconnect={Uri.EscapeDataString(connection.ConnectionId)}#connection-{connection.ConnectionId}")">
                                 <OpenWishIcon Name="x-circle" /> Disconnect
                             </a>
@@ -219,6 +219,8 @@ else
     </ul>
 }
 
+@if (!IsMcpSection)
+{
 @if (availableApps.Count > 0)
 {
     <section class="connected-apps-available" aria-labelledby="available-apps-title">
@@ -252,6 +254,11 @@ else
         </ul>
     </section>
 }
+else
+{
+    <h2 class="connected-apps-section-title">Apps you can connect</h2>
+    <p class="text-muted">There are no additional apps to connect here.</p>
+}
 
 <details class="connected-apps-guide">
     <summary>Build or register an app</summary>
@@ -261,12 +268,30 @@ else
         <a href="/llms.txt">Read llms.txt</a>
     </div>
 </details>
+}
+</PageSections>
 </div>
 
 @code {
+    private const string PagePath = "/Account/Manage/ConnectedApps";
+    private const string McpPath = $"{PagePath}?section=mcp";
+    private static readonly PageSection[] Sections =
+    [
+        new("connections", "Connected apps", "link-45deg", PagePath),
+        new("mcp", "MCP", "stars", McpPath)
+    ];
+
+    [SupplyParameterFromQuery(Name = "section")]
+    private string? Section { get; set; }
+
+    private bool IsMcpSection { get; set; }
+    private string ActiveSection => IsMcpSection ? "mcp" : "connections";
+    private static string SectionPath(ConnectedAppSummary connection) =>
+        connection.Audience == IntegrationAudience.Mcp ? McpPath : PagePath;
+
     private string userId = default!;
     private string? errorMessage;
-    private List<ConnectedAppSummary> connections = [];
+    private List<ConnectedAppSummary> visibleConnections = [];
     private IReadOnlyList<ConsentWishlistOption> editOptions = [];
     private HashSet<string> editSelectedIds = new(StringComparer.Ordinal);
     private string? editDefaultId;
@@ -293,6 +318,10 @@ else
         userId = user.Id;
         var loadedConnections = await ConnectionService.GetConnectedAppsAsync(userId);
         var editing = loadedConnections.FirstOrDefault(c => string.Equals(c.ConnectionId, EditConnectionId, StringComparison.Ordinal));
+        var disconnecting = loadedConnections.FirstOrDefault(c => string.Equals(c.ConnectionId, DisconnectConnectionId, StringComparison.Ordinal));
+        IsMcpSection = (editing ?? disconnecting) is { } selected
+            ? selected.Audience == IntegrationAudience.Mcp
+            : Section == "mcp";
         if (editing is not null)
         {
             var state = await ConnectionService.GetConsentStateAsync(userId, editing.ClientId);
@@ -301,8 +330,8 @@ else
             editDefaultId = editOptions.FirstOrDefault(w => w.IsDefault)?.PublicId;
         }
 
-        connections = [.. loadedConnections];
-        var connectedClientIds = connections.Select(c => c.ClientId).ToHashSet(StringComparer.Ordinal);
+        visibleConnections = loadedConnections.Where(c => (c.Audience == IntegrationAudience.Mcp) == IsMcpSection).ToList();
+        var connectedClientIds = loadedConnections.Select(c => c.ClientId).ToHashSet(StringComparer.Ordinal);
         availableApps = Registry.Apps.Where(app => !connectedClientIds.Contains(app.ClientId)).ToList();
     }
 
@@ -315,7 +344,7 @@ else
         var manageExistingItems = string.Equals(form["manageExistingItems"], "true", StringComparison.Ordinal);
         editSelectedIds = chosen.ToHashSet(StringComparer.Ordinal);
         editDefaultId = defaultWishlist;
-        connections = connections.Select(c => c.ConnectionId == connection.ConnectionId
+        visibleConnections = visibleConnections.Select(c => c.ConnectionId == connection.ConnectionId
             ? c with { AllowAllWishlists = allowAllWishlists, ManageExistingItems = manageExistingItems }
             : c).ToList();
 
@@ -339,12 +368,12 @@ else
             return;
         }
 
-        RedirectManager.RedirectToWithStatus("Account/Manage/ConnectedApps", $"Saved permissions for {connection.AppName}.", HttpContext);
+        RedirectManager.RedirectToWithStatus(SectionPath(connection), $"Saved permissions for {connection.AppName}.", HttpContext);
     }
 
     private async Task DisconnectAsync(ConnectedAppSummary connection)
     {
         await ConnectionService.DisconnectAsync(userId, connection.ConnectionId);
-        RedirectManager.RedirectToCurrentPageWithStatus($"Disconnected {connection.AppName}. Ideas it added are still on your lists.", HttpContext);
+        RedirectManager.RedirectToWithStatus(SectionPath(connection), $"Disconnected {connection.AppName}. Ideas it added are still on your lists.", HttpContext);
     }
 }

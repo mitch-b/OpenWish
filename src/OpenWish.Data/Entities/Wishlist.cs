@@ -11,6 +11,7 @@ public class Wishlist : BaseEntity
     public ICollection<WishlistItem>? Items { get; set; } // Items in the wishlist
     public ICollection<WillPurchase>? WillPurchases { get; set; } // Who has committed to buying items
     public bool IsCollaborative { get; set; } // Indicates if multiple users can add items
+    public bool IsArchived { get; set; }
     public bool IsPrivate { get; set; } // Indicates if the wishlist is private (only owner can see)
     public bool IsFriendsOnly { get; set; } // When true, only friends with explicit permissions can see (not all friends)
     public ICollection<WishlistComment>? Comments { get; set; } // Comments on the wishlist

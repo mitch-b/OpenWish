@@ -12,6 +12,7 @@ public class WishlistModel : BaseEntityModel
     public int? EventId { get; set; }
     public EventModel? Event { get; set; }
     public bool IsCollaborative { get; set; }
+    public bool IsArchived { get; set; }
     public int ItemCount { get; set; }
     public ICollection<WishlistItemModel> Items { get; set; } = [];
     public ICollection<WishlistItemModel> ReceivedItems { get; set; } = []; // Owner-only: ideas marked as received

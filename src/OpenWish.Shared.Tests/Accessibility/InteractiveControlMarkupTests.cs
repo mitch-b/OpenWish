@@ -95,7 +95,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("Read the app developer guide", page, StringComparison.Ordinal);
         Assert.Contains("href=\"/llms.txt\"", page, StringComparison.Ordinal);
         Assert.Contains("OpenWishSettings__Integrations__Mcp__Enabled", page, StringComparison.Ordinal);
-        Assert.Contains("sign in and choose which lists it can use", page, StringComparison.Ordinal);
+        Assert.Contains("sign in to OpenWish and choose its lists", page, StringComparison.Ordinal);
+        Assert.Contains("PageSections Label=\"Integration sections\"", page, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -936,8 +937,8 @@ public class InteractiveControlMarkupTests
         Assert.Contains("position: relative;", actionStyles, StringComparison.Ordinal);
         Assert.Contains("z-index: 2;", actionStyles, StringComparison.Ordinal);
         Assert.Contains(".wishlist-card:has(.wishlist-card-link:focus-visible)", styles, StringComparison.Ordinal);
-        Assert.Contains("return deleteDialog.ShowAsync(", markup, StringComparison.Ordinal);
-        Assert.Contains("$\"dropdownMenu{Wishlist?.PublicId}\"", markup, StringComparison.Ordinal);
+        Assert.Contains("await deleteDialog.ShowAsync(", markup, StringComparison.Ordinal);
+        Assert.Contains("$\"dropdownMenu{wishlist.PublicId}\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("overflow: hidden;", styles, StringComparison.Ordinal);
     }
 

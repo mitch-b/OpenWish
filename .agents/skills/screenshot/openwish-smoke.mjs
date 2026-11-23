@@ -2384,12 +2384,22 @@ async function verifyOwnerJourney(browser, manifest, results) {
 
   await visit(page, "/events", "Neighborhood Gift Exchange", visitedRoutes);
   await verifyEventCardNavigation(page, createdEventPublicId, visitedRoutes);
+  const lifecycleListResponse = await context.request.post(`${baseUrl}/api/events/${createdEventPublicId}/wishlists`, {
+    data: { name: "Holiday keepsakes", isFriendsOnly: true }
+  });
+  if (!lifecycleListResponse.ok()) throw new Error(await lifecycleListResponse.text());
+  const lifecycleList = await lifecycleListResponse.json();
+  const lifecycleIdeaResponse = await context.request.post(`${baseUrl}/api/wishlists/${lifecycleList.publicId}/items`, {
+    data: { name: "Handmade ornament" }
+  });
+  if (!lifecycleIdeaResponse.ok()) throw new Error(await lifecycleIdeaResponse.text());
   const createdEventCard = page.locator(".event-card").filter({ hasText: "Neighborhood Gift Exchange" });
   const createdEventActions = createdEventCard.getByRole("button", { name: "Actions for Neighborhood Gift Exchange" });
   await createdEventActions.click();
   await createdEventCard.getByRole("button", { name: "Delete" }).click();
   const eventDeleteDialog = page.getByRole("dialog", { name: "Delete event" });
   await eventDeleteDialog.waitFor({ state: "visible" });
+  await eventDeleteDialog.getByText("Handmade ornament", { exact: true }).waitFor();
   const cancelEventDeletion = eventDeleteDialog.getByRole("button", { name: "Cancel" });
   if (!(await cancelEventDeletion.evaluate(element => element === document.activeElement))) {
     throw new Error("The shared dialog did not focus its safe action.");
@@ -2411,6 +2421,34 @@ async function verifyOwnerJourney(browser, manifest, results) {
   await page.getByRole("button", { name: "Delete event" }).click();
   await createdEventCard.waitFor({ state: "detached" });
   await page.waitForFunction(() => document.activeElement?.matches("main h1, main h2, main h3, main"));
+  await visit(page, "/wishlists", "Holiday keepsakes", visitedRoutes);
+  const keepsakesActions = page.getByRole("button", { name: "Actions for Holiday keepsakes" });
+  await keepsakesActions.click();
+  await page.getByRole("button", { name: "Archive wishlist" }).click();
+  const archiveDialog = page.getByRole("dialog", { name: "Archive wishlist" });
+  await archiveDialog.getByText(/Only you will be able to see it/).waitFor();
+  await archiveDialog.getByRole("button", { name: "Archive wishlist" }).click();
+  await keepsakesActions.waitFor({ state: "detached" });
+  await page.getByRole("link", { name: "Archive", exact: true }).click();
+  await page.getByRole("heading", { name: "Archived wishlists" }).waitFor();
+  await keepsakesActions.waitFor();
+  await screenshot(page, "wishlist-archive.png");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshot(page, "wishlist-archive-mobile.png");
+  await keepsakesActions.click();
+  await page.getByRole("button", { name: "Restore wishlist" }).click();
+  await page.getByRole("dialog", { name: "Restore wishlist" }).getByRole("button", { name: "Restore wishlist" }).click();
+  await page.getByRole("heading", { name: "No archived wishlists" }).waitFor();
+  await page.getByRole("link", { name: "Back to wishlists" }).click();
+  await keepsakesActions.click();
+  await page.locator(".wishlist-card").filter({ hasText: "Holiday keepsakes" }).getByRole("button", { name: "Delete", exact: true }).click();
+  const deleteWishlistDialog = page.getByRole("dialog", { name: "Delete wishlist" });
+  await deleteWishlistDialog.getByText("Handmade ornament", { exact: true }).waitFor();
+  await screenshot(page, "wishlist-delete-preview-mobile.png");
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await screenshot(page, "wishlist-delete-preview.png");
+  await deleteWishlistDialog.getByRole("button", { name: "Delete wishlist" }).click();
+  await keepsakesActions.waitFor({ state: "detached" });
 
   if (diagnostics.browserErrors.length > 0) {
     throw new Error(`Owner browser errors: ${diagnostics.browserErrors.join(" | ")}`);
@@ -2454,7 +2492,8 @@ async function verifyOwnerJourney(browser, manifest, results) {
       "state-aware theme persistence",
       "current release history",
       "account settings requirements and deletion safety",
-      "two-factor status, setup, recovery, reset, and disable safety"
+      "two-factor status, setup, recovery, reset, and disable safety",
+      "wishlist archive and restore, and gift previews before wishlist and event deletion"
     ]
   });
   await context.close();
@@ -3828,6 +3867,12 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
     throw new Error("The shopper's reserved count did not update after reserving.");
   }
   const cancelReservation = giftCoordination.getByRole("button", { name: "Cancel reservation" });
+  await cancelReservation.hover();
+  for (const theme of ["dark", "light"]) {
+    await page.evaluate(value => document.documentElement.setAttribute("data-theme", value), theme);
+    await assertTextContrast(cancelReservation, `Cancel reservation hover in ${theme} theme`);
+    await screenshot(page, `reservation-hover-${theme}.png`, false);
+  }
   await cancelReservation.click();
   const reservationDialog = giftCoordination.getByRole("alertdialog", { name: "Release this reservation?" });
   await reservationDialog.waitFor({ state: "visible" });
@@ -3923,7 +3968,8 @@ async function verifyGuestJourney(browser, manifest, securityFixture, results) {
       "grid gift coordination opens the matching list row",
       "items made private by collaborators disappear immediately for their creator",
       "private collaborator items remain visible to the wishlist owner",
-      "private item persistence and viewer-filtered lookup endpoints return success"
+      "private item persistence and viewer-filtered lookup endpoints return success",
+      "Cancel reservation has at least 4.5:1 hover contrast in both themes"
     ]
   });
   await context.close();
@@ -6628,6 +6674,8 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
 
   await page.getByRole("link", { name: "Integrations", exact: true }).click();
   await page.getByRole("heading", { name: "Integrations", exact: true }).waitFor({ state: "visible" });
+  const integrationSections = page.getByRole("navigation", { name: "Integration sections" });
+  await integrationSections.getByRole("link", { name: "Connected apps" }).waitFor();
   await page.getByText("Build or register an app", { exact: true }).click();
   await page.getByRole("link", { name: "Read the app developer guide" }).waitFor({ state: "visible" });
   await page.getByRole("link", { name: "Read llms.txt" }).waitFor({ state: "visible" });
@@ -6637,7 +6685,7 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
       await primaryNavigation.locator('a[href="Account/Manage"]').getAttribute("aria-current") !== null) {
     throw new Error("Integrations and account navigation should not both appear active.");
   }
-  await visit(page, "/Account/Manage/ConnectedApps", "Integrations", []);
+  await integrationSections.getByRole("link", { name: "MCP", exact: true }).click();
   await page.getByRole("button", { name: "Copy address", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Address copied." }).waitFor({ state: "visible" });
   await page.evaluate(() => {
@@ -6649,7 +6697,9 @@ async function verifyConnectedAppFlow(browser, results, { assertions, listName, 
   await page.evaluate(() => { window.openWishCopyText = window.openWishOriginalCopyText; });
   await page.getByRole("button", { name: "Copy address", exact: true }).click();
   await page.getByText("Address copied. Paste it into your assistant.", { exact: true }).waitFor({ state: "visible" });
+  await screenshot(page, "integration-assistant-setup.png", false);
   assertions.push("MCP address copy reports success and actionable clipboard failure");
+  await integrationSections.getByRole("link", { name: "Connected apps" }).click();
   const connection = page.locator(".connected-app").filter({ hasText: connectedApp.name });
   await connection.locator(".connected-app-count").getByText("2", { exact: true }).waitFor({ state: "visible" });
   await connection.getByRole("link", { name: listName, exact: true }).first().waitFor({ state: "visible" });

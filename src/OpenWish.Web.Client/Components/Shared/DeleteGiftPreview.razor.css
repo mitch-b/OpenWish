@@ -1,0 +1,10 @@
+.gift-preview {
+    max-height: 12rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface-alt);
+}

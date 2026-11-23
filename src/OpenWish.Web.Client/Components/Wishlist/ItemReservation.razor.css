@@ -87,7 +87,7 @@
 
 .reservation-cancel {
     white-space: nowrap;
-    background: var(--color-surface);
+    --bs-btn-bg: var(--color-surface);
 }
 
 .reservation-confirm {

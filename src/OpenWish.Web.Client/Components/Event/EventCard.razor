@@ -94,9 +94,11 @@ else
 
 <Dialog @ref="_deleteDialog"
         Title="@_deleteDialogTitle"
+        CanClose="@(!_isDeleting)"
         ReturnFocusElementId="@($"dropdownMenu{Event?.PublicId}")">
     <div class="modal-body">
         <p>@_deleteDialogMessage</p>
+        <EventDeleteGiftPreview EventPublicId="@Event?.PublicId" />
         @if (!string.IsNullOrWhiteSpace(_deleteErrorMessage))
         {
             <div class="alert alert-danger mb-0" role="alert">
@@ -116,7 +118,7 @@ else
         }
         else
         {
-            <p class="text-danger mb-0">This is permanent. Are you absolutely sure?</p>
+            <p class="text-danger mb-0">You can't undo this.</p>
         }
     </div>
     <div class="modal-footer">
@@ -225,7 +227,7 @@ else
 
         _deleteConfirmationStage = DeleteConfirmationStage.First;
         _deleteErrorMessage = null;
-        _deleteDialogMessage = $"Deleting '{Event.Name}' will remove all wishlists, participants, and activity.";
+        _deleteDialogMessage = $"Deleting {Event.Name} removes its invitations, participants, and drawn names. Linked wishlists and gift ideas stay with their owners.";
         _deleteDialog.Show();
     }
 
@@ -256,7 +258,7 @@ else
 
         _deleteConfirmationStage = DeleteConfirmationStage.Second;
         _deleteErrorMessage = null;
-        _deleteDialogMessage = $"This is your final confirmation. '{Event.Name}' cannot be recovered once deleted.";
+        _deleteDialogMessage = $"Permanently delete {Event.Name}? Its linked wishlists and gift ideas won't be deleted.";
         StateHasChanged();
         await Task.Yield();
         await _cancelDeleteButton.FocusAsync();

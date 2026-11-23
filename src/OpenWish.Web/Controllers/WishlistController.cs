@@ -16,15 +16,39 @@ public class WishlistController(IWishlistService wishlistService, ApiUserContext
     private readonly ApiUserContextService _userContextService = userContextService;
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetWishlists()
+    public async Task<ActionResult<IEnumerable<WishlistModel>>> GetWishlists([FromQuery] bool archived = false)
     {
         var userId = await _userContextService.GetUserIdAsync();
         if (userId is null)
         {
             return Unauthorized();
         }
-        var wishlists = await _wishlistService.GetUserWishlistsAsync(userId);
+        var wishlists = await _wishlistService.GetUserWishlistsAsync(userId, archived);
         return Ok(wishlists);
+    }
+
+    [HttpPut("{publicId}/archived")]
+    public async Task<IActionResult> SetWishlistArchived(string publicId, [FromBody] bool archived)
+    {
+        var userId = await _userContextService.GetUserIdAsync();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            await _wishlistService.SetWishlistArchivedAsync(publicId, userId, archived);
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpGet("{publicId}")]

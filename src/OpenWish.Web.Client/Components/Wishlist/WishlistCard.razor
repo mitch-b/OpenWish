@@ -43,6 +43,15 @@ else
                             <OpenWishIcon Name="three-dots-vertical" />
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenu@(Wishlist.PublicId)">
+                            @if (OnArchiveChanged.HasDelegate)
+                            {
+                                <li>
+                                    <button class="dropdown-item" type="button" disabled="@(!RendererInfo.IsInteractive)"
+                                            @onclick="ShowArchiveDialog">
+                                        <OpenWishIcon Name="@(Wishlist.IsArchived ? "arrow-clockwise" : "box-seam")" /> @ArchiveAction
+                                    </button>
+                                </li>
+                            }
                             <li>
                                 <button class="dropdown-item text-danger"
                                         type="button"
@@ -77,7 +86,44 @@ else
         </div>
     </div>
 
-    <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDelete" />
+    <WishlistDeleteDialog @ref="deleteDialog" OnConfirm="HandleDelete" CloseOnConfirm="false"
+                          ConfirmLabel="Delete wishlist" IsBusy="@_saving"
+                          ConfirmDisabled="@(_deletePreview is null)" ErrorMessage="@_deleteError">
+        <Preview>
+            @if (_deletePreview is null && _deleteError is null)
+            {
+                <p role="status">Loading gift ideas...</p>
+            }
+            else if (_deletePreview is not null)
+            {
+                <DeleteGiftPreview Wishlists="@_deletePreview" Heading="Gift ideas that will be deleted" IncludeOwnerHistory="true" />
+            }
+        </Preview>
+    </WishlistDeleteDialog>
+
+    <Dialog @ref="_archiveDialog" Title="@ArchiveAction" ReturnFocusElementId="@($"dropdownMenu{Wishlist.PublicId}")"
+            CanClose="@(!_saving)">
+        <div class="modal-body">
+            @if (Wishlist.IsArchived)
+            {
+                <p>Move <strong>@Wishlist.Name</strong> back to My wishlists? Anyone who previously had access can see it again.</p>
+            }
+            else
+            {
+                <p>Move <strong>@Wishlist.Name</strong> to your archive? Only you will be able to see it, including any ideas others added. Friends and contributors will regain access if you restore it.</p>
+            }
+            @if (_archiveError is not null)
+            {
+                <p class="alert alert-danger mb-0" role="alert">@_archiveError</p>
+            }
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dialog-initial-focus disabled="@_saving" @onclick="_archiveDialog.CloseAsync">Cancel</button>
+            <button type="button" class="btn btn-primary" disabled="@_saving" @onclick="ChangeArchiveStateAsync">
+                @(_saving ? (Wishlist.IsArchived ? "Restoring..." : "Archiving...") : ArchiveAction)
+            </button>
+        </div>
+    </Dialog>
 }
 
 @code {
@@ -86,11 +132,20 @@ else
     [Parameter]
     public EventCallback<WishlistModel> OnDelete { get; set; }
     [Parameter]
+    public EventCallback<WishlistModel> OnArchiveChanged { get; set; }
+    [Parameter]
     public bool ShowOwner { get; set; } = true;
     [Parameter]
     public int? ItemCount { get; set; }
 
     private WishlistDeleteDialog deleteDialog = default!;
+    private Dialog _archiveDialog = default!;
+    private string? _deleteError;
+    private string? _archiveError;
+    private IReadOnlyList<WishlistModel>? _deletePreview;
+    private int _previewVersion;
+    private bool _saving;
+    private string ArchiveAction => Wishlist?.IsArchived == true ? "Restore wishlist" : "Archive wishlist";
     private bool isCurrentUserOwner = false;
     private int DisplayItemCount => ItemCount ?? Wishlist?.Items?.Count ?? Wishlist?.ItemCount ?? 0;
 
@@ -98,6 +153,7 @@ else
 
     private string PrivacyLabel => Wishlist switch
     {
+        { IsArchived: true } => "Only you",
         { IsPrivate: true } => "Private",
         { IsFriendsOnly: true } => HasEventAccess ? "Specific friends + event" : "Specific friends",
         _ => HasEventAccess ? "All friends + event" : "All friends"
@@ -105,6 +161,7 @@ else
 
     private string PrivacyDescription => Wishlist switch
     {
+        { IsArchived: true } => "Archived: only you can see this wishlist until you restore it",
         { IsPrivate: true } => "Private: only you and people you share it with can see it",
         { IsFriendsOnly: true } => HasEventAccess ? "Shared with specific friends and event members" : "Shared with specific friends",
         _ => HasEventAccess ? "Shared with all friends and event members" : "Shared with all friends"
@@ -112,6 +169,7 @@ else
 
     private string PrivacyIcon => Wishlist switch
     {
+        { IsArchived: true } => "lock",
         { IsPrivate: true } => "lock",
         { IsFriendsOnly: true } => "person-check",
         _ => "eye"
@@ -134,25 +192,98 @@ else
         }
     }
 
-    private Task ShowDeleteDialog()
+    private async Task ShowDeleteDialog()
     {
-        return deleteDialog.ShowAsync(
-            "Delete wishlist",
-            $"Are you sure you want to delete the wishlist '{Wishlist?.Name}'? This action cannot be undone.",
-            $"dropdownMenu{Wishlist?.PublicId}"
-        );
+        if (Wishlist is not { } wishlist)
+        {
+            return;
+        }
+
+        var version = ++_previewVersion;
+        _deleteError = null;
+        _deletePreview = null;
+        await deleteDialog.ShowAsync("Delete wishlist",
+            $"Delete {wishlist.Name} and its gift ideas? This can't be undone.",
+            $"dropdownMenu{wishlist.PublicId}");
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync() ?? throw new UnauthorizedAccessException();
+            var preview = await WishlistService.GetWishlistByPublicIdAsync(wishlist.PublicId, userId);
+            if (version == _previewVersion)
+            {
+                _deletePreview = [preview];
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not load delete preview for wishlist {WishlistId}", wishlist.PublicId);
+            if (version == _previewVersion)
+            {
+                _deleteError = "We couldn't load the gift ideas. Close this dialog and try again.";
+            }
+        }
     }
 
     private async Task HandleDelete()
     {
-        if (Wishlist != null)
+        if (Wishlist is not { } wishlist || _saving || _deletePreview is null)
         {
-            Logger.LogInformation("Deleting wishlist {WishlistPublicId}", Wishlist.PublicId);
-            await WishlistService.DeleteWishlistByPublicIdAsync(Wishlist.PublicId);
-            if (OnDelete.HasDelegate)
-            {
-                await OnDelete.InvokeAsync(Wishlist);
-            }
+            return;
         }
+
+        _saving = true;
+        _deleteError = null;
+        try
+        {
+            await WishlistService.DeleteWishlistByPublicIdAsync(wishlist.PublicId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not delete wishlist {WishlistId}", wishlist.PublicId);
+            _deleteError = "We couldn't delete this wishlist. Try again.";
+            return;
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        await deleteDialog.Close();
+        await OnDelete.InvokeAsync(wishlist);
+    }
+
+    private void ShowArchiveDialog()
+    {
+        _archiveError = null;
+        _archiveDialog.Show();
+    }
+
+    private async Task ChangeArchiveStateAsync()
+    {
+        if (Wishlist is not { } wishlist || _saving)
+        {
+            return;
+        }
+
+        _saving = true;
+        _archiveError = null;
+        try
+        {
+            var userId = await UserContextService.GetUserIdAsync() ?? throw new UnauthorizedAccessException();
+            await WishlistService.SetWishlistArchivedAsync(wishlist.PublicId, userId, !wishlist.IsArchived);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not change archive state for wishlist {WishlistId}", wishlist.PublicId);
+            _archiveError = "We couldn't move this wishlist. Try again.";
+            return;
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        await _archiveDialog.CloseAsync();
+        await OnArchiveChanged.InvokeAsync(wishlist);
     }
 }

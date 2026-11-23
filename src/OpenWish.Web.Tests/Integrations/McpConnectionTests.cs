@@ -250,9 +250,12 @@ public sealed class McpConnectionTests(OpenWishAppFactory factory)
         Assert.DoesNotContain(added.Id, (await owner.GetItemsAsync(list.PublicId)).Select(i => i.PublicId));
 
         var settings = await owner.GetPageAsync("Account/Manage/ConnectedApps");
-        Assert.Contains(Resource, settings);
+        Assert.DoesNotContain("OpenWish Test Assistant", settings);
+        Assert.Contains("Connect an AI assistant with MCP", settings);
+        settings = await owner.GetPageAsync("Account/Manage/ConnectedApps?section=mcp");
         Assert.Contains("AI assistant", settings);
         Assert.Contains("OpenWish Test Assistant", settings);
+        Assert.Contains(Resource, settings);
     }
 
     [Fact]

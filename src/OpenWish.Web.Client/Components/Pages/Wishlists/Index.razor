@@ -15,15 +15,23 @@
 @rendermode InteractiveServer
 
 <div class="container page-shell">
-    <PageHeader Title="Wishlists"
-                Description="Keep your ideas handy and browse lists friends shared.">
+    <PageHeader Title="@(IsArchive ? "Archived wishlists" : "Wishlists")"
+                Description="@(IsArchive ? "Only you can see these lists. Restoring a list brings back its previous sharing permissions." : "Keep your ideas handy and browse lists friends shared.")">
         <Actions>
-            <a href="/wishlists/new" class="btn btn-primary">
-                <OpenWishIcon Name="plus-lg" /> New wishlist
-            </a>
+            @if (IsArchive)
+            {
+                <a href="/wishlists" class="btn btn-outline-secondary"><OpenWishIcon Name="list-ul" /> Back to wishlists</a>
+            }
+            else
+            {
+                <a href="/wishlists?tab=archive" class="btn btn-outline-secondary"><OpenWishIcon Name="box-seam" /> Archive</a>
+                <a href="/wishlists/new" class="btn btn-primary"><OpenWishIcon Name="plus-lg" /> New wishlist</a>
+            }
         </Actions>
     </PageHeader>
 
+    @if (!IsArchive)
+    {
     <ul class="nav nav-tabs mb-3" id="wishlistTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link @(activeTab == "my-wishlists" ? "active" : "")" id="my-wishlists-tab"
@@ -50,17 +58,20 @@
             </button>
         </li>
     </ul>
+    }
 
     <div class="tab-content" id="wishlistTabsContent">
             <div class="tab-pane fade @(activeTab == "my-wishlists" ? "show active" : string.Empty)"
                  id="my-wishlists-panel"
-                 role="tabpanel"
-                 aria-labelledby="my-wishlists-tab"
+                 role="@(IsArchive ? null : "tabpanel")"
+                 aria-labelledby="@(IsArchive ? null : "my-wishlists-tab")"
                  tabindex="0"
                  aria-busy="@(_loadingWishlists ? "true" : "false")"
                  hidden="@(activeTab != "my-wishlists")">
                 @if (HasLoadedOwnWishlists)
                 {
+                    @if (!IsArchive)
+                    {
                     <section class="wishlist-pulse" aria-labelledby="wishlist-pulse-title">
                         <h2 id="wishlist-pulse-title">Your collection</h2>
                         <dl class="wishlist-pulse-stats">
@@ -78,6 +89,7 @@
                             </div>
                         </dl>
                     </section>
+                    }
                     <div class="wishlist-toolbar">
                         <div class="filter-cluster">
                             <div class="filter-field">
@@ -136,7 +148,13 @@
                 {
                     <p class="visually-hidden" role="status" aria-live="polite">No wishlists found.</p>
                     <div class="empty-state">
-                        @if (TotalWishlistCount == 0)
+                        @if (IsArchive && TotalWishlistCount == 0)
+                        {
+                            <span class="empty-state-icon" aria-hidden="true"><OpenWishIcon Name="box-seam" /></span>
+                            <h2>No archived wishlists</h2>
+                            <p>Archive a list from its actions menu when you want to set it aside.</p>
+                        }
+                        else if (TotalWishlistCount == 0)
                         {
                             <span class="empty-state-icon" aria-hidden="true"><OpenWishIcon Name="gift" /></span>
                             <h2>Start your first wishlist</h2>
@@ -165,7 +183,7 @@
                             @foreach (var wishlist in filteredWishlists)
                             {
                                 <div class="col-md-6 col-xl-4">
-                                <WishlistCard Wishlist="@wishlist" ShowOwner="false" OnDelete="@HandleWishlistDeleted" />
+                                <WishlistCard Wishlist="@wishlist" ShowOwner="false" OnDelete="@RefreshAfterWishlistChangeAsync" OnArchiveChanged="@RefreshAfterWishlistChangeAsync" />
                             </div>
                         }
                         }
@@ -314,6 +332,7 @@
 
     [SupplyParameterFromQuery(Name = "tab")]
     public string? Tab { get; set; }
+    private bool IsArchive => Tab == "archive";
 
     [SupplyParameterFromQuery(Name = "owner")]
     public string? Owner { get; set; }
@@ -330,8 +349,13 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var archiveChanged = IsArchive != (_appliedTab == "archive");
         if (ApplyQueryParameters() && _userId != null)
         {
+            if (archiveChanged)
+            {
+                await RefreshWishlistsAsync();
+            }
             await LoadFriendsWishlistsIfShown();
         }
     }
@@ -481,7 +505,7 @@
         if (!string.IsNullOrWhiteSpace(_userId))
         {
             _wishlistLoadError = null;
-            wishlists = await WishlistService.GetUserWishlistsAsync(_userId);
+            wishlists = await WishlistService.GetUserWishlistsAsync(_userId, IsArchive);
             ApplyFiltersAndSort();
         }
     }
@@ -617,8 +641,26 @@
 
     private int SharedWishlistCount => wishlists?.Count(wishlist => !wishlist.IsPrivate) ?? 0;
 
-    private async Task HandleWishlistDeleted(WishlistModel wishlist)
+    private async Task RefreshAfterWishlistChangeAsync(WishlistModel wishlist)
     {
-        await LoadWishlists();
+        await RefreshWishlistsAsync();
+    }
+
+    private async Task RefreshWishlistsAsync()
+    {
+        _loadingWishlists = true;
+        try
+        {
+            await LoadWishlists();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not refresh wishlists.");
+            _wishlistLoadError = "We couldn't refresh your wishlists. Reload the page to try again.";
+        }
+        finally
+        {
+            _loadingWishlists = false;
+        }
     }
 }

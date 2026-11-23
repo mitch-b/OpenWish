@@ -1,0 +1,39 @@
+@inject IEventService EventService
+@inject IUserContextService UserContext
+@inject ILogger<EventDeleteGiftPreview> Logger
+
+@if (_error)
+{
+    <p class="text-muted" role="status">Couldn't load linked gift ideas. Deleting the event won't delete them.</p>
+}
+else if (_wishlists is null)
+{
+    <p role="status">Loading linked gift ideas...</p>
+}
+else
+{
+    <DeleteGiftPreview Wishlists="@_wishlists" Heading="Gift ideas from linked wishlists (kept)" />
+}
+
+@code {
+    [Parameter, EditorRequired] public string? EventPublicId { get; set; }
+
+    private IReadOnlyList<WishlistModel>? _wishlists;
+    private bool _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var userId = await UserContext.GetUserIdAsync() ?? throw new UnauthorizedAccessException();
+            _wishlists = EventPublicId is { } publicId
+                ? (await EventService.GetEventWishlistsByPublicIdAsync(publicId, userId)).ToList()
+                : [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not load delete preview for event {EventId}", EventPublicId);
+            _error = true;
+        }
+    }
+}

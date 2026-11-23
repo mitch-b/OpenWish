@@ -113,7 +113,7 @@ public class FriendService(IServiceScopeFactory scopeFactory,
             .ToListAsync();
         var owners = await context.Wishlists
             .AsNoTracking()
-            .Where(w => !w.Deleted && sharedWishlistIds.Contains(w.Id))
+            .Where(w => !w.Deleted && !w.IsArchived && sharedWishlistIds.Contains(w.Id))
             .Select(w => new { UserId = w.OwnerId, w.Owner!.UserName, WishlistName = w.Name })
             .ToListAsync();
 

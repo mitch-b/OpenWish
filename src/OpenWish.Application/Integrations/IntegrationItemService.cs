@@ -383,7 +383,7 @@ public class IntegrationItemService(
 
         var wishlists = await context.Wishlists
             .AsNoTracking()
-            .Where(w => w.OwnerId == caller.UserId && !w.Deleted &&
+            .Where(w => w.OwnerId == caller.UserId && !w.Deleted && !w.IsArchived &&
                 (connection.AllowAllWishlists || context.IntegrationConnectionWishlists.Any(a =>
                     a.IntegrationConnectionId == caller.ConnectionId && a.WishlistId == w.Id)))
             .OrderBy(w => w.Id)

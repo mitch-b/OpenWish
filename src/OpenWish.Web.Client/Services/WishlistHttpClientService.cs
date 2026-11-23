@@ -24,11 +24,17 @@ public class WishlistHttpClientService(HttpClient httpClient) : IWishlistService
             ?? throw new InvalidOperationException("Wishlist not found.");
     }
 
-    public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId)
+    public async Task<IEnumerable<WishlistModel>> GetUserWishlistsAsync(string userId, bool archived = false)
     {
         // Assuming userId is not required since the server knows the authenticated user
-        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>(BaseUrl)
+        return await _httpClient.GetFromJsonAsync<IEnumerable<WishlistModel>>(archived ? $"{BaseUrl}?archived=true" : BaseUrl)
             ?? Enumerable.Empty<WishlistModel>();
+    }
+
+    public async Task SetWishlistArchivedAsync(string publicId, string userId, bool archived)
+    {
+        using var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/{Uri.EscapeDataString(publicId)}/archived", archived);
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task<WishlistModel> UpdateWishlistAsync(int id, WishlistModel wishlist)
